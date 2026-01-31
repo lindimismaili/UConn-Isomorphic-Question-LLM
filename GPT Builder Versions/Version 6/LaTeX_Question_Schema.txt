@@ -1,0 +1,13 @@
+\begin{mcq}
+\textbf{Q1.} Which option has the incorrect unit?
+\begin{enumerate}[label=\Alph*.]
+\item Work: joule
+\item Momentum: kilogram$\cdot$meter/second
+\item Power: kilogram$\cdot$meter/second$^2$
+\item Pressure: pascal
+\end{enumerate}
+\textcolor{red}{\textbf{Correct: (C.) \text{-} Reason:}} \textcolor{red}{\textbf{Power has SI unit watt, $\mathrm{kg\cdot m^2/s^3}$, not $\mathrm{kg\cdot m/s^2}$ (which is force).}}\\
+\textcolor{blue}{\textbf{Incorrect: (A.) \text{-} Reason:}} \textcolor{blue}{\textbf{Work is measured in joules.}}\\
+\textcolor{blue}{\textbf{Incorrect: (B.) \text{-} Reason:}} \textcolor{blue}{\textbf{Momentum has units $\mathrm{kg\cdot m/s}$.}}\\
+\textcolor{blue}{\textbf{Incorrect: (D.) \text{-} Reason:}} \textcolor{blue}{\textbf{Pressure is measured in pascals.}}
+\end{mcq}

@@ -1,0 +1,16 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb, siunitx, graphicx, physics, bm, geometry, hyperref, xcolor, enumitem, needspace}
+\geometry{margin=1in}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+% Non-breaking MCQ block
+\newenvironment{mcq}{\Needspace{14\baselineskip}\begin{samepage}}{\end{samepage}}
+
+\begin{document}
+\begin{center}
+{\LARGE \textbf{IsoPhys-GPT: Isomorphic Physics MCQs}}\\[0.4em]
+Instructions: Select the best answer for each item. Exactly one option is correct. The correct choice and its explanation are shown in \textcolor{red}{\textbf{red}}. Common incorrect solutions are shown in \textcolor{blue}{\textbf{blue}}.
+\end{center}
+
+\hrule\vspace{0.6em}

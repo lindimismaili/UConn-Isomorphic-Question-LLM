@@ -1,0 +1,7 @@
+{
+	"id": "MCQ_0001",
+	"correct_label": "C",
+	"unique": true,
+	"units_ok": true,
+	"plausible_magnitudes": true,
+}

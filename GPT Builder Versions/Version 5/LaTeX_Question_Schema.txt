@@ -1,0 +1,14 @@
+\begin{mcq}
+\textbf{Q1.} A space probe at Earth's center (origin) observes an asteroid at the position $\vec r = -5\,\hat{\imath} + 7\,\hat{\jmath}$ (megameters). Which statement is correct?
+\begin{enumerate}[label=\Alph*.]
+\item The distance between Earth and the asteroid is \SI{12}{megameter}.
+\item The distance between Earth and the asteroid is \SI{7}{megameter}.
+\item The distance between Earth and the asteroid is \SI{8.6}{megameter}.
+\item None of the above is correct.
+\end{enumerate}
+
+\textcolor{red}{\textbf{Correct: (C.) \text{-} Reason:}} \textcolor{red}{\textbf{Use vector magnitude. $|\vec r|=\sqrt{x^2+y^2}$. Here $x=-5$, $y=7$, so $|\vec r|=\sqrt{(-5)^2+7^2}=\sqrt{74}\approx \SI{8.60}{megameter}$, matching option C.}}\\
+\textcolor{blue}{\textbf{Incorrect: (A.) \text{-} Reason:}} \textcolor{blue}{\textbf{Uses $|x|+|y|=5+7=12$ (Manhattan distance) instead of Euclidean magnitude.}}\\
+\textcolor{blue}{\textbf{Incorrect: (B.) \text{-} Reason:}} \textcolor{blue}{\textbf{Takes $\max(|x|,|y|)=7$ as the distance.}}\\
+\textcolor{blue}{\textbf{Incorrect: (D.) \text{-} Reason:}} \textcolor{blue}{\textbf{A correct numerical option (C) exists.}}
+\end{mcq}

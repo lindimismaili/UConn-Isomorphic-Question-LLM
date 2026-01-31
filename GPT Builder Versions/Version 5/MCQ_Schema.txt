@@ -1,0 +1,65 @@
+{
+  "title": "QuestionObject",
+  "type": "object",
+  "required": ["new_question", "answers", "correct_index", "incorrect_indices", "reasoning"],
+  "properties": {
+    "new_question": {
+      "type": "string",
+      "description": "The question text"
+    },
+    "answers": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string"
+      },
+      "description": "List of all answer choices in order"
+    },
+    "correct_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Index of the correct answer in the answers array"
+    },
+    "incorrect_indices": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "description": "Indices of all incorrect answers in the answers array"
+    },
+    "reasoning": {
+      "type": "object",
+      "required": ["correct_reasoning", "incorrect_reasoning"],
+      "properties": {
+        "correct_reasoning": {
+          "type": "string",
+          "description": "Step-by-step reasoning for arriving at the correct answer"
+        },
+        "incorrect_reasoning": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["index", "explanation"],
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Index of the incorrect answer"
+              },
+              "explanation": {
+                "type": "string",
+                "description": "Explanation for why this answer is incorrect"
+              }
+            }
+          },
+          "description": "List of reasoning explanations for each incorrect answer"
+        }
+      },
+      "description": "Reasoning details for both correct and incorrect answers"
+    }
+  },
+  "additionalProperties": false
+}

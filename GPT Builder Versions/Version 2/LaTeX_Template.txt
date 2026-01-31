@@ -1,0 +1,61 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb, siunitx, graphicx, physics, bm, geometry, hyperref, xcolor, enumitem}
+\geometry{margin=1in}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+\begin{center}
+{\LARGE \textbf{IsoPhys-GPT: Isomorphic Physics MCQs}}\\[0.4em]
+Instructions: Select the best answer for each item. Exactly one option is correct. The correct choice and its explanation are shown in \textcolor{red}{\textbf{red}}. Common incorrect solutions are shown in \textcolor{blue}{\textbf{blue}}.
+\end{center}
+
+\hrule\vspace{0.6em}
+
+% Q1
+\textbf{Q1.} A space probe at Earth's center (origin) observes an asteroid at the position $\vec r = -5\,\hat{\imath} + 7\,\hat{\jmath}$ (megameters). Which statement is correct?
+\begin{enumerate}[label=\Alph*.]
+\item The distance between Earth and the asteroid is \SI{12}{megameter}.
+\item The distance between Earth and the asteroid is \SI{7}{megameter}.
+\item The distance between Earth and the asteroid is \SI{8.6}{megameter}.
+\item None of the above is correct.
+\end{enumerate}
+
+\textcolor{red}{\textbf{Correct: (C.) \text{-} Reason:}} \textcolor{red}{\textbf{Use vector magnitude. $|\vec r|=\sqrt{x^2+y^2}$. Here $x=-5$, $y=7$, so $|\vec r|=\sqrt{(-5)^2+7^2}=\sqrt{74}\approx \SI{8.60}{megameter}$, matching option C.}}\\
+\textcolor{blue}{\textbf{Incorrect: (A.) \text{-} Reason:}} \textcolor{blue}{\textbf{Uses $|x|+|y|=5+7=12$ (Manhattan distance) instead of Euclidean magnitude.}}\\
+\textcolor{blue}{\textbf{Incorrect: (B.) \text{-} Reason:}} \textcolor{blue}{\textbf{Takes $\max(|x|,|y|)=7$ as the distance.}}\\
+\textcolor{blue}{\textbf{Incorrect: (D.) \text{-} Reason:}} \textcolor{blue}{\textbf{A correct numerical option (C) exists.}}
+
+\hrule\vspace{0.6em}
+
+% Q2
+\textbf{Q2.} The displacement of a mage's orb along a straight corridor is $s(t)=(\SI{1.6}{m/s^3})t^3+(\SI{2.1}{m/s^2})t^2\,\hat{\imath}$. Which statement is correct?
+\begin{enumerate}[label=\Alph*.]
+\item This motion has constant acceleration.
+\item The magnitude of the acceleration is \SI{2.1}{m/s^2}.
+\item The magnitude of the acceleration at $t=0\,\mathrm{s}$ is \SI{0}{m/s^2}.
+\item The magnitude of the acceleration at $t=0\,\mathrm{s}$ is \SI{4.2}{m/s^2}.
+\end{enumerate}
+
+\textcolor{red}{\textbf{Correct: (D.) \text{-} Reason:}} \textcolor{red}{\textbf{$v(t)=\dv{s}{t}=3(1.6)t^2+2(2.1)t$, so $a(t)=\dv{v}{t}=6(1.6)t+2(2.1)=9.6t+4.2$. Hence $a(0)=\SI{4.2}{m/s^2}$. Acceleration is not constant since it depends on $t$.}}\\
+\textcolor{blue}{\textbf{Incorrect: (A.) \text{-} Reason:}} \textcolor{blue}{\textbf{$a(t)$ is linear in $t$, not constant.}}\\
+\textcolor{blue}{\textbf{Incorrect: (B.) \text{-} Reason:}} \textcolor{blue}{\textbf{Confuses the coefficient of $t^2$ in $s(t)$ with acceleration.}}\\
+\textcolor{blue}{\textbf{Incorrect: (C.) \text{-} Reason:}} \textcolor{blue}{\textbf{$a(0)=2\times 2.1=\SI{4.2}{m/s^2}$, not zero.}}
+
+\hrule\vspace{0.6em}
+
+% Q3
+\textbf{Q3.} A robot moves for \SI{4.0}{s} from position $\vec r_A=-6\,\hat{\imath}+9\,\hat{\jmath}\,\mathrm{(m)}$ to $\vec r_B=5\,\hat{\imath}+1\,\hat{\jmath}\,\mathrm{(m)}$. Which statement is correct?
+\begin{enumerate}[label=\Alph*.]
+\item The moving distance is \SI{13.6}{m}.
+\item The speed at $t=0\,\mathrm{s}$ must be \SI{3.4}{m/s}.
+\item The acceleration at $t=0\,\mathrm{s}$ must be \SI{0.85}{m/s^2}.
+\item None of the above is correct.
+\end{enumerate}
+
+\textcolor{red}{\textbf{Correct: (D.) \text{-} Reason:}} \textcolor{red}{\textbf{Only displacement $\Delta \vec r=\vec r_B-\vec r_A=(11,-8)$ and total time are given. The path length, instantaneous speed at $t=0$, and instantaneous acceleration are \emph{not determined}. Note $\lVert\Delta \vec r\rVert=\sqrt{11^2+(-8)^2}=\sqrt{185}\approx \SI{13.6}{m}$ is the straight-line displacement, not necessarily the actual path length.}}\\
+\textcolor{blue}{\textbf{Incorrect: (A.) \text{-} Reason:}} \textcolor{blue}{\textbf{Equates path length to displacement magnitude (minimum possible path).}}\\
+\textcolor{blue}{\textbf{Incorrect: (B.) \text{-} Reason:}} \textcolor{blue}{\textbf{Equates instantaneous speed at $t=0$ to average speed $\lVert\Delta \vec r\rVert/\Delta t \approx \SI{3.4}{m/s}$.}}\\
+\textcolor{blue}{\textbf{Incorrect: (C.) \text{-} Reason:}} \textcolor{blue}{\textbf{Acceleration cannot be deduced from positions at only two instants.}}
+
+\end{document}
