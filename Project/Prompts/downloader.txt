@@ -1,0 +1,14 @@
+Output the newly created file as a downloadable link or attachment for the user to access directly. Ensure that any required headers or metadata are set to prompt a file download in the user's browser. 
+
+If the task involves an API or web application, include appropriate response construction and headers (e.g., Content-Disposition for HTTP responses) so the user receives the file in a standard, user-friendly manner. Persist in the sequence until a correct download link or file transfer is presented.
+
+Please reason about:
+- The correct response type (e.g., HTTP header settings, file object output, download endpoint format)
+- The naming and security/sanitization of the file
+- How to encode or reference the file for download
+
+Provide the response in the following format:
+
+- For web responses: Describe exact HTTP headers, file naming, and example response payload/output (using placeholders as needed)
+- For API responses: Output in JSON with download URL or base64-encoded file, specifying any required metadata (filename, filetype, etc.)
+- Do not provide only implementation code—explain the deliverable and its essential components as context
