@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Isomorphic Question Generator</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%236366f1'/%3E%3Cstop offset='100%25' style='stop-color:%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,5 95,30 95,70 50,95 5,70 5,30' fill='url(%23g)'/%3E%3Cpolygon points='50,20 75,35 75,65 50,80 25,65 25,35' fill='%23fff' opacity='0.3'/%3E%3Ccircle cx='50' cy='50' r='12' fill='%23fff'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <svg
+            class="logo-icon"
+            viewBox="0 0 100 100"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color: #6366f1" />
+                <stop offset="100%" style="stop-color: #8b5cf6" />
+              </linearGradient>
+            </defs>
+            <polygon
+              points="50,5 95,30 95,70 50,95 5,70 5,30"
+              fill="url(#logoGrad)"
+            />
+            <polygon
+              points="50,20 75,35 75,65 50,80 25,65 25,35"
+              fill="#fff"
+              opacity="0.3"
+            />
+            <circle cx="50" cy="50" r="12" fill="#fff" />
+          </svg>
+          <h1>Isomorphic Question Generator</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Start Here Card -->
+      <section class="card main-card">
+        <div class="card-header">
+          <div class="card-header-row">
+            <h2>Start Here!</h2>
+            <div class="header-buttons">
+              <button
+                class="btn btn-ghost help-btn"
+                id="agentsBtn"
+                title="Agents"
+              >
+                Agents
+              </button>
+              <button
+                class="btn btn-ghost help-btn"
+                id="helpBtn"
+                title="Summary"
+              >
+                Summary
+              </button>
+            </div>
+          </div>
+          <p class="subtitle">
+            Enter a prompt and provide some example questions. You can upload
+            files as well!
+          </p>
+        </div>
+        <div class="card-body">
+          <div class="prompt-row">
+            <textarea
+              id="promptInput"
+              class="prompt-input"
+              placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'"
+            ></textarea>
+            <div class="sliders-panel">
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="slider-label">Difficulty</span>
+                </div>
+                <div class="slider-container">
+                  <span class="slider-end-label">Standard</span>
+                  <input
+                    type="range"
+                    id="difficultySlider"
+                    class="custom-slider"
+                    min="0"
+                    max="3"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="slider-end-label">Difficult</span>
+                </div>
+              </div>
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="slider-label">Theme</span>
+                </div>
+                <div class="slider-container">
+                  <span class="slider-end-label">Similar</span>
+                  <input
+                    type="range"
+                    id="themeSlider"
+                    class="custom-slider"
+                    min="0"
+                    max="3"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="slider-end-label">New</span>
+                </div>
+              </div>
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="slider-label">Numeric Variation</span>
+                </div>
+                <div class="slider-container">
+                  <span class="slider-end-label">Slim</span>
+                  <input
+                    type="range"
+                    id="numericVariationSlider"
+                    class="custom-slider"
+                    min="0"
+                    max="3"
+                    value="0"
+                    step="1"
+                  />
+                  <span class="slider-end-label">Wide</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-actions">
+            <div class="left-actions">
+              <button
+                id="currentFilesBtn"
+                class="btn btn-secondary file-count-btn hidden"
+              >
+                <svg
+                  class="btn-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                <span>Current Files - <span id="fileCount">0</span></span>
+              </button>
+              <button id="uploadBtn" class="btn btn-secondary">
+                <svg
+                  class="btn-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span class="btn-label">Upload Files</span>
+              </button>
+              <input
+                type="file"
+                id="fileInput"
+                multiple
+                accept=".pdf,.docx,.doc,.txt"
+                hidden
+              />
+            </div>
+            <div class="right-actions">
+              <button id="clearInputsBtn" class="btn btn-ghost">
+                <svg
+                  class="btn-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
+                </svg>
+                <span class="btn-label">Clear Inputs</span>
+              </button>
+              <button id="clearAgentsBtn" class="btn btn-ghost">
+                <svg
+                  class="btn-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M4 5h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"
+                  />
+                  <path d="M8 21h8M10 16h4" />
+                </svg>
+                <span class="btn-label">Clear Agents</span>
+              </button>
+              <button id="sendBtn" class="btn btn-primary">
+                <svg
+                  class="btn-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                <span>Send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Agents Section -->
+      <section class="agents-section">
+        <h3 class="section-title">Agent Pipeline</h3>
+        <p class="section-subtitle">Click an agent to view more information</p>
+        <div class="agents-grid">
+          <!-- Normalizer Agent -->
+          <div class="card agent-card clickable" data-agent="normalizer">
+            <div class="agent-header">
+              <div class="agent-info">
+                <div class="agent-icon" aria-hidden="true">
+                  <svg
+                    class="agent-icon-computer"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="5" width="18" height="10" rx="2" />
+                    <path d="M8 21h8" />
+                    <path d="M10 16h4" />
+                  </svg>
+                  <svg
+                    class="agent-icon-brain"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M12 3c1.5 0 3.5 1 3.5 3S13.5 12 12 12s-3.5-3-3.5-6 2-3 3.5-3z"
+                    />
+                    <path
+                      d="M5.5 8a4.5 4.5 0 0 1 8.5 0c0 1.5-1.5 3-3.5 3S7 9.5 7 8.5"
+                    />
+                    <path
+                      d="M3 16a6 6 0 1 1 12 0c0 1.5-1 2.5-2.5 3.5H5.5C4.5 18 3 17 3 16z"
+                    />
+                  </svg>
+                </div>
+                <div class="agent-text">
+                  <div class="agent-name-row">
+                    <div
+                      class="status-indicator inactive"
+                      data-status="inactive"
+                    ></div>
+                    <h4>Normalizer</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="agent-description">
+              Parses user request into configuration
+            </p>
+            <div class="agent-status-text">Inactive</div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="agent-arrow">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </div>
+
+          <!-- Extracter Agent -->
+          <div class="card agent-card clickable" data-agent="extracter">
+            <div class="agent-header">
+              <div class="agent-info">
+                <div class="agent-icon" aria-hidden="true">
+                  <svg
+                    class="agent-icon-computer"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="5" width="18" height="10" rx="2" />
+                    <path d="M8 21h8" />
+                    <path d="M10 16h4" />
+                  </svg>
+                  <svg
+                    class="agent-icon-brain"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M12 3c1.5 0 3.5 1 3.5 3S13.5 12 12 12s-3.5-3-3.5-6 2-3 3.5-3z"
+                    />
+                    <path
+                      d="M5.5 8a4.5 4.5 0 0 1 8.5 0c0 1.5-1.5 3-3.5 3S7 9.5 7 8.5"
+                    />
+                    <path
+                      d="M3 16a6 6 0 1 1 12 0c0 1.5-1 2.5-2.5 3.5H5.5C4.5 18 3 17 3 16z"
+                    />
+                  </svg>
+                </div>
+                <div class="agent-text">
+                  <div class="agent-name-row">
+                    <div
+                      class="status-indicator inactive"
+                      data-status="inactive"
+                    ></div>
+                    <h4>Extracter</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="agent-description">Reads files and extracts questions</p>
+            <div class="agent-status-text">Inactive</div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="agent-arrow">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </div>
+
+          <!-- Verifier Agent -->
+          <div class="card agent-card clickable" data-agent="verifier">
+            <div class="agent-header">
+              <div class="agent-info">
+                <div class="agent-icon" aria-hidden="true">
+                  <svg
+                    class="agent-icon-computer"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="5" width="18" height="10" rx="2" />
+                    <path d="M8 21h8" />
+                    <path d="M10 16h4" />
+                  </svg>
+                  <svg
+                    class="agent-icon-brain"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M12 3c1.5 0 3.5 1 3.5 3S13.5 12 12 12s-3.5-3-3.5-6 2-3 3.5-3z"
+                    />
+                    <path
+                      d="M5.5 8a4.5 4.5 0 0 1 8.5 0c0 1.5-1.5 3-3.5 3S7 9.5 7 8.5"
+                    />
+                    <path
+                      d="M3 16a6 6 0 1 1 12 0c0 1.5-1 2.5-2.5 3.5H5.5C4.5 18 3 17 3 16z"
+                    />
+                  </svg>
+                </div>
+                <div class="agent-text">
+                  <div class="agent-name-row">
+                    <div
+                      class="status-indicator inactive"
+                      data-status="inactive"
+                    ></div>
+                    <h4>Verifier</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="agent-description">
+              Validates answers and adds explanations
+            </p>
+            <div class="agent-status-text">Inactive</div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="agent-arrow">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </div>
+
+          <!-- Generator Agent -->
+          <div class="card agent-card clickable" data-agent="generator">
+            <div class="agent-header">
+              <div class="agent-info">
+                <div class="agent-icon" aria-hidden="true">
+                  <svg
+                    class="agent-icon-computer"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="5" width="18" height="10" rx="2" />
+                    <path d="M8 21h8" />
+                    <path d="M10 16h4" />
+                  </svg>
+                  <svg
+                    class="agent-icon-brain"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M12 3c1.5 0 3.5 1 3.5 3S13.5 12 12 12s-3.5-3-3.5-6 2-3 3.5-3z"
+                    />
+                    <path
+                      d="M5.5 8a4.5 4.5 0 0 1 8.5 0c0 1.5-1.5 3-3.5 3S7 9.5 7 8.5"
+                    />
+                    <path
+                      d="M3 16a6 6 0 1 1 12 0c0 1.5-1 2.5-2.5 3.5H5.5C4.5 18 3 17 3 16z"
+                    />
+                  </svg>
+                </div>
+                <div class="agent-text">
+                  <div class="agent-name-row">
+                    <div
+                      class="status-indicator inactive"
+                      data-status="inactive"
+                    ></div>
+                    <h4>Generator</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="agent-description">Creates isomorphic questions</p>
+            <div class="agent-status-text">Inactive</div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="agent-arrow">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </div>
+
+          <!-- LaTeX Formatter Agent -->
+          <div class="card agent-card clickable" data-agent="latex">
+            <div class="agent-header">
+              <div class="agent-info">
+                <div class="agent-icon" aria-hidden="true">
+                  <svg
+                    class="agent-icon-computer"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="5" width="18" height="10" rx="2" />
+                    <path d="M8 21h8" />
+                    <path d="M10 16h4" />
+                  </svg>
+                  <svg
+                    class="agent-icon-brain"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M12 3c1.5 0 3.5 1 3.5 3S13.5 12 12 12s-3.5-3-3.5-6 2-3 3.5-3z"
+                    />
+                    <path
+                      d="M5.5 8a4.5 4.5 0 0 1 8.5 0c0 1.5-1.5 3-3.5 3S7 9.5 7 8.5"
+                    />
+                    <path
+                      d="M3 16a6 6 0 1 1 12 0c0 1.5-1 2.5-2.5 3.5H5.5C4.5 18 3 17 3 16z"
+                    />
+                  </svg>
+                </div>
+                <div class="agent-text">
+                  <div class="agent-name-row">
+                    <div
+                      class="status-indicator inactive"
+                      data-status="inactive"
+                    ></div>
+                    <h4>LaTeX Formatter</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="agent-description">Formats questions as .tex file</p>
+            <div class="agent-status-text">Inactive</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Completed Section -->
+      <section class="card completed-card hidden" id="completedSection">
+        <div class="card-header">
+          <div class="completed-header">
+            <svg
+              class="completed-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <h2>Completed!</h2>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="output-section">
+            <h4>Output Summary</h4>
+            <div id="outputText" class="output-text"></div>
+            <div class="output-folder-note" id="outputFolderNote">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                />
+              </svg>
+              <span
+                >Files saved to:
+                <code id="outputFolderPath">Outputs/</code></span
+              >
+            </div>
+          </div>
+          <div class="downloads-section">
+            <div class="downloads-header">
+              <h4>
+                Download Files -
+                <span id="downloadFileCount" class="download-count"
+                  >0 files</span
+                >
+              </h4>
+            </div>
+            <div id="downloadsList" class="downloads-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Failure Section -->
+      <section class="card failed-card hidden" id="failureSection">
+        <div class="card-header">
+          <div class="completed-header failed-header">
+            <svg
+              class="completed-icon failed-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="8" y1="8" x2="16" y2="16" />
+              <line x1="16" y1="8" x2="8" y2="16" />
+            </svg>
+            <h2>Failure!</h2>
+          </div>
+          <p class="section-subtitle">
+            The workflow stopped before the final agent finished. Review the
+            output below and try again.
+          </p>
+        </div>
+        <div class="card-body">
+          <div class="output-section">
+            <h4>Output Summary</h4>
+            <div id="failureOutputText" class="output-text"></div>
+            <div class="output-folder-note" id="failureFolderNote">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                />
+              </svg>
+              <span
+                >Files saved to:
+                <code id="failureFolderPath">Outputs/</code></span
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p class="footer-primary">
+          UCONN Physics Research - Dr. Xian Wu (2025 - 2026)
+        </p>
+        <p class="footer-primary">Created by Lindim Ismaili</p>
+      </div>
+    </footer>
+
+    <!-- Files Modal -->
+    <div id="filesModal" class="modal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Uploaded Files</h3>
+          <button class="btn-icon-only close-modal" data-modal="filesModal">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="filesList" class="files-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal" data-modal="filesModal">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent Info Modal -->
+    <div id="agentModal" class="modal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3 id="agentModalTitle">Agent Details</h3>
+          <button class="btn-icon-only close-modal" data-modal="agentModal">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body agent-modal-body">
+          <div class="agent-details-sidebar">
+            <div class="detail-item">
+              <label>Agent Name</label>
+              <span id="detailAgentName">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>Model</label>
+              <span id="detailModel">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>Reasoning Level</label>
+              <span id="detailReasoning">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>Status</label>
+              <span id="detailStatus">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>Start Time</label>
+              <span id="detailStartTime">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>End Time</label>
+              <span id="detailEndTime">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>Execution Time</label>
+              <span id="detailExecutionTime">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>Input From Agent</label>
+              <span id="detailInputFrom">Unavailable</span>
+            </div>
+            <div class="detail-item">
+              <label>Output To Agent</label>
+              <span id="detailOutputTo">Unavailable</span>
+            </div>
+          </div>
+          <div class="agent-details-main">
+            <div class="schema-panels">
+              <div class="detail-text-section">
+                <label>Input Schema</label>
+                <pre id="detailInputText" class="detail-text-box"></pre>
+              </div>
+              <div class="detail-text-section">
+                <label>Output Schema</label>
+                <pre id="detailOutputText" class="detail-text-box"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal" data-modal="agentModal">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Summary</h3>
+          <button class="btn-icon-only close-modal" data-modal="helpModal">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body help-modal-body">
+          <p class="help-intro">
+            This tool generates
+            <strong>isomorphic multiple-choice physics questions</strong> based
+            on your input questions.
+          </p>
+          <h4>Key Features</h4>
+          <ul class="help-list">
+            <li>
+              <strong>Customizable Generation</strong> — Adjust difficulty,
+              theme, and the number of questions generated per source
+            </li>
+            <li>
+              <strong>Answer Verification</strong> — All generated questions are
+              verified for correctness
+            </li>
+            <li>
+              <strong>Plausible Distractors</strong> — Wrong answers are based
+              on common student misconceptions
+            </li>
+            <li>
+              <strong>Education-Ready Output</strong> — Questions are formatted
+              for direct use in assessments
+            </li>
+            <li>
+              <strong>LaTeX Support</strong> — Mathematical expressions are
+              preserved with proper formatting
+            </li>
+          </ul>
+          <h4>How It Works</h4>
+          <ol class="help-list numbered">
+            <li>Upload your source questions (PDF or DOCX)</li>
+            <li>Provide any additional instructions or preferences</li>
+            <li>
+              Click <strong>Send</strong> to start the generation pipeline
+            </li>
+            <li>Download your new isomorphic questions when complete</li>
+          </ol>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary close-modal" data-modal="helpModal">
+            Got it!
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agents List Modal -->
+    <div id="agentsModal" class="modal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Agent Prompts</h3>
+          <button class="btn-icon-only close-modal" data-modal="agentsModal">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body agents-list-body">
+          <p class="agents-list-intro">
+            Click an agent to view its system prompt:
+          </p>
+          <div class="agents-list">
+            <button class="agent-list-item" data-prompt="normalizer">
+              <div class="agent-list-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="5" width="18" height="10" rx="2" />
+                  <path d="M8 21h8" />
+                  <path d="M10 16h4" />
+                </svg>
+              </div>
+              <span>Normalizer</span>
+            </button>
+            <button class="agent-list-item" data-prompt="extracter">
+              <div class="agent-list-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="5" width="18" height="10" rx="2" />
+                  <path d="M8 21h8" />
+                  <path d="M10 16h4" />
+                </svg>
+              </div>
+              <span>Extracter</span>
+            </button>
+            <button class="agent-list-item" data-prompt="verifier">
+              <div class="agent-list-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="5" width="18" height="10" rx="2" />
+                  <path d="M8 21h8" />
+                  <path d="M10 16h4" />
+                </svg>
+              </div>
+              <span>Verifier</span>
+            </button>
+            <button class="agent-list-item" data-prompt="generator">
+              <div class="agent-list-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="5" width="18" height="10" rx="2" />
+                  <path d="M8 21h8" />
+                  <path d="M10 16h4" />
+                </svg>
+              </div>
+              <span>Generator</span>
+            </button>
+            <button class="agent-list-item" data-prompt="latex">
+              <div class="agent-list-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="5" width="18" height="10" rx="2" />
+                  <path d="M8 21h8" />
+                  <path d="M10 16h4" />
+                </svg>
+              </div>
+              <span>LaTeX</span>
+            </button>
+            <button class="agent-list-item" data-prompt="python">
+              <div class="agent-list-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="5" width="18" height="10" rx="2" />
+                  <path d="M8 21h8" />
+                  <path d="M10 16h4" />
+                </svg>
+              </div>
+              <span>Python</span>
+            </button>
+            <button class="agent-list-item slider-item" data-prompt="sliders">
+              <div class="agent-list-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="4" y1="21" x2="4" y2="14" />
+                  <line x1="4" y1="10" x2="4" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12" y2="3" />
+                  <line x1="20" y1="21" x2="20" y2="16" />
+                  <line x1="20" y1="12" x2="20" y2="3" />
+                  <line x1="1" y1="14" x2="7" y2="14" />
+                  <line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="17" y1="16" x2="23" y2="16" />
+                </svg>
+              </div>
+              <span>Sliders</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary close-modal"
+            data-modal="agentsModal"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent Prompt Viewer Modal (Overlay) -->
+    <div id="promptViewerModal" class="modal modal-overlay">
+      <div class="modal-backdrop modal-backdrop-blur"></div>
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3 id="promptViewerTitle">Agent Prompt</h3>
+          <button
+            class="btn-icon-only close-modal"
+            data-modal="promptViewerModal"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body prompt-viewer-body">
+          <pre id="promptViewerContent" class="prompt-viewer-content">
+Loading...</pre
+          >
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" id="backToAgentsBtn">
+            ← Back to List
+          </button>
+          <button
+            class="btn btn-secondary close-modal"
+            data-modal="promptViewerModal"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

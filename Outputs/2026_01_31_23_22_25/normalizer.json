@@ -1,0 +1,10 @@
+{
+  "agent_name": "Normalizer",
+  "model": "gpt-5.2",
+  "reasoning_level": "none",
+  "execution_time_seconds": 2.0400784015655518,
+  "input_as_text": "[{\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Question Data Files/PDF/Quiz_Compilation.pdf\\nGenerate new questions from this.\"}]}, {\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Defaults unless specified otherwise:\\n              New questions per question is one-to-one. Difficulty remains the same.\\n              Theme remains the same. Title is 'Isomorphic Questions' unless one is extracted from the input source.\\n\\n             Question Data Files/PDF/Quiz_Compilation.pdf\\nGenerate new questions from this.\"}]}]",
+  "output_as_text": "{\"new_questions_per_question\":1.0,\"difficulty\":\"same as source\",\"theme\":\"same as source\",\"title\":\"Isomorphic Questions\",\"notes\":\"Source file: Question Data Files/PDF/Quiz_Compilation.pdf. Generate new (isomorphic) questions from this PDF. Title should be 'Isomorphic Questions' unless a title is extracted from the input source.\"}",
+  "agent_received_from": "user",
+  "agent_sent_to": "Extracter"
+}

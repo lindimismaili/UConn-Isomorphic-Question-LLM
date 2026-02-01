@@ -1,0 +1,17 @@
+# Isomorphic Question Generator - Requirements
+# Python 3.10+
+
+# FastAPI and server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# OpenAI and Agents
+openai>=1.12.0
+openai-agents>=0.0.1
+
+# Data validation
+pydantic>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0

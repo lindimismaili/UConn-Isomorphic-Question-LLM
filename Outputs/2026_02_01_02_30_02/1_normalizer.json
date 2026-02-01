@@ -1,0 +1,11 @@
+{
+  "agent_name": "Normalizer",
+  "execution_time_seconds": 1.3643276691436768,
+  "output": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": "Files provided: Quiz_Compilation.pdf; Create new questions."
+  }
+}

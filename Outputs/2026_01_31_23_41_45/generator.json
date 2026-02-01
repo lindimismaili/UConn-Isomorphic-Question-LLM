@@ -1,0 +1,10 @@
+{
+  "agent_name": "Generator",
+  "model": "gpt-5.2",
+  "reasoning_level": "medium",
+  "execution_time_seconds": 5.574457168579102,
+  "input_as_text": "[{\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Generate new questions according to configuration. \\n             {\\\"new_questions_per_question\\\":1.0,\\\"difficulty\\\":\\\"same\\\",\\\"theme\\\":\\\"same\\\",\\\"title\\\":\\\"Isomorphic Questions\\\",\\\"notes\\\":\\\"\\\"}\"}]}, {\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Question data:\\n\\n             {\\\"questions\\\":[]}\"}]}]",
+  "output_as_text": "{\"isomorphic_questions\":[]}",
+  "agent_received_from": "Verifier",
+  "agent_sent_to": "none"
+}

@@ -1,0 +1,10 @@
+{
+  "agent_name": "Normalizer",
+  "model": "gpt-4o",
+  "reasoning_level": null,
+  "execution_time_seconds": 1.4840059280395508,
+  "input_summary": "1 message(s)",
+  "output_as_text": "{\"new_questions_per_question\":1,\"difficulty\":\"\",\"theme\":\"\",\"title\":\"\",\"notes\":\"Create isomorphic questions from the provided files.\"}",
+  "agent_received_from": "user",
+  "agent_sent_to": "extracter"
+}

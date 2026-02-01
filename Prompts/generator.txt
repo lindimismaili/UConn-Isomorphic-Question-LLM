@@ -14,6 +14,11 @@ Generate new, fully original multiple-choice questions that are isomorphic to ea
   - If the input question is multiple_choice (question_type), keep the same number of options. If open_ended, create 4 options.
   - **Logical Errors:** Distractors must be based on common student misconceptions or calculation errors (e.g., forgetting to square a term, using sine instead of cosine, sign errors, incorrect unit conversions).
   - Distractors should be plausible "near-misses," not random numbers.
+- **Answer Position Randomization:**
+  - Shuffle the order of multiple choice options so they differ from the source question.
+  - The correct answer should NOT always be in the same position (e.g., not always A or always the first option).
+  - Vary which key (A, B, C, D) is correct across generated questions—aim for a random distribution.
+  - Ensure at least one option position differs from the corresponding source question's layout.
 - **Equation Formatting:**
   - Write all equations and mathematical terms using LaTeX notation (e.g., $E = mc^2$, $\frac{1}{2}mv^2$) or clear, consistent formatting.
   - Prioritize a format that is highly interpretable for future agents, particularly the LaTeX conversion agent.

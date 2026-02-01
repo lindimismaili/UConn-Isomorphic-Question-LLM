@@ -1,0 +1,77 @@
+{
+  "agent_name": "Generator",
+  "execution_time_seconds": 10.493072986602783,
+  "questions_count": 2,
+  "output": {
+    "isomorphic_questions": [
+      {
+        "id": 1,
+        "source_id": "1",
+        "stem": "A dolphin leaps out of the water with an initial speed $u_0$ at an angle $\\alpha$ to the horizontal. What is the dolphin's speed at the highest point of its trajectory?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$u_0$",
+            "is_correct": false,
+            "explanation": "At maximum height, only the horizontal component of velocity remains; $u_0$ is incorrect as it is the total initial speed."
+          },
+          {
+            "key": "B",
+            "text": "$u_0 \\cos \\alpha$",
+            "is_correct": true,
+            "explanation": "Correct because at the highest point, the vertical component of speed is zero, and only the horizontal component ($u_0 \\cos \\alpha$) remains."
+          },
+          {
+            "key": "C",
+            "text": "$u_0 \\sin \\alpha$",
+            "is_correct": false,
+            "explanation": "Incorrect because $u_0 \\sin \\alpha$ is the initial vertical component, which becomes zero at maximum height."
+          },
+          {
+            "key": "D",
+            "text": "0",
+            "is_correct": false,
+            "explanation": "Incorrect because the horizontal speed is non-zero at the apex."
+          }
+        ],
+        "difficulty": "",
+        "topic_tags": [],
+        "generation_notes": "Numerical values adjusted for a different context, maintaining conceptual integrity."
+      },
+      {
+        "id": 2,
+        "source_id": "2",
+        "stem": "A space probe travels with an initial velocity of $\\vec{u}_0 = (30.5 \\text{ m/s})\\hat{i}$ when thrusters provide an acceleration of $\\vec{b} = (1.5 \\text{ m/s}^2)\\hat{i}+(5.0 \\text{ m/s}^2)\\hat{j}$. Which statement about the probe's velocity is true?",
+        "options": [
+          {
+            "key": "A",
+            "text": "The x-component of the probe\u2019s velocity remains constant.",
+            "is_correct": false,
+            "explanation": "Incorrect because there is acceleration in the x-direction, so velocity changes."
+          },
+          {
+            "key": "B",
+            "text": "The y-component of the probe\u2019s velocity remains unchanged.",
+            "is_correct": false,
+            "explanation": "Incorrect since there is acceleration in the y-direction, altering the velocity."
+          },
+          {
+            "key": "C",
+            "text": "Both the speed and the motion direction change.",
+            "is_correct": true,
+            "explanation": "Correct because accelerations in both directions affect both speed and direction."
+          },
+          {
+            "key": "D",
+            "text": "None of these statements is correct.",
+            "is_correct": false,
+            "explanation": "Incorrect because option C accurately describes the situation."
+          }
+        ],
+        "difficulty": "",
+        "topic_tags": [],
+        "generation_notes": "Adjusted initial values and accelerations while preserving the problem's essence."
+      }
+    ]
+  }
+}

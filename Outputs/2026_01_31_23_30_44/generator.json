@@ -1,0 +1,10 @@
+{
+  "agent_name": "Generator",
+  "model": "gpt-5.2",
+  "reasoning_level": "medium",
+  "execution_time_seconds": 4.290546894073486,
+  "input_as_text": "[{\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Generate new questions according to configuration. \\n             {\\\"new_questions_per_question\\\":1.0,\\\"difficulty\\\":\\\"same as source\\\",\\\"theme\\\":\\\"same as source\\\",\\\"title\\\":\\\"Isomorphic Questions\\\",\\\"notes\\\":\\\"Source: Question Data Files/PDF/Quiz_Compilation.pdf. Instruction: Generate new (isomorphic) questions from this PDF; one new question per original; keep difficulty and theme the same. If a title is extracted from the input source, use it instead of 'Isomorphic Questions'.\\\"}\"}]}, {\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Question data:\\n\\n             {\\\"questions\\\":[]}\"}]}]",
+  "output_as_text": "{\"isomorphic_questions\":[]}",
+  "agent_received_from": "Verifier",
+  "agent_sent_to": "none"
+}

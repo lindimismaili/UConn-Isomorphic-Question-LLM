@@ -1,0 +1,11 @@
+{
+  "agent_name": "Normalizer",
+  "execution_time_seconds": 1.4590494632720947,
+  "output": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": "Files provided: Quiz4s.pdf"
+  }
+}
