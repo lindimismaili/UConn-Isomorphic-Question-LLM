@@ -100,3 +100,7 @@ After running, you'll find in `Outputs/<timestamp>/`:
 ## Deploy (AWS + Cloudflare)
 
 See `DEPLOYMENT_AWS.md`.
+
+## Deploy (Raspberry Pi + nginx)
+
+See `DEPLOYMENT_RPI_NGINX.md`.

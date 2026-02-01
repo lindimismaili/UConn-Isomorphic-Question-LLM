@@ -1,0 +1,16 @@
+[Unit]
+Description=UConn Isomorphic Question LLM (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/uconn
+Environment=PORT=3001
+Environment=HOST=127.0.0.1
+ExecStart=/var/www/uconn/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 3001
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+
