@@ -4,13 +4,27 @@ After=network.target
 
 [Service]
 Type=simple
+
+User=www-data
+Group=www-data
+
 WorkingDirectory=/var/www/uconn
-Environment=PORT=3002
+
 Environment=HOST=127.0.0.1
-ExecStart=/var/www/uconn/.venv/bin/uvicorn src.server:app --host 127.0.0.1 --port 3002
+Environment=PORT=3002
+
+ExecStart=/var/www/uconn/.venv/bin/uvicorn src.server:app --host ${HOST} --port ${PORT}
 Restart=on-failure
 RestartSec=3
 
+# Optional: log to journald with a stable identifier
+SyslogIdentifier=uconn
+
+# Basic hardening (generally safe for FastAPI apps)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
 [Install]
 WantedBy=multi-user.target
-
