@@ -46,23 +46,29 @@ def _detect_repo_root(start: Path) -> Path:
     """
     Detect the repo root for this project.
 
-    Historically, files lived under a `Project/` folder. Today, `server.py` often
-    lives at the repo root. This keeps both layouts working.
+    When server.py is in src/, the repo root is the parent directory.
+    We detect this by looking for index.html (frontend) and prompts/ folder.
     """
-    candidates = [start, start.parent]
-    for candidate in candidates:
-        if (candidate / "Prompts").is_dir() and (candidate / "Site").is_dir():
-            return candidate
-    return start
+    # If we're in src/, go up one level
+    if start.name == "src":
+        candidate = start.parent
+    else:
+        candidate = start
+    
+    # Verify we found the repo root by checking for key files/folders
+    if (candidate / "index.html").is_file() or (candidate / "prompts").is_dir():
+        return candidate
+    
+    return start.parent  # Fallback: assume we're in src/
 
 
 REPO_ROOT = _detect_repo_root(THIS_DIR)
 PROJECT_ROOT = REPO_ROOT
-SITE_DIR = REPO_ROOT / "Site"
+STATIC_DIR = REPO_ROOT  # Frontend files are in repo root (index.html, etc.)
 ENV_PATH = REPO_ROOT / ".env"
-PROMPTS_DIR = REPO_ROOT / "Prompts"
-OUTPUTS_DIR = REPO_ROOT / "Outputs"
-UPLOADS_DIR = REPO_ROOT / "Uploads"
+PROMPTS_DIR = REPO_ROOT / "prompts"
+OUTPUTS_DIR = REPO_ROOT / "outputs"
+UPLOADS_DIR = REPO_ROOT / "uploads"
 
 # Create directories if they don't exist
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -899,7 +905,7 @@ async def run_workflow_with_events(workflow_id: str, prompt: str, file_paths: li
 # =============================================================================
 
 # Mount static files last to catch API routes first
-app.mount("/", StaticFiles(directory=str(SITE_DIR), html=True), name="static")
+app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 
 # =============================================================================
