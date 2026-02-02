@@ -914,7 +914,7 @@ async function sendWorkflow() {
   state.isProcessing = true;
   elements.sendBtn.disabled = true;
   resetAllAgents();
-  queueAllAgents();  // Show white glow on all agents immediately
+  queueAllAgents(); // Show white glow on all agents immediately
   hideCompletedSection();
   hideFailureSection();
   clearInputs({ showFeedback: false });
