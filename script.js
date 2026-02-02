@@ -12,6 +12,7 @@ const state = {
   agents: {
     normalizer: {
       name: "Normalizer",
+      description: "Parses user request into configuration",
       model: "gpt-4o",
       reasoningLevel: "none",
       status: "inactive",
@@ -25,6 +26,7 @@ const state = {
     },
     extracter: {
       name: "Extracter",
+      description: "Reads files and extracts questions",
       model: "gpt-4o",
       reasoningLevel: "none",
       status: "inactive",
@@ -38,6 +40,7 @@ const state = {
     },
     verifier: {
       name: "Verifier",
+      description: "Validates answers and adds explanations",
       model: "gpt-4o",
       reasoningLevel: "none",
       status: "inactive",
@@ -51,6 +54,7 @@ const state = {
     },
     generator: {
       name: "Generator",
+      description: "Creates isomorphic questions",
       model: "gpt-4o",
       reasoningLevel: "none",
       status: "inactive",
@@ -64,6 +68,7 @@ const state = {
     },
     latex: {
       name: "LaTeX Formatter",
+      description: "Converts questions to LaTeX format",
       model: "gpt-4o",
       reasoningLevel: "none",
       status: "inactive",
@@ -71,7 +76,7 @@ const state = {
       endTime: null,
       executionTime: null,
       inputFrom: "Generator",
-      outputTo: "END USER",
+      outputTo: "User",
       inputText: "",
       outputText: "",
     },
@@ -82,12 +87,14 @@ const state = {
   outputFolder: "",
   workflowId: null,
   sessionId: null,
+  abortController: null, // For cancelling API requests
   sliders: {
     difficulty: 0,
     theme: 0,
     numericVariation: 0,
   },
   sliderConfig: null,
+  agentsConfig: null, // Loaded from agents.json
 };
 
 const MAX_UPLOAD_FILES = 5;
@@ -124,6 +131,67 @@ const elements = {
 // =============================================================================
 // Utility Functions
 // =============================================================================
+
+/**
+ * Load agents configuration from the server
+ */
+async function loadAgentsConfig() {
+  try {
+    state.agentsConfig = await fetchAgentsConfigData();
+    // Update agent state with config data
+    applyAgentsConfig();
+  } catch (error) {
+    console.warn("Failed to load agents config:", error);
+  }
+}
+
+/**
+ * Fetch agents config from API or local fallback
+ */
+async function fetchAgentsConfigData() {
+  // Try API first
+  try {
+    const response = await fetch("/api/agents");
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (error) {
+    console.log("API fetch failed, trying local fallback:", error.message);
+  }
+
+  // Fallback to local file
+  try {
+    const response = await fetch("prompts/agents.json");
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (error) {
+    console.log("Local fallback failed:", error.message);
+  }
+
+  throw new Error("Could not load agents config");
+}
+
+/**
+ * Apply loaded agents config to state
+ */
+function applyAgentsConfig() {
+  if (!state.agentsConfig) return;
+
+  for (const [key, config] of Object.entries(state.agentsConfig)) {
+    if (state.agents[key]) {
+      state.agents[key].name = config.name || state.agents[key].name;
+      state.agents[key].model = config.model || state.agents[key].model;
+      state.agents[key].reasoningLevel =
+        config.reasoning || state.agents[key].reasoningLevel;
+      state.agents[key].description = config.description || "";
+      state.agents[key].inputFrom =
+        config.inputFrom || state.agents[key].inputFrom;
+      state.agents[key].outputTo =
+        config.outputTo || state.agents[key].outputTo;
+    }
+  }
+}
 
 /**
  * Load slider configuration from the server
@@ -563,6 +631,9 @@ function openAgentModal(agentKey) {
   // Populate modal with agent data
   elements.agentModalTitle.textContent = `${agent.name} Details`;
   document.getElementById("detailAgentName").textContent = getValue(agent.name);
+  document.getElementById("detailDescription").textContent = getValue(
+    agent.description,
+  );
   document.getElementById("detailModel").textContent = getValue(agent.model);
   document.getElementById("detailReasoning").textContent = getValue(
     agent.reasoningLevel,
@@ -647,6 +718,7 @@ function updateAgentStatus(agentKey, status, data = {}) {
 function getStatusColor(status) {
   const colors = {
     inactive: "var(--color-text-muted)",
+    queued: "#ffffff",
     thinking: "var(--color-warning)",
     completed: "var(--color-success)",
     errored: "var(--color-error)",
@@ -671,14 +743,39 @@ function resetAllAgents() {
   });
 }
 
+/**
+ * Set all agents to queued status (white glow)
+ */
+function queueAllAgents() {
+  Object.keys(state.agents).forEach((key) => {
+    updateAgentStatus(key, "queued");
+  });
+}
+
 // =============================================================================
 // Workflow Management
 // =============================================================================
 
 /**
+ * Abort any ongoing API requests and reset workflow state
+ */
+function abortWorkflow() {
+  if (state.abortController) {
+    state.abortController.abort();
+    state.abortController = null;
+  }
+  state.isProcessing = false;
+  state.workflowId = null;
+  elements.sendBtn.disabled = false;
+}
+
+/**
  * Clear the prompt and uploaded files while leaving agents untouched.
  */
 function clearInputs({ showFeedback = true } = {}) {
+  // Abort any ongoing requests
+  abortWorkflow();
+
   if (showFeedback) {
     triggerClearButtonFeedback(elements.clearInputsBtn);
   }
@@ -691,9 +788,12 @@ function clearInputs({ showFeedback = true } = {}) {
 }
 
 /**
- * Reset every agent back to the inactive state.
+ * Reset every agent back to the inactive state and abort any ongoing workflow.
  */
 function clearAgents() {
+  // Abort any ongoing requests
+  abortWorkflow();
+
   triggerClearButtonFeedback(elements.clearAgentsBtn);
   resetAllAgents();
   hideCompletedSection();
@@ -814,6 +914,7 @@ async function sendWorkflow() {
   state.isProcessing = true;
   elements.sendBtn.disabled = true;
   resetAllAgents();
+  queueAllAgents();  // Show white glow on all agents immediately
   hideCompletedSection();
   hideFailureSection();
   clearInputs({ showFeedback: false });
@@ -838,6 +939,10 @@ async function sendWorkflow() {
  * Execute the real workflow via API
  */
 async function executeWorkflow(prompt, files = []) {
+  // Create an AbortController for this workflow
+  state.abortController = new AbortController();
+  const signal = state.abortController.signal;
+
   try {
     // Step 1: Upload files if any
     if (files.length > 0) {
@@ -854,8 +959,13 @@ async function executeWorkflow(prompt, files = []) {
         uploadResponse = await fetch("/api/upload", {
           method: "POST",
           body: formData,
+          signal,
         });
       } catch (networkError) {
+        if (networkError.name === "AbortError") {
+          console.log("Upload aborted by user");
+          return;
+        }
         console.error("Network error during upload:", networkError);
         throw new Error(
           `Upload network error: ${networkError.message}. Check if the server is running and accessible.`,
@@ -894,8 +1004,13 @@ async function executeWorkflow(prompt, files = []) {
       startResponse = await fetch("/api/workflow/start", {
         method: "POST",
         body: formData,
+        signal,
       });
     } catch (networkError) {
+      if (networkError.name === "AbortError") {
+        console.log("Workflow start aborted by user");
+        return;
+      }
       console.error("Network error starting workflow:", networkError);
       throw new Error(`Workflow start network error: ${networkError.message}`);
     }
@@ -939,9 +1054,26 @@ async function executeWorkflow(prompt, files = []) {
  */
 async function pollWorkflowStatus(workflowId) {
   const agents = ["normalizer", "extracter", "verifier", "generator", "latex"];
+  const signal = state.abortController?.signal;
 
   while (true) {
-    const response = await fetch(`/api/workflow/${workflowId}/status`);
+    // Check if aborted
+    if (signal?.aborted) {
+      console.log("Polling aborted by user");
+      return;
+    }
+
+    let response;
+    try {
+      response = await fetch(`/api/workflow/${workflowId}/status`, { signal });
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.log("Status poll aborted by user");
+        return;
+      }
+      throw error;
+    }
+
     if (!response.ok) {
       throw new Error("Failed to get workflow status");
     }
@@ -965,7 +1097,19 @@ async function pollWorkflowStatus(workflowId) {
     // Check if completed or errored
     if (status.status === "completed") {
       // Get final results
-      const resultResponse = await fetch(`/api/workflow/${workflowId}/result`);
+      let resultResponse;
+      try {
+        resultResponse = await fetch(`/api/workflow/${workflowId}/result`, {
+          signal,
+        });
+      } catch (error) {
+        if (error.name === "AbortError") {
+          console.log("Result fetch aborted by user");
+          return;
+        }
+        throw error;
+      }
+
       if (resultResponse.ok) {
         const result = await resultResponse.json();
         showCompletedSection({
@@ -979,16 +1123,32 @@ async function pollWorkflowStatus(workflowId) {
       throw new Error("Workflow failed");
     }
 
-    // Wait before next poll
-    await sleep(1000);
+    // Wait before next poll (with abort check)
+    try {
+      await sleep(1000, signal);
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.log("Sleep aborted by user");
+        return;
+      }
+      throw error;
+    }
   }
 }
 
 /**
- * Sleep utility
+ * Sleep utility with abort support
  */
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener("abort", () => {
+        clearTimeout(timeout);
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    }
+  });
 }
 
 // =============================================================================
@@ -1176,8 +1336,9 @@ async function getWorkflowResults(workflowId) {
 // =============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Load slider configuration
+  // Load configurations
   loadSliderConfig();
+  loadAgentsConfig();
 
   // File upload
   elements.uploadBtn.addEventListener("click", () =>

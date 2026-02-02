@@ -1,0 +1,97 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}
+
+\newcommand{\QBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Questions}}\\[0.25em]
+{\Large Projectile Motion and Spacecraft Dynamics}\\[0.25em]
+{\large Multiple choice questions generated below. Answers in RED and incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A Chinook salmon leaps from the water at a speed of $v_0$ with an angle of $55^\circ$. What is the fish's speed at its maximum height?}{
+  \Wrong{$v_0 \sin 55^\circ$}{This choice represents the initial vertical velocity component, which becomes zero at maximum height.}
+  \Wrong{0}{The vertical component becomes zero, but the horizontal component remains at maximum height.}
+  \Wrong{$v_0$}{The speed at maximum height involves only the horizontal component, which is $v_0 \cos \theta$.}
+  \Correct{$v_0 \cos 55^\circ$}{The horizontal velocity, $v_0 \cos \theta$, remains constant throughout the motion since there's no horizontal acceleration.}
+}
+
+\QBlock{Q2}{A spacecraft moves with an initial velocity $\vec{v}_0 = (22 \text{ m/s})\hat{i}$, and its boosters provide an acceleration $\vec{a} = (2.5\text{ m/s}^2)\hat{i} + (3.5\text{ m/s}^2)\hat{j}$. Which statement correctly describes the motion?}{
+  \Wrong{The y-component of the velocity does not change.}{Since there is acceleration in the $\hat{j}$ direction, the y-component does change.}
+  \Wrong{The x-component of the velocity does not change.}{There is an acceleration in the $\hat{i}$ direction, causing the x-component to change.}
+  \Wrong{The speed increases but the direction remains unchanged.}{Both speed and direction change because there are accelerations in both x and y directions.}
+  \Correct{Both the speed and direction change.}{Accelerations in both x and y cause changes in both speed and direction, altering the spacecraft's trajectory.}
+}
+
+\end{document}

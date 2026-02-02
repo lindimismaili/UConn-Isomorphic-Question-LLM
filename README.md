@@ -1,106 +1,65 @@
-# UConn Isomorphic Question LLM
+# Workflow Outline
 
-Generates fully original, isomorphic multiple-choice questions from a set of source questions using an agent workflow (normalize → extract → verify → generate → LaTeX format).
+## Goal
+This project turns raw physics question sources (PDFs, images, or text) into a clean, structured question schema and then produces high‑quality isomorphic multiple‑choice variants. The pipeline is built to preserve mathematical fidelity, standardize metadata, verify answers, and generate consistent MCQ outputs based on user‑specified configuration.
 
-## Features
+## Core Objects
+Two primary objects flow through the system:
 
-- **5-Agent Pipeline**: Normalizer → Extracter → Verifier → Generator → LaTeX Formatter
-- **PDF/DOCX Support**: Upload files directly, agents extract questions automatically
-- **LaTeX Output**: Generated questions are formatted as a downloadable `.tex` file
-- **Web Interface**: Modern glass-morphism UI for easy interaction
-- **Real-time Status**: Watch agents process your questions in real-time
+1) User Request (configuration)
+- newQuestionAmountPerInputQuestion
+- newDifficultyLevel
+- newTheme
+- newTitle
+- moreInstructions
 
-## Repo layout
+2) Question Schema (content)
+- filename
+- title
+- author
+- instructions
+- date
+- class
+- questions[]
+  - sourceID
+  - explicitAnswer
+  - questionType (open_ended | multiple_choice)
+  - topics[]
+  - difficulty
+  - stem
+  - options[]
+    - key
+    - text
+    - isCorrect
+    - explanation
 
-- Python backend (repo root)
-  - `server.py` — FastAPI server (main entry point)
-  - `main.py` — CLI workflow runner
-  - `run.py` — Server startup script
-  - `Prompts/` — Agent instruction prompts
-  - `Outputs/` — Generated output files
-- `Site/` — Frontend web interface
-  - `index.html` — Main HTML page
-  - `styles.css` — Styling
-  - `script.js` — JavaScript logic
-- `Question Data Files/` — Source PDFs/DOCX used as input material
-- `GPT Builder Versions/` — Prompt/schema iterations and reference artifacts
+## Workflow Steps
 
-## Prerequisites
+1) Normalize User Request
+- The Normalizer reads user input and produces the User Request object.
+- Defaults are applied when values are not provided.
 
-- Python 3.10+ recommended
-- An OpenAI API key set as `OPENAI_API_KEY` environment variable
+2) Extract Questions
+- The Extracter reads source content and outputs a Question Schema object.
+- Metadata is captured when available; missing fields are left empty.
+- Mathematical fidelity is preserved.
 
-## Install
+3) Verify Answers
+- The Verifier checks each multiple‑choice question.
+- If an explicit correct answer exists, it is preserved.
+- If no answer is marked, the Verifier infers the correct option and adds explanations.
+- Non‑MCQ items remain open‑ended and are not converted here.
 
-Create and activate a virtualenv, then install dependencies:
+4) Generate Isomorphic Questions
+- The Generation agent creates new MCQs for each input question using the User Request object.
+- Each new question is fully original but concept‑equivalent.
+- Difficulty and theme are overridden only when provided.
+- Explanations are included for every option.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
+## How It Works End‑to‑End
+- Input text (and any provided files) enter the workflow.
+- The User Request object is built first to guide downstream behavior.
+- The Question Schema object is extracted, then verified.
+- The Generator produces new, schema‑compliant MCQs aligned to the request.
 
-Or install manually:
-
-```bash
-pip install fastapi uvicorn python-multipart openai pydantic openai-agents
-```
-
-## Run the Web Server
-
-Start the FastAPI server:
-
-```bash
-python run.py
-```
-
-Then open http://localhost:8000 in your browser.
-
-Options:
-
-- `--port PORT` — Port to run on (default: 8000)
-- `--host HOST` — Host to bind to (default: 0.0.0.0)
-- `--reload` — Enable auto-reload for development
-
-## Run CLI (Developer Usage)
-
-You can also run the workflow directly from the command line:
-
-```bash
-python main.py path/to/questions.pdf
-```
-
-Options:
-
-- `-i, --instructions` — Additional instructions for generation
-- `-n, --num-questions` — Number of isomorphic questions per source (default: 1)
-
-Example:
-
-```bash
-python main.py "../Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
-```
-
-## How It Works
-
-1. **Normalizer**: Parses user request into configuration (difficulty, theme, etc.)
-2. **Extracter**: Reads PDF/DOCX files and extracts questions using code interpreter
-3. **Verifier**: Validates answers and adds explanations
-4. **Generator**: Creates new isomorphic questions that test the same concepts
-5. **LaTeX Formatter**: Formats all questions into a downloadable `.tex` file
-
-## Output Files
-
-After running, you'll find in `Outputs/<timestamp>/`:
-
-- `final_result.json` — Complete workflow results
-- `isomorphic_questions.tex` — LaTeX formatted questions
-- `1_normalizer.json` through `5_latex.json` — Individual agent outputs
-
-## Deploy (AWS + Cloudflare)
-
-See `DEPLOYMENT_AWS.md`.
-
-## Deploy (Raspberry Pi + nginx)
-
-See `DEPLOYMENT_RPI_NGINX.md`.
+This structure keeps configuration and content separate, making the system easier to extend, audit, and reuse across different sources or output formats.

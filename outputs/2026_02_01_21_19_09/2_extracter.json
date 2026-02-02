@@ -1,0 +1,24 @@
+{
+  "agent_name": "Extracter",
+  "execution_time_seconds": 15.722751140594482,
+  "questions_count": 1,
+  "output": {
+    "filename": "Quiz3.pdf",
+    "title": "Quiz#3",
+    "author": "",
+    "date": "",
+    "course": "",
+    "questions": [
+      {
+        "source_id": "1",
+        "source_raw": "Using the five-step problem-solving strategy, solve the following problem: \nAn object starts with an initial velocity of 3.8m/s and moves along a straight line with a \nconstant acceleration of \u22121.1m/s2. What is the displacement of the object when its \nvelocity is \u22125.2m/s?",
+        "stem": "An object starts with an initial velocity of 3.8m/s and moves along a straight line with a constant acceleration of $-1.1 \\, \\text{m/s}^2$. What is the displacement of the object when its velocity is $-5.2 \\, \\text{m/s}$?",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "open_ended",
+        "topic_tags": []
+      }
+    ]
+  }
+}

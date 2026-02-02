@@ -1,0 +1,91 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Question Block Macro =====
+\newcommand{\QBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Isomorphic Questions}}\\[0.25em]
+{\Large Motion and Forces}\[0.25em]
+{\large Multiple choice questions generated below. Answers in RED and incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A dolphin leaps out of the water with a speed of 12 m/s at an angle $\phi$. What is the speed of the dolphin when it is at its maximum height?}{
+  \Wrong{12 m/s.}{At maximum height, the vertical component of velocity is zero, while the horizontal component remains constant.}
+  \Correct{12 \cos \phi\, \text{m/s}.}{Correct. The horizontal component of the velocity, $v_{x} = v \cos \phi$, remains the same throughout the motion.}
+  \Wrong{12 \sin \phi\, \text{m/s}.}{This represents the initial vertical component, which becomes zero at maximum height.}
+  \Wrong{0 m/s.}{The horizontal component of velocity is not zero at the maximum height.}
+}
+
+\QBlock{Q2}{A rover is moving on a flat surface with an initial velocity of $\mathbf{v} = (15.5\, \text{m/s}) \hat{i}$ when its thrusters produce an acceleration of $\mathbf{a} = (3.0\, \text{m/s}^2) \hat{i} + (1.5\, \text{m/s}^2) \hat{j}$. Based on this scenario, which statement is true?}{
+  \Wrong{The x-component of the rover’s velocity stays the same.}{The x-velocity changes due to the i-direction acceleration.}
+  \Wrong{The y-component of the rover’s velocity stays the same.}{The y-velocity changes due to the j-direction acceleration.}
+  \Correct{Both the speed and direction change.}{Correct. Both the x and y components of velocity change, affecting the speed and direction.}
+  \Wrong{None of the statements above are correct.}{This is incorrect as option C accurately describes the situation.}
+}
+
+\end{document}

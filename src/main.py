@@ -37,7 +37,7 @@ THIS_DIR = Path(__file__).resolve().parent
 def _detect_repo_root(start: Path) -> Path:
     candidates = [start, start.parent]
     for candidate in candidates:
-        if (candidate / "Prompts").is_dir():
+        if (candidate / "prompts").is_dir():
             return candidate
     return start
 
@@ -45,7 +45,8 @@ def _detect_repo_root(start: Path) -> Path:
 REPO_ROOT = _detect_repo_root(THIS_DIR)
 PROJECT_ROOT = REPO_ROOT
 ENV_PATH = REPO_ROOT / ".env"
-PROMPTS_DIR = REPO_ROOT / "Prompts"
+PROMPTS_DIR = REPO_ROOT / "prompts"
+AGENTS_CONFIG_PATH = PROMPTS_DIR / "agents.json"
 QUESTION_DATA_DIR = REPO_ROOT / "Question Data Files"
 
 
@@ -71,8 +72,20 @@ _load_dotenv(ENV_PATH)
 client = OpenAI()
 
 
+def load_agents_config() -> dict:
+    """Load agent configuration from agents.json."""
+    if not AGENTS_CONFIG_PATH.exists():
+        logger.warning("Agents config not found: %s", AGENTS_CONFIG_PATH)
+        return {}
+    try:
+        return json.loads(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("Failed to load agents config: %s", exc)
+        return {}
+
+
 def load_prompt(name: str) -> str:
-    """Load a prompt from the Prompts directory."""
+    """Load a prompt from the prompts directory."""
     prompt_path = PROMPTS_DIR / f"{name}.txt"
     if not prompt_path.exists():
         logger.warning("Prompt file not found: %s", prompt_path)
@@ -246,18 +259,28 @@ class LaTeXOutput(BaseModel):
 # Agent Definitions
 # =============================================================================
 
+# Output type mapping for each agent
+AGENT_OUTPUT_TYPES = {
+    "normalizer": NormalizerOutput,
+    "extracter": ExtracterOutput,
+    "verifier": VerifierOutput,
+    "generator": GeneratorOutput,
+    "latex": LaTeXOutput,
+}
+
 
 def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
     """
-    Create all agents with their tools configured.
+    Create all agents with their tools configured from agents.json.
     
     Args:
         file_ids: List of uploaded file IDs for code interpreter access
     
     Returns:
-        Dictionary of agent name -> Agent instance
+        Dictionary of agent key -> Agent instance
     """
     file_ids = file_ids or []
+    agents_config = load_agents_config()
     
     # Code interpreter tool with file access
     code_interpreter = CodeInterpreterTool(
@@ -270,76 +293,39 @@ def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
         }
     )
     
-    # Normalizer: Parses user request into configuration
-    normalizer = Agent(
-        name="Normalizer",
-        instructions=load_prompt("normalizer"),
-        model="gpt-5.2",
-        output_type=NormalizerOutput,
-        model_settings=ModelSettings(
-            store=True,
-            reasoning=Reasoning(effort="none", summary="auto"),
-        ),
-    )
+    agents = {}
     
-    # Extracter: Reads files and extracts questions using code interpreter
-    extracter = Agent(
-        name="Extracter",
-        instructions=load_prompt("extracter"),
-        model="gpt-5.2",
-        tools=[code_interpreter],
-        output_type=ExtracterOutput,
-        model_settings=ModelSettings(
-            store=True,
-            reasoning=Reasoning(effort="low", summary="auto"),
-        ),
-    )
+    for agent_key, config in agents_config.items():
+        # Get output type for this agent
+        output_type = AGENT_OUTPUT_TYPES.get(agent_key)
+        if not output_type:
+            logger.warning("No output type defined for agent: %s", agent_key)
+            continue
+        
+        # Determine tools based on config
+        tools = [code_interpreter] if config.get("useCodeInterpreter", False) else []
+        
+        # Get reasoning level from config
+        reasoning_level = config.get("reasoning", "none")
+        
+        # Create the agent
+        agent = Agent(
+            name=config.get("name", agent_key.title()),
+            instructions=load_prompt(agent_key),
+            model=config.get("model", "gpt-4o"),
+            tools=tools if tools else None,
+            output_type=output_type,
+            model_settings=ModelSettings(
+                store=True,
+                reasoning=Reasoning(effort=reasoning_level, summary="auto"),
+            ),
+        )
+        
+        agents[agent_key] = agent
+        logger.info("Created agent: %s (model=%s, reasoning=%s)", 
+                   config.get("name"), config.get("model"), reasoning_level)
     
-    # Verifier: Validates answers and adds explanations
-    verifier = Agent(
-        name="Verifier",
-        instructions=load_prompt("verifier"),
-        model="gpt-5.2",
-        tools=[code_interpreter],
-        output_type=VerifierOutput,
-        model_settings=ModelSettings(
-            store=True,
-            reasoning=Reasoning(effort="low", summary="auto"),
-        ),
-    )
-    
-    # Generator: Creates isomorphic questions
-    generator = Agent(
-        name="Generator",
-        instructions=load_prompt("generator"),
-        model="gpt-5.2",
-        tools=[code_interpreter],
-        output_type=GeneratorOutput,
-        model_settings=ModelSettings(
-            store=True,
-            reasoning=Reasoning(effort="medium", summary="auto"),
-        ),
-    )
-    
-    # LaTeX Formatter: Converts questions to LaTeX
-    latex_formatter = Agent(
-        name="LaTeX Formatter",
-        instructions=load_prompt("latex"),
-        model="gpt-5.2",
-        output_type=LaTeXOutput,
-        model_settings=ModelSettings(
-            store=True,
-            reasoning=Reasoning(effort="medium", summary="auto"),
-        ),
-    )
-    
-    return {
-        "normalizer": normalizer,
-        "extracter": extracter,
-        "verifier": verifier,
-        "generator": generator,
-        "latex": latex_formatter,
-    }
+    return agents
 
 
 # =============================================================================

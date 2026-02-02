@@ -539,6 +539,12 @@ h4 {
   align-items: flex-start;
 }
 
+.file-limit-text {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-left: var(--spacing-xs);
+}
+
 /* =============================================================================
    Buttons
    ============================================================================= */
@@ -546,6 +552,7 @@ h4 {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-lg);
   font-size: 0.9rem;
@@ -555,6 +562,12 @@ h4 {
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  min-width: fit-content;
+}
+
+/* Prevent button text changes from resizing buttons */
+.btn-label {
+  min-width: max-content;
 }
 
 .btn:disabled {
@@ -827,22 +840,58 @@ h4 {
     filter var(--transition-fast);
 }
 
-.agent-icon-brain {
+/* Hide thinking, success, error icons by default */
+.agent-icon-thinking,
+.agent-icon-success,
+.agent-icon-error {
   opacity: 0;
   transform: scale(0.9);
 }
 
-.agent-card[data-status="thinking"] .agent-icon-computer {
+/* Default state - show computer icon */
+.agent-icon-default {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Thinking state - hide default, show lightbulb pulsing */
+.agent-card[data-status="thinking"] .agent-icon-default {
   opacity: 0;
   transform: scale(0.9);
 }
 
-.agent-card[data-status="thinking"] .agent-icon-brain {
+.agent-card[data-status="thinking"] .agent-icon-thinking {
   opacity: 1;
   transform: scale(1);
   color: var(--color-warning);
   filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.8));
-  animation: brainPulse 1.6s ease-in-out infinite;
+  animation: iconPulse 1.6s ease-in-out infinite;
+}
+
+/* Completed state - hide default, show patch-check in green */
+.agent-card[data-status="completed"] .agent-icon-default {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.agent-card[data-status="completed"] .agent-icon-success {
+  opacity: 1;
+  transform: scale(1);
+  color: var(--color-success);
+  filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.8));
+}
+
+/* Errored state - hide default, show patch-exclamation in red */
+.agent-card[data-status="errored"] .agent-icon-default {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.agent-card[data-status="errored"] .agent-icon-error {
+  opacity: 1;
+  transform: scale(1);
+  color: var(--color-error);
+  filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.8));
 }
 
 .agent-text {
@@ -891,6 +940,12 @@ h4 {
   box-shadow: 0 0 8px rgba(100, 116, 139, 0.5);
 }
 
+.status-indicator.queued {
+  background: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
+  animation: queuedPulse 1s infinite;
+}
+
 .status-indicator.thinking {
   background: var(--color-warning);
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
@@ -919,7 +974,7 @@ h4 {
   }
 }
 
-@keyframes brainPulse {
+@keyframes iconPulse {
   0%,
   100% {
     transform: scale(1);
@@ -931,7 +986,26 @@ h4 {
   }
 }
 
+@keyframes queuedPulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 24px rgba(255, 255, 255, 1);
+  }
+}
+
 /* Agent card status colors */
+.agent-card[data-status="queued"] {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    var(--shadow-md),
+    0 0 30px rgba(255, 255, 255, 0.3);
+}
+
 .agent-card[data-status="thinking"] {
   border-color: var(--color-warning);
   box-shadow:

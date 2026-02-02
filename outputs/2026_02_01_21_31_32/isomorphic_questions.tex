@@ -1,0 +1,117 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Question Block Macro =====
+\newcommand{\QBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Mechanics}}\\[0.25em]
+{\Large Motion and Trajectory}}\\[0.25em]
+{\large Multiple choice questions generated below. Answers in RED and incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A grasshopper jumps off the ground with a speed $u_0$ 
+ at an angle \(\theta\). What is the speed of the grasshopper when it reaches the highest point of its trajectory?}{
+  \Wrong{$u_0$.}{At maximum height, only the horizontal component 
+  of velocity remains, not the initial speed.}
+  \Correct{$u_0 \cos \theta$.}{At the maximum height, the upward 
+  velocity is zero, leaving only the horizontal component, which 
+  is $u_0 \cos \theta$.}
+  \Wrong{$u_0 \sin \theta$.}{The vertical component of the velocity 
+  becomes zero at the maximum height.}
+  \Wrong{0.}{The total speed is not zero due to the presence of the 
+  horizontal component.}
+}
+
+\QBlock{Q2}{A drone is moving horizontally with an initial velocity of 
+\(\vec{v_0} = (25.5 \text{ m/s})\hat{i}\). It experiences an 
+acceleration given by \(\vec{a} = (1.75 \text{ m/s}^2)\hat{i} + (3.28 \text{ m/s}^2)\hat{j}\) when its boosters 
+activate. Which of the following statements is true about the drone's motion?}{
+  \Wrong{The x-component of the drone's velocity remains constant.}{The x-component changes due to the 
+x-component of the acceleration.}
+  \Wrong{The y-component of the drone's velocity remains constant.}{The y-component changes due to the 
+y-component of the acceleration.}
+  \Correct{Both the direction of motion and speed change.}{The acceleration in both the x and y directions affects both 
+the speed and the direction of motion.}
+  \Wrong{None of the above is correct.}{The motion and speed change due to the given acceleration, 
+confirming option C.}
+}
+
+\QBlock{Q3}{A projectile is launched from a tower with an initial speed of 10.2 m/s 
+at an angle of 45$^\circ$ above the horizontal. Calculate the time it takes for the 
+projectile to reach its maximum height.}{
+  \Wrong{0.50 seconds.}{This option results from incorrectly calculating 
+the time by using the wrong vertical component.}
+  \Correct{0.72 seconds.}{The time to reach maximum height is calculated using 
+$t = \frac{u_0 \sin(\theta)}{g}$. Here, $u_0 = 10.2 \text{ m/s}$ and $\theta = 45^\circ$, so 
+$t = \frac{10.2 \times \sin(45^\circ)}{9.81} \approx 0.72 \text{ seconds}$.}
+  \Wrong{0.90 seconds.}{This value is based on doubling the time for a 
+different component of motion.}
+  \Wrong{1 second.}{Assumes incorrect independence of time and angle.}
+}
+
+\end{document}
