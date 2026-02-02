@@ -286,7 +286,7 @@ async function fetchSlidersConfigData() {
   } catch (apiError) {
     console.warn("Falling back to local sliders config:", apiError);
     try {
-      return await fetchLocalJson("../Prompts/sliders.json");
+      return await fetchLocalJson("prompts/sliders.json");
     } catch (localError) {
       throw new Error(
         `API error: ${apiError.message}; Local fallback: ${localError.message}`,
@@ -296,10 +296,10 @@ async function fetchSlidersConfigData() {
 }
 
 /**
- * Fetch a local prompt file from the Prompts directory.
+ * Fetch a local prompt file from the prompts directory.
  */
 async function fetchLocalPrompt(promptName) {
-  const response = await fetchLocalResource(`../Prompts/${promptName}.txt`);
+  const response = await fetchLocalResource(`prompts/${promptName}.txt`);
   return await response.text();
 }
 
