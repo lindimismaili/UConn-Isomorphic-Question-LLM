@@ -1,0 +1,77 @@
+{
+  "agent_name": "Generator",
+  "execution_time_seconds": 21.604939222335815,
+  "questions_count": 2,
+  "output": {
+    "isomorphic_questions": [
+      {
+        "id": 1,
+        "source_id": "1",
+        "stem": "A dolphin leaps out of the water with a speed of 12 m/s at an angle \ud835\udf11. What is the speed of the dolphin when it is at its maximum height?",
+        "options": [
+          {
+            "key": "A",
+            "text": "12 m/s.",
+            "is_correct": false,
+            "explanation": "At maximum height, the vertical component of velocity is zero, while the horizontal component remains constant."
+          },
+          {
+            "key": "B",
+            "text": "12 \\cos \\phi\\, \\text{m/s}.",
+            "is_correct": true,
+            "explanation": "Correct. The horizontal component of the velocity, $v_{x} = v \\cos \\phi$, remains the same throughout the motion."
+          },
+          {
+            "key": "C",
+            "text": "12 \\sin \\phi\\, \\text{m/s}.",
+            "is_correct": false,
+            "explanation": "This represents the initial vertical component, which becomes zero at maximum height."
+          },
+          {
+            "key": "D",
+            "text": "0 m/s.",
+            "is_correct": false,
+            "explanation": "The horizontal component of velocity is not zero at the maximum height."
+          }
+        ],
+        "difficulty": "",
+        "topic_tags": [],
+        "generation_notes": "Generated with varying numeric values while preserving the concept of horizontal and vertical motion separation."
+      },
+      {
+        "id": 2,
+        "source_id": "2",
+        "stem": "A rover is moving on a flat surface with an initial velocity of \\( \\mathbf{v} = (15.5\\, \\text{m/s}) \\hat{i} \\) when its thrusters produce an acceleration of \\( \\mathbf{a} = (3.0\\, \\text{m/s}^2) \\hat{i} + (1.5\\, \\text{m/s}^2) \\hat{j} \\). Based on this scenario, which statement is true?",
+        "options": [
+          {
+            "key": "A",
+            "text": "The x-component of the rover\u2019s velocity stays the same.",
+            "is_correct": false,
+            "explanation": "The x-velocity changes due to the i-direction acceleration."
+          },
+          {
+            "key": "B",
+            "text": "The y-component of the rover\u2019s velocity stays the same.",
+            "is_correct": false,
+            "explanation": "The y-velocity changes due to the j-direction acceleration."
+          },
+          {
+            "key": "C",
+            "text": "Both the speed and direction change.",
+            "is_correct": true,
+            "explanation": "Correct. Both the x and y components of velocity change, affecting the speed and direction."
+          },
+          {
+            "key": "D",
+            "text": "None of the statements above are correct.",
+            "is_correct": false,
+            "explanation": "This is incorrect as option C accurately describes the situation."
+          }
+        ],
+        "difficulty": "",
+        "topic_tags": [],
+        "generation_notes": "Adjusted numeric values but kept the concept of analyzing vector components and resulting motion accurate."
+      }
+    ]
+  }
+}

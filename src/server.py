@@ -374,6 +374,19 @@ async def get_sliders():
         raise HTTPException(status_code=500, detail=f"Failed to load sliders: {str(e)}")
 
 
+@app.get("/api/agents")
+async def get_agents():
+    """Get the agents configuration for the frontend."""
+    agents_path = PROMPTS_DIR / "agents.json"
+    if not agents_path.exists():
+        raise HTTPException(status_code=404, detail="Agents configuration not found")
+    
+    try:
+        return json.loads(agents_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load agents: {str(e)}")
+
+
 @app.get("/api/prompts/{prompt_name}")
 async def get_prompt(prompt_name: str):
     """Get an agent prompt file content."""

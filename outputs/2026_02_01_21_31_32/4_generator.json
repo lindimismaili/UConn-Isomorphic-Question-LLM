@@ -1,0 +1,120 @@
+{
+  "agent_name": "Generator",
+  "execution_time_seconds": 25.862956285476685,
+  "questions_count": 3,
+  "output": {
+    "isomorphic_questions": [
+      {
+        "id": 1,
+        "source_id": "1",
+        "stem": "A grasshopper jumps off the ground with a speed $u_0$ at an angle \ud835\udf19. What is the speed of the grasshopper when it reaches the highest point of its trajectory?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$u_0$.",
+            "is_correct": false,
+            "explanation": "At maximum height, only the horizontal component of velocity remains, not the initial speed."
+          },
+          {
+            "key": "B",
+            "text": "$u_0 \\cos \ud835\udf19$.",
+            "is_correct": true,
+            "explanation": "At the maximum height, the upward velocity is zero, leaving only the horizontal component, which is $u_0 \\cos \ud835\udf19$."
+          },
+          {
+            "key": "C",
+            "text": "$u_0 \\sin \ud835\udf19$.",
+            "is_correct": false,
+            "explanation": "The vertical component of the velocity becomes zero at the maximum height."
+          },
+          {
+            "key": "D",
+            "text": "0.",
+            "is_correct": false,
+            "explanation": "The total speed is not zero due to the presence of the horizontal component."
+          }
+        ],
+        "difficulty": "decently harder than the original",
+        "topic_tags": [
+          "projectile_motion",
+          "physics"
+        ],
+        "generation_notes": "Speed and angle were varied, maintaining the core concept of projectile motion."
+      },
+      {
+        "id": 2,
+        "source_id": "2",
+        "stem": "A drone is moving horizontally with an initial velocity of \ud835\udc49\u20d7\u2080 = (25.5 \ud835\udc5a/\ud835\udc60)\ud835\udc56\u0302. It experiences an acceleration given by \ud835\udc4e\u20d7 = (1.75 \ud835\udc5a/\ud835\udc60\u00b2)\ud835\udc56\u0302 + (3.28 \ud835\udc5a/\ud835\udc60\u00b2)\ud835\udc57\u0302 when its boosters activate. Which of the following statements is true about the drone's motion?",
+        "options": [
+          {
+            "key": "A",
+            "text": "The x-component of the drone's velocity remains constant.",
+            "is_correct": false,
+            "explanation": "The x-component changes due to the x-component of the acceleration."
+          },
+          {
+            "key": "B",
+            "text": "The y-component of the drone's velocity remains constant.",
+            "is_correct": false,
+            "explanation": "The y-component changes due to the y-component of the acceleration."
+          },
+          {
+            "key": "C",
+            "text": "Both the direction of motion and speed change.",
+            "is_correct": true,
+            "explanation": "The acceleration in both the x and y directions affects both the speed and the direction of motion."
+          },
+          {
+            "key": "D",
+            "text": "None of the above is correct.",
+            "is_correct": false,
+            "explanation": "The motion and speed change due to the given acceleration, confirming option C."
+          }
+        ],
+        "difficulty": "decently harder than the original",
+        "topic_tags": [
+          "motion_dynamics",
+          "physics"
+        ],
+        "generation_notes": "Velocity and acceleration values updated; the core dynamics concept is retained."
+      },
+      {
+        "id": 3,
+        "source_id": "3",
+        "stem": "A projectile is launched from a tower with an initial speed of 10.2 m/s at an angle of 45\u00b0 above the horizontal. Calculate the time it takes for the projectile to reach its maximum height.",
+        "options": [
+          {
+            "key": "A",
+            "text": "0.50 seconds.",
+            "is_correct": false,
+            "explanation": "This option results from incorrectly calculating the time by using the wrong vertical component."
+          },
+          {
+            "key": "B",
+            "text": "0.72 seconds.",
+            "is_correct": true,
+            "explanation": "The time to reach maximum height is calculated using $t = \\frac{u_0 \\sin(\ud835\udf03)}{g}$. Here, $u_0 = 10.2 \\text{ m/s}$ and $\\theta = 45\u00b0$, so $t = \\frac{10.2 \\times \\sin(45\u00b0)}{9.81} \\approx 0.72 \\text{ seconds}$."
+          },
+          {
+            "key": "C",
+            "text": "0.90 seconds.",
+            "is_correct": false,
+            "explanation": "This value is based on doubling the time for a different component of motion."
+          },
+          {
+            "key": "D",
+            "text": "1 second.",
+            "is_correct": false,
+            "explanation": "Assumes incorrect independence of time and angle."
+          }
+        ],
+        "difficulty": "decently harder than the original",
+        "topic_tags": [
+          "projectile_motion_time",
+          "physics"
+        ],
+        "generation_notes": "Increased initial speed and varied angle create a new problem context, retaining the principle."
+      }
+    ]
+  }
+}

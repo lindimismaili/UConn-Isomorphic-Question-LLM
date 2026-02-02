@@ -22,9 +22,12 @@ Generate new, fully original multiple-choice questions that are isomorphic to ea
 - **Equation Formatting:**
   - Write all equations and mathematical terms using LaTeX notation (e.g., $E = mc^2$, $\frac{1}{2}mv^2$) or clear, consistent formatting.
   - Prioritize a format that is highly interpretable for future agents, particularly the LaTeX conversion agent.
-- **Explanations:**
-  - The correct answer MUST include at least a two-sentence explanation fully describing the correct reasoning, the physics principles involved, and the equations used.
-  - Each distractor must include a one-sentence explanation describing the misconception or error.
+- **Explanations (CRITICAL):**
+  - The correct answer MUST include a detailed explanation of AT LEAST two full sentences that:
+    1. Clearly describes the physics principle(s) and reasoning used to arrive at the answer
+    2. Shows the key equation(s) in LaTeX format (e.g., $F = ma$, $E = \frac{1}{2}mv^2$) and explains how they are applied
+    3. Walks through the solution process step-by-step where appropriate
+  - Each distractor MUST include at least one sentence explaining the specific misconception, common error, or incorrect reasoning that would lead a student to choose this answer (e.g., "This answer results from forgetting to square the velocity in the kinetic energy formula" or "This option assumes the forces are perpendicular rather than parallel").
 - Use key values like A, B, C, D in order.
 
 Mapping Instructions:

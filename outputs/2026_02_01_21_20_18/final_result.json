@@ -1,0 +1,76 @@
+{
+  "config": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": "Ensure the difficulty is similar to the original. Maintain the theme and context. Keep numeric values close to the original."
+  },
+  "source_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "Using the five-step problem-solving strategy, solve the following problem: \nAn object starts with an initial velocity of 3.8m/s and moves along a straight line with a \nconstant acceleration of −1.1m/s2. What is the displacement of the object when its \nvelocity is −5.2m/s?",
+      "stem": "An object starts with an initial velocity of $3.8\\,\\text{m/s}$ and moves along a straight line with a constant acceleration of $-1.1\\,\\text{m/s}^2$. What is the displacement of the object when its velocity is $-5.2\\,\\text{m/s}$?",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "topic_tags": [
+        "kinematics"
+      ]
+    }
+  ],
+  "verified_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "Using the five-step problem-solving strategy, solve the following problem: \nAn object starts with an initial velocity of 3.8m/s and moves along a straight line with a \nconstant acceleration of −1.1m/s2. What is the displacement of the object when its \nvelocity is −5.2m/s?",
+      "stem": "An object starts with an initial velocity of $3.8\\,\\text{m/s}$ and moves along a straight line with a constant acceleration of $-1.1\\,\\text{m/s}^2$. What is the displacement of the object when its velocity is $-5.2\\,\\text{m/s}$?",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "topic_tags": [
+        "kinematics"
+      ]
+    }
+  ],
+  "generated_questions": [
+    {
+      "id": 1,
+      "source_id": "1",
+      "stem": "An object starts with an initial velocity of $4.5\\,\\text{m/s}$ and moves along a straight line with a constant acceleration of $-0.9\\,\\text{m/s}^2$. What is the displacement of the object when its velocity is $-3.0\\,\\text{m/s}$?",
+      "options": [
+        {
+          "key": "A",
+          "text": "-40.5 m",
+          "is_correct": true,
+          "explanation": "To find the displacement, use the kinematic equation $v^2 = u^2 + 2as$, where $v$ is the final velocity, $u$ is the initial velocity, $a$ is the acceleration, and $s$ is the displacement. \\n Here, $v = -3.0\\,\\text{m/s}$, $u = 4.5\\,\\text{m/s}$, and $a = -0.9\\,\\text{m/s}^2$.\\n Solving for $s$, we have $(-3.0)^2 = (4.5)^2 + 2*(-0.9)*s$.\\n This simplifies to $9 = 20.25 - 1.8s$, leading to $1.8s = 11.25$, thus $s = -40.5\\,\\text{m}$.\\n The negative sign indicates displacement in the opposite direction of the initial velocity."
+        },
+        {
+          "key": "B",
+          "text": "-30.5 m",
+          "is_correct": false,
+          "explanation": "This choice results from wrongly adding the squares of the velocities, as in $(v+u)^2=0.5a^2s$."
+        },
+        {
+          "key": "C",
+          "text": "-20.0 m",
+          "is_correct": false,
+          "explanation": "This choice uses half the acceleration value, a common error thinking initial acceleration is different from constant acceleration."
+        },
+        {
+          "key": "D",
+          "text": "-10.5 m",
+          "is_correct": false,
+          "explanation": "This choice arises from incorrectly applying the equation $v = u + at$ instead of using the kinematic equation involving displacement."
+        }
+      ],
+      "difficulty": "",
+      "topic_tags": [
+        "kinematics"
+      ],
+      "generation_notes": "Numbers adjusted for similar difficulty, applying the kinematic equation in a different context."
+    }
+  ],
+  "latex_file": "isomorphic_questions.tex"
+}

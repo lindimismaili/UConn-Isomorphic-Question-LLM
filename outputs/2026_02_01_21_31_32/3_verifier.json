@@ -1,0 +1,89 @@
+{
+  "agent_name": "Verifier",
+  "execution_time_seconds": 27.384217977523804,
+  "questions_count": 3,
+  "output": {
+    "questions": [
+      {
+        "source_id": "1",
+        "source_raw": "1. A Chinook salmon can jump out of water with a speed v0 and an angle \ud835\udf03. What is the \nspeed of the fish when it is at the maximum height? \nA. \ud835\udc630. \nB. \ud835\udc97\ud835\udfce\ud835\udc1c\ud835\udc28\ud835\udc2c\ud835\udf3d. \nC. \ud835\udc630sin\ud835\udf03. \nD. 0. ",
+        "stem": "A Chinook salmon can jump out of water with a speed v0 and an angle \ud835\udf03. What is the \nspeed of the fish when it is at the maximum height?",
+        "options": [
+          {
+            "key": "A",
+            "text": "\ud835\udc630.",
+            "is_correct": false,
+            "explanation": "At maximum height, only the horizontal component of velocity remains, not the initial speed."
+          },
+          {
+            "key": "B",
+            "text": "\ud835\udc97\ud835\udfce\ud835\udc1c\ud835\udc28\ud835\udc2c\ud835\udf3d.",
+            "is_correct": true,
+            "explanation": "The horizontal component of the velocity remains constant throughout the projectile motion."
+          },
+          {
+            "key": "C",
+            "text": "\ud835\udc630sin\ud835\udf03.",
+            "is_correct": false,
+            "explanation": "The vertical component of the velocity is zero at maximum height."
+          },
+          {
+            "key": "D",
+            "text": "0.",
+            "is_correct": false,
+            "explanation": "The speed is not zero because the horizontal component is still present."
+          }
+        ],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multiple_choice",
+        "topic_tags": []
+      },
+      {
+        "source_id": "2",
+        "source_raw": "2. A spaceship is traveling with an initial velocity of \ud835\udc63\u20d70=(20.1 \ud835\udc5a/\ud835\udc60)\ud835\udc56\u0302 when its rockets \nfire, imparting an acceleration of \ud835\udc4e\u20d7=(2.02\ud835\udc5a\ud835\udc602\u2044)\ud835\udc56\u0302+(4.03\ud835\udc5a\ud835\udc602\u2044)\ud835\udc57\u0302. Based on this \nscenario, which of the following statements is correct? \nA. The x-component of the spaceship\u2019s velocity remains constant . \nB. The y-component of the spaceship\u2019s velocity remains constant . \nC. Both the direction of motion and speed change . \nD. None of the above is correct. ",
+        "stem": "A spaceship is traveling with an initial velocity of \ud835\udc63\u20d70=(20.1 \ud835\udc5a/\ud835\udc60)\ud835\udc56\u0302 when its rockets \nfire, imparting an acceleration of \ud835\udc4e\u20d7=(2.02\ud835\udc5a\ud835\udc602\u2044)\ud835\udc56\u0302+(4.03\ud835\udc5a\ud835\udc602\u2044)\ud835\udc57\u0302. Based on this \nscenario, which of the following statements is correct?",
+        "options": [
+          {
+            "key": "A",
+            "text": "The x-component of the spaceship\u2019s velocity remains constant.",
+            "is_correct": false,
+            "explanation": "The x-component changes due to the x-component of the acceleration."
+          },
+          {
+            "key": "B",
+            "text": "The y-component of the spaceship\u2019s velocity remains constant.",
+            "is_correct": false,
+            "explanation": "The y-component changes due to the y-component of the acceleration."
+          },
+          {
+            "key": "C",
+            "text": "Both the direction of motion and speed change.",
+            "is_correct": true,
+            "explanation": "Acceleration in both x and y directions change the speed and direction of motion."
+          },
+          {
+            "key": "D",
+            "text": "None of the above is correct.",
+            "is_correct": false,
+            "explanation": "There is a change in both speed and direction, making option C correct."
+          }
+        ],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multiple_choice",
+        "topic_tags": []
+      },
+      {
+        "source_id": "3",
+        "source_raw": "3. A stone is launched into the air from the top of a building with an initial speed of 6.7 \nm/s at an angle of 60\u00b0 above the horizontal. How much time does it take for the \nstone to reach it",
+        "stem": "A stone is launched into the air from the top of a building with an initial speed of 6.7 \nm/s at an angle of 60\u00b0 above the horizontal. How much time does it take for the \nstone to reach its maximum height?",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "open_ended",
+        "topic_tags": []
+      }
+    ]
+  }
+}

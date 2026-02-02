@@ -1,0 +1,43 @@
+{
+  "agent_name": "Generator",
+  "execution_time_seconds": 20.583091497421265,
+  "questions_count": 1,
+  "output": {
+    "isomorphic_questions": [
+      {
+        "id": 1,
+        "source_id": "1",
+        "stem": "An object starts with an initial velocity of 6.2 m/s and moves along a straight line with a constant acceleration of $-2.3 \\, \\text{m/s}^2$. What is the displacement of the object when its velocity is $-7.5 \\, \\text{m/s}$?",
+        "options": [
+          {
+            "key": "A",
+            "text": "-20.1 m",
+            "is_correct": false,
+            "explanation": "This answer results from using incorrect signs for the initial and final velocities."
+          },
+          {
+            "key": "B",
+            "text": "-25.4 m",
+            "is_correct": false,
+            "explanation": "This answer occurs from ignoring the negative sign in acceleration."
+          },
+          {
+            "key": "C",
+            "text": "-27.0 m",
+            "is_correct": true,
+            "explanation": "To find the displacement, use the equation $v^2 = u^2 + 2as$, where $v = -7.5 \\, \\text{m/s}$, $u = 6.2 \\, \\text{m/s}$, and $a = -2.3 \\, \\text{m/s}^2$. Solving for $s$, $s = \\frac{v^2 - u^2}{2a}$ yields $s = \\frac{(-7.5)^2 - (6.2)^2}{2 \\times (-2.3)} = -27.0 \\, \\text{m}$. This result is the correct displacement."
+          },
+          {
+            "key": "D",
+            "text": "-30.7 m",
+            "is_correct": false,
+            "explanation": "This option assumes acceleration was positive, affecting the calculation of displacement."
+          }
+        ],
+        "difficulty": "",
+        "topic_tags": [],
+        "generation_notes": "Generated with new velocities and acceleration, ensuring a realistic and solvable scenario."
+      }
+    ]
+  }
+}
