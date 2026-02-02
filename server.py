@@ -108,6 +108,25 @@ app.add_middleware(
 
 
 # =============================================================================
+# Health Check Endpoint
+# =============================================================================
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for debugging connectivity issues."""
+    return {
+        "status": "healthy",
+        "uploads_dir": str(UPLOADS_DIR),
+        "uploads_dir_exists": UPLOADS_DIR.exists(),
+        "uploads_dir_writable": os.access(UPLOADS_DIR, os.W_OK),
+        "outputs_dir": str(OUTPUTS_DIR),
+        "outputs_dir_exists": OUTPUTS_DIR.exists(),
+        "outputs_dir_writable": os.access(OUTPUTS_DIR, os.W_OK),
+    }
+
+
+# =============================================================================
 # Helper Functions
 # =============================================================================
 
@@ -290,24 +309,44 @@ def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
 @app.post("/api/upload")
 async def upload_files(files: list[UploadFile] = File(...)):
     """Upload files for processing."""
+    logger.info("Upload request received with %d file(s)", len(files))
     uploaded_files = []
     
-    # Create a session directory for uploads
-    session_id = str(uuid.uuid4())[:8]
-    session_dir = UPLOADS_DIR / session_id
-    session_dir.mkdir(parents=True, exist_ok=True)
-    
-    for file in files:
-        if file.filename:
-            file_path = session_dir / file.filename
-            with open(file_path, "wb") as f:
-                content = await file.read()
-                f.write(content)
-            uploaded_files.append({
-                "name": file.filename,
-                "path": str(file_path),
-                "size": len(content),
-            })
+    try:
+        # Create a session directory for uploads
+        session_id = str(uuid.uuid4())[:8]
+        session_dir = UPLOADS_DIR / session_id
+        session_dir.mkdir(parents=True, exist_ok=True)
+        logger.info("Created session directory: %s", session_dir)
+        
+        for file in files:
+            if file.filename:
+                # Sanitize filename to prevent path traversal
+                safe_filename = Path(file.filename).name
+                file_path = session_dir / safe_filename
+                logger.info("Saving file: %s", safe_filename)
+                
+                try:
+                    content = await file.read()
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+                    uploaded_files.append({
+                        "name": safe_filename,
+                        "path": str(file_path),
+                        "size": len(content),
+                    })
+                    logger.info("Saved file %s (%d bytes)", safe_filename, len(content))
+                except Exception as file_error:
+                    logger.error("Failed to save file %s: %s", safe_filename, file_error)
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to save file {safe_filename}: {str(file_error)}"
+                    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Upload error: %s", e)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
     
     return {
         "success": True,

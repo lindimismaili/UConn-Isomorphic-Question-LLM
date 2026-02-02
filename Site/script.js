@@ -844,16 +844,37 @@ async function executeWorkflow(prompt, files = []) {
       const formData = new FormData();
       files.forEach((f) => formData.append("files", f.file));
 
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      console.log("Uploading files:", files.map(f => f.name));
+      
+      let uploadResponse;
+      try {
+        uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+      } catch (networkError) {
+        console.error("Network error during upload:", networkError);
+        throw new Error(`Upload network error: ${networkError.message}. Check if the server is running and accessible.`);
+      }
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload files");
+        let errorDetail = `Status: ${uploadResponse.status}`;
+        try {
+          const errorJson = await uploadResponse.json();
+          errorDetail = errorJson.detail || errorJson.message || JSON.stringify(errorJson);
+        } catch {
+          try {
+            errorDetail = await uploadResponse.text();
+          } catch {
+            // Keep status code as error detail
+          }
+        }
+        console.error("Upload failed:", errorDetail);
+        throw new Error(`Failed to upload files: ${errorDetail}`);
       }
 
       const uploadResult = await uploadResponse.json();
+      console.log("Upload successful:", uploadResult);
       state.sessionId = uploadResult.sessionId;
     }
 
@@ -862,13 +883,31 @@ async function executeWorkflow(prompt, files = []) {
     formData.append("prompt", prompt);
     formData.append("sessionId", state.sessionId || "");
 
-    const startResponse = await fetch("/api/workflow/start", {
-      method: "POST",
-      body: formData,
-    });
+    let startResponse;
+    try {
+      startResponse = await fetch("/api/workflow/start", {
+        method: "POST",
+        body: formData,
+      });
+    } catch (networkError) {
+      console.error("Network error starting workflow:", networkError);
+      throw new Error(`Workflow start network error: ${networkError.message}`);
+    }
 
     if (!startResponse.ok) {
-      throw new Error("Failed to start workflow");
+      let errorDetail = `Status: ${startResponse.status}`;
+      try {
+        const errorJson = await startResponse.json();
+        errorDetail = errorJson.detail || errorJson.message || JSON.stringify(errorJson);
+      } catch {
+        try {
+          errorDetail = await startResponse.text();
+        } catch {
+          // Keep status code
+        }
+      }
+      console.error("Workflow start failed:", errorDetail);
+      throw new Error(`Failed to start workflow: ${errorDetail}`);
     }
 
     const startResult = await startResponse.json();
