@@ -844,8 +844,11 @@ async function executeWorkflow(prompt, files = []) {
       const formData = new FormData();
       files.forEach((f) => formData.append("files", f.file));
 
-      console.log("Uploading files:", files.map(f => f.name));
-      
+      console.log(
+        "Uploading files:",
+        files.map((f) => f.name),
+      );
+
       let uploadResponse;
       try {
         uploadResponse = await fetch("/api/upload", {
@@ -854,14 +857,17 @@ async function executeWorkflow(prompt, files = []) {
         });
       } catch (networkError) {
         console.error("Network error during upload:", networkError);
-        throw new Error(`Upload network error: ${networkError.message}. Check if the server is running and accessible.`);
+        throw new Error(
+          `Upload network error: ${networkError.message}. Check if the server is running and accessible.`,
+        );
       }
 
       if (!uploadResponse.ok) {
         let errorDetail = `Status: ${uploadResponse.status}`;
         try {
           const errorJson = await uploadResponse.json();
-          errorDetail = errorJson.detail || errorJson.message || JSON.stringify(errorJson);
+          errorDetail =
+            errorJson.detail || errorJson.message || JSON.stringify(errorJson);
         } catch {
           try {
             errorDetail = await uploadResponse.text();
@@ -898,7 +904,8 @@ async function executeWorkflow(prompt, files = []) {
       let errorDetail = `Status: ${startResponse.status}`;
       try {
         const errorJson = await startResponse.json();
-        errorDetail = errorJson.detail || errorJson.message || JSON.stringify(errorJson);
+        errorDetail =
+          errorJson.detail || errorJson.message || JSON.stringify(errorJson);
       } catch {
         try {
           errorDetail = await startResponse.text();
