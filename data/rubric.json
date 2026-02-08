@@ -1,0 +1,47 @@
+[
+  {
+    "name": "preserve_physical_content",
+    "category": "Preservation",
+    "question": "Does the generated question preserve the original physical content?"
+  },
+  {
+    "name": "scenario_variation",
+    "category": "Variation",
+    "question": "Does the generated question use the scenario different from the original one?"
+  },
+  {
+    "name": "numerical_variation",
+    "category": "Variation",
+    "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+  },
+  {
+    "name": "physics_correctness",
+    "category": "Quality control",
+    "question": "Is the generated question free of physics errors or misconceptions?"
+  },
+  {
+    "name": "numeric_reasonableness",
+    "category": "Quality control",
+    "question": "Do all numerical values have physically reasonable magnitudes and units?"
+  },
+  {
+    "name": "distractor_structure_preservation",
+    "category": "Preservation",
+    "question": "Does the generated question preserve the logical structure of the distractors?"
+  },
+  {
+    "name": "clerical_quality",
+    "category": "Quality control",
+    "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+  },
+  {
+    "name": "latex_syntax_quality",
+    "category": "Quality control",
+    "question": "Is the generated LaTeX code free of syntax or compilation errors?"
+  },
+  {
+    "name": "solvable_and_specified",
+    "category": "Quality control",
+    "question": "Is the generated question fully specified and solvable as written?"
+  }
+]

@@ -263,7 +263,14 @@ h4 {
   width: 48px;
   height: 48px;
   filter: drop-shadow(0 0 12px var(--color-primary-glow));
-  animation: logoPulse 3s ease-in-out infinite;
+  animation: none;
+}
+
+.logo-icon-ai {
+  display: inline-block;
+  background: linear-gradient(135deg, #072157 0%, #123a80 55%, #2f67c7 100%);
+  -webkit-mask: url("assets/ai_icon_fill.svg") center / contain no-repeat;
+  mask: url("assets/ai_icon_fill.svg") center / contain no-repeat;
 }
 
 .logo h1 {
@@ -465,6 +472,13 @@ h4 {
   gap: var(--spacing-sm);
 }
 
+.slider-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
 .slider-end-label {
   font-size: 0.7rem;
   font-weight: 700;
@@ -492,6 +506,8 @@ h4 {
   outline: none;
   cursor: pointer;
   transition: background var(--transition-fast);
+  position: relative;
+  z-index: 2;
 }
 
 .custom-slider::-webkit-slider-thumb {
@@ -535,6 +551,26 @@ h4 {
   height: 6px;
   background: var(--color-border);
   border-radius: 3px;
+}
+
+.slider-ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.slider-tick {
+  width: 2px;
+  height: 12px;
+  border-radius: 2px;
+  background: rgba(11, 42, 102, 0.35);
 }
 
 @media (max-width: 768px) {
@@ -644,6 +680,11 @@ h4 {
   background: var(--color-surface);
   color: var(--color-primary);
   border: 1px solid var(--color-border);
+}
+
+.btn-fixed-width {
+  width: 132px;
+  justify-content: center;
 }
 
 .btn-secondary:hover {
@@ -762,9 +803,9 @@ h4 {
 }
 
 .btn-icon-only:hover {
-  background: var(--color-surface-hover);
+  background: rgba(8, 35, 82, 0.14);
   color: var(--color-text);
-  border-color: var(--color-border-hover);
+  border-color: rgba(8, 35, 82, 0.35);
 }
 
 .file-count-btn {

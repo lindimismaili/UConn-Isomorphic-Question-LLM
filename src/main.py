@@ -46,8 +46,9 @@ def _detect_repo_root(start: Path) -> Path:
 REPO_ROOT = _detect_repo_root(THIS_DIR)
 PROJECT_ROOT = REPO_ROOT
 ENV_PATH = REPO_ROOT / ".env"
-PROMPTS_DIR = REPO_ROOT / "prompts"
-AGENTS_CONFIG_PATH = PROMPTS_DIR / "agents.json"
+DATA_DIR = REPO_ROOT / "data"
+PROMPTS_DIR = DATA_DIR / "prompts"
+AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 QUESTION_DATA_DIR = REPO_ROOT / "Question Data Files"
 
 
