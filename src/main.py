@@ -26,6 +26,7 @@ from agents.logger import logger
 from openai import OpenAI
 from openai.types.shared.reasoning import Reasoning
 from pydantic import BaseModel
+from evaluation import run_openai_output_evaluation
 
 # =============================================================================
 # Configuration
@@ -70,6 +71,14 @@ _load_dotenv(ENV_PATH)
 
 # Initialize OpenAI client for file uploads
 client = OpenAI()
+
+THEME_ALLOWED_VALUES = {
+    "life_science",
+    "engineering",
+    "everyday_activity",
+    "physics_abstract",
+    "",
+}
 
 
 def load_agents_config() -> dict:
@@ -160,9 +169,13 @@ async def run_agent(
         reasoning_level = agent.model_settings.reasoning.effort
     
     # Build log payload
-    # Format input/output labels
     input_label = "USER INPUT" if received_from == "user" else f"Input From Agent {received_from.capitalize()}"
     output_label = "END USER" if sent_to is None else f"Output To Agent {sent_to.capitalize()}"
+    output_obj = (
+        result.final_output.model_dump()
+        if hasattr(result.final_output, "model_dump")
+        else result.final_output
+    )
     
     log_payload = {
         "agent_name": agent.name,
@@ -170,9 +183,13 @@ async def run_agent(
         "reasoning_level": reasoning_level,
         "execution_time_seconds": elapsed,
         "input_summary": f"{len(inputs)} message(s)",
+        "input_messages": inputs,
         "output_as_text": result.final_output.model_dump_json() if hasattr(result.final_output, "model_dump_json") else str(result.final_output),
+        "output_object": output_obj,
         "agent_received_from": input_label,
+        "received_from_node": received_from,
         "agent_sent_to": output_label,
+        "sent_to_node": sent_to or "user",
     }
     
     # Save log to file
@@ -206,6 +223,7 @@ class SourceQuestionItem(BaseModel):
     has_explicit_answer: bool
     difficulty: str
     question_type: str
+    theme: str = ""
     topic_tags: list[str]
 
 
@@ -216,6 +234,7 @@ class NewQuestionItem(BaseModel):
     stem: str
     options: list[OptionItem]
     difficulty: str
+    theme: str = ""
     topic_tags: list[str]
     generation_notes: str
 
@@ -346,6 +365,63 @@ class WorkflowResult(BaseModel):
     verified_questions: list[SourceQuestionItem]
     generated_questions: list[NewQuestionItem]
     latex_file: str = ""
+    evaluation: Optional[dict[str, Any]] = None
+
+
+def _normalize_theme_value(theme: str) -> str:
+    normalized = (theme or "").strip().lower()
+    return normalized if normalized in THEME_ALLOWED_VALUES else "physics_abstract"
+
+
+def _reconcile_verified_questions(
+    extracted_questions: list[SourceQuestionItem],
+    verified_questions: list[SourceQuestionItem],
+) -> list[SourceQuestionItem]:
+    """
+    Ensure no multiple-choice source question is dropped by verifier output.
+    Open-ended questions are allowed to be excluded from later generation.
+    """
+    extracted_mc = []
+    for q in extracted_questions:
+        if q.options:
+            q.question_type = "multiple_choice"
+        if q.question_type == "multiple_choice":
+            q.theme = _normalize_theme_value(q.theme)
+            extracted_mc.append(q)
+    verified_by_id = {q.source_id: q for q in verified_questions}
+    reconciled: list[SourceQuestionItem] = []
+    for q in extracted_mc:
+        verified_q = verified_by_id.get(q.source_id)
+        if verified_q is None:
+            fallback = q.model_copy(deep=True)
+            for opt in fallback.options:
+                if not opt.explanation:
+                    opt.explanation = "Not verified; preserved to prevent question loss."
+            fallback.has_explicit_answer = bool(any(opt.is_correct for opt in fallback.options))
+            fallback.theme = _normalize_theme_value(fallback.theme)
+            reconciled.append(fallback)
+            continue
+        if verified_q.options:
+            verified_q.question_type = "multiple_choice"
+        verified_q.theme = _normalize_theme_value(verified_q.theme)
+        reconciled.append(verified_q)
+    return reconciled
+
+
+def _missing_generation_source_ids(
+    source_questions: list[SourceQuestionItem],
+    generated_questions: list[NewQuestionItem],
+    per_source: int,
+) -> list[str]:
+    generated_count_by_source: dict[str, int] = {}
+    for q in generated_questions:
+        generated_count_by_source[q.source_id] = generated_count_by_source.get(q.source_id, 0) + 1
+    missing: list[str] = []
+    for src in source_questions:
+        current = generated_count_by_source.get(src.source_id, 0)
+        if current < per_source:
+            missing.append(src.source_id)
+    return missing
 
 
 # =============================================================================
@@ -373,7 +449,7 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
     with trace("Isomorphic Question Generation Workflow"):
         # Setup output directory
         timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        outputs_dir = PROJECT_ROOT / "Outputs" / timestamp
+        outputs_dir = PROJECT_ROOT / "outputs" / timestamp
         outputs_dir.mkdir(parents=True, exist_ok=True)
         
         run_config = RunConfig(
@@ -478,7 +554,9 @@ Remember:
 - Preserve all mathematical notation (use LaTeX format)
 - Extract metadata (title, author, date, course) from headers
 - Identify question types (multiple_choice vs open_ended)
+- Multiple-choice questions must not be skipped
 - For multiple choice, extract all options with their keys (A, B, C, D)
+- Assign a theme to each question: life_science | engineering | everyday_activity | physics_abstract
 - Set has_explicit_answer=true only if the correct answer is clearly marked
 """,
                     },
@@ -496,6 +574,43 @@ Remember:
             2,
         )
         extracter_output: ExtracterOutput = extracter_result.final_output
+        if file_ids and not extracter_output.questions:
+            retry_extract_input = [
+                {
+                    "role": "user",
+                    "content": [
+                        *file_refs,
+                        {
+                            "type": "input_text",
+                            "text": f"""The previous extraction returned zero questions.
+
+Re-read every attached file and extract all questions and metadata.
+Multiple-choice questions must not be skipped.
+Return structured output that includes each question's theme.
+
+Files attached: {', '.join(file_names)}
+""",
+                        },
+                    ],
+                }
+            ]
+            retry_extract_result = await run_agent(
+                agents["extracter"],
+                retry_extract_input,
+                run_config,
+                outputs_dir,
+                "extracter",
+                "verifier",
+                21,
+            )
+            extracter_output = retry_extract_result.final_output
+
+        for q in extracter_output.questions:
+            if q.options:
+                q.question_type = "multiple_choice"
+            q.theme = _normalize_theme_value(q.theme)
+        if file_ids and not extracter_output.questions:
+            raise ValueError("Extractor returned zero questions after retry.")
         print(f"   Extracted {len(extracter_output.questions)} questions")
         
         # =================================================================
@@ -520,7 +635,7 @@ For each question:
 1. If has_explicit_answer=true, keep the marked answer
 2. If no answer is marked, solve the problem and mark the correct option
 3. Add explanations for each option
-4. Remove any questions that are not multiple choice
+4. Do not remove any question. Preserve all multiple-choice questions.
 5. Use code interpreter to verify calculations if needed
 """,
                     }
@@ -538,7 +653,11 @@ For each question:
             3,
         )
         verifier_output: VerifierOutput = verifier_result.final_output
-        print(f"   Verified {len(verifier_output.questions)} questions")
+        verifier_output.questions = _reconcile_verified_questions(
+            extracter_output.questions,
+            verifier_output.questions,
+        )
+        print(f"   Verified {len(verifier_output.questions)} multiple-choice questions")
         
         # =================================================================
         # Step 4: Generate Isomorphic Questions
@@ -567,6 +686,8 @@ Requirements:
 - Vary numerical values significantly but keep them physically reasonable
 - Create plausible distractors based on common misconceptions
 - Include detailed explanations for the correct answer
+- Include misconception-based explanations for each distractor
+- Set theme on every generated question using the allowed categories
 - Use LaTeX for all mathematical expressions
 - Use code interpreter to verify your calculations
 """,
@@ -585,6 +706,62 @@ Requirements:
             4,
         )
         generator_output: GeneratorOutput = generator_result.final_output
+        for q in generator_output.isomorphic_questions:
+            q.theme = _normalize_theme_value(q.theme)
+
+        missing_source_ids = _missing_generation_source_ids(
+            verifier_output.questions,
+            generator_output.isomorphic_questions,
+            normalizer_output.new_questions_per_question,
+        )
+        if missing_source_ids:
+            retry_questions = [
+                q for q in verifier_output.questions if q.source_id in missing_source_ids
+            ]
+            retry_input = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": f"""You omitted required source questions in the prior pass.
+
+Generate only for these missing source IDs: {', '.join(missing_source_ids)}.
+Return exactly {normalizer_output.new_questions_per_question} generated question(s) per source_id.
+
+Configuration:
+{normalizer_output.model_dump_json(indent=2)}
+
+Source Questions:
+{json.dumps({'questions': [q.model_dump() for q in retry_questions]}, indent=2)}
+""",
+                        }
+                    ],
+                }
+            ]
+            retry_result = await run_agent(
+                agents["generator"],
+                retry_input,
+                run_config,
+                outputs_dir,
+                "generator",
+                "generator",
+                41,
+            )
+            retry_output: GeneratorOutput = retry_result.final_output
+            for q in retry_output.isomorphic_questions:
+                q.theme = _normalize_theme_value(q.theme)
+            generator_output.isomorphic_questions.extend(retry_output.isomorphic_questions)
+            missing_source_ids = _missing_generation_source_ids(
+                verifier_output.questions,
+                generator_output.isomorphic_questions,
+                normalizer_output.new_questions_per_question,
+            )
+            if missing_source_ids:
+                raise ValueError(
+                    f"Generator failed to produce required outputs for source_id(s): {', '.join(missing_source_ids)}"
+                )
+
         print(f"   Generated {len(generator_output.isomorphic_questions)} new questions")
         
         # =================================================================
@@ -648,12 +825,24 @@ Set filename to "isomorphic_questions.tex"
         # =================================================================
         # Save final results
         # =================================================================
+        evaluation_report = run_openai_output_evaluation(
+            client=client,
+            final_result={
+                "source_questions": [q.model_dump() for q in extracter_output.questions],
+                "verified_questions": [q.model_dump() for q in verifier_output.questions],
+                "generated_questions": [q.model_dump() for q in generator_output.isomorphic_questions],
+            },
+            outputs_dir=outputs_dir,
+            latex_path=latex_path,
+        )
+
         final_result = WorkflowResult(
             config=normalizer_output,
             source_questions=extracter_output.questions,
             verified_questions=verifier_output.questions,
             generated_questions=generator_output.isomorphic_questions,
             latex_file=latex_filename,
+            evaluation=evaluation_report,
         )
         
         result_path = outputs_dir / "final_result.json"

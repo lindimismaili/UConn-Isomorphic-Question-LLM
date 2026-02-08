@@ -16,7 +16,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,6 +34,7 @@ from agents import (
 )
 from agents.logger import logger
 from openai import OpenAI
+from evaluation import run_openai_output_evaluation
 
 # =============================================================================
 # Configuration
@@ -95,6 +96,14 @@ _load_dotenv(ENV_PATH)
 
 # Initialize OpenAI client
 client = OpenAI()
+
+THEME_ALLOWED_VALUES = {
+    "life_science",
+    "engineering",
+    "everyday_activity",
+    "physics_abstract",
+    "",
+}
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -178,6 +187,7 @@ class SourceQuestionItem(BaseModel):
     has_explicit_answer: bool
     difficulty: str
     question_type: str
+    theme: str = ""
     topic_tags: list[str]
 
 
@@ -187,6 +197,7 @@ class NewQuestionItem(BaseModel):
     stem: str
     options: list[OptionItem]
     difficulty: str
+    theme: str = ""
     topic_tags: list[str]
     generation_notes: str
 
@@ -227,6 +238,59 @@ class WorkflowResult(BaseModel):
     verified_questions: list[SourceQuestionItem]
     generated_questions: list[NewQuestionItem]
     latex_file: str = ""
+    evaluation: Optional[dict[str, Any]] = None
+
+
+def _normalize_theme_value(theme: str) -> str:
+    normalized = (theme or "").strip().lower()
+    return normalized if normalized in THEME_ALLOWED_VALUES else "physics_abstract"
+
+
+def _reconcile_verified_questions(
+    extracted_questions: list[SourceQuestionItem],
+    verified_questions: list[SourceQuestionItem],
+) -> list[SourceQuestionItem]:
+    extracted_mc = []
+    for q in extracted_questions:
+        if q.options:
+            q.question_type = "multiple_choice"
+        if q.question_type == "multiple_choice":
+            q.theme = _normalize_theme_value(q.theme)
+            extracted_mc.append(q)
+    verified_by_id = {q.source_id: q for q in verified_questions}
+    reconciled: list[SourceQuestionItem] = []
+    for q in extracted_mc:
+        verified_q = verified_by_id.get(q.source_id)
+        if verified_q is None:
+            fallback = q.model_copy(deep=True)
+            for opt in fallback.options:
+                if not opt.explanation:
+                    opt.explanation = "Not verified; preserved to prevent question loss."
+            fallback.has_explicit_answer = bool(any(opt.is_correct for opt in fallback.options))
+            fallback.theme = _normalize_theme_value(fallback.theme)
+            reconciled.append(fallback)
+            continue
+        if verified_q.options:
+            verified_q.question_type = "multiple_choice"
+        verified_q.theme = _normalize_theme_value(verified_q.theme)
+        reconciled.append(verified_q)
+    return reconciled
+
+
+def _missing_generation_source_ids(
+    source_questions: list[SourceQuestionItem],
+    generated_questions: list[NewQuestionItem],
+    per_source: int,
+) -> list[str]:
+    generated_count_by_source: dict[str, int] = {}
+    for q in generated_questions:
+        generated_count_by_source[q.source_id] = generated_count_by_source.get(q.source_id, 0) + 1
+    missing: list[str] = []
+    for src in source_questions:
+        current = generated_count_by_source.get(src.source_id, 0)
+        if current < per_source:
+            missing.append(src.source_id)
+    return missing
 
 
 # =============================================================================
@@ -632,6 +696,9 @@ Defaults (use if not specified):
             workflow["agents"]["normalizer"]["status"] = "completed"
             workflow["agents"]["normalizer"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["normalizer"]["data"]["executionTime"] = elapsed
+            workflow["agents"]["normalizer"]["data"]["receivedFrom"] = "user"
+            workflow["agents"]["normalizer"]["data"]["sentTo"] = "extracter"
+            workflow["agents"]["normalizer"]["data"]["input"] = normalizer_input
             workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump_json()
             
             # Save normalizer output
@@ -639,6 +706,9 @@ Defaults (use if not specified):
                 json.dumps({
                     "agent_name": "Normalizer",
                     "execution_time_seconds": elapsed,
+                    "received_from_node": "user",
+                    "sent_to_node": "extracter",
+                    "input_messages": normalizer_input,
                     "output": normalizer_output.model_dump(),
                 }, indent=2),
                 encoding="utf-8"
@@ -673,7 +743,9 @@ Remember:
 - Preserve all mathematical notation (use LaTeX format)
 - Extract metadata (title, author, date, course) from headers
 - Identify question types (multiple_choice vs open_ended)
+- Multiple-choice questions must not be skipped
 - For multiple choice, extract all options with their keys (A, B, C, D)
+- Assign a theme to each question: life_science | engineering | everyday_activity | physics_abstract
 - Set has_explicit_answer=true only if the correct answer is clearly marked
 """,
                         },
@@ -685,10 +757,43 @@ Remember:
             extracter_result = await Runner.run(agents["extracter"], input=extracter_input, run_config=run_config)
             elapsed = time.time() - start_time
             extracter_output: ExtracterOutput = extracter_result.final_output
+            if file_ids and not extracter_output.questions:
+                retry_extract_input = [
+                    {
+                        "role": "user",
+                        "content": [
+                            *file_refs,
+                            {
+                                "type": "input_text",
+                                "text": f"""The previous extraction returned zero questions.
+
+Re-read every attached file and extract all questions and metadata.
+Multiple-choice questions must not be skipped.
+Return structured output that includes each question's theme.
+
+Files attached: {', '.join(file_names)}
+""",
+                            },
+                        ],
+                    }
+                ]
+                retry_extract_result = await Runner.run(
+                    agents["extracter"], input=retry_extract_input, run_config=run_config
+                )
+                extracter_output = retry_extract_result.final_output
+            for q in extracter_output.questions:
+                if q.options:
+                    q.question_type = "multiple_choice"
+                q.theme = _normalize_theme_value(q.theme)
+            if file_ids and not extracter_output.questions:
+                raise ValueError("Extractor returned zero questions after retry.")
             
             workflow["agents"]["extracter"]["status"] = "completed"
             workflow["agents"]["extracter"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["extracter"]["data"]["executionTime"] = elapsed
+            workflow["agents"]["extracter"]["data"]["receivedFrom"] = "normalizer"
+            workflow["agents"]["extracter"]["data"]["sentTo"] = "verifier"
+            workflow["agents"]["extracter"]["data"]["input"] = extracter_input
             workflow["agents"]["extracter"]["data"]["output"] = f"Extracted {len(extracter_output.questions)} questions"
             
             # Save extracter output
@@ -696,6 +801,9 @@ Remember:
                 json.dumps({
                     "agent_name": "Extracter",
                     "execution_time_seconds": elapsed,
+                    "received_from_node": "normalizer",
+                    "sent_to_node": "verifier",
+                    "input_messages": extracter_input,
                     "questions_count": len(extracter_output.questions),
                     "output": extracter_output.model_dump(),
                 }, indent=2),
@@ -723,7 +831,7 @@ For each question:
 1. If has_explicit_answer=true, keep the marked answer
 2. If no answer is marked, solve the problem and mark the correct option
 3. Add explanations for each option
-4. Remove any questions that are not multiple choice
+4. Do not remove any question. Preserve all multiple-choice questions.
 5. Use code interpreter to verify calculations if needed
 """,
                         }
@@ -735,10 +843,17 @@ For each question:
             verifier_result = await Runner.run(agents["verifier"], input=verifier_input, run_config=run_config)
             elapsed = time.time() - start_time
             verifier_output: VerifierOutput = verifier_result.final_output
+            verifier_output.questions = _reconcile_verified_questions(
+                extracter_output.questions,
+                verifier_output.questions,
+            )
             
             workflow["agents"]["verifier"]["status"] = "completed"
             workflow["agents"]["verifier"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["verifier"]["data"]["executionTime"] = elapsed
+            workflow["agents"]["verifier"]["data"]["receivedFrom"] = "extracter"
+            workflow["agents"]["verifier"]["data"]["sentTo"] = "generator"
+            workflow["agents"]["verifier"]["data"]["input"] = verifier_input
             workflow["agents"]["verifier"]["data"]["output"] = f"Verified {len(verifier_output.questions)} questions"
             
             # Save verifier output
@@ -746,6 +861,9 @@ For each question:
                 json.dumps({
                     "agent_name": "Verifier",
                     "execution_time_seconds": elapsed,
+                    "received_from_node": "extracter",
+                    "sent_to_node": "generator",
+                    "input_messages": verifier_input,
                     "questions_count": len(verifier_output.questions),
                     "output": verifier_output.model_dump(),
                 }, indent=2),
@@ -778,6 +896,8 @@ Requirements:
 - Vary numerical values significantly but keep them physically reasonable
 - Create plausible distractors based on common misconceptions
 - Include detailed explanations for the correct answer
+- Include misconception-based explanations for each distractor
+- Set theme on every generated question using the allowed categories
 - Use LaTeX for all mathematical expressions
 - Use code interpreter to verify your calculations
 """,
@@ -790,10 +910,60 @@ Requirements:
             generator_result = await Runner.run(agents["generator"], input=generator_input, run_config=run_config)
             elapsed = time.time() - start_time
             generator_output: GeneratorOutput = generator_result.final_output
+            for q in generator_output.isomorphic_questions:
+                q.theme = _normalize_theme_value(q.theme)
+
+            missing_source_ids = _missing_generation_source_ids(
+                verifier_output.questions,
+                generator_output.isomorphic_questions,
+                normalizer_output.new_questions_per_question,
+            )
+            if missing_source_ids:
+                retry_questions = [
+                    q for q in verifier_output.questions if q.source_id in missing_source_ids
+                ]
+                retry_input = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": f"""You omitted required source questions in the prior pass.
+
+Generate only for these missing source IDs: {', '.join(missing_source_ids)}.
+Return exactly {normalizer_output.new_questions_per_question} generated question(s) per source_id.
+
+Configuration:
+{normalizer_output.model_dump_json(indent=2)}
+
+Source Questions:
+{json.dumps({'questions': [q.model_dump() for q in retry_questions]}, indent=2)}
+""",
+                            }
+                        ],
+                    }
+                ]
+                retry_result = await Runner.run(agents["generator"], input=retry_input, run_config=run_config)
+                retry_output: GeneratorOutput = retry_result.final_output
+                for q in retry_output.isomorphic_questions:
+                    q.theme = _normalize_theme_value(q.theme)
+                generator_output.isomorphic_questions.extend(retry_output.isomorphic_questions)
+                missing_source_ids = _missing_generation_source_ids(
+                    verifier_output.questions,
+                    generator_output.isomorphic_questions,
+                    normalizer_output.new_questions_per_question,
+                )
+                if missing_source_ids:
+                    raise ValueError(
+                        f"Generator failed to produce required outputs for source_id(s): {', '.join(missing_source_ids)}"
+                    )
             
             workflow["agents"]["generator"]["status"] = "completed"
             workflow["agents"]["generator"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["generator"]["data"]["executionTime"] = elapsed
+            workflow["agents"]["generator"]["data"]["receivedFrom"] = "verifier"
+            workflow["agents"]["generator"]["data"]["sentTo"] = "latex"
+            workflow["agents"]["generator"]["data"]["input"] = generator_input
             workflow["agents"]["generator"]["data"]["output"] = f"Generated {len(generator_output.isomorphic_questions)} questions"
             
             # Save generator output
@@ -801,6 +971,9 @@ Requirements:
                 json.dumps({
                     "agent_name": "Generator",
                     "execution_time_seconds": elapsed,
+                    "received_from_node": "verifier",
+                    "sent_to_node": "latex",
+                    "input_messages": generator_input,
                     "questions_count": len(generator_output.isomorphic_questions),
                     "output": generator_output.model_dump(),
                 }, indent=2),
@@ -854,6 +1027,9 @@ Set filename to "isomorphic_questions.tex"
             workflow["agents"]["latex"]["status"] = "completed"
             workflow["agents"]["latex"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["latex"]["data"]["executionTime"] = elapsed
+            workflow["agents"]["latex"]["data"]["receivedFrom"] = "generator"
+            workflow["agents"]["latex"]["data"]["sentTo"] = "user"
+            workflow["agents"]["latex"]["data"]["input"] = latex_input
             workflow["agents"]["latex"]["data"]["output"] = f"Created {latex_output.filename}"
             
             # Save LaTeX file
@@ -866,7 +1042,11 @@ Set filename to "isomorphic_questions.tex"
                 json.dumps({
                     "agent_name": "LaTeX Formatter",
                     "execution_time_seconds": elapsed,
+                    "received_from_node": "generator",
+                    "sent_to_node": "user",
+                    "input_messages": latex_input,
                     "filename": latex_filename,
+                    "output": latex_output.model_dump(),
                 }, indent=2),
                 encoding="utf-8"
             )
@@ -874,12 +1054,24 @@ Set filename to "isomorphic_questions.tex"
             # =================================================================
             # Save final results
             # =================================================================
+            evaluation_report = run_openai_output_evaluation(
+                client=client,
+                final_result={
+                    "source_questions": [q.model_dump() for q in extracter_output.questions],
+                    "verified_questions": [q.model_dump() for q in verifier_output.questions],
+                    "generated_questions": [q.model_dump() for q in generator_output.isomorphic_questions],
+                },
+                outputs_dir=outputs_dir,
+                latex_path=latex_path,
+            )
+
             final_result = WorkflowResult(
                 config=normalizer_output,
                 source_questions=extracter_output.questions,
                 verified_questions=verifier_output.questions,
                 generated_questions=generator_output.isomorphic_questions,
                 latex_file=latex_filename,
+                evaluation=evaluation_report,
             )
             
             result_path = outputs_dir / "final_result.json"
@@ -895,6 +1087,12 @@ Set filename to "isomorphic_questions.tex"
                 {"name": "4_generator.json", "size": (outputs_dir / "4_generator.json").stat().st_size},
                 {"name": "5_latex.json", "size": (outputs_dir / "5_latex.json").stat().st_size},
             ]
+            eval_report_path = outputs_dir / "evaluation_report.json"
+            eval_dataset_path = outputs_dir / "evaluation_dataset.jsonl"
+            if eval_report_path.exists():
+                workflow["files"].append({"name": "evaluation_report.json", "size": eval_report_path.stat().st_size})
+            if eval_dataset_path.exists():
+                workflow["files"].append({"name": "evaluation_dataset.jsonl", "size": eval_dataset_path.stat().st_size})
             workflow["result"] = final_result.model_dump()
             workflow["status"] = "completed"
             
