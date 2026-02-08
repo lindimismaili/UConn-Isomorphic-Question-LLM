@@ -48,7 +48,7 @@ def _detect_repo_root(start: Path) -> Path:
     Detect the repo root for this project.
 
     When server.py is in src/, the repo root is the parent directory.
-    We detect this by looking for index.html (frontend) and prompts/ folder.
+    We detect this by looking for index.html (frontend) and data/ folder.
     """
     # If we're in src/, go up one level
     if start.name == "src":
@@ -57,7 +57,7 @@ def _detect_repo_root(start: Path) -> Path:
         candidate = start
     
     # Verify we found the repo root by checking for key files/folders
-    if (candidate / "index.html").is_file() or (candidate / "prompts").is_dir():
+    if (candidate / "index.html").is_file() or (candidate / "data").is_dir():
         return candidate
     
     return start.parent  # Fallback: assume we're in src/
@@ -67,7 +67,8 @@ REPO_ROOT = _detect_repo_root(THIS_DIR)
 PROJECT_ROOT = REPO_ROOT
 STATIC_DIR = REPO_ROOT  # Frontend files are in repo root (index.html, etc.)
 ENV_PATH = REPO_ROOT / ".env"
-PROMPTS_DIR = REPO_ROOT / "prompts"
+DATA_DIR = REPO_ROOT / "data"
+PROMPTS_DIR = DATA_DIR / "prompts"
 OUTPUTS_DIR = REPO_ROOT / "outputs"
 UPLOADS_DIR = REPO_ROOT / "uploads"
 
@@ -428,7 +429,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
 @app.get("/api/sliders")
 async def get_sliders():
     """Get the slider configuration for the frontend."""
-    sliders_path = PROMPTS_DIR / "sliders.json"
+    sliders_path = DATA_DIR / "sliders.json"
     if not sliders_path.exists():
         raise HTTPException(status_code=404, detail="Sliders configuration not found")
     
@@ -441,7 +442,7 @@ async def get_sliders():
 @app.get("/api/agents")
 async def get_agents():
     """Get the agents configuration for the frontend."""
-    agents_path = PROMPTS_DIR / "agents.json"
+    agents_path = DATA_DIR / "agents.json"
     if not agents_path.exists():
         raise HTTPException(status_code=404, detail="Agents configuration not found")
     

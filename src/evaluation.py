@@ -17,7 +17,13 @@ from typing import Any, Optional
 from openai import OpenAI
 
 
-RUBRIC_CRITERIA: list[dict[str, str]] = [
+THIS_DIR = Path(__file__).resolve().parent
+REPO_ROOT = THIS_DIR.parent
+DATA_DIR = REPO_ROOT / "data"
+RUBRIC_PATH = DATA_DIR / "rubric.json"
+
+
+DEFAULT_RUBRIC_CRITERIA: list[dict[str, str]] = [
     {
         "name": "preserve_physical_content",
         "category": "Preservation",
@@ -64,6 +70,20 @@ RUBRIC_CRITERIA: list[dict[str, str]] = [
         "question": "Is the generated question fully specified and solvable as written?",
     },
 ]
+
+
+def _load_rubric_criteria() -> list[dict[str, str]]:
+    if RUBRIC_PATH.exists():
+        try:
+            data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, list) and data:
+                return data
+        except Exception:
+            pass
+    return DEFAULT_RUBRIC_CRITERIA
+
+
+RUBRIC_CRITERIA = _load_rubric_criteria()
 
 
 def _to_jsonl(items: list[dict[str, Any]]) -> str:

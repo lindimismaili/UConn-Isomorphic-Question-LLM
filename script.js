@@ -161,7 +161,7 @@ async function fetchAgentsConfigData() {
 
   // Fallback to local file
   try {
-    const response = await fetch("prompts/agents.json");
+    const response = await fetch("data/agents.json");
     if (response.ok) {
       return await response.json();
     }
@@ -354,7 +354,7 @@ async function fetchSlidersConfigData() {
   } catch (apiError) {
     console.warn("Falling back to local sliders config:", apiError);
     try {
-      return await fetchLocalJson("prompts/sliders.json");
+      return await fetchLocalJson("data/sliders.json");
     } catch (localError) {
       throw new Error(
         `API error: ${apiError.message}; Local fallback: ${localError.message}`,
@@ -367,7 +367,7 @@ async function fetchSlidersConfigData() {
  * Fetch a local prompt file from the prompts directory.
  */
 async function fetchLocalPrompt(promptName) {
-  const response = await fetchLocalResource(`prompts/${promptName}.txt`);
+  const response = await fetchLocalResource(`data/prompts/${promptName}.txt`);
   return await response.text();
 }
 
@@ -817,12 +817,16 @@ function triggerButtonFeedback(
     target.dataset.originalLabel = originalText;
   }
 
-  const widthBefore = button.getBoundingClientRect().width;
-  const widthAfter = measureButtonWidth(button, text);
-  button.dataset.originalWidth = widthBefore;
-
-  button.style.width = `${widthBefore}px`;
-  button.offsetHeight;
+  const isFixedWidth = button.classList.contains("btn-fixed-width");
+  let widthBefore = null;
+  let widthAfter = null;
+  if (!isFixedWidth) {
+    widthBefore = button.getBoundingClientRect().width;
+    widthAfter = measureButtonWidth(button, text);
+    button.dataset.originalWidth = widthBefore;
+    button.style.width = `${widthBefore}px`;
+    button.offsetHeight;
+  }
 
   requestAnimationFrame(() => {
     target.textContent = text;
@@ -830,7 +834,9 @@ function triggerButtonFeedback(
       button.classList.add(className);
     }
     button.disabled = true;
-    button.style.width = `${widthAfter}px`;
+    if (!isFixedWidth && widthAfter !== null) {
+      button.style.width = `${widthAfter}px`;
+    }
   });
 
   if (button._feedbackTimeoutId) {
@@ -838,19 +844,23 @@ function triggerButtonFeedback(
   }
 
   button._feedbackTimeoutId = setTimeout(() => {
-    const resetWidth =
-      Number(button.dataset.originalWidth) ||
-      button.getBoundingClientRect().width;
-    button.style.width = `${resetWidth}px`;
+    if (!isFixedWidth) {
+      const resetWidth =
+        Number(button.dataset.originalWidth) ||
+        button.getBoundingClientRect().width;
+      button.style.width = `${resetWidth}px`;
+    }
     target.textContent = target.dataset.originalLabel || originalText;
     if (className) {
       button.classList.remove(className);
     }
     button.disabled = false;
     button._feedbackTimeoutId = null;
-    setTimeout(() => {
-      button.style.width = "";
-    }, 300);
+    if (!isFixedWidth) {
+      setTimeout(() => {
+        button.style.width = "";
+      }, 300);
+    }
     if (typeof onReset === "function") {
       onReset();
     }
