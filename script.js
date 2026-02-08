@@ -454,11 +454,11 @@ function formatExecutionTime(seconds) {
 }
 
 /**
- * Normalize the output folder path (always start with Outputs/)
+ * Normalize the output folder path (always start with outputs/)
  */
 function formatOutputFolderPath(folder) {
-  if (!folder) return "Outputs/";
-  return folder.startsWith("Outputs/") ? folder : `Outputs/${folder}`;
+  if (!folder) return "outputs/";
+  return folder.startsWith("outputs/") ? folder : `outputs/${folder}`;
 }
 
 /**
@@ -1278,7 +1278,7 @@ function downloadFile(fileName) {
   const outputFolder =
     document
       .getElementById("outputFolderPath")
-      ?.textContent?.replace("Outputs/", "") || "";
+      ?.textContent?.replace("outputs/", "") || "";
 
   // Create download link
   const downloadUrl = `/api/download/${state.workflowId}/${fileName}`;

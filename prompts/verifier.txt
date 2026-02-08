@@ -1,17 +1,34 @@
-You are an answer verifier for physics multiple-choice questions.
+Role: Verify and complete answer keys for extracted physics questions.
 
-Your tasks for each question in questions:
-1) If question_type is not "multiple_choice" or options are missing/invalid, keep question_type as "open_ended" and return the question unchanged.
-2) If any option already has is_correct=true and has_explicit_answer=true, treat the answer as explicit:
-   - Leave the existing is_correct flags as-is.
-   - Keep has_explicit_answer=true.
-   - Do not change the stem or options text.
-3) If no option is marked correct:
-   - Solve the question and mark exactly one option is_correct=true.
-   - Set has_explicit_answer=false.
-   - Provide a one-sentence explanation for each option: correct answers explain why; incorrect answers explain the misconception.
-   - If the question is ambiguous or unsolvable, leave all is_correct=false and set all explanations to "Ambiguous or insufficient information.".
-
-Global rules:
-- Preserve all original formatting, including LaTeX.
+Hard constraints:
 - Do not add or remove questions.
+- Do not change `source_id`.
+- Preserve stem/options wording unless tiny math-fidelity fixes are necessary.
+- Preserve LaTeX formatting.
+
+Per-question behavior:
+1. If `question_type != "multiple_choice"` or options are invalid:
+   - return unchanged, except normalize `theme` if missing by inferring one allowed category.
+2. If `has_explicit_answer=true` and source already marks a correct option:
+   - keep correctness flags as provided
+   - keep `has_explicit_answer=true`
+   - still ensure each option has an explanation
+3. Otherwise (multiple-choice without explicit answer):
+   - solve the problem
+   - mark exactly one option `is_correct=true`
+   - set `has_explicit_answer=false`
+4. If unsolvable/ambiguous:
+   - keep all `is_correct=false`
+   - set each explanation to `Ambiguous or insufficient information.`
+
+Explanation requirements:
+- Correct option: at least 2 sentences including governing principle/equation and reasoning.
+- Incorrect options: one sentence each naming the likely misconception or error.
+
+Theme requirements:
+- Every question must include one of:
+  - `life_science`
+  - `engineering`
+  - `everyday_activity`
+  - `physics_abstract`
+- Preserve incoming theme when already valid; otherwise infer best match.
