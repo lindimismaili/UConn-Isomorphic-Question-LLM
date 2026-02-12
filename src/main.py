@@ -38,7 +38,7 @@ THIS_DIR = Path(__file__).resolve().parent
 def _detect_repo_root(start: Path) -> Path:
     candidates = [start, start.parent]
     for candidate in candidates:
-        if (candidate / "prompts").is_dir():
+        if (candidate / "data" / "prompts").is_dir():
             return candidate
     return start
 
@@ -50,6 +50,8 @@ DATA_DIR = REPO_ROOT / "data"
 PROMPTS_DIR = DATA_DIR / "prompts"
 AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 QUESTION_DATA_DIR = REPO_ROOT / "Question Data Files"
+if not QUESTION_DATA_DIR.exists():
+    QUESTION_DATA_DIR = REPO_ROOT / "archive" / "Question Data Files"
 
 
 def _load_dotenv(path: Path) -> None:

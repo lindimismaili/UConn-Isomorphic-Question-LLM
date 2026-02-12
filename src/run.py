@@ -2,7 +2,7 @@
 Run the Isomorphic Question Generator Server
 
 Usage:
-    python run.py [--port PORT] [--host HOST]
+    python src/run.py [--port PORT] [--host HOST]
     
 Options:
     --port PORT     Port to run server on (default: 8000)
@@ -49,7 +49,7 @@ def main():
 """)
     
     uvicorn.run(
-        "server:app",
+        "src.server:app",
         host=args.host,
         port=args.port,
         reload=args.reload,

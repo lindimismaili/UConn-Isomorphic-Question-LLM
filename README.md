@@ -1,65 +1,76 @@
-# Workflow Outline
+# UConn Isomorphic Question Generator
 
-## Goal
-This project turns raw physics question sources (PDFs, images, or text) into a clean, structured question schema and then produces high‑quality isomorphic multiple‑choice variants. The pipeline is built to preserve mathematical fidelity, standardize metadata, verify answers, and generate consistent MCQ outputs based on user‑specified configuration.
+Generate original, isomorphic physics multiple-choice questions from source PDFs/DOCX/TXT using a 5-agent workflow:
 
-## Core Objects
-Two primary objects flow through the system:
+`Normalizer -> Extracter -> Verifier -> Generator -> LaTeX Formatter`
 
-1) User Request (configuration)
-- newQuestionAmountPerInputQuestion
-- newDifficultyLevel
-- newTheme
-- newTitle
-- moreInstructions
+## Features
 
-2) Question Schema (content)
-- filename
-- title
-- author
-- instructions
-- date
-- class
-- questions[]
-  - sourceID
-  - explicitAnswer
-  - questionType (open_ended | multiple_choice)
-  - topics[]
-  - difficulty
-  - stem
-  - options[]
-    - key
-    - text
-    - isCorrect
-    - explanation
+- 5-agent pipeline with structured outputs
+- Web UI + FastAPI backend
+- PDF/DOCX/TXT upload support
+- LaTeX output (`isomorphic_questions.tex`)
+- OpenAI Evals report per run
 
-## Workflow Steps
+## Repository Layout
 
-1) Normalize User Request
-- The Normalizer reads user input and produces the User Request object.
-- Defaults are applied when values are not provided.
+- `src/`
+  - `src/server.py` FastAPI API server
+  - `src/main.py` CLI workflow runner
+  - `src/run.py` server startup wrapper
+  - `src/evaluation.py` OpenAI Evals integration
+- `data/`
+  - `data/prompts/` agent prompts
+  - `data/agents.json` agent model/tool config
+  - `data/sliders.json` UI slider prompt config
+  - `data/rubric.json` eval rubric
+- Frontend (repo root)
+  - `index.html`, `styles.css`, `script.js`
+- Runtime directories
+  - `uploads/` uploaded files by session
+  - `outputs/` workflow outputs by timestamp
+- Historical artifacts
+  - `archive/`
 
-2) Extract Questions
-- The Extracter reads source content and outputs a Question Schema object.
-- Metadata is captured when available; missing fields are left empty.
-- Mathematical fidelity is preserved.
+## Prerequisites
 
-3) Verify Answers
-- The Verifier checks each multiple‑choice question.
-- If an explicit correct answer exists, it is preserved.
-- If no answer is marked, the Verifier infers the correct option and adds explanations.
-- Non‑MCQ items remain open‑ended and are not converted here.
+- Python 3.10+
+- `OPENAI_API_KEY` set in environment (or `.env`)
 
-4) Generate Isomorphic Questions
-- The Generation agent creates new MCQs for each input question using the User Request object.
-- Each new question is fully original but concept‑equivalent.
-- Difficulty and theme are overridden only when provided.
-- Explanations are included for every option.
+## Install
 
-## How It Works End‑to‑End
-- Input text (and any provided files) enter the workflow.
-- The User Request object is built first to guide downstream behavior.
-- The Question Schema object is extracted, then verified.
-- The Generator produces new, schema‑compliant MCQs aligned to the request.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-This structure keeps configuration and content separate, making the system easier to extend, audit, and reuse across different sources or output formats.
+## Run Server
+
+```bash
+python3 src/run.py
+```
+
+Open [http://localhost:8000](http://localhost:8000).
+
+## Run CLI
+
+```bash
+python3 src/main.py "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
+```
+
+## Output Files
+
+Each run writes to `outputs/<timestamp>/`:
+
+- `final_result.json`
+- `isomorphic_questions.tex`
+- `1_normalizer.json` ... `5_latex.json`
+- `evaluation_report.json` (if eval ran)
+- `evaluation_dataset.jsonl` (if eval ran)
+
+## Deployment Docs
+
+- Local/dev runbook: `docs/RUN.md`
+- Live/cloud notes: `docs/LIVE.md`
+- Raspberry Pi + Nginx deployment: `docs/DEPLOYMENT_RPI_NGINX.md`
