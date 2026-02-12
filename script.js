@@ -545,29 +545,44 @@ function updateUploadButtonState() {
  * Render the files list in the modal
  */
 function renderFilesList() {
-  elements.filesList.innerHTML = state.files
-    .map(
-      (file) => `
-        <div class="file-item" data-file-id="${file.id}">
-            <div class="file-item-info">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                <span class="file-item-name">${file.name}</span>
-            </div>
-            <button class="btn btn-remove btn-sm" onclick="removeFile('${file.id}')">
-                Remove
-            </button>
-        </div>
-    `,
-    )
-    .join("");
+  elements.filesList.textContent = "";
 
   if (state.files.length === 0) {
-    elements.filesList.innerHTML =
-      '<p style="color: var(--color-text-muted); text-align: center;">No files uploaded</p>';
+    const empty = document.createElement("p");
+    empty.style.color = "var(--color-text-muted)";
+    empty.style.textAlign = "center";
+    empty.textContent = "No files uploaded";
+    elements.filesList.appendChild(empty);
+    return;
   }
+
+  state.files.forEach((file) => {
+    const item = document.createElement("div");
+    item.className = "file-item";
+    item.dataset.fileId = file.id;
+
+    const info = document.createElement("div");
+    info.className = "file-item-info";
+    info.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+    `;
+    const name = document.createElement("span");
+    name.className = "file-item-name";
+    name.textContent = file.name;
+    info.appendChild(name);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "btn btn-remove btn-sm";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => removeFile(file.id));
+
+    item.appendChild(info);
+    item.appendChild(removeBtn);
+    elements.filesList.appendChild(item);
+  });
 }
 
 // =============================================================================
@@ -927,7 +942,11 @@ async function sendWorkflow() {
   queueAllAgents(); // Show white glow on all agents immediately
   hideCompletedSection();
   hideFailureSection();
-  clearInputs({ showFeedback: false });
+  elements.promptInput.value = "";
+  state.files = [];
+  updateFilesUI();
+  renderFilesList();
+  updateUploadButtonState();
 
   try {
     // Run the real workflow
@@ -1250,29 +1269,40 @@ function hideFailureSection() {
  * Render the downloads list
  */
 function renderDownloadsList() {
-  elements.downloadsList.innerHTML = state.outputFiles
-    .map(
-      (file) => `
-        <div class="download-item">
-            <div class="download-item-info">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                <span class="download-item-name">${file.name}</span>
-            </div>
-            <button class="btn btn-primary btn-download" onclick="downloadFile('${file.name}')">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Download
-            </button>
-        </div>
-    `,
-    )
-    .join("");
+  elements.downloadsList.textContent = "";
+  state.outputFiles.forEach((file) => {
+    const item = document.createElement("div");
+    item.className = "download-item";
+
+    const info = document.createElement("div");
+    info.className = "download-item-info";
+    info.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+    `;
+    const name = document.createElement("span");
+    name.className = "download-item-name";
+    name.textContent = file.name;
+    info.appendChild(name);
+
+    const button = document.createElement("button");
+    button.className = "btn btn-primary btn-download";
+    button.innerHTML = `
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download
+    `;
+    button.addEventListener("click", () => downloadFile(file.name));
+
+    item.appendChild(info);
+    item.appendChild(button);
+    elements.downloadsList.appendChild(item);
+  });
 }
 
 /**
@@ -1283,12 +1313,6 @@ function downloadFile(fileName) {
     alert("No workflow results available");
     return;
   }
-
-  // Get the output folder from the workflow
-  const outputFolder =
-    document
-      .getElementById("outputFolderPath")
-      ?.textContent?.replace("outputs/", "") || "";
 
   // Create download link
   const downloadUrl = `/api/download/${state.workflowId}/${fileName}`;

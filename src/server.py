@@ -34,6 +34,7 @@ from agents import (
 )
 from agents.logger import logger
 from openai import OpenAI
+from openai.types.shared.reasoning import Reasoning
 from evaluation import run_openai_output_evaluation
 
 # =============================================================================
@@ -69,8 +70,14 @@ STATIC_DIR = REPO_ROOT  # Frontend files are in repo root (index.html, etc.)
 ENV_PATH = REPO_ROOT / ".env"
 DATA_DIR = REPO_ROOT / "data"
 PROMPTS_DIR = DATA_DIR / "prompts"
+AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 OUTPUTS_DIR = REPO_ROOT / "outputs"
 UPLOADS_DIR = REPO_ROOT / "uploads"
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt"}
+MAX_UPLOAD_FILES = 5
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
+WORKFLOW_TTL_SECONDS = int(os.getenv("WORKFLOW_TTL_SECONDS", str(24 * 60 * 60)))
+WORKFLOW_MAX_ENTRIES = int(os.getenv("WORKFLOW_MAX_ENTRIES", "200"))
 
 # Create directories if they don't exist
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -160,6 +167,27 @@ def load_prompt(name: str) -> str:
         return ""
 
 
+def load_agents_config() -> dict[str, Any]:
+    """Load agent configuration from data/agents.json."""
+    if not AGENTS_CONFIG_PATH.exists():
+        logger.warning("Agents config not found: %s", AGENTS_CONFIG_PATH)
+        return {}
+    try:
+        data = json.loads(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("Failed to load agents config: %s", exc)
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _is_under_directory(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except Exception:
+        return False
+
+
 def upload_file_to_openai(file_path: Path) -> str:
     """Upload a file to OpenAI and return the file ID."""
     with open(file_path, "rb") as f:
@@ -242,6 +270,15 @@ class WorkflowResult(BaseModel):
     evaluation: Optional[dict[str, Any]] = None
 
 
+AGENT_OUTPUT_TYPES = {
+    "normalizer": NormalizerOutput,
+    "extracter": ExtracterOutput,
+    "verifier": VerifierOutput,
+    "generator": GeneratorOutput,
+    "latex": LaTeXOutput,
+}
+
+
 def _normalize_theme_value(theme: str) -> str:
     normalized = (theme or "").strip().lower()
     return normalized if normalized in THEME_ALLOWED_VALUES else "physics_abstract"
@@ -301,15 +338,58 @@ def _missing_generation_source_ids(
 workflows: dict[str, dict] = {}
 
 
+def _workflow_now() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def _touch_workflow(workflow: dict[str, Any]) -> None:
+    workflow["updated_at"] = _workflow_now()
+
+
+def _prune_workflows() -> None:
+    """Bound memory by removing expired/old workflow records."""
+    now = datetime.utcnow().timestamp()
+    expired_ids: list[str] = []
+    for workflow_id, workflow in workflows.items():
+        updated_raw = workflow.get("updated_at")
+        if not updated_raw:
+            continue
+        try:
+            updated_ts = datetime.fromisoformat(updated_raw.replace("Z", "")).timestamp()
+        except Exception:
+            continue
+        if now - updated_ts > WORKFLOW_TTL_SECONDS:
+            expired_ids.append(workflow_id)
+
+    for workflow_id in expired_ids:
+        workflows.pop(workflow_id, None)
+
+    if len(workflows) <= WORKFLOW_MAX_ENTRIES:
+        return
+
+    # Drop oldest terminal workflows first, then oldest overall.
+    candidates = sorted(
+        workflows.items(),
+        key=lambda item: item[1].get("updated_at", ""),
+    )
+    for workflow_id, workflow in candidates:
+        status = workflow.get("status")
+        if status in {"completed", "errored"} or len(workflows) > WORKFLOW_MAX_ENTRIES:
+            workflows.pop(workflow_id, None)
+        if len(workflows) <= WORKFLOW_MAX_ENTRIES:
+            break
+
+
 # =============================================================================
 # Agent Creation
 # =============================================================================
 
 
 def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
-    """Create all agents with their tools configured."""
+    """Create all agents with config from agents.json."""
     file_ids = file_ids or []
-    
+    agents_config = load_agents_config()
+
     code_interpreter = CodeInterpreterTool(
         tool_config={
             "type": "code_interpreter",
@@ -319,57 +399,32 @@ def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
             },
         }
     )
-    
-    normalizer = Agent(
-        name="Normalizer",
-        instructions=load_prompt("normalizer"),
-        model="gpt-4o",
-        output_type=NormalizerOutput,
-        model_settings=ModelSettings(store=True),
-    )
-    
-    extracter = Agent(
-        name="Extracter",
-        instructions=load_prompt("extracter"),
-        model="gpt-4o",
-        tools=[code_interpreter],
-        output_type=ExtracterOutput,
-        model_settings=ModelSettings(store=True),
-    )
-    
-    verifier = Agent(
-        name="Verifier",
-        instructions=load_prompt("verifier"),
-        model="gpt-4o",
-        tools=[code_interpreter],
-        output_type=VerifierOutput,
-        model_settings=ModelSettings(store=True),
-    )
-    
-    generator = Agent(
-        name="Generator",
-        instructions=load_prompt("generator"),
-        model="gpt-4o",
-        tools=[code_interpreter],
-        output_type=GeneratorOutput,
-        model_settings=ModelSettings(store=True),
-    )
-    
-    latex_formatter = Agent(
-        name="LaTeX Formatter",
-        instructions=load_prompt("latex"),
-        model="gpt-4o",
-        output_type=LaTeXOutput,
-        model_settings=ModelSettings(store=True),
-    )
-    
-    return {
-        "normalizer": normalizer,
-        "extracter": extracter,
-        "verifier": verifier,
-        "generator": generator,
-        "latex": latex_formatter,
-    }
+
+    agents: dict[str, Agent] = {}
+    for agent_key, config in agents_config.items():
+        output_type = AGENT_OUTPUT_TYPES.get(agent_key)
+        if not output_type:
+            logger.warning("No output type defined for agent: %s", agent_key)
+            continue
+
+        reasoning_level = config.get("reasoning", "none")
+        tools = [code_interpreter] if config.get("useCodeInterpreter", False) else []
+        agents[agent_key] = Agent(
+            name=config.get("name", agent_key.title()),
+            instructions=load_prompt(agent_key),
+            model=config.get("model", "gpt-4o"),
+            tools=tools or None,
+            output_type=output_type,
+            model_settings=ModelSettings(
+                store=True,
+                reasoning=Reasoning(effort=reasoning_level, summary="auto"),
+            ),
+        )
+
+    missing = [k for k in AGENT_OUTPUT_TYPES.keys() if k not in agents]
+    if missing:
+        raise ValueError(f"Missing required agent config(s): {', '.join(missing)}")
+    return agents
 
 
 # =============================================================================
@@ -380,9 +435,17 @@ def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
 @app.post("/api/upload")
 async def upload_files(files: list[UploadFile] = File(...)):
     """Upload files for processing."""
+    _prune_workflows()
     logger.info("Upload request received with %d file(s)", len(files))
     uploaded_files = []
-    
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+    if len(files) > MAX_UPLOAD_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files. Maximum is {MAX_UPLOAD_FILES}.",
+        )
+
     try:
         # Create a session directory for uploads
         session_id = str(uuid.uuid4())[:8]
@@ -394,25 +457,47 @@ async def upload_files(files: list[UploadFile] = File(...)):
             if file.filename:
                 # Sanitize filename to prevent path traversal
                 safe_filename = Path(file.filename).name
+                extension = Path(safe_filename).suffix.lower()
+                if extension not in ALLOWED_UPLOAD_EXTENSIONS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Unsupported file type for {safe_filename}",
+                    )
                 file_path = session_dir / safe_filename
                 logger.info("Saving file: %s", safe_filename)
                 
                 try:
-                    content = await file.read()
+                    total_size = 0
                     with open(file_path, "wb") as f:
-                        f.write(content)
+                        while True:
+                            chunk = await file.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            total_size += len(chunk)
+                            if total_size > MAX_UPLOAD_BYTES:
+                                raise HTTPException(
+                                    status_code=413,
+                                    detail=f"File too large: {safe_filename}. Max size is {MAX_UPLOAD_BYTES} bytes.",
+                                )
+                            f.write(chunk)
                     uploaded_files.append({
                         "name": safe_filename,
                         "path": str(file_path),
-                        "size": len(content),
+                        "size": total_size,
                     })
-                    logger.info("Saved file %s (%d bytes)", safe_filename, len(content))
+                    logger.info("Saved file %s (%d bytes)", safe_filename, total_size)
                 except Exception as file_error:
+                    if file_path.exists():
+                        file_path.unlink(missing_ok=True)
                     logger.error("Failed to save file %s: %s", safe_filename, file_error)
+                    if isinstance(file_error, HTTPException):
+                        raise
                     raise HTTPException(
                         status_code=500,
                         detail=f"Failed to save file {safe_filename}: {str(file_error)}"
                     )
+                finally:
+                    await file.close()
     except HTTPException:
         raise
     except Exception as e:
@@ -474,10 +559,12 @@ async def get_prompt(prompt_name: str):
 @app.get("/api/workflow/{workflow_id}/status")
 async def get_workflow_status(workflow_id: str):
     """Get the current status of a workflow."""
+    _prune_workflows()
     if workflow_id not in workflows:
         raise HTTPException(status_code=404, detail="Workflow not found")
     
     workflow = workflows[workflow_id]
+    _touch_workflow(workflow)
     return {
         "workflowId": workflow_id,
         "status": workflow.get("status", "unknown"),
@@ -489,10 +576,12 @@ async def get_workflow_status(workflow_id: str):
 @app.get("/api/workflow/{workflow_id}/result")
 async def get_workflow_result(workflow_id: str):
     """Get the final result of a workflow."""
+    _prune_workflows()
     if workflow_id not in workflows:
         raise HTTPException(status_code=404, detail="Workflow not found")
     
     workflow = workflows[workflow_id]
+    _touch_workflow(workflow)
     if workflow.get("status") != "completed":
         raise HTTPException(status_code=400, detail="Workflow not yet completed")
     
@@ -507,21 +596,30 @@ async def get_workflow_result(workflow_id: str):
 @app.get("/api/download/{workflow_id}/{filename}")
 async def download_file(workflow_id: str, filename: str):
     """Download a file from a completed workflow."""
+    _prune_workflows()
     if workflow_id not in workflows:
         raise HTTPException(status_code=404, detail="Workflow not found")
     
     workflow = workflows[workflow_id]
+    _touch_workflow(workflow)
     output_folder = workflow.get("outputFolder")
     if not output_folder:
         raise HTTPException(status_code=404, detail="Output folder not found")
-    
-    file_path = OUTPUTS_DIR / output_folder / filename
-    if not file_path.exists():
+
+    safe_filename = Path(filename).name
+    if safe_filename != filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    output_dir = (OUTPUTS_DIR / output_folder).resolve()
+    file_path = (output_dir / safe_filename).resolve()
+    if not _is_under_directory(file_path, output_dir):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     
     return FileResponse(
         path=file_path,
-        filename=filename,
+        filename=safe_filename,
         media_type="application/octet-stream",
     )
 
@@ -533,21 +631,38 @@ async def start_workflow(
     filePaths: str = Form("[]"),
 ):
     """Start a new workflow and return a stream of status updates."""
+    _prune_workflows()
     workflow_id = str(uuid.uuid4())[:8]
     
-    # Parse file paths
+    # Parse legacy file paths input, but only trust paths under uploads/.
     try:
-        file_paths = json.loads(filePaths) if filePaths else []
+        raw_file_paths = json.loads(filePaths) if filePaths else []
     except json.JSONDecodeError:
-        file_paths = []
+        raw_file_paths = []
+    if not isinstance(raw_file_paths, list):
+        raw_file_paths = []
+    file_paths: list[str] = []
+    for file_path in raw_file_paths:
+        try:
+            path = Path(str(file_path)).resolve()
+        except Exception:
+            continue
+        if _is_under_directory(path, UPLOADS_DIR) and path.is_file():
+            file_paths.append(str(path))
     
     # If sessionId provided, get files from upload directory
     if sessionId:
-        session_dir = UPLOADS_DIR / sessionId
+        safe_session_id = Path(sessionId).name
+        if safe_session_id != sessionId:
+            raise HTTPException(status_code=400, detail="Invalid sessionId")
+        session_dir = (UPLOADS_DIR / safe_session_id).resolve()
+        if not _is_under_directory(session_dir, UPLOADS_DIR):
+            raise HTTPException(status_code=400, detail="Invalid session path")
         if session_dir.exists():
-            file_paths = [str(f) for f in session_dir.iterdir() if f.is_file()]
+            file_paths = [str(f.resolve()) for f in session_dir.iterdir() if f.is_file()]
     
     # Initialize workflow state
+    now = _workflow_now()
     workflows[workflow_id] = {
         "status": "starting",
         "agents": {
@@ -560,6 +675,8 @@ async def start_workflow(
         "files": [],
         "outputFolder": "",
         "result": None,
+        "created_at": now,
+        "updated_at": now,
     }
     
     async def generate_events():
@@ -638,6 +755,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             outputs_dir.mkdir(parents=True, exist_ok=True)
             workflow["outputFolder"] = timestamp
             workflow["status"] = "running"
+            _touch_workflow(workflow)
             
             run_config = RunConfig(
                 trace_metadata={
@@ -664,6 +782,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             # =================================================================
             workflow["agents"]["normalizer"]["status"] = "thinking"
             workflow["agents"]["normalizer"]["data"]["startTime"] = datetime.now().isoformat()
+            _touch_workflow(workflow)
             
             normalizer_input = [
                 {
@@ -701,6 +820,7 @@ Defaults (use if not specified):
             workflow["agents"]["normalizer"]["data"]["sentTo"] = "extracter"
             workflow["agents"]["normalizer"]["data"]["input"] = normalizer_input
             workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump_json()
+            _touch_workflow(workflow)
             
             # Save normalizer output
             (outputs_dir / "1_normalizer.json").write_text(
@@ -720,6 +840,7 @@ Defaults (use if not specified):
             # =================================================================
             workflow["agents"]["extracter"]["status"] = "thinking"
             workflow["agents"]["extracter"]["data"]["startTime"] = datetime.now().isoformat()
+            _touch_workflow(workflow)
             
             file_refs = [{"type": "input_file", "file_id": fid} for fid in file_ids]
             
@@ -796,6 +917,7 @@ Files attached: {', '.join(file_names)}
             workflow["agents"]["extracter"]["data"]["sentTo"] = "verifier"
             workflow["agents"]["extracter"]["data"]["input"] = extracter_input
             workflow["agents"]["extracter"]["data"]["output"] = f"Extracted {len(extracter_output.questions)} questions"
+            _touch_workflow(workflow)
             
             # Save extracter output
             (outputs_dir / "2_extracter.json").write_text(
@@ -816,6 +938,7 @@ Files attached: {', '.join(file_names)}
             # =================================================================
             workflow["agents"]["verifier"]["status"] = "thinking"
             workflow["agents"]["verifier"]["data"]["startTime"] = datetime.now().isoformat()
+            _touch_workflow(workflow)
             
             verifier_input = [
                 {
@@ -856,6 +979,7 @@ For each question:
             workflow["agents"]["verifier"]["data"]["sentTo"] = "generator"
             workflow["agents"]["verifier"]["data"]["input"] = verifier_input
             workflow["agents"]["verifier"]["data"]["output"] = f"Verified {len(verifier_output.questions)} questions"
+            _touch_workflow(workflow)
             
             # Save verifier output
             (outputs_dir / "3_verifier.json").write_text(
@@ -876,6 +1000,7 @@ For each question:
             # =================================================================
             workflow["agents"]["generator"]["status"] = "thinking"
             workflow["agents"]["generator"]["data"]["startTime"] = datetime.now().isoformat()
+            _touch_workflow(workflow)
             
             generator_input = [
                 {
@@ -966,6 +1091,7 @@ Source Questions:
             workflow["agents"]["generator"]["data"]["sentTo"] = "latex"
             workflow["agents"]["generator"]["data"]["input"] = generator_input
             workflow["agents"]["generator"]["data"]["output"] = f"Generated {len(generator_output.isomorphic_questions)} questions"
+            _touch_workflow(workflow)
             
             # Save generator output
             (outputs_dir / "4_generator.json").write_text(
@@ -986,6 +1112,7 @@ Source Questions:
             # =================================================================
             workflow["agents"]["latex"]["status"] = "thinking"
             workflow["agents"]["latex"]["data"]["startTime"] = datetime.now().isoformat()
+            _touch_workflow(workflow)
             
             # Prepare questions for LaTeX formatting
             questions_for_latex = []
@@ -1032,6 +1159,7 @@ Set filename to "isomorphic_questions.tex"
             workflow["agents"]["latex"]["data"]["sentTo"] = "user"
             workflow["agents"]["latex"]["data"]["input"] = latex_input
             workflow["agents"]["latex"]["data"]["output"] = f"Created {latex_output.filename}"
+            _touch_workflow(workflow)
             
             # Save LaTeX file
             latex_filename = latex_output.filename or "isomorphic_questions.tex"
@@ -1096,6 +1224,7 @@ Set filename to "isomorphic_questions.tex"
                 workflow["files"].append({"name": "evaluation_dataset.jsonl", "size": eval_dataset_path.stat().st_size})
             workflow["result"] = final_result.model_dump()
             workflow["status"] = "completed"
+            _touch_workflow(workflow)
             
             logger.info("Workflow %s completed successfully", workflow_id)
             
@@ -1103,6 +1232,7 @@ Set filename to "isomorphic_questions.tex"
         logger.error("Workflow %s failed: %s", workflow_id, e)
         workflow["status"] = "errored"
         workflow["error"] = str(e)
+        _touch_workflow(workflow)
         raise
 
 
