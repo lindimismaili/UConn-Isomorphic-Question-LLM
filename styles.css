@@ -102,95 +102,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Background decoration - animated gradient */
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes floatGradient1 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.15;
-  }
-  50% {
-    transform: translate(30px, -20px) scale(1.1);
-    opacity: 0.2;
-  }
-}
-
-@keyframes floatGradient2 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.1;
-  }
-  50% {
-    transform: translate(-40px, 30px) scale(1.15);
-    opacity: 0.15;
-  }
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    radial-gradient(
-      ellipse at 20% 20%,
-      rgba(60, 109, 193, 0.26) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 80% 80%,
-      rgba(8, 35, 82, 0.18) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 50% 50%,
-      rgba(153, 176, 214, 0.15) 0%,
-      transparent 70%
-    );
-  pointer-events: none;
-  z-index: -1;
-  animation: gradientShift 15s ease infinite;
-  background-size: 200% 200%;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background:
-    radial-gradient(
-      ellipse 600px 600px at 30% 30%,
-      rgba(8, 35, 82, 0.12) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse 500px 500px at 70% 70%,
-      rgba(64, 107, 184, 0.11) 0%,
-      transparent 50%
-    );
-  pointer-events: none;
-  z-index: -1;
-  animation: floatGradient1 20s ease-in-out infinite;
-}
-
 /* =============================================================================
    Typography
    ============================================================================= */
@@ -643,7 +554,12 @@ h4 {
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
   white-space: nowrap;
   min-width: fit-content;
 }
@@ -661,6 +577,9 @@ h4 {
 .btn-icon {
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
+  display: block;
+  pointer-events: none;
 }
 
 .btn-primary {
@@ -683,7 +602,8 @@ h4 {
 }
 
 .btn-fixed-width {
-  width: 132px;
+  width: 144px;
+  min-width: 144px;
   justify-content: center;
 }
 
@@ -705,81 +625,47 @@ h4 {
 }
 
 .btn-feedback {
-  background: linear-gradient(135deg, #10b981, #34d399);
+  background-color: #10b981;
+  background-image: none;
   border-color: #10b981;
   color: white;
   box-shadow:
-    0 0 20px rgba(16, 185, 129, 0.8),
-    0 5px 15px rgba(16, 185, 129, 0.35);
-  animation: feedbackGlow 1.2s ease forwards;
+    0 0 12px rgba(16, 185, 129, 0.55),
+    0 4px 10px rgba(16, 185, 129, 0.25);
 }
 
 .btn-feedback:hover {
-  background: linear-gradient(135deg, #10b981, #34d399);
+  background-color: #10b981;
+  background-image: none;
   border-color: #10b981;
   color: white;
   box-shadow:
-    0 0 20px rgba(16, 185, 129, 0.8),
-    0 5px 15px rgba(16, 185, 129, 0.35);
+    0 0 12px rgba(16, 185, 129, 0.55),
+    0 4px 10px rgba(16, 185, 129, 0.25);
   cursor: not-allowed;
   transform: none;
 }
 
 .btn-error-feedback {
-  background: linear-gradient(135deg, #ef4444, #fb7185);
+  background-color: #ef4444;
+  background-image: none;
   border-color: #ef4444;
   color: white;
   box-shadow:
-    0 0 20px rgba(239, 68, 68, 0.8),
-    0 5px 15px rgba(239, 68, 68, 0.35);
-  animation: errorGlow 1.2s ease forwards;
+    0 0 12px rgba(239, 68, 68, 0.55),
+    0 4px 10px rgba(239, 68, 68, 0.25);
 }
 
 .btn-error-feedback:hover {
-  background: linear-gradient(135deg, #ef4444, #fb7185);
+  background-color: #ef4444;
+  background-image: none;
   border-color: #ef4444;
   color: white;
   box-shadow:
-    0 0 20px rgba(239, 68, 68, 0.8),
-    0 5px 15px rgba(239, 68, 68, 0.35);
+    0 0 12px rgba(239, 68, 68, 0.55),
+    0 4px 10px rgba(239, 68, 68, 0.25);
   cursor: not-allowed;
   transform: none;
-}
-
-@keyframes feedbackGlow {
-  0% {
-    box-shadow:
-      0 0 0 rgba(16, 185, 129, 0),
-      0 0 0 rgba(16, 185, 129, 0);
-  }
-  50% {
-    box-shadow:
-      0 0 18px rgba(16, 185, 129, 0.85),
-      0 6px 20px rgba(16, 185, 129, 0.35);
-  }
-  100% {
-    box-shadow:
-      0 0 10px rgba(16, 185, 129, 0.5),
-      0 4px 12px rgba(16, 185, 129, 0.25);
-  }
-}
-
-@keyframes errorGlow {
-  0% {
-    box-shadow:
-      0 0 0 rgba(239, 68, 68, 0),
-      0 0 0 rgba(239, 68, 68, 0);
-  }
-  50% {
-    box-shadow:
-      0 0 18px rgba(239, 68, 68, 0.85),
-      0 6px 20px rgba(239, 68, 68, 0.35);
-  }
-  100% {
-    box-shadow:
-      0 0 10px rgba(239, 68, 68, 0.5),
-      0 4px 12px rgba(239, 68, 68, 0.25);
-  }
 }
 
 .btn-icon-only {
@@ -1283,7 +1169,7 @@ h4 {
 .header,
 .main-content,
 .footer {
-  transition: filter var(--transition-fast);
+  transition: filter var(--transition-normal);
 }
 
 body.modal-open .header,
@@ -1326,15 +1212,20 @@ body.modal-open .footer {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  /* On hide: fade out first, then set visibility:hidden after transition */
   transition:
-    opacity var(--transition-fast),
-    visibility var(--transition-fast);
+    opacity var(--transition-normal),
+    visibility 0s var(--transition-normal);
 }
 
 .modal.is-visible {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  /* On show: visibility is immediately visible, then opacity fades in */
+  transition:
+    opacity var(--transition-normal),
+    visibility 0s;
 }
 
 .modal-backdrop {
@@ -1345,15 +1236,13 @@ body.modal-open .footer {
   bottom: 0;
   background: rgba(6, 22, 52, 0.5);
   opacity: 0;
-  backdrop-filter: blur(0);
-  transition:
-    opacity var(--transition-fast),
-    backdrop-filter var(--transition-fast);
+  /* Keep blur always set; opacity controls visibility for smoother transition */
+  backdrop-filter: blur(var(--blur-sm));
+  transition: opacity var(--transition-normal);
 }
 
 .modal.is-visible .modal-backdrop {
   opacity: 1;
-  backdrop-filter: blur(var(--blur-sm));
 }
 
 .modal-content {
@@ -1372,23 +1261,23 @@ body.modal-open .footer {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: modalSlideIn var(--transition-normal) ease-out;
+  /* Transition-based approach: animates both open AND close */
+  opacity: 0;
+  transform: translateY(-16px) scale(0.97);
+  transition:
+    opacity var(--transition-normal),
+    transform var(--transition-normal);
+}
+
+.modal.is-visible .modal-content {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .modal-large {
   max-width: 800px;
 }
 
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
 .modal-header {
   display: flex;
@@ -1414,6 +1303,10 @@ body.modal-open .footer {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-sm);
+}
+
+.agent-modal-footer {
+  justify-content: space-between;
 }
 
 /* Files List in Modal */
@@ -1473,8 +1366,9 @@ body.modal-open .footer {
   flex-direction: column;
   gap: var(--spacing-sm);
   max-height: 400px;
-  overflow-y: auto;
-  padding-right: var(--spacing-md);
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  padding-right: var(--spacing-sm);
   border-right: 1px solid var(--color-border);
 }
 
@@ -1716,29 +1610,31 @@ body.modal-open .footer {
 }
 
 /* =============================================================================
-   Agents List Modal
+   Skills Modal
    ============================================================================= */
 
-.agents-list-body {
+.skills-list-body {
   padding: var(--spacing-lg);
 }
 
-.agents-list-intro {
+.skills-list-intro {
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-md);
 }
 
-.agents-list {
+.skills-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: var(--spacing-sm);
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: var(--spacing-xs);
 }
 
-.agent-list-item {
+.skill-list-item {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -1751,55 +1647,11 @@ body.modal-open .footer {
   text-align: left;
 }
 
-.agent-list-item:hover {
+.skill-list-item:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-primary);
   color: var(--color-primary);
   transform: none;
-}
-
-.agent-list-item:hover .agent-list-icon {
-  color: var(--color-primary);
-}
-
-.agent-list-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  color: var(--color-text-secondary);
-  transition: color var(--transition-fast);
-}
-
-.agent-list-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.agent-list-item.slider-item {
-  grid-column: span 2;
-  justify-content: center;
-  margin-top: var(--spacing-sm);
-  border-color: var(--color-secondary);
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.agent-list-item.slider-item:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.agent-list-item.slider-item:hover .agent-list-icon {
-  color: var(--color-accent);
-}
-
-@media (max-width: 500px) {
-  .agents-list {
-    grid-template-columns: 1fr;
-  }
-
-  .agent-list-item.slider-item {
-    grid-column: span 1;
-  }
 }
 
 /* =============================================================================
@@ -1831,15 +1683,4 @@ body.modal-open .footer {
   color: var(--color-text-secondary);
   tab-size: 2;
   margin: 0;
-}
-
-/* Overlay Modal (appears on top of another modal) */
-.modal-overlay {
-  z-index: 1100;
-}
-
-.modal-overlay .modal-backdrop-blur {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }

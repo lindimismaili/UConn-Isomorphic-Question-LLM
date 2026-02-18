@@ -3,7 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Isomorphic Question Generator</title>
+    <title>Isomorphic Question Generator — UConn Physics Research</title>
+
+    <!-- SEO -->
+    <meta
+      name="description"
+      content="AI-powered tool for generating isomorphic multiple-choice physics questions. Upload source materials and produce verified question variants with customizable difficulty, theme, and numeric parameters."
+    />
+    <meta name="author" content="Lindim Ismaili" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0b2a66" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Isomorphic Question Generator" />
+    <meta
+      property="og:description"
+      content="AI-powered tool for generating isomorphic physics questions — UConn Physics Research."
+    />
+    <meta property="og:type" content="website" />
+
+    <!-- Security headers as meta equivalents -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
+    <meta
+      http-equiv="Referrer-Policy"
+      content="strict-origin-when-cross-origin"
+    />
+
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,7 +44,7 @@
       type="image/svg+xml"
       href="assets/ai_icon_fill_white.svg"
     />
-    <link rel="stylesheet" href="styles.css?v=20260201" />
+    <link rel="stylesheet" href="styles.css?v=20260218" />
   </head>
   <body>
     <!-- Header -->
@@ -42,10 +71,10 @@
             <div class="header-buttons">
               <button
                 class="btn btn-ghost help-btn"
-                id="agentsBtn"
-                title="Agents"
+                id="skillsBtn"
+                title="Skills"
               >
-                Agents
+                Skills
               </button>
               <button
                 class="btn btn-ghost help-btn"
@@ -858,17 +887,20 @@
           <div class="agent-details-main">
             <div class="schema-panels">
               <div class="detail-text-section">
-                <label>Input Schema</label>
+                <label>Input</label>
                 <pre id="detailInputText" class="detail-text-box"></pre>
               </div>
               <div class="detail-text-section">
-                <label>Output Schema</label>
+                <label>Output</label>
                 <pre id="detailOutputText" class="detail-text-box"></pre>
               </div>
             </div>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer agent-modal-footer">
+          <button id="agentPromptBtn" class="btn btn-ghost" disabled>
+            Prompt
+          </button>
           <button class="btn btn-secondary close-modal" data-modal="agentModal">
             Close
           </button>
@@ -941,13 +973,13 @@
       </div>
     </div>
 
-    <!-- Agents List Modal -->
-    <div id="agentsModal" class="modal">
+    <!-- Skills Modal -->
+    <div id="skillsModal" class="modal">
       <div class="modal-backdrop"></div>
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Agent Prompts</h3>
-          <button class="btn-icon-only close-modal" data-modal="agentsModal">
+          <h3>Skills</h3>
+          <button class="btn-icon-only close-modal" data-modal="skillsModal">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -959,128 +991,16 @@
             </svg>
           </button>
         </div>
-        <div class="modal-body agents-list-body">
-          <p class="agents-list-intro">
-            Click an agent to view its system prompt:
+        <div class="modal-body skills-list-body">
+          <p class="skills-list-intro">
+            Click a skill to view its <code>SKILL.md</code>:
           </p>
-          <div class="agents-list">
-            <button class="agent-list-item" data-prompt="normalizer">
-              <div class="agent-list-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="5" width="18" height="10" rx="2" />
-                  <path d="M8 21h8" />
-                  <path d="M10 16h4" />
-                </svg>
-              </div>
-              <span>Normalizer</span>
-            </button>
-            <button class="agent-list-item" data-prompt="extracter">
-              <div class="agent-list-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="5" width="18" height="10" rx="2" />
-                  <path d="M8 21h8" />
-                  <path d="M10 16h4" />
-                </svg>
-              </div>
-              <span>Extracter</span>
-            </button>
-            <button class="agent-list-item" data-prompt="verifier">
-              <div class="agent-list-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="5" width="18" height="10" rx="2" />
-                  <path d="M8 21h8" />
-                  <path d="M10 16h4" />
-                </svg>
-              </div>
-              <span>Verifier</span>
-            </button>
-            <button class="agent-list-item" data-prompt="generator">
-              <div class="agent-list-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="5" width="18" height="10" rx="2" />
-                  <path d="M8 21h8" />
-                  <path d="M10 16h4" />
-                </svg>
-              </div>
-              <span>Generator</span>
-            </button>
-            <button class="agent-list-item" data-prompt="latex">
-              <div class="agent-list-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="5" width="18" height="10" rx="2" />
-                  <path d="M8 21h8" />
-                  <path d="M10 16h4" />
-                </svg>
-              </div>
-              <span>LaTeX</span>
-            </button>
-            <button class="agent-list-item" data-prompt="python">
-              <div class="agent-list-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="5" width="18" height="10" rx="2" />
-                  <path d="M8 21h8" />
-                  <path d="M10 16h4" />
-                </svg>
-              </div>
-              <span>Python</span>
-            </button>
-            <button class="agent-list-item slider-item" data-prompt="sliders">
-              <div class="agent-list-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <line x1="4" y1="21" x2="4" y2="14" />
-                  <line x1="4" y1="10" x2="4" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="12" />
-                  <line x1="12" y1="8" x2="12" y2="3" />
-                  <line x1="20" y1="21" x2="20" y2="16" />
-                  <line x1="20" y1="12" x2="20" y2="3" />
-                  <line x1="1" y1="14" x2="7" y2="14" />
-                  <line x1="9" y1="8" x2="15" y2="8" />
-                  <line x1="17" y1="16" x2="23" y2="16" />
-                </svg>
-              </div>
-              <span>Sliders</span>
-            </button>
-          </div>
+          <div id="skillsList" class="skills-list"></div>
         </div>
         <div class="modal-footer">
           <button
             class="btn btn-secondary close-modal"
-            data-modal="agentsModal"
+            data-modal="skillsModal"
           >
             Close
           </button>
@@ -1088,12 +1008,12 @@
       </div>
     </div>
 
-    <!-- Agent Prompt Viewer Modal (Overlay) -->
-    <div id="promptViewerModal" class="modal modal-overlay">
-      <div class="modal-backdrop modal-backdrop-blur"></div>
+    <!-- Content Viewer Modal -->
+    <div id="promptViewerModal" class="modal">
+      <div class="modal-backdrop"></div>
       <div class="modal-content modal-large">
         <div class="modal-header">
-          <h3 id="promptViewerTitle">Agent Prompt</h3>
+          <h3 id="promptViewerTitle">Viewer</h3>
           <button
             class="btn-icon-only close-modal"
             data-modal="promptViewerModal"
@@ -1115,9 +1035,6 @@ Loading...</pre
           >
         </div>
         <div class="modal-footer">
-          <button class="btn btn-ghost" id="backToAgentsBtn">
-            ← Back to List
-          </button>
           <button
             class="btn btn-secondary close-modal"
             data-modal="promptViewerModal"
@@ -1128,6 +1045,6 @@ Loading...</pre
       </div>
     </div>
 
-    <script src="script.js?v=20260201"></script>
+    <script src="script.js?v=20260218"></script>
   </body>
 </html>

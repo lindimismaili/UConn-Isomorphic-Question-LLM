@@ -12,7 +12,7 @@
     "name": "Extracter",
     "description": "Reads files and extracts questions",
     "model": "gpt-5.2",
-    "reasoning": "low",
+    "reasoning": "none",
     "inputFrom": "Normalizer",
     "outputTo": "Verifier",
     "useCodeInterpreter": true

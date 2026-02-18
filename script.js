@@ -98,6 +98,46 @@ const state = {
 };
 
 const MAX_UPLOAD_FILES = 5;
+const AGENT_PROMPT_MAP = {
+  normalizer: "normalizer",
+  extracter: "extracter",
+  verifier: "verifier",
+  generator: "generator",
+  latex: "latex",
+};
+const AGENT_PROMPT_TITLES = {
+  normalizer: "Normalizer",
+  extracter: "Extracter",
+  verifier: "Verifier",
+  generator: "Generator",
+  latex: "LaTeX",
+  python: "Python",
+};
+const FALLBACK_SKILLS = [
+  "check-for-answers",
+  "confirm-answer",
+  "convert-to-latex",
+  "create-function-for-question",
+  "determine-question-concept",
+  "determine-question-difficulty",
+  "determine-question-theme",
+  "evaluate-via-python",
+  "extract-docx",
+  "extract-image",
+  "extract-pdf",
+  "extract-variables",
+  "generate-distractors",
+  "generate-question",
+  "generate-quick-reason",
+  "generate-solution-process",
+  "identify-author",
+  "identify-date",
+  "identify-other",
+  "identify-questions",
+  "identify-title",
+  "verify-answer",
+  "verify-latex",
+];
 
 // =============================================================================
 // DOM Elements
@@ -281,36 +321,28 @@ function buildPromptWithSliders(userPrompt) {
 }
 
 /**
- * Load and display an agent prompt or sliders config
+ * Load and display a content document in the viewer modal.
  */
-async function loadAndShowPrompt(promptName) {
+function openViewer(title, initialContent = "Loading...") {
   const titleEl = document.getElementById("promptViewerTitle");
   const contentEl = document.getElementById("promptViewerContent");
-
-  // Map prompt names to display titles
-  const titles = {
-    normalizer: "Normalizer",
-    extracter: "Extracter",
-    verifier: "Verifier",
-    generator: "Generator",
-    latex: "LaTeX",
-    python: "Python",
-    sliders: "Sliders",
-  };
-
-  titleEl.textContent = titles[promptName] || "Agent Prompt";
-  contentEl.textContent = "Loading...";
-
-  // Open prompt viewer as overlay (don't close agents modal)
+  if (titleEl) titleEl.textContent = title;
+  if (contentEl) contentEl.textContent = initialContent;
   openModal("promptViewerModal");
+}
+
+/**
+ * Load and display an agent prompt in the viewer modal.
+ */
+async function loadAndShowPrompt(promptName) {
+  const displayName = AGENT_PROMPT_TITLES[promptName] || promptName;
+  openViewer(`${displayName} Prompt`);
+
+  const contentEl = document.getElementById("promptViewerContent");
+  if (!contentEl) return;
 
   try {
-    const content =
-      promptName === "sliders"
-        ? formatSlidersForDisplay(await fetchSlidersConfigData())
-        : await fetchPromptContent(promptName);
-
-    contentEl.textContent = content;
+    contentEl.textContent = await fetchPromptContent(promptName);
   } catch (error) {
     contentEl.textContent = `Error loading prompt: ${error.message}`;
   }
@@ -338,6 +370,117 @@ async function fetchPromptContent(promptName) {
         `API error: ${apiError.message}; Local fallback: ${localError.message}`,
       );
     }
+  }
+}
+
+/**
+ * Fetch available skills for the skills modal.
+ */
+async function fetchSkillsList() {
+  try {
+    const response = await fetch("/api/skills");
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}`);
+    }
+    const payload = await response.json();
+    if (Array.isArray(payload.skills) && payload.skills.length > 0) {
+      return payload.skills;
+    }
+    throw new Error("Skills list is empty");
+  } catch (error) {
+    console.warn("Falling back to local hardcoded skills list:", error);
+    return FALLBACK_SKILLS;
+  }
+}
+
+/**
+ * Fetch a SKILL.md with API-first strategy and local fallback.
+ */
+async function fetchSkillContent(skillName) {
+  try {
+    const response = await fetch(`/api/skills/${skillName}`);
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}`);
+    }
+    return await response.text();
+  } catch (apiError) {
+    console.warn(
+      `Falling back to local skill copy for ${skillName}:`,
+      apiError,
+    );
+    try {
+      return await fetchLocalSkill(skillName);
+    } catch (localError) {
+      throw new Error(
+        `API error: ${apiError.message}; Local fallback: ${localError.message}`,
+      );
+    }
+  }
+}
+
+/**
+ * Populate the skills modal list.
+ */
+function renderSkillsList(skills) {
+  const skillsList = document.getElementById("skillsList");
+  if (!skillsList) return;
+
+  skillsList.innerHTML = "";
+  skills
+    .slice()
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((skillName) => {
+      const button = document.createElement("button");
+      button.className = "skill-list-item";
+      button.type = "button";
+      button.dataset.skill = skillName;
+      button.textContent = skillName;
+      skillsList.appendChild(button);
+    });
+}
+
+function renderSkillsStatus(message) {
+  const skillsList = document.getElementById("skillsList");
+  if (!skillsList) return;
+  skillsList.innerHTML = "";
+  const button = document.createElement("button");
+  button.className = "skill-list-item";
+  button.type = "button";
+  button.disabled = true;
+  button.textContent = message;
+  skillsList.appendChild(button);
+}
+
+/**
+ * Open skills modal and load latest list.
+ */
+async function openSkillsModal() {
+  renderSkillsStatus("Loading skills...");
+  openModal("skillsModal");
+
+  try {
+    const skills = await fetchSkillsList();
+    renderSkillsList(skills);
+  } catch (error) {
+    renderSkillsStatus(`Error loading skills: ${error.message}`);
+  }
+}
+
+/**
+ * Load and show one skill file.
+ * The skills modal stays open in the background; the viewer opens on top.
+ * Closing the viewer reveals the skills modal again.
+ */
+async function loadAndShowSkill(skillName) {
+  openViewer(`${skillName}/SKILL.md`);
+
+  const contentEl = document.getElementById("promptViewerContent");
+  if (!contentEl) return;
+
+  try {
+    contentEl.textContent = await fetchSkillContent(skillName);
+  } catch (error) {
+    contentEl.textContent = `Error loading SKILL.md: ${error.message}`;
   }
 }
 
@@ -372,6 +515,14 @@ async function fetchLocalPrompt(promptName) {
 }
 
 /**
+ * Fetch a local skill file from the skills directory.
+ */
+async function fetchLocalSkill(skillName) {
+  const response = await fetchLocalResource(`skills/${skillName}/SKILL.md`);
+  return await response.text();
+}
+
+/**
  * Fetch JSON from a local path relative to the current page.
  */
 async function fetchLocalJson(relativePath) {
@@ -389,29 +540,6 @@ async function fetchLocalResource(relativePath) {
     throw new Error(`Local resource unavailable (${response.status})`);
   }
   return response;
-}
-
-/**
- * Format sliders config for readable display
- */
-function formatSlidersForDisplay(data) {
-  let output = "";
-
-  for (const [key, config] of Object.entries(data)) {
-    output += `═══════════════════════════════════════════\n`;
-    output += `${config.label || key.toUpperCase()}\n`;
-    output += `Range: ${config.leftLabel} → ${config.rightLabel}\n`;
-    output += `═══════════════════════════════════════════\n\n`;
-
-    config.levels.forEach((level, index) => {
-      output += `Level ${index + 1}:\n`;
-      output += `  "${level}"\n\n`;
-    });
-
-    output += "\n";
-  }
-
-  return output.trim();
 }
 
 /**
@@ -678,6 +806,13 @@ function openAgentModal(agentKey) {
   document.getElementById("detailOutputText").textContent =
     formatText(agent.outputText) || "No output data";
 
+  const promptBtn = document.getElementById("agentPromptBtn");
+  if (promptBtn) {
+    const promptName = AGENT_PROMPT_MAP[agentKey] || "";
+    promptBtn.dataset.prompt = promptName;
+    promptBtn.disabled = !promptName;
+  }
+
   openModal("agentModal");
 }
 
@@ -832,26 +967,12 @@ function triggerButtonFeedback(
     target.dataset.originalLabel = originalText;
   }
 
-  const isFixedWidth = button.classList.contains("btn-fixed-width");
-  let widthBefore = null;
-  let widthAfter = null;
-  if (!isFixedWidth) {
-    widthBefore = button.getBoundingClientRect().width;
-    widthAfter = measureButtonWidth(button, text);
-    button.dataset.originalWidth = widthBefore;
-    button.style.width = `${widthBefore}px`;
-    button.offsetHeight;
-  }
-
   requestAnimationFrame(() => {
     target.textContent = text;
     if (className) {
       button.classList.add(className);
     }
     button.disabled = true;
-    if (!isFixedWidth && widthAfter !== null) {
-      button.style.width = `${widthAfter}px`;
-    }
   });
 
   if (button._feedbackTimeoutId) {
@@ -859,23 +980,12 @@ function triggerButtonFeedback(
   }
 
   button._feedbackTimeoutId = setTimeout(() => {
-    if (!isFixedWidth) {
-      const resetWidth =
-        Number(button.dataset.originalWidth) ||
-        button.getBoundingClientRect().width;
-      button.style.width = `${resetWidth}px`;
-    }
     target.textContent = target.dataset.originalLabel || originalText;
     if (className) {
       button.classList.remove(className);
     }
     button.disabled = false;
     button._feedbackTimeoutId = null;
-    if (!isFixedWidth) {
-      setTimeout(() => {
-        button.style.width = "";
-      }, 300);
-    }
     if (typeof onReset === "function") {
       onReset();
     }
@@ -897,25 +1007,6 @@ function triggerUploadButtonWarning() {
     duration: 1600,
     onReset: updateUploadButtonState,
   });
-}
-
-function measureButtonWidth(button, text) {
-  const clone = button.cloneNode(true);
-  clone.style.position = "absolute";
-  clone.style.visibility = "hidden";
-  clone.style.top = "-9999px";
-  clone.style.left = "-9999px";
-  clone.style.width = "auto";
-  const cloneLabel = clone.querySelector(".btn-label");
-  if (cloneLabel) {
-    cloneLabel.textContent = text;
-  } else {
-    clone.textContent = text;
-  }
-  document.body.appendChild(clone);
-  const width = clone.getBoundingClientRect().width;
-  clone.remove();
-  return width;
 }
 
 /**
@@ -1423,25 +1514,30 @@ document.addEventListener("DOMContentLoaded", () => {
     helpBtn.addEventListener("click", () => openModal("helpModal"));
   }
 
-  // Agents button
-  const agentsBtn = document.getElementById("agentsBtn");
-  if (agentsBtn) {
-    agentsBtn.addEventListener("click", () => openModal("agentsModal"));
+  // Skills button
+  const skillsBtn = document.getElementById("skillsBtn");
+  if (skillsBtn) {
+    skillsBtn.addEventListener("click", openSkillsModal);
   }
 
-  // Agent list items - load prompt when clicked
-  document.querySelectorAll(".agent-list-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      const promptName = item.getAttribute("data-prompt");
-      loadAndShowPrompt(promptName);
+  // Skills list click delegation
+  const skillsList = document.getElementById("skillsList");
+  if (skillsList) {
+    skillsList.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) return;
+      const item = event.target.closest(".skill-list-item");
+      if (!item || !item.dataset.skill) return;
+      loadAndShowSkill(item.dataset.skill);
     });
-  });
+  }
 
-  // Back to agents list button (just close overlay, agents modal is still open)
-  const backToAgentsBtn = document.getElementById("backToAgentsBtn");
-  if (backToAgentsBtn) {
-    backToAgentsBtn.addEventListener("click", () => {
-      closeModal("promptViewerModal");
+  // Prompt button in agent modal
+  const agentPromptBtn = document.getElementById("agentPromptBtn");
+  if (agentPromptBtn) {
+    agentPromptBtn.addEventListener("click", () => {
+      const promptName = agentPromptBtn.dataset.prompt;
+      if (!promptName) return;
+      loadAndShowPrompt(promptName);
     });
   }
 
@@ -1471,12 +1567,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Close modals on Escape key
+  // Close modals on Escape key — only close the topmost visible modal
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      document.querySelectorAll(".modal.is-visible").forEach((modal) => {
-        closeModal(modal);
-      });
+      const visibleModals = [
+        ...document.querySelectorAll(".modal.is-visible"),
+      ];
+      if (visibleModals.length > 0) {
+        // Close the last one in DOM order (rendered on top)
+        closeModal(visibleModals[visibleModals.length - 1]);
+      }
     }
   });
 
