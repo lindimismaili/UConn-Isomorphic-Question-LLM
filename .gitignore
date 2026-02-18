@@ -41,3 +41,6 @@ Desktop.ini
 # Local secrets / configs
 .env.local
 .env.*.local
+
+# Local upload marker
+.upload
