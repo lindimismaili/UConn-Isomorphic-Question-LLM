@@ -11,6 +11,7 @@ Provides REST API endpoints for:
 import asyncio
 import json
 import os
+import re
 import shutil
 import time
 import uuid
@@ -20,7 +21,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -70,6 +71,7 @@ STATIC_DIR = REPO_ROOT  # Frontend files are in repo root (index.html, etc.)
 ENV_PATH = REPO_ROOT / ".env"
 DATA_DIR = REPO_ROOT / "data"
 PROMPTS_DIR = DATA_DIR / "prompts"
+SKILLS_DIR = REPO_ROOT / "skills"
 AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 OUTPUTS_DIR = REPO_ROOT / "outputs"
 UPLOADS_DIR = REPO_ROOT / "uploads"
@@ -550,10 +552,47 @@ async def get_prompt(prompt_name: str):
         raise HTTPException(status_code=404, detail="Prompt file not found")
     
     try:
-        from fastapi.responses import PlainTextResponse
         return PlainTextResponse(prompt_path.read_text(encoding="utf-8"))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load prompt: {str(e)}")
+
+
+@app.get("/api/skills")
+async def get_skills():
+    """Get available skill folders that contain SKILL.md."""
+    if not SKILLS_DIR.exists():
+        raise HTTPException(status_code=404, detail="Skills directory not found")
+
+    try:
+        skills = []
+        for entry in sorted(SKILLS_DIR.iterdir()):
+            if not entry.is_dir():
+                continue
+            if entry.name.startswith("_"):
+                continue
+            if (entry / "SKILL.md").exists():
+                skills.append(entry.name)
+        return {"skills": skills}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load skills: {str(e)}")
+
+
+@app.get("/api/skills/{skill_name}")
+async def get_skill(skill_name: str):
+    """Get SKILL.md content for a specific skill."""
+    if not re.fullmatch(r"[a-z0-9-]+", skill_name):
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    skill_path = (SKILLS_DIR / skill_name / "SKILL.md").resolve()
+    if not _is_under_directory(skill_path, SKILLS_DIR):
+        raise HTTPException(status_code=400, detail="Invalid skill path")
+    if not skill_path.exists():
+        raise HTTPException(status_code=404, detail="Skill file not found")
+
+    try:
+        return PlainTextResponse(skill_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load skill: {str(e)}")
 
 
 @app.get("/api/workflow/{workflow_id}/status")
