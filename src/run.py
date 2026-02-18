@@ -48,8 +48,13 @@ def main():
 ╚══════════════════════════════════════════════════════════╝
 """)
     
+    # Support both:
+    # - python src/run.py (module path should be server:app)
+    # - python -m src.run (module path should be src.server:app)
+    app_path = "src.server:app" if __package__ == "src" else "server:app"
+
     uvicorn.run(
-        "src.server:app",
+        app_path,
         host=args.host,
         port=args.port,
         reload=args.reload,
