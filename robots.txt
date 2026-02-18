@@ -1,0 +1,12 @@
+# robots.txt — Isomorphic Question Generator
+# Internal research tool; block all search engine indexing.
+
+User-agent: *
+Disallow: /
+
+# Block access to sensitive directories regardless of the above
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /outputs/
+Disallow: /src/
+Disallow: /data/
