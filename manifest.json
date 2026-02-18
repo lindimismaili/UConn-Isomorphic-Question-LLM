@@ -1,0 +1,18 @@
+{
+  "name": "Isomorphic Question Generator",
+  "short_name": "IsoQ Gen",
+  "description": "AI-powered tool for generating isomorphic physics questions — UConn Physics Research.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef3fb",
+  "theme_color": "#0b2a66",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "assets/ai_icon_fill.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
