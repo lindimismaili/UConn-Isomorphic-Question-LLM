@@ -44,3 +44,9 @@ Desktop.ini
 
 # Local upload marker
 .upload
+
+# Runtime artifacts: keep folders, ignore contents
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
