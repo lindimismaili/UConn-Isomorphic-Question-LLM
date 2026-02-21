@@ -291,12 +291,18 @@ AGENT_OUTPUT_TYPES = {
 }
 
 
-def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
+def create_agents(
+    *,
+    file_ids: Optional[list[str]] = None,
+    container_id: Optional[str] = None,
+) -> dict[str, Agent]:
     """
     Create all agents with their tools configured from agents.json.
     
     Args:
         file_ids: List of uploaded file IDs for code interpreter access
+        container_id: If provided, use a single explicit Code Interpreter container
+            shared across all agent calls in the workflow.
     
     Returns:
         Dictionary of agent key -> Agent instance
@@ -308,10 +314,14 @@ def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
     code_interpreter = CodeInterpreterTool(
         tool_config={
             "type": "code_interpreter",
-            "container": {
-                "type": "auto",
-                "file_ids": file_ids,
-            },
+            "container": (
+                container_id
+                if container_id
+                else {
+                    "type": "auto",
+                    "file_ids": file_ids,
+                }
+            ),
         }
     )
     
@@ -348,6 +358,33 @@ def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
                    config.get("name"), config.get("model"), reasoning_level)
     
     return agents
+
+
+def _any_agent_uses_code_interpreter(agents_config: dict[str, Any]) -> bool:
+    for _agent_key, cfg in agents_config.items():
+        try:
+            if bool(cfg.get("useCodeInterpreter", False)):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _container_expires_minutes() -> int:
+    """
+    OpenAI containers currently enforce a max expiry of 20 minutes
+    (relative to last_active_at). Clamp env config to a safe range.
+    """
+    raw = os.getenv("OPENAI_CONTAINER_EXPIRES_MINUTES", "20")
+    try:
+        minutes = int(raw)
+    except Exception:
+        minutes = 20
+    if minutes < 1:
+        return 1
+    if minutes > 20:
+        return 20
+    return minutes
 
 
 # =============================================================================
@@ -478,8 +515,24 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
             else:
                 print(f"   ⚠ File not found: {file_path}")
         
-        # Create agents with file access
-        agents = create_agents(file_ids)
+        # Create a single shared Code Interpreter container for this workflow
+        # so that all agent calls reuse the same environment.
+        agents_config = load_agents_config()
+        shared_container_id: Optional[str] = None
+        if _any_agent_uses_code_interpreter(agents_config):
+            if not hasattr(client, "containers"):
+                raise RuntimeError(
+                    "OpenAI SDK does not support containers; upgrade openai to >=2.0.0"
+                )
+            container = client.containers.create(
+                name=f"isomorphic-workflow-cli-{timestamp}",
+                expires_after={"anchor": "last_active_at", "minutes": _container_expires_minutes()},
+                file_ids=file_ids,
+            )
+            shared_container_id = container.id
+
+        # Create agents (use shared container if available)
+        agents = create_agents(file_ids=file_ids, container_id=shared_container_id)
         
         # =================================================================
         # Step 1: Normalize User Request
