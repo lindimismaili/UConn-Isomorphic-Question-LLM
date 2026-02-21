@@ -387,18 +387,30 @@ def _prune_workflows() -> None:
 # =============================================================================
 
 
-def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
-    """Create all agents with config from agents.json."""
+def create_agents(
+    *,
+    file_ids: Optional[list[str]] = None,
+    container_id: Optional[str] = None,
+) -> dict[str, Agent]:
+    """Create all agents with config from agents.json.
+
+    If container_id is provided, all Code Interpreter tool invocations use the
+    same explicit OpenAI container (shared across agent calls in the workflow).
+    """
     file_ids = file_ids or []
     agents_config = load_agents_config()
 
     code_interpreter = CodeInterpreterTool(
         tool_config={
             "type": "code_interpreter",
-            "container": {
-                "type": "auto",
-                "file_ids": file_ids,
-            },
+            "container": (
+                container_id
+                if container_id
+                else {
+                    "type": "auto",
+                    "file_ids": file_ids,
+                }
+            ),
         }
     )
 
@@ -427,6 +439,33 @@ def create_agents(file_ids: list[str] = None) -> dict[str, Agent]:
     if missing:
         raise ValueError(f"Missing required agent config(s): {', '.join(missing)}")
     return agents
+
+
+def _any_agent_uses_code_interpreter(agents_config: dict[str, Any]) -> bool:
+    for _agent_key, cfg in agents_config.items():
+        try:
+            if bool(cfg.get("useCodeInterpreter", False)):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _container_expires_minutes() -> int:
+    """
+    OpenAI containers currently enforce a max expiry of 20 minutes
+    (relative to last_active_at). Clamp env config to a safe range.
+    """
+    raw = os.getenv("OPENAI_CONTAINER_EXPIRES_MINUTES", "20")
+    try:
+        minutes = int(raw)
+    except Exception:
+        minutes = 20
+    if minutes < 1:
+        return 1
+    if minutes > 20:
+        return 20
+    return minutes
 
 
 # =============================================================================
@@ -704,6 +743,10 @@ async def start_workflow(
     now = _workflow_now()
     workflows[workflow_id] = {
         "status": "starting",
+        "container": {
+            "status": "inactive",
+            "id": "",
+        },
         "agents": {
             "normalizer": {"status": "inactive", "data": {}},
             "extracter": {"status": "inactive", "data": {}},
@@ -813,8 +856,29 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     file_ids.append(file_id)
                     file_names.append(path.name)
             
-            # Create agents
-            agents = create_agents(file_ids)
+            # Create a single shared Code Interpreter container for this workflow
+            # so that all agent calls reuse the same environment.
+            agents_config = load_agents_config()
+            shared_container_id: Optional[str] = None
+            if _any_agent_uses_code_interpreter(agents_config):
+                if not hasattr(client, "containers"):
+                    raise RuntimeError(
+                        "OpenAI SDK does not support containers; upgrade openai to >=2.0.0"
+                    )
+                workflow["container"]["status"] = "creating"
+                _touch_workflow(workflow)
+                container = client.containers.create(
+                    name=f"isomorphic-workflow-{workflow_id}-{timestamp}",
+                    expires_after={"anchor": "last_active_at", "minutes": _container_expires_minutes()},
+                    file_ids=file_ids,
+                )
+                shared_container_id = container.id
+                workflow["container"]["status"] = "active"
+                workflow["container"]["id"] = shared_container_id
+                _touch_workflow(workflow)
+
+            # Create agents (use shared container if available)
+            agents = create_agents(file_ids=file_ids, container_id=shared_container_id)
             
             # =================================================================
             # Step 1: Normalizer
