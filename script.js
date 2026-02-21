@@ -163,6 +163,7 @@ const elements = {
   failureSection: document.getElementById("failureSection"),
   failureOutputText: document.getElementById("failureOutputText"),
   failureFolderPath: document.getElementById("failureFolderPath"),
+  footerVersion: document.getElementById("footerVersion"),
   difficultySlider: document.getElementById("difficultySlider"),
   themeSlider: document.getElementById("themeSlider"),
   numericVariationSlider: document.getElementById("numericVariationSlider"),
@@ -579,6 +580,40 @@ function formatDateTime(date) {
 function formatExecutionTime(seconds) {
   if (seconds === null || seconds === undefined) return "-";
   return `${seconds.toFixed(2)}s`;
+}
+
+/**
+ * Load publish version metadata from version.json and render it in the footer.
+ */
+async function loadFooterVersion() {
+  if (!elements.footerVersion) return;
+
+  try {
+    const response = await fetch(`/version.json?t=${Date.now()}`, {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`Version metadata unavailable (${response.status})`);
+    }
+
+    const metadata = await response.json();
+    const version = metadata.version || "unknown";
+    const publishIso = metadata.commit_time || metadata.published_at;
+
+    if (publishIso) {
+      const publishDate = new Date(publishIso);
+      const publishText = Number.isNaN(publishDate.getTime())
+        ? publishIso
+        : publishDate.toLocaleString();
+      elements.footerVersion.textContent = `Version ${version} | Last publish: ${publishText}`;
+      return;
+    }
+
+    elements.footerVersion.textContent = `Version ${version}`;
+  } catch (error) {
+    console.warn("Could not load footer version metadata:", error);
+    elements.footerVersion.textContent = "Version dev | Last publish: local";
+  }
 }
 
 /**
@@ -1464,6 +1499,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Load configurations
   loadSliderConfig();
   loadAgentsConfig();
+  loadFooterVersion();
 
   // File upload
   elements.uploadBtn.addEventListener("click", () =>

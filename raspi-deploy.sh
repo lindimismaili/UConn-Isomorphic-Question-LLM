@@ -67,6 +67,38 @@ setup_python_venv_at_destination() {
   fi
 }
 
+write_version_metadata() {
+  local src="$1"
+  local dst="$2"
+
+  echo "---- write version metadata ----"
+  require_dir "$src"
+  require_dir "$dst"
+
+  local commit_sha
+  local commit_short
+  local commit_time
+  local published_at
+
+  commit_sha="$(git -C "$src" rev-parse HEAD)"
+  commit_short="$(git -C "$src" rev-parse --short HEAD)"
+  commit_time="$(git -C "$src" log -1 --format=%cI)"
+  published_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  sudo tee "$dst/version.json" >/dev/null <<EOF
+{
+  "version": "${commit_short}",
+  "commit": "${commit_sha}",
+  "commit_time": "${commit_time}",
+  "published_at": "${published_at}"
+}
+EOF
+
+  sudo chown www-data:www-data "$dst/version.json"
+  sudo chmod 644 "$dst/version.json"
+  echo "OK: wrote $dst/version.json (${commit_short})"
+}
+
 install_uconn_nginx_conf() {
   echo "---- install nginx conf: uconn ----"
   require_file "$UCONN_NGINX_SRC"
@@ -100,6 +132,7 @@ require_file "$REPO_DIR/src/server.py"
 
 deploy_static "$UCONN_SRC" "$UCONN_DST"
 setup_python_venv_at_destination "$UCONN_DST"
+write_version_metadata "$UCONN_SRC" "$UCONN_DST"
 install_uconn_nginx_conf
 install_and_restart_uconn_service
 
