@@ -205,5 +205,3 @@ Notes:
 
 - `git push` to GitHub does not deploy by itself on the Pi.
 - Auto-deploy is triggered when you run `git pull` on the Pi.
-
-TEST
