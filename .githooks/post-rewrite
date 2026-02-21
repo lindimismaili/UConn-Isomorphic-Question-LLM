@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Trigger deploy after rewritten history (e.g., pull --rebase).
+if [[ "${1:-}" == "rebase" ]]; then
+  REPO_ROOT="$(git rev-parse --show-toplevel)"
+  HOOK="${REPO_ROOT}/.githooks/post-merge"
+  if [[ -f "${HOOK}" ]]; then
+    bash "${HOOK}"
+  fi
+fi
