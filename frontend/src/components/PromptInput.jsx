@@ -37,6 +37,7 @@ export default function PromptInput({
   const handleReset = () => {
     onClearInputs();
     onClearAgents();
+    dispatch({ type: 'CLEAR_LOGS' });
     setPrompt('');
     setResetFeedback(true);
     setTimeout(() => setResetFeedback(false), 1400);
