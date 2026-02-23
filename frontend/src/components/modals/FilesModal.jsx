@@ -21,7 +21,10 @@ export default function FilesModal({ isOpen, onClose, files, onRemove }) {
             <div key={file.id} className="file-item">
               <div className="file-item-info">
                 <IconFile />
-                <span className="file-item-name">{file.name}</span>
+                <span className="file-item-name">
+                  {file.name}
+                  {file.source === 'test' ? ' (Test File)' : ''}
+                </span>
               </div>
               <button
                 className="btn btn-remove btn-sm"

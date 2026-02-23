@@ -8,6 +8,7 @@ import ResultsSection from './components/ResultsSection.jsx';
 import FailureSection from './components/FailureSection.jsx';
 
 import FilesModal from './components/modals/FilesModal.jsx';
+import TestFilesModal from './components/modals/TestFilesModal.jsx';
 import AgentDetailModal from './components/modals/AgentDetailModal.jsx';
 import SetupModal from './components/modals/SetupModal.jsx';
 import HelpModal from './components/modals/HelpModal.jsx';
@@ -358,6 +359,7 @@ export default function App() {
           onClearInputs={handleClearInputs}
           onClearAgents={handleClearAgents}
           onShowFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'files' })}
+          onShowTestFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'test-files' })}
         />
 
         {state.pipelineVisible && (
@@ -390,6 +392,13 @@ export default function App() {
         onClose={closeModal}
         files={state.files}
         onRemove={(id) => dispatch({ type: 'REMOVE_FILE', fileId: id })}
+      />
+      <TestFilesModal
+        isOpen={state.activeModal === 'test-files'}
+        onClose={closeModal}
+        files={state.files}
+        dispatch={dispatch}
+        isRunning={state.isRunning}
       />
       <AgentDetailModal
         isOpen={state.activeModal === 'agent'}
