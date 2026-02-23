@@ -889,7 +889,7 @@ h4 { font-size: 1rem; }
 }
 
 .status-indicator.inactive  { background: var(--color-text-muted); box-shadow: 0 0 8px rgba(100, 116, 139, 0.5); }
-.status-indicator.queued    { background: #ffffff; box-shadow: 0 0 16px rgba(255, 255, 255, 0.8); animation: queuedPulse 1s infinite; }
+.status-indicator.queued    { background: var(--color-text-muted); box-shadow: 0 0 8px rgba(100, 116, 139, 0.5); }
 .status-indicator.thinking  { background: var(--color-warning); box-shadow: 0 0 12px rgba(245, 158, 11, 0.6); animation: pulse 1.5s infinite; }
 .status-indicator.completed { background: var(--color-success); box-shadow: 0 0 12px rgba(16, 185, 129, 0.6); }
 .status-indicator.errored   { background: var(--color-error); box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
@@ -902,11 +902,6 @@ h4 { font-size: 1rem; }
 @keyframes iconPulse {
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.6)); }
   50% { transform: scale(1.08); filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.8)); }
-}
-
-@keyframes queuedPulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 16px rgba(255, 255, 255, 0.8); }
-  50% { opacity: 0.7; box-shadow: 0 0 24px rgba(255, 255, 255, 1); }
 }
 
 /* Agent card status colors */
