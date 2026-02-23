@@ -36,7 +36,10 @@ from agents import (
 from agents.logger import logger
 from openai import OpenAI
 from openai.types.shared.reasoning import Reasoning
-from evaluation import run_openai_output_evaluation
+try:
+    from .evaluation import run_openai_output_evaluation
+except ImportError:
+    from evaluation import run_openai_output_evaluation
 
 # =============================================================================
 # Configuration
@@ -104,8 +107,34 @@ def _load_dotenv(path: Path) -> None:
 
 _load_dotenv(ENV_PATH)
 
-# Initialize OpenAI client
-client = OpenAI()
+_openai_client: Optional[OpenAI] = None
+
+
+def _has_openai_api_key() -> bool:
+    """Check whether an OpenAI API key is currently configured."""
+    return bool((os.getenv("OPENAI_API_KEY") or "").strip())
+
+
+def get_openai_client() -> OpenAI:
+    """
+    Lazily initialize the OpenAI client.
+
+    Keeping this lazy prevents the whole API from failing to start if
+    OPENAI_API_KEY is missing; non-OpenAI endpoints can still function.
+    """
+    global _openai_client
+    if _openai_client is not None:
+        return _openai_client
+
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured. "
+            "Set it in the environment or in /var/www/uconn/.env."
+        )
+
+    _openai_client = OpenAI(api_key=api_key)
+    return _openai_client
 
 THEME_ALLOWED_VALUES = {
     "life_science",
@@ -142,6 +171,7 @@ async def health_check():
     """Health check endpoint for debugging connectivity issues."""
     return {
         "status": "healthy",
+        "openai_api_key_configured": _has_openai_api_key(),
         "uploads_dir": str(UPLOADS_DIR),
         "uploads_dir_exists": UPLOADS_DIR.exists(),
         "uploads_dir_writable": os.access(UPLOADS_DIR, os.W_OK),
@@ -192,6 +222,7 @@ def _is_under_directory(path: Path, root: Path) -> bool:
 
 def upload_file_to_openai(file_path: Path) -> str:
     """Upload a file to OpenAI and return the file ID."""
+    client = get_openai_client()
     with open(file_path, "rb") as f:
         response = client.files.create(file=f, purpose="assistants")
     logger.info("Uploaded file %s -> %s", file_path.name, response.id)
@@ -709,6 +740,11 @@ async def start_workflow(
     filePaths: str = Form("[]"),
 ):
     """Start a new workflow and return a stream of status updates."""
+    try:
+        get_openai_client()
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
     _prune_workflows()
     workflow_id = str(uuid.uuid4())[:8]
     
@@ -828,6 +864,7 @@ async def stream_workflow(workflow_id: str):
 async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str]):
     """Run the workflow asynchronously."""
     workflow = workflows[workflow_id]
+    client = get_openai_client()
     
     try:
         with trace("Isomorphic Question Generation Workflow"):

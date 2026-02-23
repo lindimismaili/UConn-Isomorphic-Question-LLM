@@ -29,6 +29,28 @@ require_index() {
   [[ -f "$1/index.html" ]] || { echo "ERROR: Missing index.html in: $1" >&2; exit 1; }
 }
 
+hash_file_sha256() {
+  local file="$1"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+    return
+  fi
+
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+    return
+  fi
+
+  if command -v openssl >/dev/null 2>&1; then
+    openssl dgst -sha256 "$file" | awk '{print $NF}'
+    return
+  fi
+
+  echo "ERROR: No SHA-256 tool found (sha256sum/shasum/openssl)." >&2
+  exit 1
+}
+
 deploy_static() {
   local src="$1"
   local dst="$2"
@@ -38,11 +60,17 @@ deploy_static() {
   require_index "$src"
 
   sudo mkdir -p "$dst"
-  sudo rsync -av --delete --exclude ".git/" "${src}/" "${dst}/"
+  sudo rsync -av --delete --exclude ".git/" --exclude ".venv/" --exclude ".env" "${src}/" "${dst}/"
 
   sudo chown -R www-data:www-data "$dst"
-  sudo find "$dst" -type d -exec chmod 755 {} \;
-  sudo find "$dst" -type f -exec chmod 644 {} \;
+  sudo find "$dst" -path "$dst/.venv" -prune -o -path "$dst/.env" -prune -o -type d -exec chmod 755 {} \;
+  sudo find "$dst" -path "$dst/.venv" -prune -o -path "$dst/.env" -prune -o -type f -exec chmod 644 {} \;
+  if [[ -f "$dst/.env" ]]; then
+    sudo chown www-data:www-data "$dst/.env"
+    sudo chmod 640 "$dst/.env"
+  else
+    echo "WARN: $dst/.env is missing. API workflows require OPENAI_API_KEY."
+  fi
 
   echo "OK: deployed to $dst"
 }
@@ -53,15 +81,50 @@ setup_python_venv_at_destination() {
   if [[ -f "$dst/requirements.txt" ]]; then
     echo "---- python venv at destination: $dst ----"
 
+    local req_file="$dst/requirements.txt"
+    local venv_dir="$dst/.venv"
+    local pip_bin="$venv_dir/bin/pip"
+    local hash_file="$venv_dir/.requirements.sha256"
+    local current_hash
+    local previous_hash=""
+    local needs_install=0
+
     if [[ ! -d "$dst/.venv" ]]; then
-      sudo python3 -m venv "$dst/.venv"
+      echo "Creating venv (missing)."
+      sudo python3 -m venv "$venv_dir"
+      needs_install=1
     fi
 
-    sudo "$dst/.venv/bin/pip" install --upgrade pip
-    sudo "$dst/.venv/bin/pip" install -r "$dst/requirements.txt"
-    sudo chown -R www-data:www-data "$dst/.venv"
+    if [[ ! -x "$pip_bin" ]]; then
+      echo "pip missing in venv; reinstall required."
+      needs_install=1
+    fi
 
-    echo "OK: venv ready at $dst/.venv"
+    current_hash="$(hash_file_sha256 "$req_file")"
+    if [[ -f "$hash_file" ]]; then
+      previous_hash="$(tr -d '[:space:]' < "$hash_file" || true)"
+    fi
+
+    if [[ "${FORCE_PIP_SYNC:-0}" == "1" ]]; then
+      echo "FORCE_PIP_SYNC=1 set; forcing dependency sync."
+      needs_install=1
+    elif [[ "$current_hash" != "$previous_hash" ]]; then
+      echo "requirements.txt changed; syncing dependencies."
+      needs_install=1
+    else
+      echo "requirements.txt unchanged; skipping pip install."
+    fi
+
+    if [[ "$needs_install" -eq 1 ]]; then
+      sudo "$pip_bin" install --upgrade pip
+      sudo "$pip_bin" install -r "$req_file"
+      printf "%s\n" "$current_hash" | sudo tee "$hash_file" >/dev/null
+      sudo chmod 644 "$hash_file"
+    fi
+
+    sudo chown -R www-data:www-data "$venv_dir"
+
+    echo "OK: venv ready at $venv_dir"
   else
     echo "---- skip venv (no requirements.txt): $dst ----"
   fi
