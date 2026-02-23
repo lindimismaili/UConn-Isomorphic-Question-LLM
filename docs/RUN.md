@@ -18,7 +18,8 @@ pip install -r requirements.txt
 From repository root:
 
 ```bash
-python3 src/run.py
+npm install
+npm start
 ```
 
 Open `http://localhost:8000`.
@@ -28,6 +29,19 @@ Optional flags:
 - `--port` (default `8000`)
 - `--host` (default `0.0.0.0`)
 - `--reload` (dev autoreload)
+
+## Dev UI (hot reload)
+
+In two terminals:
+
+```bash
+npm install
+npm run dev
+```
+
+```bash
+# (backend is started automatically)
+```
 
 ## Run CLI Workflow
 
