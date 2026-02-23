@@ -10,7 +10,16 @@ Options:
 """
 
 import argparse
+from pathlib import Path
+
 import uvicorn
+
+
+def ensure_runtime_dirs() -> None:
+    """Ensure runtime directories exist before server startup."""
+    repo_root = Path(__file__).resolve().parent.parent
+    (repo_root / "uploads").mkdir(parents=True, exist_ok=True)
+    (repo_root / "outputs").mkdir(parents=True, exist_ok=True)
 
 
 def main():
@@ -36,6 +45,7 @@ def main():
     )
     
     args = parser.parse_args()
+    ensure_runtime_dirs()
 
     banner = (
         "\n"
