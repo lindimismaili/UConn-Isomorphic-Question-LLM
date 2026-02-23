@@ -26,6 +26,60 @@ require_index() {
   [[ -f "$1/index.html" ]] || { echo "ERROR: Missing index.html in: $1" >&2; exit 1; }
 }
 
+ensure_git_pull_deploy_hooks() {
+  local src="$1"
+  local desired_hooks_path=".githooks"
+
+  if [[ "${DEPLOY_HOOK_RUNNING:-0}" == "1" ]]; then
+    echo "---- git hooks bootstrap (skipped: running from hook) ----"
+    return
+  fi
+
+  echo "---- git hooks bootstrap ----"
+  require_dir "$src/.githooks"
+
+  if ! command -v git >/dev/null 2>&1; then
+    echo "WARN: git not found; cannot configure hooks path automatically."
+    return
+  fi
+
+  if ! git -C "$src" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "WARN: $src is not a git work tree; skipping hooks bootstrap."
+    return
+  fi
+
+  local current_hooks_path
+  current_hooks_path="$(git -C "$src" config --local --get core.hooksPath || true)"
+  if [[ "$current_hooks_path" != "$desired_hooks_path" ]]; then
+    git -C "$src" config --local core.hooksPath "$desired_hooks_path"
+    echo "Set git hooksPath -> ${desired_hooks_path}"
+  else
+    echo "git hooksPath already set -> ${desired_hooks_path}"
+  fi
+
+  local hook_files=(
+    "$src/.githooks/post-merge"
+    "$src/.githooks/post-rewrite"
+    "$src/raspi-deploy.sh"
+  )
+
+  for hook in "${hook_files[@]}"; do
+    if [[ ! -f "$hook" ]]; then
+      echo "WARN: Missing hook file: $hook"
+      continue
+    fi
+    # Normalize Windows CRLF to LF only when needed.
+    if grep -q $'\r' "$hook"; then
+      sed -i 's/\r$//' "$hook"
+    fi
+    if [[ ! -x "$hook" ]]; then
+      chmod +x "$hook"
+    fi
+  done
+
+  echo "OK: git pull deploy hooks ready."
+}
+
 ensure_frontend_dist() {
   local src="$1"
 
@@ -313,6 +367,7 @@ require_dir "$REPO_DIR"
 require_file "$REPO_DIR/requirements.txt"
 require_file "$REPO_DIR/src/server.py"
 
+ensure_git_pull_deploy_hooks "$UCONN_SRC"
 ensure_frontend_dist "$UCONN_SRC"
 deploy_static "$UCONN_SRC" "$UCONN_DST"
 setup_python_venv_at_destination "$UCONN_DST"
