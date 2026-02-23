@@ -934,7 +934,21 @@ h4 { font-size: 1rem; }
 .completed-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.completed-header-left {
+  display: flex;
+  align-items: center;
   gap: var(--spacing-sm);
+}
+
+.completed-elapsed-time {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  text-align: right;
 }
 
 .completed-icon { width: 32px; height: 32px; color: var(--color-success); }
@@ -1216,7 +1230,22 @@ body.modal-open .footer {
   gap: var(--spacing-sm);
 }
 
-.agent-modal-footer { justify-content: space-between; }
+.modal-footer-row,
+.agent-modal-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.modal-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
 
 /* Files List in Modal */
 .files-list {
@@ -1376,6 +1405,32 @@ body.modal-open .footer {
   font-size: 0.85rem;
 }
 
+.modal-file-location {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.8rem;
+  min-width: 0;
+}
+
+.modal-file-location span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-file-location a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.modal-file-location a:hover {
+  text-decoration: underline;
+}
+
+.help-file-location {
+  margin-top: var(--spacing-md);
+  margin-left: var(--spacing-lg);
+}
+
 .output-folder-note svg { width: 20px; height: 20px; color: var(--color-primary); flex-shrink: 0; }
 
 .output-folder-note code {
@@ -1384,6 +1439,18 @@ body.modal-open .footer {
   border-radius: var(--radius-sm);
   font-family: "Consolas", "Monaco", monospace;
   color: var(--color-primary);
+}
+
+@media (max-width: 700px) {
+  .modal-footer-row,
+  .agent-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-footer-actions {
+    justify-content: flex-end;
+  }
 }
 
 /* Help Modal */
