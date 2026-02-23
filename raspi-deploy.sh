@@ -26,6 +26,41 @@ require_index() {
   [[ -f "$1/index.html" ]] || { echo "ERROR: Missing index.html in: $1" >&2; exit 1; }
 }
 
+ensure_frontend_dist() {
+  local src="$1"
+
+  echo "---- frontend build ----"
+  require_dir "$src"
+  require_dir "$src/frontend"
+  require_file "$src/frontend/package.json"
+
+  if [[ "${SKIP_FRONTEND_BUILD:-0}" == "1" ]]; then
+    echo "SKIP_FRONTEND_BUILD=1 set; skipping frontend build."
+    require_index "$src/dist"
+    echo "OK: using existing $src/dist"
+    return
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "ERROR: npm is required to build frontend. Install Node.js/npm on this host." >&2
+    exit 1
+  fi
+
+  if [[ ! -d "$src/node_modules" ]]; then
+    echo "Installing Node dependencies at repo root..."
+    if [[ -f "$src/package-lock.json" ]]; then
+      (cd "$src" && npm ci --no-audit --no-fund)
+    else
+      (cd "$src" && npm install --no-audit --no-fund)
+    fi
+  fi
+
+  echo "Building frontend (outputs to $src/dist)..."
+  (cd "$src" && npm run frontend:build)
+  require_index "$src/dist"
+  echo "OK: frontend build ready at $src/dist"
+}
+
 hash_file_sha256() {
   local file="$1"
 
@@ -269,6 +304,7 @@ require_dir "$REPO_DIR"
 require_file "$REPO_DIR/requirements.txt"
 require_file "$REPO_DIR/src/server.py"
 
+ensure_frontend_dist "$UCONN_SRC"
 deploy_static "$UCONN_SRC" "$UCONN_DST"
 setup_python_venv_at_destination "$UCONN_DST"
 write_version_metadata "$UCONN_SRC" "$UCONN_DST/dist"
