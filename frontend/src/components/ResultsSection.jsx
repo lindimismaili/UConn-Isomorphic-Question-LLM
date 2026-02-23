@@ -6,6 +6,11 @@ function formatOutputFolderPath(folder) {
   return folder.startsWith('outputs/') ? folder : `outputs/${folder}`;
 }
 
+function formatElapsed(seconds) {
+  if (typeof seconds !== 'number' || Number.isNaN(seconds)) return '';
+  return `${seconds.toFixed(2)}s`;
+}
+
 export default function ResultsSection({ result }) {
   const sectionRef = useRef(null);
 
@@ -19,6 +24,7 @@ export default function ResultsSection({ result }) {
 
   const folderPath = formatOutputFolderPath(result.outputFolder);
   const fileCount = result.files?.length || 0;
+  const elapsedText = formatElapsed(result.elapsedTimeSeconds);
 
   const handleDownload = async (fileName) => {
     try {
@@ -39,8 +45,13 @@ export default function ResultsSection({ result }) {
     <section className="card completed-card" ref={sectionRef}>
       <div className="card-header">
         <div className="completed-header">
-          <IconCheckCircle className="completed-icon" />
-          <h2>Completed!</h2>
+          <div className="completed-header-left">
+            <IconCheckCircle className="completed-icon" />
+            <h2>Completed!</h2>
+          </div>
+          <div className="completed-elapsed-time">
+            {elapsedText ? `Elapsed Time: ${elapsedText}` : ''}
+          </div>
         </div>
       </div>
       <div className="card-body">

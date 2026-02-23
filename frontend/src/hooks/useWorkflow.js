@@ -71,6 +71,7 @@ export function useWorkflow(dispatch) {
     const controller = new AbortController();
     abortRef.current = controller;
     const { signal } = controller;
+    const setupStartMs = Date.now();
     statusRef.current = {};
 
     dispatch({ type: 'WORKFLOW_START' });
@@ -106,6 +107,7 @@ export function useWorkflow(dispatch) {
         throw new Error(`Failed to start workflow: ${err}`);
       }
       const { workflowId } = await startRes.json();
+      const setupElapsedSeconds = (Date.now() - setupStartMs) / 1000;
 
       dispatch({ type: 'SETUP_COMPLETE', workflowId });
       dispatch({ type: 'LOG', message: `Workflow started (${workflowId})`, level: 'info' });
@@ -166,15 +168,24 @@ export function useWorkflow(dispatch) {
         }
 
         if (status.status === 'completed') {
+          const agentsElapsedSeconds = agentKeys.reduce((total, key) => {
+            const value = status.agents?.[key]?.data?.executionTime;
+            return total + (typeof value === 'number' ? value : 0);
+          }, 0);
+          const totalElapsedSeconds = setupElapsedSeconds + agentsElapsedSeconds;
+
           const resultRes = await fetchWithAbort(`/api/workflow/${workflowId}/result`, {}, signal);
           if (resultRes.ok) {
             const result = await resultRes.json();
             dispatch({
               type: 'WORKFLOW_COMPLETE',
               result: {
+                workflowId,
                 outputFolder: result.outputFolder,
                 files: result.files || [],
+                elapsedTimeSeconds: totalElapsedSeconds,
               },
+              elapsedTimeSeconds: totalElapsedSeconds,
             });
           }
           return;

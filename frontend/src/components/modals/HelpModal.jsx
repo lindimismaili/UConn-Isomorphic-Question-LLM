@@ -1,4 +1,5 @@
 import Modal from './Modal.jsx';
+import { IconFile } from '../Icons.jsx';
 
 export default function HelpModal({ isOpen, onClose }) {
   return (
@@ -39,6 +40,12 @@ export default function HelpModal({ isOpen, onClose }) {
             preserved with proper formatting
           </li>
         </ul>
+        <div className="output-folder-note modal-file-location help-file-location">
+          <IconFile />
+          <span>
+            File located in: <code>data/template.tex</code>
+          </span>
+        </div>
         <h4>How It Works</h4>
         <ol className="help-list numbered">
           <li>Upload your source questions (PDF or DOCX)</li>

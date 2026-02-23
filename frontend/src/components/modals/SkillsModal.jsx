@@ -75,7 +75,7 @@ export default function SkillsModal({ isOpen, onClose }) {
       <PromptViewerModal
         isOpen={!!selectedSkill}
         onClose={() => setSelectedSkill(null)}
-        title={selectedSkill ? `${selectedSkill}/SKILL.md` : ''}
+        title={selectedSkill || ''}
         skillName={selectedSkill}
       />
     </>

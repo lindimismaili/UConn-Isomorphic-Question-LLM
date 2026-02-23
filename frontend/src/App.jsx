@@ -223,13 +223,18 @@ function reducer(state, action) {
     }
 
     case 'WORKFLOW_COMPLETE':
+      {
+      const elapsed = typeof action.elapsedTimeSeconds === 'number'
+        ? ` in ${action.elapsedTimeSeconds.toFixed(2)}s`
+        : '';
       return {
         ...state,
         isRunning: false,
         result: action.result,
         error: null,
-        logs: [...state.logs, makeLog('Workflow completed', 'success')].slice(-MAX_LOGS),
+        logs: [...state.logs, makeLog(`Workflow completed${elapsed}`, 'success')].slice(-MAX_LOGS),
       };
+      }
 
     case 'WORKFLOW_ERROR': {
       const now = Date.now();

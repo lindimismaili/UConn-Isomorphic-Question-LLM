@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from './Modal.jsx';
 import PromptViewerModal from './PromptViewerModal.jsx';
+import { IconFile } from '../Icons.jsx';
 
 const AGENT_PROMPT_MAP = {
   normalizer: 'normalizer',
@@ -74,15 +75,24 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
         title={agent ? `${agent.name} Details` : 'Agent Details'}
         large
         footer={
-          <div className="agent-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            <button
-              className="btn btn-ghost"
-              disabled={!promptName}
-              onClick={() => promptName && setViewerOpen(true)}
-            >
-              Prompt
-            </button>
-            <button className="btn btn-secondary" onClick={onClose}>Close</button>
+          <div className="agent-modal-footer">
+            <div className="output-folder-note modal-file-location">
+              <IconFile />
+              <span>
+                File located in:{' '}
+                <code>data/agents.json</code>
+              </span>
+            </div>
+            <div className="modal-footer-actions">
+              <button
+                className="btn btn-ghost"
+                disabled={!promptName}
+                onClick={() => promptName && setViewerOpen(true)}
+              >
+                Prompt
+              </button>
+              <button className="btn btn-secondary" onClick={onClose}>Close</button>
+            </div>
           </div>
         }
       >
