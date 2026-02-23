@@ -12,7 +12,7 @@ WorkingDirectory=/var/www/uconn
 
 Environment=HOST=127.0.0.1
 Environment=PORT=3002
-EnvironmentFile=/var/www/uconn/.env
+EnvironmentFile=-/var/www/uconn/.env
 
 ExecStart=/var/www/uconn/.venv/bin/uvicorn src.server:app --host ${HOST} --port ${PORT}
 Restart=on-failure
