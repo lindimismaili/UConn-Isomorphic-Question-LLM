@@ -55,6 +55,15 @@ ensure_frontend_dist() {
     fi
   fi
 
+  if [[ ! -x "$src/frontend/node_modules/.bin/vite" ]]; then
+    echo "Installing frontend dependencies..."
+    if [[ -f "$src/frontend/package-lock.json" ]]; then
+      (cd "$src/frontend" && npm ci --no-audit --no-fund)
+    else
+      (cd "$src/frontend" && npm install --no-audit --no-fund)
+    fi
+  fi
+
   echo "Building frontend (outputs to $src/dist)..."
   (cd "$src" && npm run frontend:build)
   require_index "$src/dist"
