@@ -183,7 +183,12 @@ function reducer(state, action) {
         errorFolder: '',
         files: [],
         pipelineVisible: true,
-        logs: [...state.logs, makeLog('Process starting...', 'info'), makeLog('Setup started', 'info')].slice(-MAX_LOGS),
+        logs: [
+          ...state.logs,
+          makeLog('------------------------------', 'info'),
+          makeLog('Process starting...', 'info'),
+          makeLog('Setup started', 'info'),
+        ].slice(-MAX_LOGS),
       };
     }
 
@@ -275,6 +280,8 @@ function reducer(state, action) {
       return { ...state, files: [], result: null, error: null };
     case 'CLEAR_AGENTS':
       return { ...state, agents: resetAgents(state.agents), result: null, error: null };
+    case 'CLEAR_LOGS':
+      return { ...state, logs: [] };
 
     case 'LOG':
       return {

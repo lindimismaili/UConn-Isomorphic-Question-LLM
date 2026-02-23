@@ -19,6 +19,8 @@ const AGENT_PROMPT_TITLES = {
   latex: 'LaTeX',
 };
 
+const DEFAULT_TIME_ZONE = 'America/New_York';
+
 function formatText(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') {
@@ -43,7 +45,16 @@ function formatText(value) {
 
 function formatDateTime(date) {
   if (!date) return '-';
-  return new Date(date).toLocaleString();
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return String(date);
+  try {
+    return parsed.toLocaleString(undefined, {
+      timeZone: DEFAULT_TIME_ZONE,
+      timeZoneName: 'short',
+    });
+  } catch {
+    return parsed.toLocaleString();
+  }
 }
 
 function formatExecutionTime(seconds) {
