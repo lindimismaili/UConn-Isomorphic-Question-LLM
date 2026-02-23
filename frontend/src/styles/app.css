@@ -1272,6 +1272,12 @@ body.modal-open .footer {
 
 .file-item-info svg { width: 20px; height: 20px; color: var(--color-text-secondary); }
 .file-item-name { font-size: 0.9rem; }
+.file-item-path {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-family: "Consolas", "Monaco", monospace;
+  margin-top: 2px;
+}
 
 .btn-remove {
   color: var(--color-error);

@@ -78,12 +78,19 @@ export function useWorkflow(dispatch) {
 
     try {
       let sessionId = null;
+      const uploadableFiles = files.filter((f) => {
+        if (typeof File === 'undefined') return !!f.file;
+        return f.file instanceof File;
+      });
+      const selectedTestFiles = files
+        .filter((f) => f?.source === 'test' && typeof f.testFile === 'string' && f.testFile)
+        .map((f) => f.testFile);
 
       // Step 1: Upload files
-      if (files.length > 0) {
+      if (uploadableFiles.length > 0) {
         dispatch({ type: 'LOG', message: 'Uploading files...', level: 'info' });
         const formData = new FormData();
-        files.forEach((f) => formData.append('files', f.file));
+        uploadableFiles.forEach((f) => formData.append('files', f.file));
 
         const uploadRes = await fetchWithAbort('/api/upload', { method: 'POST', body: formData }, signal);
         if (!uploadRes.ok) {
@@ -100,6 +107,14 @@ export function useWorkflow(dispatch) {
       const startForm = new FormData();
       startForm.append('prompt', prompt);
       startForm.append('sessionId', sessionId || '');
+      if (selectedTestFiles.length > 0) {
+        startForm.append('testFiles', JSON.stringify(selectedTestFiles));
+        dispatch({
+          type: 'LOG',
+          message: `Using ${selectedTestFiles.length} test file(s) from data/evaluation`,
+          level: 'info',
+        });
+      }
 
       const startRes = await fetchWithAbort('/api/workflow/start', { method: 'POST', body: startForm }, signal);
       if (!startRes.ok) {

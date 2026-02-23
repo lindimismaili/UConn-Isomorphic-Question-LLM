@@ -2,7 +2,16 @@ import { useRef, useState } from 'react';
 import { useFileUpload } from '../hooks/useFileUpload.js';
 import { IconFile, IconUpload, IconTrash, IconSend, IconInfo, IconList } from './Icons.jsx';
 
-export default function PromptInput({ files, dispatch, isRunning, onSend, onClearInputs, onClearAgents, onShowFiles }) {
+export default function PromptInput({
+  files,
+  dispatch,
+  isRunning,
+  onSend,
+  onClearInputs,
+  onClearAgents,
+  onShowFiles,
+  onShowTestFiles,
+}) {
   const [prompt, setPrompt] = useState('');
   const [resetFeedback, setResetFeedback] = useState(false);
   const [uploadWarning, setUploadWarning] = useState(false);
@@ -100,6 +109,15 @@ export default function PromptInput({ files, dispatch, isRunning, onSend, onClea
             >
               <IconTrash className="btn-icon" />
               <span className="btn-label">Reset</span>
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={onShowTestFiles}
+              disabled={isRunning}
+            >
+              <IconFile className="btn-icon" />
+              <span className="btn-label">Test Files</span>
             </button>
 
             <div className="upload-group">

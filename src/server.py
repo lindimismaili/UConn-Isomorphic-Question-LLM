@@ -79,6 +79,7 @@ SKILLS_DIR = DATA_DIR / "skills"
 AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 OUTPUTS_DIR = REPO_ROOT / "outputs"
 UPLOADS_DIR = REPO_ROOT / "uploads"
+EVALUATION_DIR = DATA_DIR / "evaluation"
 VERSION_PATHS = [REPO_ROOT / "version.json", DIST_DIR / "version.json"]
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt"}
 MAX_UPLOAD_FILES = 5
@@ -89,6 +90,7 @@ WORKFLOW_MAX_ENTRIES = int(os.getenv("WORKFLOW_MAX_ENTRIES", "200"))
 # Create directories if they don't exist
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+EVALUATION_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _load_dotenv(path: Path) -> None:
@@ -709,6 +711,33 @@ async def get_skill(skill_name: str):
         raise HTTPException(status_code=500, detail=f"Failed to load skill: {str(e)}")
 
 
+@app.get("/api/evaluation/files")
+async def get_evaluation_files():
+    """List selectable evaluation files from data/evaluation."""
+    if not EVALUATION_DIR.exists():
+        return {"files": []}
+
+    files: list[dict[str, Any]] = []
+    try:
+        for path in sorted(EVALUATION_DIR.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in ALLOWED_UPLOAD_EXTENSIONS:
+                continue
+            rel = path.relative_to(EVALUATION_DIR).as_posix()
+            files.append(
+                {
+                    "name": path.name,
+                    "relativePath": rel,
+                    "size": path.stat().st_size,
+                }
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load evaluation files: {str(e)}")
+
+    return {"files": files}
+
+
 @app.get("/api/workflow/{workflow_id}/status")
 async def get_workflow_status(workflow_id: str):
     """Get the current status of a workflow."""
@@ -782,6 +811,7 @@ async def start_workflow(
     prompt: str = Form(""),
     sessionId: str = Form(""),
     filePaths: str = Form("[]"),
+    testFiles: str = Form("[]"),
 ):
     """Start a new workflow and return a stream of status updates."""
     try:
@@ -807,6 +837,26 @@ async def start_workflow(
             continue
         if _is_under_directory(path, UPLOADS_DIR) and path.is_file():
             file_paths.append(str(path))
+
+    # Parse selected test files from data/evaluation.
+    try:
+        raw_test_files = json.loads(testFiles) if testFiles else []
+    except json.JSONDecodeError:
+        raw_test_files = []
+    if not isinstance(raw_test_files, list):
+        raw_test_files = []
+    for rel_path in raw_test_files:
+        try:
+            rel = Path(str(rel_path))
+        except Exception:
+            continue
+        candidate = (EVALUATION_DIR / rel).resolve()
+        if (
+            _is_under_directory(candidate, EVALUATION_DIR)
+            and candidate.is_file()
+            and candidate.suffix.lower() in ALLOWED_UPLOAD_EXTENSIONS
+        ):
+            file_paths.append(str(candidate))
     
     # If sessionId provided, get files from upload directory
     if sessionId:
@@ -817,7 +867,17 @@ async def start_workflow(
         if not _is_under_directory(session_dir, UPLOADS_DIR):
             raise HTTPException(status_code=400, detail="Invalid session path")
         if session_dir.exists():
-            file_paths = [str(f.resolve()) for f in session_dir.iterdir() if f.is_file()]
+            file_paths.extend(str(f.resolve()) for f in session_dir.iterdir() if f.is_file())
+
+    # Deduplicate while preserving order.
+    deduped_file_paths: list[str] = []
+    seen_paths: set[str] = set()
+    for path in file_paths:
+        if path in seen_paths:
+            continue
+        seen_paths.add(path)
+        deduped_file_paths.append(path)
+    file_paths = deduped_file_paths
     
     # Initialize workflow state
     now = _workflow_now()
