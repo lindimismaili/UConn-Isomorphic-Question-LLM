@@ -1,0 +1,18 @@
+{
+  "name": "uconn-isomorphicquestionllm",
+  "private": true,
+  "scripts": {
+    "backend:start": "node scripts/backend.mjs",
+    "backend:dev": "node scripts/backend.mjs -- --reload",
+    "frontend:dev": "npm -C frontend run dev:ui",
+    "frontend:build": "npm -C frontend run build",
+    "dev": "concurrently -k \"npm:backend:dev\" \"npm:frontend:dev\"",
+    "build": "npm run frontend:build",
+    "start": "npm run build && npm run backend:start",
+    "lint": "npm -C frontend run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
+

@@ -24,8 +24,10 @@ Generate original, isomorphic physics multiple-choice questions from source PDFs
   - `data/agents.json` agent model/tool config
   - `data/sliders.json` UI slider prompt config
   - `data/rubric.json` eval rubric
-- Frontend (repo root)
-  - `index.html`, `styles.css`, `script.js`
+- `frontend/`
+  - Vite + React web UI (dev server + build)
+- `dist/`
+  - Built frontend output served by FastAPI (created by `npm -C frontend run build`)
 - Runtime directories
   - `uploads/` uploaded files by session
   - `outputs/` workflow outputs by timestamp
@@ -48,10 +50,16 @@ pip install -r requirements.txt
 ## ▶️ Run Server on Local Machine
 
 ```bash
-python3 src/run.py
+npm install
+npm start
 ```
 
 Open [http://localhost:8000](http://localhost:8000).
+
+### Dev UI (hot reload)
+
+- `npm install`
+- `npm run dev`
 
 ## 🖥️ Run CLI
 

@@ -21,7 +21,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -53,24 +53,25 @@ def _detect_repo_root(start: Path) -> Path:
     Detect the repo root for this project.
 
     When server.py is in src/, the repo root is the parent directory.
-    We detect this by looking for index.html (frontend) and data/ folder.
+    We verify by checking for key directories (data/, dist/) that only
+    exist at the repo root.
     """
     # If we're in src/, go up one level
     if start.name == "src":
         candidate = start.parent
     else:
         candidate = start
-    
+
     # Verify we found the repo root by checking for key files/folders
-    if (candidate / "index.html").is_file() or (candidate / "data").is_dir():
+    if (candidate / "data").is_dir() or (candidate / "dist").is_dir():
         return candidate
-    
+
     return start.parent  # Fallback: assume we're in src/
 
 
 REPO_ROOT = _detect_repo_root(THIS_DIR)
 PROJECT_ROOT = REPO_ROOT
-STATIC_DIR = REPO_ROOT  # Frontend files are in repo root (index.html, etc.)
+DIST_DIR = REPO_ROOT / "dist"
 ENV_PATH = REPO_ROOT / ".env"
 DATA_DIR = REPO_ROOT / "data"
 PROMPTS_DIR = DATA_DIR / "prompts"
@@ -78,6 +79,7 @@ SKILLS_DIR = REPO_ROOT / "skills"
 AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 OUTPUTS_DIR = REPO_ROOT / "outputs"
 UPLOADS_DIR = REPO_ROOT / "uploads"
+VERSION_PATHS = [REPO_ROOT / "version.json", DIST_DIR / "version.json"]
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt"}
 MAX_UPLOAD_FILES = 5
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
@@ -179,6 +181,26 @@ async def health_check():
         "outputs_dir_exists": OUTPUTS_DIR.exists(),
         "outputs_dir_writable": os.access(OUTPUTS_DIR, os.W_OK),
     }
+
+
+@app.get("/version.json")
+async def get_version_json():
+    """
+    Return version metadata for the frontend footer.
+
+    In production this is typically written during deploy. In local/dev, return
+    a stable fallback object so the UI does not generate 404 noise.
+    """
+    for version_path in VERSION_PATHS:
+        if not version_path.exists():
+            continue
+        try:
+            data = json.loads(version_path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            continue
+    return {"version": "dev", "published_at": None}
 
 
 # =============================================================================
@@ -411,6 +433,28 @@ def _prune_workflows() -> None:
             workflows.pop(workflow_id, None)
         if len(workflows) <= WORKFLOW_MAX_ENTRIES:
             break
+
+
+def _build_json_message(
+    payload: dict[str, Any],
+    *,
+    file_refs: Optional[list[dict[str, Any]]] = None,
+) -> list[dict[str, Any]]:
+    """
+    Build a single user message where the textual part is strict JSON.
+
+    This keeps cross-agent handoff data structured and machine-readable.
+    """
+    content: list[dict[str, Any]] = []
+    if file_refs:
+        content.extend(file_refs)
+    content.append(
+        {
+            "type": "input_text",
+            "text": json.dumps(payload, indent=2, ensure_ascii=False),
+        }
+    )
+    return [{"role": "user", "content": content}]
 
 
 # =============================================================================
@@ -924,29 +968,27 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["normalizer"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
             
-            normalizer_input = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": f"""Parse this user request and extract configuration.
-                            
-Files provided: {', '.join(file_names) if file_names else 'None'}
-
-User instructions:
-{prompt or 'Create isomorphic questions from the provided files.'}
-
-Defaults (use if not specified):
-- new_questions_per_question: 1
-- difficulty: "" (keep same as source)
-- theme: "" (keep same as source)  
-- title: "" (extract from source if available)
-""",
-                        }
-                    ],
-                }
-            ]
+            prompt_text = (prompt or "").strip()
+            normalizer_input_payload = {
+                "task": "normalize_user_request",
+                "user_input": {
+                    "prompt": prompt_text,
+                    "files": file_names,
+                },
+                "defaults": {
+                    "new_questions_per_question": 1,
+                    "difficulty": "",
+                    "theme": "",
+                    "title": "",
+                },
+            }
+            normalizer_input = _build_json_message(normalizer_input_payload)
+            workflow["agents"]["normalizer"]["data"]["receivedFrom"] = "user"
+            workflow["agents"]["normalizer"]["data"]["sentTo"] = "extracter"
+            workflow["agents"]["normalizer"]["data"]["input"] = (
+                {"prompt": prompt_text} if prompt_text else None
+            )
+            _touch_workflow(workflow)
             
             start_time = time.time()
             normalizer_result = await Runner.run(agents["normalizer"], input=normalizer_input, run_config=run_config)
@@ -956,10 +998,7 @@ Defaults (use if not specified):
             workflow["agents"]["normalizer"]["status"] = "completed"
             workflow["agents"]["normalizer"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["normalizer"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["normalizer"]["data"]["receivedFrom"] = "user"
-            workflow["agents"]["normalizer"]["data"]["sentTo"] = "extracter"
-            workflow["agents"]["normalizer"]["data"]["input"] = normalizer_input
-            workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump_json()
+            workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
             _touch_workflow(workflow)
             
             # Save normalizer output
@@ -984,61 +1023,45 @@ Defaults (use if not specified):
             
             file_refs = [{"type": "input_file", "file_id": fid} for fid in file_ids]
             
-            extracter_input = [
-                {
-                    "role": "user",
-                    "content": [
-                        *file_refs,
-                        {
-                            "type": "input_text",
-                            "text": f"""Extract all questions from the attached file(s).
-
-Use your code interpreter to:
-1. Read the PDF/DOCX file(s)
-2. Extract all text content
-3. Parse and identify individual questions
-4. Structure them according to the schema
-
-Files attached: {', '.join(file_names)}
-
-Remember:
-- Preserve all mathematical notation (use LaTeX format)
-- Extract metadata (title, author, date, course) from headers
-- Identify question types (multiple_choice vs open_ended)
-- Multiple-choice questions must not be skipped
-- For multiple choice, extract all options with their keys (A, B, C, D)
-- Assign a theme to each question: life_science | engineering | everyday_activity | physics_abstract
-- Set has_explicit_answer=true only if the correct answer is clearly marked
-""",
-                        },
+            extracter_input_payload = {
+                "task": "extract_source_questions",
+                "files": file_names,
+                "normalizer_config": normalizer_output.model_dump(),
+                "requirements": {
+                    "preserve_math_latex": True,
+                    "extract_metadata": ["title", "author", "date", "course"],
+                    "must_include_multiple_choice": True,
+                    "multiple_choice_option_keys": ["A", "B", "C", "D"],
+                    "allowed_themes": [
+                        "life_science",
+                        "engineering",
+                        "everyday_activity",
+                        "physics_abstract",
                     ],
-                }
-            ]
+                    "set_has_explicit_answer_only_if_marked": True,
+                },
+            }
+            extracter_input = _build_json_message(extracter_input_payload, file_refs=file_refs)
+            workflow["agents"]["extracter"]["data"]["receivedFrom"] = "normalizer"
+            workflow["agents"]["extracter"]["data"]["sentTo"] = "verifier"
+            workflow["agents"]["extracter"]["data"]["input"] = extracter_input_payload
+            _touch_workflow(workflow)
             
             start_time = time.time()
             extracter_result = await Runner.run(agents["extracter"], input=extracter_input, run_config=run_config)
             elapsed = time.time() - start_time
             extracter_output: ExtracterOutput = extracter_result.final_output
             if file_ids and not extracter_output.questions:
-                retry_extract_input = [
-                    {
-                        "role": "user",
-                        "content": [
-                            *file_refs,
-                            {
-                                "type": "input_text",
-                                "text": f"""The previous extraction returned zero questions.
-
-Re-read every attached file and extract all questions and metadata.
-Multiple-choice questions must not be skipped.
-Return structured output that includes each question's theme.
-
-Files attached: {', '.join(file_names)}
-""",
-                            },
-                        ],
-                    }
-                ]
+                retry_extract_payload = {
+                    "task": "extract_source_questions_retry",
+                    "reason": "previous_result_had_zero_questions",
+                    "files": file_names,
+                    "requirements": {
+                        "must_include_multiple_choice": True,
+                        "must_return_theme_per_question": True,
+                    },
+                }
+                retry_extract_input = _build_json_message(retry_extract_payload, file_refs=file_refs)
                 retry_extract_result = await Runner.run(
                     agents["extracter"], input=retry_extract_input, run_config=run_config
                 )
@@ -1053,10 +1076,7 @@ Files attached: {', '.join(file_names)}
             workflow["agents"]["extracter"]["status"] = "completed"
             workflow["agents"]["extracter"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["extracter"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["extracter"]["data"]["receivedFrom"] = "normalizer"
-            workflow["agents"]["extracter"]["data"]["sentTo"] = "verifier"
-            workflow["agents"]["extracter"]["data"]["input"] = extracter_input
-            workflow["agents"]["extracter"]["data"]["output"] = f"Extracted {len(extracter_output.questions)} questions"
+            workflow["agents"]["extracter"]["data"]["output"] = extracter_output.model_dump()
             _touch_workflow(workflow)
             
             # Save extracter output
@@ -1080,28 +1100,22 @@ Files attached: {', '.join(file_names)}
             workflow["agents"]["verifier"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
             
-            verifier_input = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": f"""Verify the answers for these extracted questions.
-
-Questions to verify:
-{extracter_output.model_dump_json(indent=2)}
-
-For each question:
-1. If has_explicit_answer=true, keep the marked answer
-2. If no answer is marked, solve the problem and mark the correct option
-3. Add explanations for each option
-4. Do not remove any question. Preserve all multiple-choice questions.
-5. Use code interpreter to verify calculations if needed
-""",
-                        }
-                    ],
-                }
-            ]
+            verifier_input_payload = {
+                "task": "verify_source_questions",
+                "source_questions": extracter_output.model_dump(),
+                "requirements": {
+                    "preserve_all_questions": True,
+                    "if_answer_marked_keep_it": True,
+                    "if_unmarked_solve_and_mark_correct_option": True,
+                    "add_option_explanations": True,
+                    "use_code_interpreter_for_calculations": True,
+                },
+            }
+            verifier_input = _build_json_message(verifier_input_payload)
+            workflow["agents"]["verifier"]["data"]["receivedFrom"] = "extracter"
+            workflow["agents"]["verifier"]["data"]["sentTo"] = "generator"
+            workflow["agents"]["verifier"]["data"]["input"] = verifier_input_payload
+            _touch_workflow(workflow)
             
             start_time = time.time()
             verifier_result = await Runner.run(agents["verifier"], input=verifier_input, run_config=run_config)
@@ -1115,10 +1129,7 @@ For each question:
             workflow["agents"]["verifier"]["status"] = "completed"
             workflow["agents"]["verifier"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["verifier"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["verifier"]["data"]["receivedFrom"] = "extracter"
-            workflow["agents"]["verifier"]["data"]["sentTo"] = "generator"
-            workflow["agents"]["verifier"]["data"]["input"] = verifier_input
-            workflow["agents"]["verifier"]["data"]["output"] = f"Verified {len(verifier_output.questions)} questions"
+            workflow["agents"]["verifier"]["data"]["output"] = verifier_output.model_dump()
             _touch_workflow(workflow)
             
             # Save verifier output
@@ -1142,35 +1153,34 @@ For each question:
             workflow["agents"]["generator"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
             
-            generator_input = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": f"""Generate isomorphic questions based on this configuration and source questions.
-
-Configuration:
-{normalizer_output.model_dump_json(indent=2)}
-
-Source Questions:
-{verifier_output.model_dump_json(indent=2)}
-
-Requirements:
-- Create {normalizer_output.new_questions_per_question} new question(s) per source question
-- Each new question must be fully original but test the same concept
-- Vary numerical values significantly but keep them physically reasonable
-- Create plausible distractors based on common misconceptions
-- Include detailed explanations for the correct answer
-- Include misconception-based explanations for each distractor
-- Set theme on every generated question using the allowed categories
-- Use LaTeX for all mathematical expressions
-- Use code interpreter to verify your calculations
-""",
-                        }
+            generator_input_payload = {
+                "task": "generate_isomorphic_questions",
+                "configuration": normalizer_output.model_dump(),
+                "source_questions": verifier_output.model_dump(),
+                "requirements": {
+                    "new_questions_per_source": normalizer_output.new_questions_per_question,
+                    "fully_original_questions": True,
+                    "same_underlying_concept": True,
+                    "vary_numerical_values_significantly": True,
+                    "physically_reasonable_values": True,
+                    "plausible_misconception_distractors": True,
+                    "detailed_correct_answer_explanations": True,
+                    "explain_each_distractor": True,
+                    "allowed_themes": [
+                        "life_science",
+                        "engineering",
+                        "everyday_activity",
+                        "physics_abstract",
                     ],
-                }
-            ]
+                    "latex_math": True,
+                    "use_code_interpreter_for_verification": True,
+                },
+            }
+            generator_input = _build_json_message(generator_input_payload)
+            workflow["agents"]["generator"]["data"]["receivedFrom"] = "verifier"
+            workflow["agents"]["generator"]["data"]["sentTo"] = "latex"
+            workflow["agents"]["generator"]["data"]["input"] = generator_input_payload
+            _touch_workflow(workflow)
             
             start_time = time.time()
             generator_result = await Runner.run(agents["generator"], input=generator_input, run_config=run_config)
@@ -1188,27 +1198,15 @@ Requirements:
                 retry_questions = [
                     q for q in verifier_output.questions if q.source_id in missing_source_ids
                 ]
-                retry_input = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": f"""You omitted required source questions in the prior pass.
-
-Generate only for these missing source IDs: {', '.join(missing_source_ids)}.
-Return exactly {normalizer_output.new_questions_per_question} generated question(s) per source_id.
-
-Configuration:
-{normalizer_output.model_dump_json(indent=2)}
-
-Source Questions:
-{json.dumps({'questions': [q.model_dump() for q in retry_questions]}, indent=2)}
-""",
-                            }
-                        ],
-                    }
-                ]
+                retry_payload = {
+                    "task": "generate_isomorphic_questions_retry",
+                    "reason": "missing_required_source_ids",
+                    "missing_source_ids": missing_source_ids,
+                    "new_questions_per_source": normalizer_output.new_questions_per_question,
+                    "configuration": normalizer_output.model_dump(),
+                    "source_questions": {"questions": [q.model_dump() for q in retry_questions]},
+                }
+                retry_input = _build_json_message(retry_payload)
                 retry_result = await Runner.run(agents["generator"], input=retry_input, run_config=run_config)
                 retry_output: GeneratorOutput = retry_result.final_output
                 for q in retry_output.isomorphic_questions:
@@ -1227,10 +1225,7 @@ Source Questions:
             workflow["agents"]["generator"]["status"] = "completed"
             workflow["agents"]["generator"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["generator"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["generator"]["data"]["receivedFrom"] = "verifier"
-            workflow["agents"]["generator"]["data"]["sentTo"] = "latex"
-            workflow["agents"]["generator"]["data"]["input"] = generator_input
-            workflow["agents"]["generator"]["data"]["output"] = f"Generated {len(generator_output.isomorphic_questions)} questions"
+            workflow["agents"]["generator"]["data"]["output"] = generator_output.model_dump()
             _touch_workflow(workflow)
             
             # Save generator output
@@ -1263,29 +1258,22 @@ Source Questions:
                     "options": [opt.model_dump() for opt in q.options],
                 })
             
-            latex_input = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": f"""Convert these questions to LaTeX format.
-
-Questions:
-{json.dumps({"questions": questions_for_latex}, indent=2)}
-
-Create a complete LaTeX document with:
-1. A document preamble with necessary packages
-2. Custom macros for question formatting (\\QBlock, \\Correct, \\Wrong)
-3. All questions formatted using the macros
-4. Proper math formatting for all expressions
-
-Set filename to "isomorphic_questions.tex"
-""",
-                        }
-                    ],
-                }
-            ]
+            latex_input_payload = {
+                "task": "format_questions_to_latex",
+                "questions": questions_for_latex,
+                "requirements": {
+                    "include_document_preamble": True,
+                    "include_macros": ["\\QBlock", "\\Correct", "\\Wrong"],
+                    "format_all_questions_with_macros": True,
+                    "proper_math_formatting": True,
+                    "filename": "isomorphic_questions.tex",
+                },
+            }
+            latex_input = _build_json_message(latex_input_payload)
+            workflow["agents"]["latex"]["data"]["receivedFrom"] = "generator"
+            workflow["agents"]["latex"]["data"]["sentTo"] = "user"
+            workflow["agents"]["latex"]["data"]["input"] = latex_input_payload
+            _touch_workflow(workflow)
             
             start_time = time.time()
             latex_result = await Runner.run(agents["latex"], input=latex_input, run_config=run_config)
@@ -1295,10 +1283,7 @@ Set filename to "isomorphic_questions.tex"
             workflow["agents"]["latex"]["status"] = "completed"
             workflow["agents"]["latex"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["latex"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["latex"]["data"]["receivedFrom"] = "generator"
-            workflow["agents"]["latex"]["data"]["sentTo"] = "user"
-            workflow["agents"]["latex"]["data"]["input"] = latex_input
-            workflow["agents"]["latex"]["data"]["output"] = f"Created {latex_output.filename}"
+            workflow["agents"]["latex"]["data"]["output"] = latex_output.model_dump()
             _touch_workflow(workflow)
             
             # Save LaTeX file
@@ -1387,7 +1372,30 @@ async def run_workflow_with_events(workflow_id: str, prompt: str, file_paths: li
 # =============================================================================
 
 # Mount static files last to catch API routes first
-app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+if DIST_DIR.is_dir() and (DIST_DIR / "index.html").is_file():
+    app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="static")
+else:
+    @app.get("/", include_in_schema=False)
+    async def root():
+        return HTMLResponse(
+            """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Isomorphic Question Generator</title>
+  </head>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;">
+    <h2>Frontend not built</h2>
+    <p>This FastAPI server is running, but <code>dist/index.html</code> was not found.</p>
+    <p>Dev UI: run <code>npm -C frontend run dev</code> (then open the Vite URL).</p>
+    <p>Prod UI: run <code>npm -C frontend run build</code>, then refresh this page.</p>
+    <p>API health: <a href="/api/health">/api/health</a></p>
+  </body>
+</html>
+            """.strip()
+        )
 
 
 # =============================================================================

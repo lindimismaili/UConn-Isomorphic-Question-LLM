@@ -36,17 +36,25 @@ def main():
     )
     
     args = parser.parse_args()
-    
-    print(f"""
-╔══════════════════════════════════════════════════════════╗
-║       Isomorphic Question Generator Server               ║
-╠══════════════════════════════════════════════════════════╣
-║  Starting server at: http://{args.host}:{args.port}         
-║  Web Interface: http://localhost:{args.port}               
-║                                                          ║
-║  Press Ctrl+C to stop the server                         ║
-╚══════════════════════════════════════════════════════════╝
-""")
+
+    banner = (
+        "\n"
+        "============================================================\n"
+        "  Isomorphic Question Generator Server\n"
+        "------------------------------------------------------------\n"
+        f"  Starting server at: http://{args.host}:{args.port}\n"
+        f"  Web Interface:       http://localhost:{args.port}\n"
+        "\n"
+        "  Press Ctrl+C to stop the server\n"
+        "============================================================\n"
+    )
+
+    try:
+        print(banner)
+    except UnicodeEncodeError:
+        # Some Windows terminals still default to legacy encodings; keep startup robust.
+        safe_banner = banner.encode("utf-8", errors="replace").decode("ascii", errors="replace")
+        print(safe_banner)
     
     # Support both:
     # - python src/run.py (module path should be server:app)

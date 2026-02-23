@@ -8,10 +8,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UCONN_SRC="${REPO_DIR}"
 UCONN_DST="/var/www/uconn"
 
-UCONN_NGINX_SRC="${REPO_DIR}/deploy/nginx/uconn.nginx.conf"
 UCONN_NGINX_DST="/etc/nginx/sites-available/uconn"
-
-UCONN_SERVICE_SRC="${REPO_DIR}/deploy/nginx/uconn.service"
 UCONN_SERVICE_DST="/etc/systemd/system/uconn.service"
 
 # =====================================================
@@ -57,10 +54,15 @@ deploy_static() {
 
   echo "---- deploy: uconn ----"
   require_dir "$src"
-  require_index "$src"
+  require_index "$src/dist"
 
   sudo mkdir -p "$dst"
-  sudo rsync -av --delete --exclude ".git/" --exclude ".venv/" --exclude ".env" "${src}/" "${dst}/"
+  sudo rsync -av --delete \
+    --exclude ".git/" \
+    --exclude ".venv/" \
+    --exclude ".env" \
+    --exclude "frontend/" \
+    "${src}/" "${dst}/"
 
   sudo chown -R www-data:www-data "$dst"
   sudo find "$dst" -path "$dst/.venv" -prune -o -path "$dst/.env" -prune -o -type d -exec chmod 755 {} \;
@@ -164,9 +166,52 @@ EOF
 
 install_uconn_nginx_conf() {
   echo "---- install nginx conf: uconn ----"
-  require_file "$UCONN_NGINX_SRC"
 
-  sudo install -m 0644 "$UCONN_NGINX_SRC" "$UCONN_NGINX_DST"
+  sudo tee "$UCONN_NGINX_DST" >/dev/null <<'NGINX_EOF'
+server {
+    listen 80;
+    server_name uconn.lindimismaili.com;
+
+    root /var/www/uconn/dist;
+    index index.html;
+
+    client_max_body_size 100m;
+    client_body_timeout 300s;
+    send_timeout 300s;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = /api {
+        return 301 /api/;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
+        proxy_set_header CF-Ray $http_cf_ray;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_connect_timeout 60s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+}
+NGINX_EOF
+
+  sudo chmod 0644 "$UCONN_NGINX_DST"
 
   if [[ ! -e "/etc/nginx/sites-enabled/uconn" ]]; then
     sudo ln -s "$UCONN_NGINX_DST" "/etc/nginx/sites-enabled/uconn"
@@ -178,9 +223,40 @@ install_uconn_nginx_conf() {
 
 install_and_restart_uconn_service() {
   echo "---- install systemd service: uconn ----"
-  require_file "$UCONN_SERVICE_SRC"
 
-  sudo install -m 0644 "$UCONN_SERVICE_SRC" "$UCONN_SERVICE_DST"
+  sudo tee "$UCONN_SERVICE_DST" >/dev/null <<'SERVICE_EOF'
+[Unit]
+Description=UConn Isomorphic Question LLM (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+
+User=www-data
+Group=www-data
+
+WorkingDirectory=/var/www/uconn
+
+Environment=HOST=127.0.0.1
+Environment=PORT=3002
+EnvironmentFile=-/var/www/uconn/.env
+
+ExecStart=/var/www/uconn/.venv/bin/uvicorn src.server:app --host ${HOST} --port ${PORT}
+Restart=on-failure
+RestartSec=3
+
+SyslogIdentifier=uconn
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+SERVICE_EOF
+
+  sudo chmod 0644 "$UCONN_SERVICE_DST"
   sudo systemctl daemon-reload
   sudo systemctl enable --now uconn
   sudo systemctl restart uconn
@@ -195,7 +271,7 @@ require_file "$REPO_DIR/src/server.py"
 
 deploy_static "$UCONN_SRC" "$UCONN_DST"
 setup_python_venv_at_destination "$UCONN_DST"
-write_version_metadata "$UCONN_SRC" "$UCONN_DST"
+write_version_metadata "$UCONN_SRC" "$UCONN_DST/dist"
 install_uconn_nginx_conf
 install_and_restart_uconn_service
 
