@@ -4,10 +4,11 @@ function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(resolve, ms);
     if (signal) {
-      signal.addEventListener('abort', () => {
+      const onAbort = () => {
         clearTimeout(timeout);
         reject(new DOMException('Aborted', 'AbortError'));
-      });
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
     }
   });
 }
@@ -202,12 +203,17 @@ export function useWorkflow(dispatch) {
               },
               elapsedTimeSeconds: totalElapsedSeconds,
             });
+          } else {
+            const errText = await resultRes.text().catch(() => `Status ${resultRes.status}`);
+            dispatch({ type: 'WORKFLOW_ERROR', message: `Failed to fetch result: ${errText}`, outputFolder: status.outputFolder || '' });
           }
           return;
         }
 
         if (status.status === 'errored') {
-          throw new Error('Workflow failed on the server');
+          const err = new Error('Workflow failed on the server');
+          err.outputFolder = status.outputFolder || '';
+          throw err;
         }
 
         await sleep(1000, signal);
@@ -217,7 +223,7 @@ export function useWorkflow(dispatch) {
         dispatch({ type: 'WORKFLOW_ABORTED' });
         return;
       }
-      dispatch({ type: 'WORKFLOW_ERROR', message: err.message });
+      dispatch({ type: 'WORKFLOW_ERROR', message: err.message, outputFolder: err.outputFolder || '' });
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;

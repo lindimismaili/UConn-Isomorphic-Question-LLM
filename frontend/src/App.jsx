@@ -264,6 +264,7 @@ function reducer(state, action) {
         isRunning: false,
         agents,
         error: `Workflow failed before completion.\n${action.message || ''}`.trim(),
+        errorFolder: action.outputFolder || '',
         result: null,
         logs: [
           ...state.logs,
