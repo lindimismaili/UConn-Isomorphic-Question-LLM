@@ -631,13 +631,31 @@ h4 { font-size: 1rem; }
   overflow: visible;
 }
 
-.agent-turn-connector path {
+.agent-connector-path {
   fill: none;
-  stroke: var(--color-primary);
-  stroke-width: 2;
+  stroke: var(--color-border);
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.7;
+  opacity: 0.9;
+  transition: stroke 120ms linear;
+}
+
+.agent-connector-path[data-status="inactive"],
+.agent-connector-path[data-status="queued"] {
+  stroke: var(--color-border);
+}
+
+.agent-connector-path[data-status="thinking"] {
+  stroke: var(--color-warning);
+}
+
+.agent-connector-path[data-status="completed"] {
+  stroke: var(--color-success);
+}
+
+.agent-connector-path[data-status="errored"] {
+  stroke: var(--color-error);
 }
 
 .agents-row {
