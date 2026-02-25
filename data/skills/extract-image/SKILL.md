@@ -31,15 +31,5 @@ description: "Extract OCR text and image metadata from an image file into normal
 python skills/extract-image/scripts/extract_image.py path/to/file.png --pretty
 ```
 
-## Remote dependencies
-Install these in the agent environment image/bootstrap step:
-```bash
-python -m pip install pillow pytesseract
-```
-Install OCR in the agent environment image/bootstrap step:
-```bash
-apt-get update && apt-get install -y tesseract-ocr
-```
-
 ## Output
 - `extracted_document.json` with `source.type = "image"`.

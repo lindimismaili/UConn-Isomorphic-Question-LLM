@@ -335,7 +335,7 @@ def create_agents(
         reasoning_level = config.get("reasoning", "none")
         valid_reasoning_levels = {"low", "medium", "high", "auto"}
         reasoning = (
-            Reasoning(effort=reasoning_level, generate_summary="auto")
+            Reasoning(effort=reasoning_level)
             if reasoning_level in valid_reasoning_levels
             else None
         )

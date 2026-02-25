@@ -502,7 +502,7 @@ def create_agents(
         tools = [code_interpreter] if config.get("useCodeInterpreter", False) else []
         valid_reasoning_levels = {"low", "medium", "high", "auto"}
         reasoning = (
-            Reasoning(effort=reasoning_level, generate_summary="auto")
+            Reasoning(effort=reasoning_level)
             if reasoning_level in valid_reasoning_levels
             else None
         )

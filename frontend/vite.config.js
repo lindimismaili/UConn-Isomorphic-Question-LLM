@@ -16,14 +16,18 @@ function embedAgentsConfigAsset() {
   }
 }
 
+// Avoid localhost IPv6/IPv4 resolution issues on Windows.
+// Uvicorn here binds to 0.0.0.0 (IPv4), so prefer 127.0.0.1.
+const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8000'
+
 export default defineConfig({
   plugins: [react(), embedAgentsConfigAsset()],
   server: {
     proxy: {
-      '/api': 'http://localhost:8000',
-      '/version.json': 'http://localhost:8000',
-      '/data': 'http://localhost:8000',
-      '/skills': 'http://localhost:8000',
+      '/api': backendTarget,
+      '/version.json': backendTarget,
+      '/data': backendTarget,
+      '/skills': backendTarget,
     },
   },
   build: {
