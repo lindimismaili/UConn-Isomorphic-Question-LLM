@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
 import time
 import traceback
 from datetime import datetime
@@ -66,7 +65,7 @@ DEFAULT_RUBRIC_CRITERIA: list[dict[str, str]] = [
     {
         "name": "latex_syntax_quality",
         "category": "Quality control",
-        "question": "Is the generated LaTeX code free of syntax or compilation errors?",
+        "question": "Is the generated LaTeX code free of syntax errors?",
     },
     {
         "name": "solvable_and_specified",
@@ -133,41 +132,6 @@ def _build_testing_criteria(model: str = "o4-mini") -> list[dict[str, Any]]:
     return criteria
 
 
-def _latex_compile_check(latex_path: Optional[Path]) -> dict[str, Any]:
-    if latex_path is None or not latex_path.exists():
-        return {"status": "skipped", "reason": "LaTeX file not found"}
-
-    try:
-        command = [
-            "pdflatex",
-            "-interaction=nonstopmode",
-            "-halt-on-error",
-            latex_path.name,
-        ]
-        result = subprocess.run(
-            command,
-            cwd=str(latex_path.parent),
-            capture_output=True,
-            text=True,
-            timeout=90,
-            check=False,
-        )
-        return {
-            "status": "completed",
-            "success": result.returncode == 0,
-            "return_code": result.returncode,
-            "stdout_tail": (result.stdout or "")[-4000:],
-            "stderr_tail": (result.stderr or "")[-4000:],
-        }
-    except FileNotFoundError:
-        return {
-            "status": "skipped",
-            "reason": "pdflatex not installed on host",
-        }
-    except Exception as exc:
-        return {"status": "failed", "reason": str(exc)}
-
-
 def run_openai_output_evaluation(
     client: OpenAI,
     final_result: dict[str, Any],
@@ -181,14 +145,12 @@ def run_openai_output_evaluation(
     Evaluate generated questions using OpenAI Evals and save evaluation_report.json.
     """
     report_path = outputs_dir / "evaluation_report.json"
-    latex_check = _latex_compile_check(latex_path)
 
     generated_questions = final_result.get("generated_questions", [])
     if not generated_questions:
         report = {
             "status": "skipped",
             "reason": "No generated questions to evaluate",
-            "latex_compile_check": latex_check,
             "created_at": datetime.utcnow().isoformat() + "Z",
             "rubric": RUBRIC_CRITERIA,
         }
@@ -199,7 +161,6 @@ def run_openai_output_evaluation(
         report = {
             "status": "skipped",
             "reason": "OpenAI client has no evals API surface",
-            "latex_compile_check": latex_check,
             "created_at": datetime.utcnow().isoformat() + "Z",
             "rubric": RUBRIC_CRITERIA,
         }
@@ -233,7 +194,6 @@ def run_openai_output_evaluation(
         report = {
             "status": "skipped",
             "reason": "No source/generated pairs available for evaluation",
-            "latex_compile_check": latex_check,
             "created_at": datetime.utcnow().isoformat() + "Z",
             "rubric": RUBRIC_CRITERIA,
         }
@@ -290,7 +250,6 @@ def run_openai_output_evaluation(
             "run_id": current.id,
             "run_status": getattr(current, "status", "unknown"),
             "run": current.model_dump() if hasattr(current, "model_dump") else str(current),
-            "latex_compile_check": latex_check,
         }
 
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -305,7 +264,6 @@ def run_openai_output_evaluation(
             "dataset_file": str(dataset_path.name),
             "error": str(exc),
             "traceback": traceback.format_exc(),
-            "latex_compile_check": latex_check,
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report

@@ -15,7 +15,7 @@ try:
     from docx import Document
 except ImportError as exc:  # pragma: no cover
     raise SystemExit(
-        "Missing dependency: python-docx. Install with `python -m pip install python-docx`."
+        "Missing dependency: python-docx."
     ) from exc
 
 

@@ -31,11 +31,5 @@ description: "Extract all text and metadata from a DOCX file into normalized JSO
 python skills/extract-docx/scripts/extract_docx.py path/to/file.docx --pretty
 ```
 
-## Remote dependencies
-Install these in the agent environment image/bootstrap step:
-```bash
-python -m pip install python-docx
-```
-
 ## Output
 - `extracted_document.json` with `source.type = "docx"`.

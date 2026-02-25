@@ -16,7 +16,7 @@ try:
     from pypdf import PdfReader
 except ImportError as exc:  # pragma: no cover
     raise SystemExit(
-        "Missing dependency: pypdf. Install with `python -m pip install pypdf pdfplumber`."
+        "Missing dependency: pypdf."
     ) from exc
 
 try:

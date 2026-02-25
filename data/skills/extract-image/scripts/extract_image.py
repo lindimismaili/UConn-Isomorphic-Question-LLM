@@ -13,7 +13,7 @@ from typing import Any
 try:
     from PIL import ExifTags, Image
 except ImportError as exc:  # pragma: no cover
-    raise SystemExit("Missing dependency: pillow. Install with `python -m pip install pillow pytesseract`.") from exc
+    raise SystemExit("Missing dependency: pillow.") from exc
 
 try:
     import pytesseract

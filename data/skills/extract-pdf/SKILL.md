@@ -31,11 +31,5 @@ description: "Extract all text and metadata from a PDF into normalized JSON for 
 python skills/extract-pdf/scripts/extract_pdf.py path/to/file.pdf --pretty
 ```
 
-## Remote dependencies
-Install these in the agent environment image/bootstrap step:
-```bash
-python -m pip install pypdf pdfplumber
-```
-
 ## Output
 - `extracted_document.json` with `source.type = "pdf"`.

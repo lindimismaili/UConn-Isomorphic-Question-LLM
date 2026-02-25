@@ -15,9 +15,8 @@ description: "Verify generated LaTeX for syntax/render issues and auto-fix commo
 
 ## Workflow
 1. Lint quickly for unbalanced braces, math mode issues, and special-character escapes.
-2. Compile with `latexmk` or `pdflatex` when available.
-3. If compile fails, patch common issues and retry once.
-4. Return final status and fixes applied.
+2. If linting finds issues, patch common problems and re-check once.
+3. Return final status and fixes applied.
 
 ## Output
 - `{"latex_valid": true|false, "issues": [], "fixes_applied": []}`.

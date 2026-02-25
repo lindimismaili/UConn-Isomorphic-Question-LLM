@@ -37,7 +37,7 @@
   {
     "name": "latex_syntax_quality",
     "category": "Quality control",
-    "question": "Is the generated LaTeX code free of syntax or compilation errors?"
+    "question": "Is the generated LaTeX code free of syntax errors?"
   },
   {
     "name": "solvable_and_specified",
