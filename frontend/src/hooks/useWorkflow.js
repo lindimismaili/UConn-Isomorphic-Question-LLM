@@ -35,6 +35,7 @@ const AGENT_COUNT_LOGS = {
   verifier: 'Verified',
   generator: 'Generated',
 };
+const STATUS_POLL_INTERVAL_MS = 150;
 
 function formatSeconds(seconds) {
   if (typeof seconds !== 'number' || Number.isNaN(seconds)) return '';
@@ -216,7 +217,7 @@ export function useWorkflow(dispatch) {
           throw err;
         }
 
-        await sleep(1000, signal);
+        await sleep(STATUS_POLL_INTERVAL_MS, signal);
       }
     } catch (err) {
       if (err.name === 'AbortError') {

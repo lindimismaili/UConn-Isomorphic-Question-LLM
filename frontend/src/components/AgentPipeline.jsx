@@ -1,28 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AgentCard from './AgentCard.jsx';
-import { IconArrowRight } from './Icons.jsx';
 
 // Fixed pipeline layout: two rows of 3
 const ROW1 = ['setup', 'normalizer', 'extracter'];
 const ROW2 = ['verifier', 'generator', 'latex'];
+const CONNECTIONS = [
+  { id: 'setup-normalizer', from: 'setup', to: 'normalizer', type: 'horizontal' },
+  { id: 'normalizer-extracter', from: 'normalizer', to: 'extracter', type: 'horizontal' },
+  { id: 'extracter-verifier', from: 'extracter', to: 'verifier', type: 'turn' },
+  { id: 'verifier-generator', from: 'verifier', to: 'generator', type: 'horizontal' },
+  { id: 'generator-latex', from: 'generator', to: 'latex', type: 'horizontal' },
+];
 
-function ArrowRight() {
-  return (
-    <div className="agent-arrow">
-      <IconArrowRight />
-    </div>
-  );
+function statusForLine(sourceStatus, previousStatus) {
+  // If an agent fails, keep the connector color as-is (no color change on failure).
+  if (sourceStatus === 'errored') {
+    return previousStatus || 'inactive';
+  }
+  return sourceStatus || 'inactive';
 }
 
 function AgentRow({ keys, agents, onCardClick, onNodeRef }) {
   return (
     <div className="agents-row">
-      {keys.map((key, i) => (
-        <div key={key} className="agent-row-item">
-          {i > 0 && <ArrowRight />}
-          <div className="agent-node" ref={(node) => onNodeRef(key, node)}>
-            <AgentCard agentKey={key} agent={agents[key]} onClick={onCardClick} />
-          </div>
+      {keys.map((key) => (
+        <div key={key} className="agent-node" ref={(node) => onNodeRef(key, node)}>
+          <AgentCard agentKey={key} agent={agents[key]} onClick={onCardClick} />
         </div>
       ))}
     </div>
@@ -32,32 +35,49 @@ function AgentRow({ keys, agents, onCardClick, onNodeRef }) {
 export default function AgentPipeline({ agents, onCardClick }) {
   const gridRef = useRef(null);
   const nodeRefs = useRef({});
-  const [connector, setConnector] = useState({ width: 1, height: 1, path: '' });
+  const [connector, setConnector] = useState({ width: 1, height: 1, paths: {} });
+  const [lineStatuses, setLineStatuses] = useState(() => (
+    Object.fromEntries(CONNECTIONS.map(({ id }) => [id, 'inactive']))
+  ));
 
   const updateConnector = useCallback(() => {
     const grid = gridRef.current;
-    const fromNode = nodeRefs.current[ROW1[ROW1.length - 1]];
-    const toNode = nodeRefs.current[ROW2[0]];
-    if (!grid || !fromNode || !toNode) {
-      setConnector((prev) => ({ ...prev, path: '' }));
+    if (!grid) {
+      setConnector({ width: 1, height: 1, paths: {} });
       return;
     }
 
     const gridRect = grid.getBoundingClientRect();
-    const fromRect = fromNode.getBoundingClientRect();
-    const toRect = toNode.getBoundingClientRect();
-
     const width = Math.max(1, gridRect.width);
     const height = Math.max(1, gridRect.height);
+    const paths = {};
 
-    const startX = fromRect.left + fromRect.width / 2 - gridRect.left;
-    const startY = fromRect.bottom - gridRect.top;
-    const endX = toRect.left + toRect.width / 2 - gridRect.left;
-    const endY = toRect.top - gridRect.top;
-    const bendY = startY + (endY - startY) / 2;
+    for (const connection of CONNECTIONS) {
+      const fromNode = nodeRefs.current[connection.from];
+      const toNode = nodeRefs.current[connection.to];
+      if (!fromNode || !toNode) continue;
 
-    const path = `M ${startX} ${startY} L ${startX} ${bendY} L ${endX} ${bendY} L ${endX} ${endY}`;
-    setConnector({ width, height, path });
+      const fromRect = fromNode.getBoundingClientRect();
+      const toRect = toNode.getBoundingClientRect();
+
+      if (connection.type === 'horizontal') {
+        const startX = fromRect.right - gridRect.left;
+        const startY = fromRect.top + fromRect.height / 2 - gridRect.top;
+        const endX = toRect.left - gridRect.left;
+        const endY = toRect.top + toRect.height / 2 - gridRect.top;
+        paths[connection.id] = `M ${startX} ${startY} L ${endX} ${endY}`;
+        continue;
+      }
+
+      const startX = fromRect.left + fromRect.width / 2 - gridRect.left;
+      const startY = fromRect.bottom - gridRect.top;
+      const endX = toRect.left + toRect.width / 2 - gridRect.left;
+      const endY = toRect.top - gridRect.top;
+      const bendY = startY + (endY - startY) / 2;
+      paths[connection.id] = `M ${startX} ${startY} L ${startX} ${bendY} L ${endX} ${bendY} L ${endX} ${endY}`;
+    }
+
+    setConnector({ width, height, paths });
   }, []);
 
   const setNodeRef = useCallback((key, node) => {
@@ -85,6 +105,17 @@ export default function AgentPipeline({ agents, onCardClick }) {
     };
   }, [updateConnector, agents]);
 
+  useEffect(() => {
+    setLineStatuses((prev) => {
+      const next = { ...prev };
+      for (const connection of CONNECTIONS) {
+        const sourceStatus = agents?.[connection.from]?.status || 'inactive';
+        next[connection.id] = statusForLine(sourceStatus, prev[connection.id]);
+      }
+      return next;
+    });
+  }, [agents]);
+
   return (
     <div className="agents-grid" ref={gridRef}>
       <svg
@@ -93,7 +124,18 @@ export default function AgentPipeline({ agents, onCardClick }) {
         viewBox={`0 0 ${connector.width} ${connector.height}`}
         preserveAspectRatio="none"
       >
-        {connector.path && <path d={connector.path} />}
+        {CONNECTIONS.map(({ id }) => (
+          connector.paths[id]
+            ? (
+              <path
+                key={id}
+                className="agent-connector-path"
+                data-status={lineStatuses[id] || 'inactive'}
+                d={connector.paths[id]}
+              />
+            )
+            : null
+        ))}
       </svg>
       <AgentRow keys={ROW1} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
       <AgentRow keys={ROW2} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />

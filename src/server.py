@@ -1047,6 +1047,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["normalizer"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["normalizer"]["data"]["executionTime"] = elapsed
             workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
+            workflow["agents"]["extracter"]["status"] = "thinking"
+            workflow["agents"]["extracter"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
             
             # Save normalizer output
@@ -1065,10 +1067,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             # =================================================================
             # Step 2: Extracter
             # =================================================================
-            workflow["agents"]["extracter"]["status"] = "thinking"
-            workflow["agents"]["extracter"]["data"]["startTime"] = datetime.now().isoformat()
-            _touch_workflow(workflow)
-            
             file_refs = [{"type": "input_file", "file_id": fid} for fid in file_ids]
             
             extracter_input_payload = {
@@ -1125,6 +1123,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["extracter"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["extracter"]["data"]["executionTime"] = elapsed
             workflow["agents"]["extracter"]["data"]["output"] = extracter_output.model_dump()
+            workflow["agents"]["verifier"]["status"] = "thinking"
+            workflow["agents"]["verifier"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
             
             # Save extracter output
@@ -1144,10 +1144,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             # =================================================================
             # Step 3: Verifier
             # =================================================================
-            workflow["agents"]["verifier"]["status"] = "thinking"
-            workflow["agents"]["verifier"]["data"]["startTime"] = datetime.now().isoformat()
-            _touch_workflow(workflow)
-            
             verifier_input_payload = {
                 "task": "verify_source_questions",
                 "source_questions": extracter_output.model_dump(),
@@ -1178,6 +1174,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["verifier"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["verifier"]["data"]["executionTime"] = elapsed
             workflow["agents"]["verifier"]["data"]["output"] = verifier_output.model_dump()
+            workflow["agents"]["generator"]["status"] = "thinking"
+            workflow["agents"]["generator"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
             
             # Save verifier output
@@ -1197,10 +1195,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             # =================================================================
             # Step 4: Generator
             # =================================================================
-            workflow["agents"]["generator"]["status"] = "thinking"
-            workflow["agents"]["generator"]["data"]["startTime"] = datetime.now().isoformat()
-            _touch_workflow(workflow)
-            
             generator_input_payload = {
                 "task": "generate_isomorphic_questions",
                 "configuration": normalizer_output.model_dump(),
@@ -1278,6 +1272,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["generator"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["generator"]["data"]["executionTime"] = elapsed
             workflow["agents"]["generator"]["data"]["output"] = generator_output.model_dump()
+            workflow["agents"]["latex"]["status"] = "thinking"
+            workflow["agents"]["latex"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
             
             # Save generator output
@@ -1297,10 +1293,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             # =================================================================
             # Step 5: LaTeX Formatter
             # =================================================================
-            workflow["agents"]["latex"]["status"] = "thinking"
-            workflow["agents"]["latex"]["data"]["startTime"] = datetime.now().isoformat()
-            _touch_workflow(workflow)
-            
             # Prepare questions for LaTeX formatting
             questions_for_latex = []
             for q in generator_output.isomorphic_questions:
