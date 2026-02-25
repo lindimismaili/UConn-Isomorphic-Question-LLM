@@ -8,13 +8,17 @@ an evaluation report to the run output directory.
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import time
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 THIS_DIR = Path(__file__).resolve().parent
@@ -78,8 +82,9 @@ def _load_rubric_criteria() -> list[dict[str, str]]:
             data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
             if isinstance(data, list) and data:
                 return data
-        except Exception:
-            pass
+            logger.warning("Rubric file %s is empty or not a list; using defaults", RUBRIC_PATH)
+        except Exception as exc:
+            logger.warning("Failed to load rubric from %s: %s; using defaults", RUBRIC_PATH, exc)
     return DEFAULT_RUBRIC_CRITERIA
 
 
@@ -299,6 +304,7 @@ def run_openai_output_evaluation(
             "grader_model": grader_model,
             "dataset_file": str(dataset_path.name),
             "error": str(exc),
+            "traceback": traceback.format_exc(),
             "latex_compile_check": latex_check,
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

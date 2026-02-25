@@ -122,12 +122,6 @@ def upload_file_to_openai(file_path: Path) -> str:
     return response.id
 
 
-def create_vector_store(name: str, file_ids: list[str]) -> str:
-    """Create a vector store with the given files for file search."""
-    vector_store = client.vector_stores.create(name=name, file_ids=file_ids)
-    logger.info("Created vector store %s -> %s", name, vector_store.id)
-    return vector_store.id
-
 
 # =============================================================================
 # Agent Runner Utility
@@ -158,11 +152,11 @@ async def run_agent(
     Returns:
         The agent run result
     """
-    print(f"🚀 Running agent: {agent.name}")
+    logger.info("Running agent: %s", agent.name)
     start_time = time.time()
-    
+
     result = await Runner.run(agent, input=inputs, run_config=run_config)
-    
+
     end_time = time.time()
     elapsed = end_time - start_time
     
@@ -201,7 +195,7 @@ async def run_agent(
     log_path = outputs_dir / file_name
     log_path.write_text(json.dumps(log_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     
-    print(f"✅ Completed: {agent.name} ({elapsed:.2f}s)")
+    logger.info("Completed: %s (%.2fs)", agent.name, elapsed)
     return result
 
 # =============================================================================
@@ -339,7 +333,13 @@ def create_agents(
         
         # Get reasoning level from config
         reasoning_level = config.get("reasoning", "none")
-        
+        valid_reasoning_levels = {"low", "medium", "high", "auto"}
+        reasoning = (
+            Reasoning(effort=reasoning_level, generate_summary="auto")
+            if reasoning_level in valid_reasoning_levels
+            else None
+        )
+
         # Create the agent
         agent = Agent(
             name=config.get("name", agent_key.title()),
@@ -348,8 +348,7 @@ def create_agents(
             tools=tools if tools else None,
             output_type=output_type,
             model_settings=ModelSettings(
-                store=True,
-                reasoning=Reasoning(effort=reasoning_level, summary="auto"),
+                reasoning=reasoning,
             ),
         )
         
@@ -502,7 +501,7 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
         # =================================================================
         # Step 0: Upload files to OpenAI
         # =================================================================
-        print("\n📁 Uploading files to OpenAI...")
+        logger.info("Uploading files to OpenAI...")
         file_ids = []
         file_names = []
         for file_path in workflow_input.file_paths:
@@ -511,9 +510,9 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
                 file_id = upload_file_to_openai(path)
                 file_ids.append(file_id)
                 file_names.append(path.name)
-                print(f"   ✓ {path.name} -> {file_id}")
+                logger.info("Uploaded: %s -> %s", path.name, file_id)
             else:
-                print(f"   ⚠ File not found: {file_path}")
+                logger.warning("File not found: %s", file_path)
         
         # Create a single shared Code Interpreter container for this workflow
         # so that all agent calls reuse the same environment.
@@ -537,9 +536,7 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
         # =================================================================
         # Step 1: Normalize User Request
         # =================================================================
-        print("\n" + "=" * 60)
-        print("STEP 1: Normalizing user request")
-        print("=" * 60)
+        logger.info("STEP 1: Normalizing user request")
         
         normalizer_input = [
             {
@@ -575,14 +572,12 @@ Defaults (use if not specified):
             1,
         )
         normalizer_output: NormalizerOutput = normalizer_result.final_output
-        print(f"   Config: {normalizer_output.model_dump_json(indent=2)}")
+        logger.info("Normalizer config: %s", normalizer_output.model_dump_json())
         
         # =================================================================
         # Step 2: Extract Questions from Files
         # =================================================================
-        print("\n" + "=" * 60)
-        print("STEP 2: Extracting questions from files")
-        print("=" * 60)
+        logger.info("STEP 2: Extracting questions from files")
         
         # Build file references for the agent
         file_refs = []
@@ -667,14 +662,12 @@ Files attached: {', '.join(file_names)}
             q.theme = _normalize_theme_value(q.theme)
         if file_ids and not extracter_output.questions:
             raise ValueError("Extractor returned zero questions after retry.")
-        print(f"   Extracted {len(extracter_output.questions)} questions")
+        logger.info("Extracted %d questions", len(extracter_output.questions))
         
         # =================================================================
         # Step 3: Verify Answers
         # =================================================================
-        print("\n" + "=" * 60)
-        print("STEP 3: Verifying answers")
-        print("=" * 60)
+        logger.info("STEP 3: Verifying answers")
         
         verifier_input = [
             {
@@ -713,14 +706,12 @@ For each question:
             extracter_output.questions,
             verifier_output.questions,
         )
-        print(f"   Verified {len(verifier_output.questions)} multiple-choice questions")
+        logger.info("Verified %d multiple-choice questions", len(verifier_output.questions))
         
         # =================================================================
         # Step 4: Generate Isomorphic Questions
         # =================================================================
-        print("\n" + "=" * 60)
-        print("STEP 4: Generating isomorphic questions")
-        print("=" * 60)
+        logger.info("STEP 4: Generating isomorphic questions")
         
         generator_input = [
             {
@@ -805,9 +796,13 @@ Source Questions:
                 41,
             )
             retry_output: GeneratorOutput = retry_result.final_output
+            missing_source_ids_set = set(missing_source_ids)
             for q in retry_output.isomorphic_questions:
                 q.theme = _normalize_theme_value(q.theme)
-            generator_output.isomorphic_questions.extend(retry_output.isomorphic_questions)
+            generator_output.isomorphic_questions.extend(
+                q for q in retry_output.isomorphic_questions
+                if q.source_id in missing_source_ids_set
+            )
             missing_source_ids = _missing_generation_source_ids(
                 verifier_output.questions,
                 generator_output.isomorphic_questions,
@@ -818,14 +813,12 @@ Source Questions:
                     f"Generator failed to produce required outputs for source_id(s): {', '.join(missing_source_ids)}"
                 )
 
-        print(f"   Generated {len(generator_output.isomorphic_questions)} new questions")
+        logger.info("Generated %d new questions", len(generator_output.isomorphic_questions))
         
         # =================================================================
         # Step 5: Format as LaTeX
         # =================================================================
-        print("\n" + "=" * 60)
-        print("STEP 5: Formatting as LaTeX")
-        print("=" * 60)
+        logger.info("STEP 5: Formatting as LaTeX")
         
         # Prepare questions for LaTeX formatting
         questions_for_latex = []
@@ -876,7 +869,7 @@ Set filename to "isomorphic_questions.tex"
         latex_filename = latex_output.filename or "isomorphic_questions.tex"
         latex_path = outputs_dir / latex_filename
         latex_path.write_text(latex_output.latex_content, encoding="utf-8")
-        print(f"   Created {latex_filename}")
+        logger.info("Created LaTeX file: %s", latex_filename)
         
         # =================================================================
         # Save final results
@@ -903,8 +896,8 @@ Set filename to "isomorphic_questions.tex"
         
         result_path = outputs_dir / "final_result.json"
         result_path.write_text(final_result.model_dump_json(indent=2), encoding="utf-8")
-        print(f"\n✅ Results saved to: {result_path}")
-        print(f"✅ LaTeX file: {latex_path}")
+        logger.info("Results saved to: %s", result_path)
+        logger.info("LaTeX file: %s", latex_path)
         
         return final_result
 
@@ -945,42 +938,37 @@ def main():
         default_file = QUESTION_DATA_DIR / "PDF" / "Quiz_Compilation.pdf"
         if default_file.exists():
             args.files = [str(default_file)]
-            print(f"Using default file: {default_file}")
+            logger.info("Using default file: %s", default_file)
         else:
-            print("Error: No files provided and default file not found.")
-            print(f"Expected: {default_file}")
-            return
-    
+            logger.error("No files provided and default file not found: %s", default_file)
+            raise SystemExit(1)
+
     # Build instructions
     instructions = args.instructions
     if args.num_questions != 1:
         instructions = f"Generate {args.num_questions} questions per source. " + instructions
-    
+
     # Run workflow
     workflow_input = WorkflowInput(
         file_paths=args.files,
         user_instructions=instructions,
     )
-    
-    result = asyncio.run(run_workflow(workflow_input))
-    
-    # Print summary
-    print("\n" + "=" * 60)
-    print("WORKFLOW COMPLETE")
-    print("=" * 60)
-    print(f"Source questions: {len(result.source_questions)}")
-    print(f"Verified questions: {len(result.verified_questions)}")
-    print(f"Generated questions: {len(result.generated_questions)}")
-    
-    # Print generated questions
+
+    try:
+        result = asyncio.run(run_workflow(workflow_input))
+    except Exception as exc:
+        logger.error("Workflow failed: %s", exc)
+        raise SystemExit(1) from exc
+
+    # Log summary
+    logger.info("WORKFLOW COMPLETE")
+    logger.info("Source questions:    %d", len(result.source_questions))
+    logger.info("Verified questions:  %d", len(result.verified_questions))
+    logger.info("Generated questions: %d", len(result.generated_questions))
+
     if result.generated_questions:
-        print("\n--- Generated Questions ---")
         for q in result.generated_questions:
-            print(f"\n[Q{q.id}] (from source {q.source_id})")
-            print(f"   {q.stem}")
-            for opt in q.options:
-                marker = "✓" if opt.is_correct else " "
-                print(f"   [{marker}] {opt.key}: {opt.text}")
+            logger.info("[Q%d] (from source %s): %s", q.id, q.source_id, q.stem[:80])
 
 
 if __name__ == "__main__":

@@ -134,7 +134,7 @@ def get_openai_client() -> OpenAI:
     if not api_key:
         raise RuntimeError(
             "OPENAI_API_KEY is not configured. "
-            "Set it in the environment or in /var/www/uconn/.env."
+            "Set it in the environment or in a .env file at the project root."
         )
 
     _openai_client = OpenAI(api_key=api_key)
@@ -159,7 +159,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -500,6 +500,12 @@ def create_agents(
 
         reasoning_level = config.get("reasoning", "none")
         tools = [code_interpreter] if config.get("useCodeInterpreter", False) else []
+        valid_reasoning_levels = {"low", "medium", "high", "auto"}
+        reasoning = (
+            Reasoning(effort=reasoning_level, generate_summary="auto")
+            if reasoning_level in valid_reasoning_levels
+            else None
+        )
         agents[agent_key] = Agent(
             name=config.get("name", agent_key.title()),
             instructions=load_prompt(agent_key),
@@ -507,8 +513,7 @@ def create_agents(
             tools=tools,
             output_type=output_type,
             model_settings=ModelSettings(
-                store=True,
-                reasoning=Reasoning(effort=reasoning_level, summary="auto"),
+                reasoning=reasoning,
             ),
         )
 
@@ -901,23 +906,6 @@ async def start_workflow(
         "updated_at": now,
     }
     
-    async def generate_events():
-        """Generate SSE events for workflow progress."""
-        try:
-            yield f"data: {json.dumps({'event': 'started', 'workflowId': workflow_id})}\n\n"
-            
-            # Run the workflow
-            result = await run_workflow_with_events(
-                workflow_id, prompt, file_paths, generate_events
-            )
-            
-            yield f"data: {json.dumps({'event': 'completed', 'workflowId': workflow_id})}\n\n"
-            
-        except Exception as e:
-            logger.error("Workflow error: %s", e)
-            workflows[workflow_id]["status"] = "errored"
-            yield f"data: {json.dumps({'event': 'error', 'message': str(e)})}\n\n"
-    
     # Start workflow in background
     asyncio.create_task(run_workflow_async(workflow_id, prompt, file_paths))
     
@@ -1109,7 +1097,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             
             start_time = time.time()
             extracter_result = await Runner.run(agents["extracter"], input=extracter_input, run_config=run_config)
-            elapsed = time.time() - start_time
             extracter_output: ExtracterOutput = extracter_result.final_output
             if file_ids and not extracter_output.questions:
                 retry_extract_payload = {
@@ -1126,6 +1113,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     agents["extracter"], input=retry_extract_input, run_config=run_config
                 )
                 extracter_output = retry_extract_result.final_output
+            elapsed = time.time() - start_time
             for q in extracter_output.questions:
                 if q.options:
                     q.question_type = "multiple_choice"
@@ -1244,7 +1232,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             
             start_time = time.time()
             generator_result = await Runner.run(agents["generator"], input=generator_input, run_config=run_config)
-            elapsed = time.time() - start_time
             generator_output: GeneratorOutput = generator_result.final_output
             for q in generator_output.isomorphic_questions:
                 q.theme = _normalize_theme_value(q.theme)
@@ -1269,9 +1256,13 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                 retry_input = _build_json_message(retry_payload)
                 retry_result = await Runner.run(agents["generator"], input=retry_input, run_config=run_config)
                 retry_output: GeneratorOutput = retry_result.final_output
+                missing_source_ids_set = set(missing_source_ids)
                 for q in retry_output.isomorphic_questions:
                     q.theme = _normalize_theme_value(q.theme)
-                generator_output.isomorphic_questions.extend(retry_output.isomorphic_questions)
+                generator_output.isomorphic_questions.extend(
+                    q for q in retry_output.isomorphic_questions
+                    if q.source_id in missing_source_ids_set
+                )
                 missing_source_ids = _missing_generation_source_ids(
                     verifier_output.questions,
                     generator_output.isomorphic_questions,
@@ -1281,6 +1272,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     raise ValueError(
                         f"Generator failed to produce required outputs for source_id(s): {', '.join(missing_source_ids)}"
                     )
+            elapsed = time.time() - start_time
             
             workflow["agents"]["generator"]["status"] = "completed"
             workflow["agents"]["generator"]["data"]["endTime"] = datetime.now().isoformat()
@@ -1368,7 +1360,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             # =================================================================
             # Save final results
             # =================================================================
-            evaluation_report = run_openai_output_evaluation(
+            evaluation_report = await asyncio.to_thread(
+                run_openai_output_evaluation,
                 client=client,
                 final_result={
                     "source_questions": [q.model_dump() for q in extracter_output.questions],
@@ -1419,12 +1412,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
         workflow["error"] = str(e)
         _touch_workflow(workflow)
         raise
-
-
-# Placeholder for run_workflow_with_events (not used but kept for reference)
-async def run_workflow_with_events(workflow_id: str, prompt: str, file_paths: list[str], event_generator):
-    """Run workflow with SSE events (placeholder)."""
-    pass
 
 
 # =============================================================================

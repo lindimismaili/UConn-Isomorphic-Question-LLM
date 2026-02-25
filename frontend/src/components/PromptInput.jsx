@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFileUpload } from '../hooks/useFileUpload.js';
 import { IconFile, IconUpload, IconTrash, IconSend, IconInfo, IconList } from './Icons.jsx';
 
@@ -16,12 +16,22 @@ export default function PromptInput({
   const [resetFeedback, setResetFeedback] = useState(false);
   const [uploadWarning, setUploadWarning] = useState(false);
   const fileInputRef = useRef(null);
+  const uploadWarningTimerRef = useRef(null);
+  const resetFeedbackTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(uploadWarningTimerRef.current);
+      clearTimeout(resetFeedbackTimerRef.current);
+    };
+  }, []);
 
   const { handleFileSelect, limitReached } = useFileUpload(files, dispatch);
 
   const handleUploadWarning = () => {
     setUploadWarning(true);
-    setTimeout(() => setUploadWarning(false), 1600);
+    clearTimeout(uploadWarningTimerRef.current);
+    uploadWarningTimerRef.current = setTimeout(() => setUploadWarning(false), 1600);
     dispatch({ type: 'UPLOAD_WARNING' });
   };
 
@@ -40,7 +50,8 @@ export default function PromptInput({
     dispatch({ type: 'CLEAR_LOGS' });
     setPrompt('');
     setResetFeedback(true);
-    setTimeout(() => setResetFeedback(false), 1400);
+    clearTimeout(resetFeedbackTimerRef.current);
+    resetFeedbackTimerRef.current = setTimeout(() => setResetFeedback(false), 1400);
   };
 
   const handleKeyDown = (e) => {
