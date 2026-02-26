@@ -898,6 +898,7 @@ async def start_workflow(
             "verifier": {"status": "inactive", "data": {}},
             "generator": {"status": "inactive", "data": {}},
             "latex": {"status": "inactive", "data": {}},
+            "output": {"status": "inactive", "data": {}},
         },
         "files": [],
         "outputFolder": "",
@@ -974,6 +975,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     "timestamp": timestamp,
                 }
             )
+            agent_outputs: list[dict[str, Any]] = []
             
             # Upload files to OpenAI
             file_ids = []
@@ -1050,18 +1052,15 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["extracter"]["status"] = "thinking"
             workflow["agents"]["extracter"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
-            
-            # Save normalizer output
-            (outputs_dir / "1_normalizer.json").write_text(
-                json.dumps({
+            agent_outputs.append(
+                {
                     "agent_name": "Normalizer",
                     "execution_time_seconds": elapsed,
                     "received_from_node": "user",
                     "sent_to_node": "extracter",
                     "input_messages": normalizer_input,
                     "output": normalizer_output.model_dump(),
-                }, indent=2),
-                encoding="utf-8"
+                }
             )
             
             # =================================================================
@@ -1126,10 +1125,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["verifier"]["status"] = "thinking"
             workflow["agents"]["verifier"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
-            
-            # Save extracter output
-            (outputs_dir / "2_extracter.json").write_text(
-                json.dumps({
+            agent_outputs.append(
+                {
                     "agent_name": "Extracter",
                     "execution_time_seconds": elapsed,
                     "received_from_node": "normalizer",
@@ -1137,8 +1134,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     "input_messages": extracter_input,
                     "questions_count": len(extracter_output.questions),
                     "output": extracter_output.model_dump(),
-                }, indent=2),
-                encoding="utf-8"
+                }
             )
             
             # =================================================================
@@ -1177,10 +1173,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["generator"]["status"] = "thinking"
             workflow["agents"]["generator"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
-            
-            # Save verifier output
-            (outputs_dir / "3_verifier.json").write_text(
-                json.dumps({
+            agent_outputs.append(
+                {
                     "agent_name": "Verifier",
                     "execution_time_seconds": elapsed,
                     "received_from_node": "extracter",
@@ -1188,8 +1182,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     "input_messages": verifier_input,
                     "questions_count": len(verifier_output.questions),
                     "output": verifier_output.model_dump(),
-                }, indent=2),
-                encoding="utf-8"
+                }
             )
             
             # =================================================================
@@ -1275,10 +1268,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["latex"]["status"] = "thinking"
             workflow["agents"]["latex"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
-            
-            # Save generator output
-            (outputs_dir / "4_generator.json").write_text(
-                json.dumps({
+            agent_outputs.append(
+                {
                     "agent_name": "Generator",
                     "execution_time_seconds": elapsed,
                     "received_from_node": "verifier",
@@ -1286,8 +1277,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     "input_messages": generator_input,
                     "questions_count": len(generator_output.isomorphic_questions),
                     "output": generator_output.model_dump(),
-                }, indent=2),
-                encoding="utf-8"
+                }
             )
             
             # =================================================================
@@ -1334,10 +1324,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             latex_filename = latex_output.filename or "isomorphic_questions.tex"
             latex_path = outputs_dir / latex_filename
             latex_path.write_text(latex_output.latex_content, encoding="utf-8")
-            
-            # Save LaTeX agent output
-            (outputs_dir / "5_latex.json").write_text(
-                json.dumps({
+            agent_outputs.append(
+                {
                     "agent_name": "LaTeX Formatter",
                     "execution_time_seconds": elapsed,
                     "received_from_node": "generator",
@@ -1345,15 +1333,29 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     "input_messages": latex_input,
                     "filename": latex_filename,
                     "output": latex_output.model_dump(),
-                }, indent=2),
-                encoding="utf-8"
+                }
             )
             
             # =================================================================
             # Save final results
             # =================================================================
+<<<<<<< Updated upstream
             evaluation_report = await asyncio.to_thread(
                 run_openai_output_evaluation,
+=======
+            output_stage_start = time.time()
+            workflow["agents"]["output"]["status"] = "thinking"
+            workflow["agents"]["output"]["data"]["startTime"] = datetime.now().isoformat()
+            workflow["agents"]["output"]["data"]["receivedFrom"] = "latex"
+            workflow["agents"]["output"]["data"]["sentTo"] = "user"
+            workflow["agents"]["output"]["data"]["input"] = (
+                f"Finalize local output files in outputs/{timestamp}"
+            )
+            workflow["agents"]["output"]["data"]["output"] = "Writing local artifacts..."
+            _touch_workflow(workflow)
+
+            evaluation_report = run_openai_output_evaluation(
+>>>>>>> Stashed changes
                 client=client,
                 final_result={
                     "source_questions": [q.model_dump() for q in extracter_output.questions],
@@ -1375,23 +1377,61 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             
             result_path = outputs_dir / "final_result.json"
             result_path.write_text(final_result.model_dump_json(indent=2), encoding="utf-8")
-            
-            # Update workflow with files
-            workflow["files"] = [
-                {"name": "final_result.json", "size": result_path.stat().st_size},
-                {"name": latex_filename, "size": latex_path.stat().st_size},
-                {"name": "1_normalizer.json", "size": (outputs_dir / "1_normalizer.json").stat().st_size},
-                {"name": "2_extracter.json", "size": (outputs_dir / "2_extracter.json").stat().st_size},
-                {"name": "3_verifier.json", "size": (outputs_dir / "3_verifier.json").stat().st_size},
-                {"name": "4_generator.json", "size": (outputs_dir / "4_generator.json").stat().st_size},
-                {"name": "5_latex.json", "size": (outputs_dir / "5_latex.json").stat().st_size},
-            ]
+
             eval_report_path = outputs_dir / "evaluation_report.json"
             eval_dataset_path = outputs_dir / "evaluation_dataset.jsonl"
+            agent_outputs_path = outputs_dir / "agent_outputs.json"
+            files_metadata = [
+                {"name": "final_result.json", "size": result_path.stat().st_size},
+                {"name": latex_filename, "size": latex_path.stat().st_size},
+            ]
             if eval_report_path.exists():
-                workflow["files"].append({"name": "evaluation_report.json", "size": eval_report_path.stat().st_size})
+                files_metadata.append(
+                    {"name": "evaluation_report.json", "size": eval_report_path.stat().st_size}
+                )
             if eval_dataset_path.exists():
-                workflow["files"].append({"name": "evaluation_dataset.jsonl", "size": eval_dataset_path.stat().st_size})
+                files_metadata.append(
+                    {"name": "evaluation_dataset.jsonl", "size": eval_dataset_path.stat().st_size}
+                )
+
+            output_payload = {
+                "agent_name": "Output",
+                "execution_time_seconds": None,
+                "received_from_node": "latex",
+                "sent_to_node": "user",
+                "input_summary": f"Finalize output files for workflow {workflow_id}",
+                "output": {
+                    "output_folder": str(outputs_dir),
+                    "files": [item["name"] for item in files_metadata] + ["agent_outputs.json"],
+                },
+            }
+            agent_outputs.append(output_payload)
+
+            output_elapsed = time.time() - output_stage_start
+            output_payload["execution_time_seconds"] = output_elapsed
+            agent_outputs_path.write_text(
+                json.dumps(
+                    {
+                        "generated_at": datetime.now().isoformat(),
+                        "workflow_id": workflow_id,
+                        "agents": agent_outputs,
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            files_metadata.append(
+                {"name": "agent_outputs.json", "size": agent_outputs_path.stat().st_size}
+            )
+            
+            # Update workflow with files
+            workflow["files"] = files_metadata
+            workflow["agents"]["output"]["status"] = "completed"
+            workflow["agents"]["output"]["data"]["endTime"] = datetime.now().isoformat()
+            workflow["agents"]["output"]["data"]["executionTime"] = output_elapsed
+            workflow["agents"]["output"]["data"]["output"] = (
+                f"Saved {len(files_metadata)} file(s) to outputs/{timestamp}"
+            )
             workflow["result"] = final_result.model_dump()
             workflow["status"] = "completed"
             _touch_workflow(workflow)
