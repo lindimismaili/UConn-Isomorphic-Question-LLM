@@ -132,10 +132,9 @@ async def run_agent(
     agent: Agent,
     inputs: list[dict[str, Any]],
     run_config: RunConfig,
-    outputs_dir: Path,
+    agent_outputs: list[dict[str, Any]],
     received_from: str,
     sent_to: Optional[str],
-    output_index: int,
 ) -> Any:
     """
     Run an agent and log the results.
@@ -144,10 +143,9 @@ async def run_agent(
         agent: The agent to run
         inputs: Input messages for the agent
         run_config: Configuration for the run
-        outputs_dir: Directory to save output logs
+        agent_outputs: Aggregate list to collect agent outputs
         received_from: Name of the previous agent in workflow
         sent_to: Name of the next agent in workflow
-        output_index: Index for output file naming
     
     Returns:
         The agent run result
@@ -189,11 +187,8 @@ async def run_agent(
         "sent_to_node": sent_to or "user",
     }
     
-    # Save log to file
-    safe_name = agent.name.replace(" ", "_").lower()
-    file_name = f"{output_index}_{safe_name}.json"
-    log_path = outputs_dir / file_name
-    log_path.write_text(json.dumps(log_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Append log to aggregate output
+    agent_outputs.append(log_payload)
     
     logger.info("Completed: %s (%.2fs)", agent.name, elapsed)
     return result
@@ -497,6 +492,7 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
                 "timestamp": timestamp,
             }
         )
+        agent_outputs: list[dict[str, Any]] = []
         
         # =================================================================
         # Step 0: Upload files to OpenAI
@@ -566,10 +562,9 @@ Defaults (use if not specified):
             agents["normalizer"],
             normalizer_input,
             run_config,
-            outputs_dir,
+            agent_outputs,
             "user",
             "extracter",
-            1,
         )
         normalizer_output: NormalizerOutput = normalizer_result.final_output
         logger.info("Normalizer config: %s", normalizer_output.model_dump_json())
@@ -619,10 +614,9 @@ Remember:
             agents["extracter"],
             extracter_input,
             run_config,
-            outputs_dir,
+            agent_outputs,
             "normalizer",
             "verifier",
-            2,
         )
         extracter_output: ExtracterOutput = extracter_result.final_output
         if file_ids and not extracter_output.questions:
@@ -649,10 +643,9 @@ Files attached: {', '.join(file_names)}
                 agents["extracter"],
                 retry_extract_input,
                 run_config,
-                outputs_dir,
+                agent_outputs,
                 "extracter",
                 "verifier",
-                21,
             )
             extracter_output = retry_extract_result.final_output
 
@@ -696,10 +689,9 @@ For each question:
             agents["verifier"],
             verifier_input,
             run_config,
-            outputs_dir,
+            agent_outputs,
             "extracter",
             "generator",
-            3,
         )
         verifier_output: VerifierOutput = verifier_result.final_output
         verifier_output.questions = _reconcile_verified_questions(
@@ -747,10 +739,9 @@ Requirements:
             agents["generator"],
             generator_input,
             run_config,
-            outputs_dir,
+            agent_outputs,
             "verifier",
             "latex",
-            4,
         )
         generator_output: GeneratorOutput = generator_result.final_output
         for q in generator_output.isomorphic_questions:
@@ -790,10 +781,9 @@ Source Questions:
                 agents["generator"],
                 retry_input,
                 run_config,
-                outputs_dir,
+                agent_outputs,
                 "generator",
                 "generator",
-                41,
             )
             retry_output: GeneratorOutput = retry_result.final_output
             missing_source_ids_set = set(missing_source_ids)
@@ -858,10 +848,9 @@ Set filename to "isomorphic_questions.tex"
             agents["latex"],
             latex_input,
             run_config,
-            outputs_dir,
+            agent_outputs,
             "generator",
             None,
-            5,
         )
         latex_output: LaTeXOutput = latex_result.final_output
         
@@ -874,6 +863,11 @@ Set filename to "isomorphic_questions.tex"
         # =================================================================
         # Save final results
         # =================================================================
+        print("\n" + "=" * 60)
+        print("STEP 6: Writing output artifacts")
+        print("=" * 60)
+        output_stage_start = time.time()
+
         evaluation_report = run_openai_output_evaluation(
             client=client,
             final_result={
@@ -896,8 +890,47 @@ Set filename to "isomorphic_questions.tex"
         
         result_path = outputs_dir / "final_result.json"
         result_path.write_text(final_result.model_dump_json(indent=2), encoding="utf-8")
+<<<<<<< Updated upstream
         logger.info("Results saved to: %s", result_path)
         logger.info("LaTeX file: %s", latex_path)
+=======
+        output_files = sorted(
+            file_path.name for file_path in outputs_dir.iterdir() if file_path.is_file()
+        )
+        if "agent_outputs.json" not in output_files:
+            output_files.append("agent_outputs.json")
+            output_files.sort()
+        output_elapsed = time.time() - output_stage_start
+        agent_outputs.append(
+            {
+                "agent_name": "Output",
+                "execution_time_seconds": output_elapsed,
+                "received_from_node": "latex",
+                "sent_to_node": "user",
+                "input_summary": "Finalize local output files",
+                "output": {
+                    "output_folder": str(outputs_dir),
+                    "files": output_files,
+                },
+            }
+        )
+
+        agent_outputs_path = outputs_dir / "agent_outputs.json"
+        agent_outputs_path.write_text(
+            json.dumps(
+                {
+                    "generated_at": datetime.now().isoformat(),
+                    "agents": agent_outputs,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        print(f"\n✅ Results saved to: {result_path}")
+        print(f"✅ LaTeX file: {latex_path}")
+        print(f"✅ Agent outputs saved to: {agent_outputs_path}")
+>>>>>>> Stashed changes
         
         return final_result
 
