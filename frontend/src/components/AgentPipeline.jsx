@@ -13,11 +13,15 @@ const CONNECTIONS = [
 ];
 
 function statusForLine(sourceStatus, previousStatus) {
-  // If an agent fails, keep the connector color as-is (no color change on failure).
-  if (sourceStatus === 'errored') {
-    return previousStatus || 'inactive';
+  // Connector turns green only after the source agent completes.
+  if (sourceStatus === 'completed') {
+    return 'completed';
   }
-  return sourceStatus || 'inactive';
+  // If an agent fails after completion, keep the connector green.
+  if (sourceStatus === 'errored') {
+    return previousStatus === 'completed' ? 'completed' : 'inactive';
+  }
+  return 'inactive';
 }
 
 function AgentRow({ keys, agents, onCardClick, onNodeRef }) {
