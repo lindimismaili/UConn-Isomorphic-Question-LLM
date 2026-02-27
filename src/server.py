@@ -1339,10 +1339,6 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             # =================================================================
             # Save final results
             # =================================================================
-<<<<<<< Updated upstream
-            evaluation_report = await asyncio.to_thread(
-                run_openai_output_evaluation,
-=======
             output_stage_start = time.time()
             workflow["agents"]["output"]["status"] = "thinking"
             workflow["agents"]["output"]["data"]["startTime"] = datetime.now().isoformat()
@@ -1354,8 +1350,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
             workflow["agents"]["output"]["data"]["output"] = "Writing local artifacts..."
             _touch_workflow(workflow)
 
-            evaluation_report = run_openai_output_evaluation(
->>>>>>> Stashed changes
+            evaluation_report = await asyncio.to_thread(
+                run_openai_output_evaluation,
                 client=client,
                 final_result={
                     "source_questions": [q.model_dump() for q in extracter_output.questions],

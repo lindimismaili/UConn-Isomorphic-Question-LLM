@@ -890,10 +890,8 @@ Set filename to "isomorphic_questions.tex"
         
         result_path = outputs_dir / "final_result.json"
         result_path.write_text(final_result.model_dump_json(indent=2), encoding="utf-8")
-<<<<<<< Updated upstream
         logger.info("Results saved to: %s", result_path)
         logger.info("LaTeX file: %s", latex_path)
-=======
         output_files = sorted(
             file_path.name for file_path in outputs_dir.iterdir() if file_path.is_file()
         )
@@ -930,7 +928,6 @@ Set filename to "isomorphic_questions.tex"
         print(f"\n✅ Results saved to: {result_path}")
         print(f"✅ LaTeX file: {latex_path}")
         print(f"✅ Agent outputs saved to: {agent_outputs_path}")
->>>>>>> Stashed changes
         
         return final_result
 

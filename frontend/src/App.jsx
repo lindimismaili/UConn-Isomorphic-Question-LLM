@@ -85,6 +85,13 @@ const INITIAL_AGENTS = {
 };
 
 const MAX_LOGS = 250;
+const NEXT_AGENT_BY_KEY = {
+  setup: 'normalizer',
+  normalizer: 'extracter',
+  extracter: 'verifier',
+  verifier: 'generator',
+  generator: 'latex',
+};
 
 function makeLog(message, level) {
   return {
@@ -200,6 +207,9 @@ function reducer(state, action) {
       const setupMessage = setupSeconds !== null
         ? `Setup completed in ${setupSeconds.toFixed(2)}s`
         : 'Setup completed';
+      const normalizer = state.agents.normalizer;
+      const shouldStartNormalizerNow = normalizer
+        && (normalizer.status === 'queued' || normalizer.status === 'inactive');
       return {
         ...state,
         workflowId: action.workflowId,
@@ -211,6 +221,16 @@ function reducer(state, action) {
             endTime: new Date(setupEnd),
             executionTime: setupSeconds,
           },
+          ...(shouldStartNormalizerNow
+            ? {
+                normalizer: {
+                  ...normalizer,
+                  status: 'thinking',
+                  startTime: normalizer.startTime || new Date(setupEnd),
+                  endTime: null,
+                },
+              }
+            : {}),
         },
         logs: [...state.logs, makeLog(setupMessage, 'success')].slice(-MAX_LOGS),
       };
@@ -219,12 +239,25 @@ function reducer(state, action) {
     case 'AGENT_UPDATE': {
       const agent = state.agents[action.agentKey];
       if (!agent) return state;
+      const nextAgents = {
+        ...state.agents,
+        [action.agentKey]: { ...agent, status: action.status, ...action.data },
+      };
+      if (action.status === 'completed') {
+        const nextKey = NEXT_AGENT_BY_KEY[action.agentKey];
+        const nextAgent = nextKey ? nextAgents[nextKey] : null;
+        if (nextAgent && (nextAgent.status === 'queued' || nextAgent.status === 'inactive')) {
+          nextAgents[nextKey] = {
+            ...nextAgent,
+            status: 'thinking',
+            startTime: nextAgent.startTime || new Date(),
+            endTime: null,
+          };
+        }
+      }
       return {
         ...state,
-        agents: {
-          ...state.agents,
-          [action.agentKey]: { ...agent, status: action.status, ...action.data },
-        },
+        agents: nextAgents,
       };
     }
 
