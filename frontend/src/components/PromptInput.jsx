@@ -6,6 +6,7 @@ export default function PromptInput({
   files,
   dispatch,
   isRunning,
+  serviceInactive,
   onSend,
   onClearInputs,
   onClearAgents,
@@ -36,6 +37,10 @@ export default function PromptInput({
   };
 
   const handleSend = () => {
+    if (serviceInactive) {
+      alert('OpenAI servers are down. This site is currently inactive.');
+      return;
+    }
     if (!prompt.trim() && files.length === 0) {
       alert('Please enter a prompt or upload files.');
       return;
@@ -82,6 +87,7 @@ export default function PromptInput({
             </button>
           </div>
         </div>
+        <p className="disclaimer-text">Disclaimer: All data/files/prompts sent are saved to our servers.</p>
         <p className="subtitle">
           Enter a prompt and provide some example questions. You can upload
           files as well! By default, the generator will create brand new
@@ -99,7 +105,7 @@ export default function PromptInput({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isRunning}
+            disabled={isRunning || serviceInactive}
           />
         </div>
 
@@ -117,7 +123,7 @@ export default function PromptInput({
             <button
               className={`btn btn-secondary${resetFeedback ? ' btn-feedback' : ''}`}
               onClick={handleReset}
-              disabled={isRunning || resetFeedback}
+              disabled={isRunning || serviceInactive || resetFeedback}
             >
               <IconTrash className="btn-icon" />
               <span className="btn-label">Reset</span>
@@ -126,7 +132,7 @@ export default function PromptInput({
             <button
               className="btn btn-secondary"
               onClick={onShowTestFiles}
-              disabled={isRunning}
+              disabled={isRunning || serviceInactive}
             >
               <IconFile className="btn-icon" />
               <span className="btn-label">Test Files</span>
@@ -142,7 +148,7 @@ export default function PromptInput({
                   }
                   fileInputRef.current?.click();
                 }}
-                disabled={isRunning}
+                disabled={isRunning || serviceInactive}
               >
                 <IconUpload className="btn-icon" />
                 <span className="btn-label">{uploadWarning ? 'Too many files!' : 'Upload Files'}</span>
@@ -163,7 +169,7 @@ export default function PromptInput({
             <button
               className="btn btn-primary"
               onClick={handleSend}
-              disabled={isRunning}
+              disabled={isRunning || serviceInactive}
             >
               <IconSend className="btn-icon" />
               <span>Send</span>
