@@ -4,7 +4,8 @@ set -euo pipefail
 # =====================================================
 # CONFIG
 # =====================================================
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 UCONN_SRC="${REPO_DIR}"
 UCONN_DST="/var/www/uconn"
 
@@ -60,7 +61,8 @@ ensure_git_pull_deploy_hooks() {
   local hook_files=(
     "$src/.githooks/post-merge"
     "$src/.githooks/post-rewrite"
-    "$src/raspi-deploy.sh"
+    "$src/deploy/raspi-deploy.sh"
+    "$src/deploy/force-sync-and-raspi-config.sh"
   )
 
   for hook in "${hook_files[@]}"; do
