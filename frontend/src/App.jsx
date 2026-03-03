@@ -335,6 +335,10 @@ function reducer(state, action) {
 export default function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [footerVersion, setFooterVersion] = useState('Version -');
+  const [openaiStatus, setOpenaiStatus] = useState({
+    isDown: false,
+    description: '',
+  });
 
   const { run: runWorkflow, abort: abortWorkflow } = useWorkflow(dispatch);
   useAgents(dispatch);
@@ -357,7 +361,43 @@ export default function App() {
       .catch(() => setFooterVersion('Version dev | Last publish: local'));
   }, []);
 
-  const handleSend = (prompt, files) => runWorkflow(prompt, files);
+  useEffect(() => {
+    let isDisposed = false;
+
+    const checkOpenAiStatus = async () => {
+      try {
+        const res = await fetch(`/api/openai/status?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isDisposed) return;
+        setOpenaiStatus({
+          isDown: Boolean(data?.openai_down),
+          description: typeof data?.description === 'string' ? data.description : '',
+        });
+      } catch {
+        if (isDisposed) return;
+        setOpenaiStatus((prev) => ({ ...prev, isDown: false }));
+      }
+    };
+
+    checkOpenAiStatus();
+    const intervalId = setInterval(checkOpenAiStatus, 60_000);
+
+    return () => {
+      isDisposed = true;
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  const serviceInactive = openaiStatus.isDown;
+
+  const handleSend = (prompt, files) => {
+    if (serviceInactive) {
+      dispatch({ type: 'LOG', message: 'OpenAI servers are down; workflow start blocked.', level: 'error' });
+      return;
+    }
+    runWorkflow(prompt, files);
+  };
 
   const handleClearInputs = () => {
     abortWorkflow();
@@ -378,6 +418,13 @@ export default function App() {
 
   return (
     <>
+      {serviceInactive && (
+        <div className="outage-banner" role="alert" aria-live="assertive">
+          OpenAI servers are down. This site is currently inactive.
+          {openaiStatus.description ? <span className="outage-banner-detail"> ({openaiStatus.description})</span> : null}
+        </div>
+      )}
+
       <header className="header">
         <div className="header-content">
           <div className="logo">
@@ -396,6 +443,7 @@ export default function App() {
           files={state.files}
           dispatch={dispatch}
           isRunning={state.isRunning}
+          serviceInactive={serviceInactive}
           onSend={handleSend}
           onClearInputs={handleClearInputs}
           onClearAgents={handleClearAgents}

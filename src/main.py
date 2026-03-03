@@ -206,6 +206,16 @@ class OptionItem(BaseModel):
     explanation: str
 
 
+class QuestionPart(BaseModel):
+    """A sub-part of a multi-part question."""
+    part_label: str
+    stem: str
+    question_type: str
+    options: list[OptionItem] = []
+    answer: str = ""
+    has_explicit_answer: bool = False
+
+
 class SourceQuestionItem(BaseModel):
     """A question extracted from source material."""
     source_id: str
@@ -217,6 +227,20 @@ class SourceQuestionItem(BaseModel):
     question_type: str
     theme: str = ""
     topic_tags: list[str]
+    has_figure: bool = False
+    scenario_group: str = ""
+    scenario_preamble: str = ""
+    answer: str = ""
+    parts: list[QuestionPart] = []
+
+
+class NewQuestionPart(BaseModel):
+    """A sub-part of a generated multi-part question."""
+    part_label: str
+    stem: str
+    question_type: str
+    options: list[OptionItem] = []
+    answer: str = ""
 
 
 class NewQuestionItem(BaseModel):
@@ -229,6 +253,13 @@ class NewQuestionItem(BaseModel):
     theme: str = ""
     topic_tags: list[str]
     generation_notes: str
+    question_type: str = "multiple_choice"
+    skipped: bool = False
+    skip_reason: str = ""
+    scenario_group: str = ""
+    scenario_preamble: str = ""
+    answer: str = ""
+    parts: list[NewQuestionPart] = []
 
 
 class NormalizerOutput(BaseModel):

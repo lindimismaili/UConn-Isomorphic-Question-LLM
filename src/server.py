@@ -18,6 +18,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -86,6 +88,8 @@ MAX_UPLOAD_FILES = 5
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
 WORKFLOW_TTL_SECONDS = int(os.getenv("WORKFLOW_TTL_SECONDS", str(24 * 60 * 60)))
 WORKFLOW_MAX_ENTRIES = int(os.getenv("WORKFLOW_MAX_ENTRIES", "200"))
+OPENAI_STATUS_URL = "https://status.openai.com/api/v2/status.json"
+OPENAI_STATUS_TIMEOUT_SECONDS = float(os.getenv("OPENAI_STATUS_TIMEOUT_SECONDS", "5"))
 
 # Create directories if they don't exist
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -185,6 +189,45 @@ async def health_check():
     }
 
 
+@app.get("/api/openai/status")
+async def openai_status():
+    """
+    Return OpenAI public service status.
+
+    Uses OpenAI's public status page API and marks the site as inactive only
+    when indicator is major/critical outage.
+    """
+    try:
+        req = Request(
+            OPENAI_STATUS_URL,
+            headers={"User-Agent": "IsomorphicQuestionGenerator/1.0"},
+        )
+        with urlopen(req, timeout=OPENAI_STATUS_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        status_payload = payload.get("status", {}) if isinstance(payload, dict) else {}
+        indicator = str(status_payload.get("indicator", "unknown")).lower()
+        description = str(status_payload.get("description", "Unknown"))
+        openai_down = indicator in {"major", "critical"}
+
+        return {
+            "status": "ok",
+            "openai_down": openai_down,
+            "indicator": indicator,
+            "description": description,
+            "checked_at": datetime.now().isoformat(),
+        }
+    except (URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+        logger.warning("OpenAI status check failed: %s", exc)
+        return {
+            "status": "unknown",
+            "openai_down": False,
+            "indicator": "unknown",
+            "description": "Unable to verify OpenAI status right now.",
+            "checked_at": datetime.now().isoformat(),
+        }
+
+
 @app.get("/version.json")
 async def get_version_json():
     """
@@ -265,6 +308,15 @@ class OptionItem(BaseModel):
     explanation: str
 
 
+class QuestionPart(BaseModel):
+    part_label: str
+    stem: str
+    question_type: str
+    options: list[OptionItem] = []
+    answer: str = ""
+    has_explicit_answer: bool = False
+
+
 class SourceQuestionItem(BaseModel):
     source_id: str
     source_raw: str
@@ -275,6 +327,19 @@ class SourceQuestionItem(BaseModel):
     question_type: str
     theme: str = ""
     topic_tags: list[str]
+    has_figure: bool = False
+    scenario_group: str = ""
+    scenario_preamble: str = ""
+    answer: str = ""
+    parts: list[QuestionPart] = []
+
+
+class NewQuestionPart(BaseModel):
+    part_label: str
+    stem: str
+    question_type: str
+    options: list[OptionItem] = []
+    answer: str = ""
 
 
 class NewQuestionItem(BaseModel):
@@ -286,6 +351,13 @@ class NewQuestionItem(BaseModel):
     theme: str = ""
     topic_tags: list[str]
     generation_notes: str
+    question_type: str = "multiple_choice"
+    skipped: bool = False
+    skip_reason: str = ""
+    scenario_group: str = ""
+    scenario_preamble: str = ""
+    answer: str = ""
+    parts: list[NewQuestionPart] = []
 
 
 class NormalizerOutput(BaseModel):
@@ -345,30 +417,36 @@ def _reconcile_verified_questions(
     extracted_questions: list[SourceQuestionItem],
     verified_questions: list[SourceQuestionItem],
 ) -> list[SourceQuestionItem]:
-    extracted_mc = []
+    # Normalize extracted questions in-place
     for q in extracted_questions:
         if q.options:
             q.question_type = "multiple_choice"
-        if q.question_type == "multiple_choice":
-            q.theme = _normalize_theme_value(q.theme)
-            extracted_mc.append(q)
+        q.theme = _normalize_theme_value(q.theme)
+
     verified_by_id = {q.source_id: q for q in verified_questions}
     reconciled: list[SourceQuestionItem] = []
-    for q in extracted_mc:
+
+    for q in extracted_questions:
         verified_q = verified_by_id.get(q.source_id)
+
         if verified_q is None:
-            fallback = q.model_copy(deep=True)
-            for opt in fallback.options:
-                if not opt.explanation:
-                    opt.explanation = "Not verified; preserved to prevent question loss."
-            fallback.has_explicit_answer = bool(any(opt.is_correct for opt in fallback.options))
-            fallback.theme = _normalize_theme_value(fallback.theme)
-            reconciled.append(fallback)
-            continue
-        if verified_q.options:
-            verified_q.question_type = "multiple_choice"
-        verified_q.theme = _normalize_theme_value(verified_q.theme)
-        reconciled.append(verified_q)
+            if q.question_type == "multiple_choice":
+                # MC question silently dropped by verifier — restore from extracted
+                fallback = q.model_copy(deep=True)
+                for opt in fallback.options:
+                    if not opt.explanation:
+                        opt.explanation = "Not verified; preserved to prevent question loss."
+                fallback.has_explicit_answer = bool(any(opt.is_correct for opt in fallback.options))
+                fallback.theme = _normalize_theme_value(fallback.theme)
+                reconciled.append(fallback)
+            # Open-ended or figure questions dropped by verifier are omitted;
+            # the verifier prompt instructs it to always return them unchanged.
+        else:
+            if verified_q.options:
+                verified_q.question_type = "multiple_choice"
+            verified_q.theme = _normalize_theme_value(verified_q.theme)
+            reconciled.append(verified_q)
+
     return reconciled
 
 
@@ -379,9 +457,12 @@ def _missing_generation_source_ids(
 ) -> list[str]:
     generated_count_by_source: dict[str, int] = {}
     for q in generated_questions:
-        generated_count_by_source[q.source_id] = generated_count_by_source.get(q.source_id, 0) + 1
+        if not q.skipped:  # Only count non-skipped (actual) generated questions
+            generated_count_by_source[q.source_id] = generated_count_by_source.get(q.source_id, 0) + 1
     missing: list[str] = []
     for src in source_questions:
+        if src.has_figure:  # Figure questions are intentionally skipped by the generator
+            continue
         current = generated_count_by_source.get(src.source_id, 0)
         if current < per_source:
             missing.append(src.source_id)
@@ -1149,6 +1230,8 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     "if_unmarked_solve_and_mark_correct_option": True,
                     "add_option_explanations": True,
                     "use_code_interpreter_for_calculations": True,
+                    "solve_open_ended_and_provide_answer": True,
+                    "solve_multi_part_questions_per_part": True,
                 },
             }
             verifier_input = _build_json_message(verifier_input_payload)
@@ -1209,6 +1292,13 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     ],
                     "latex_math": True,
                     "use_code_interpreter_for_verification": True,
+                    "skip_questions_with_figures": True,
+                    "generate_open_ended_for_open_ended_sources": True,
+                    "open_ended_questions_have_no_options": True,
+                    "generate_answers_for_all_open_ended": True,
+                    "preserve_scenario_groups": True,
+                    "generate_shared_scenario_preamble_for_groups": True,
+                    "generate_multi_part_for_multi_part_sources": True,
                 },
             }
             generator_input = _build_json_message(generator_input_payload)
@@ -1290,14 +1380,21 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
                     "source_id": q.source_id,
                     "stem": q.stem,
                     "options": [opt.model_dump() for opt in q.options],
+                    "question_type": q.question_type,
+                    "skipped": q.skipped,
+                    "skip_reason": q.skip_reason,
+                    "scenario_group": q.scenario_group,
+                    "scenario_preamble": q.scenario_preamble,
+                    "answer": q.answer,
+                    "parts": [part.model_dump() for part in q.parts],
                 })
-            
+
             latex_input_payload = {
                 "task": "format_questions_to_latex",
                 "questions": questions_for_latex,
                 "requirements": {
                     "include_document_preamble": True,
-                    "include_macros": ["\\QBlock", "\\Correct", "\\Wrong"],
+                    "include_macros": ["\\QBlock", "\\Correct", "\\Wrong", "\\OEBlock", "\\MPBlock", "\\MCPart", "\\OEPart", "\\SkipBlock"],
                     "format_all_questions_with_macros": True,
                     "proper_math_formatting": True,
                     "filename": "isomorphic_questions.tex",
