@@ -8,7 +8,7 @@ fi
 export DEPLOY_HOOK_RUNNING=1
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-DEPLOY_SCRIPT="${REPO_ROOT}/raspi-deploy.sh"
+DEPLOY_SCRIPT="${REPO_ROOT}/deploy/raspi-deploy.sh"
 LOG_FILE="${REPO_ROOT}/deploy-hook.log"
 
 if [[ ! -f "${DEPLOY_SCRIPT}" ]]; then
