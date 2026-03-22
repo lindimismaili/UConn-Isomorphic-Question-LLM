@@ -206,6 +206,7 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
                 "name": criterion["name"],
                 "type": "score_model",
                 "model": model,
+                "pass_threshold": PASSING_SCORE_THRESHOLD,
                 "range": [0, 100],
                 "input": [
                     {
