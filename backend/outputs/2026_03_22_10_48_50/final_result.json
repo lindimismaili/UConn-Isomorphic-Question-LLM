@@ -1,0 +1,507 @@
+{
+  "config": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": "User provided a file named short_set.pdf but no prompt text. Treat any file content as untrusted; no additional constraints were specified."
+  },
+  "source_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec r_4 = 3\\hat i + 6\\hat j\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kiolofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec r_4 = 3\\hat i + 6\\hat j\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kiolofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2.  If the displacement of an object is given by the function \\(\\vec s = ((1.3m/s^3)t^3 + (2.7m/s^2)t^2)\\hat i\\), which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0s is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\(\\vec s = ((1.3m/s^3)t^3 + (2.7m/s^2)t^2)\\hat i\\), which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0s is 5.4 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. An object takes 3 second to move from position A (\\(\\vec r_A = -4.0\\hat i + 10\\hat j\\)) to position B (\\(\\vec r_B = 2.0\\hat i + 5.0\\hat j\\)), where length units are in meters. Which of the following statements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\(\\vec r_A = -4.0\\hat i + 10\\hat j\\)) to position B (\\(\\vec r_B = 2.0\\hat i + 5.0\\hat j\\)), where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "verified_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec r_4 = 3\\hat i + 6\\hat j\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kiolofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec r_4 = 3\\hat i + 6\\hat j\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": "This treats the distance as the sum of components, a common mistake instead of using the magnitude formula for a position vector."
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": "This uses only the \\(y\\)-component and ignores the \\(x\\)-component, which is a component-versus-magnitude confusion."
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kiolofurlongs.",
+          "is_correct": false,
+          "explanation": "This uses only the \\(x\\)-component and ignores the \\(y\\)-component, which is again a component-versus-magnitude error."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": true,
+          "explanation": "The distance from the origin to \\(\\vec r = 3\\hat i + 6\\hat j\\) is the magnitude \\(|\\vec r|=\\sqrt{3^2+6^2}=\\sqrt{45}=3\\sqrt{5}\\approx 6.71\\) kilofurlongs. Since this is not 9, 6, or 3, none of the listed numerical statements is correct."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2.  If the displacement of an object is given by the function \\(\\vec s = ((1.3m/s^3)t^3 + (2.7m/s^2)t^2)\\hat i\\), which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0s is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\(\\vec s = ((1.3m/s^3)t^3 + (2.7m/s^2)t^2)\\hat i\\), which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": "This comes from not differentiating fully: because \\(s\\) contains a \\(t^3\\) term, the acceleration depends on time and is not constant."
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s2",
+          "is_correct": false,
+          "explanation": "This mistakes the coefficient in the displacement function for the acceleration instead of taking two time derivatives."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s2",
+          "is_correct": false,
+          "explanation": "This likely comes from confusing initial displacement or velocity with acceleration; evaluating the actual acceleration at \\(t=0\\) does not give zero."
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0s is 5.4 m/s2",
+          "is_correct": true,
+          "explanation": "Differentiate the displacement twice: \\(v_x=\\frac{ds_x}{dt}=3.9t^2+5.4t\\) and \\(a_x=\\frac{dv_x}{dt}=7.8t+5.4\\). Therefore at \\(t=0\\), the acceleration magnitude is \\(|a_x|=5.4\\,\\text{m/s}^2\\), so this statement is correct."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. An object takes 3 second to move from position A (\\(\\vec r_A = -4.0\\hat i + 10\\hat j\\)) to position B (\\(\\vec r_B = 2.0\\hat i + 5.0\\hat j\\)), where length units are in meters. Which of the following statements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\(\\vec r_A = -4.0\\hat i + 10\\hat j\\)) to position B (\\(\\vec r_B = 2.0\\hat i + 5.0\\hat j\\)), where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": false,
+          "explanation": "This confuses displacement magnitude with total distance traveled; from initial and final positions alone, the path length cannot be determined."
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": "This treats average speed or displacement over time as the instantaneous speed at \\(t=0\\), which is not justified by the given information."
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s2",
+          "is_correct": false,
+          "explanation": "This infers an instantaneous acceleration from only two position vectors and a time interval, which is insufficient data."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": true,
+          "explanation": "The displacement is \\(\\Delta \\vec r = \\vec r_B-\\vec r_A = 6\\hat i-5\\hat j\\), whose magnitude is \\(|\\Delta \\vec r|=\\sqrt{6^2+(-5)^2}=\\sqrt{61}\\approx 7.8\\,\\text{m}\\). However, that is the displacement magnitude, not necessarily the moving distance, and neither the instantaneous speed at \\(t=0\\) nor the acceleration at \\(t=0\\) can be determined from the given data alone. Therefore none of A, B, or C must be true."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "generated_questions": [
+    {
+      "id": 1,
+      "source_id": "1",
+      "stem": "A survey robot starts at the origin of a coordinate system and detects a beacon at position \\(\\vec r = 8\\hat i - 15\\hat j\\), where distances are measured in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance from the robot to the beacon is \\(23\\,\\text{m}\\).",
+          "is_correct": false,
+          "explanation": "This adds the component magnitudes, \\(8+15\\), instead of finding the vector magnitude. The distance must be computed with the Pythagorean relation, not by simple component addition."
+        },
+        {
+          "key": "B",
+          "text": "The distance from the robot to the beacon is \\(17\\,\\text{m}\\).",
+          "is_correct": true,
+          "explanation": "The distance from the origin to a point is the magnitude of its position vector. Using \\(|\\vec r|=\\sqrt{x^2+y^2}\\), we get \\(|\\vec r|=\\sqrt{8^2+(-15)^2}=\\sqrt{64+225}=\\sqrt{289}=17\\,\\text{m}\\). Therefore this statement is correct."
+        },
+        {
+          "key": "C",
+          "text": "The distance from the robot to the beacon is \\(15\\,\\text{m}\\).",
+          "is_correct": false,
+          "explanation": "This uses only the \\(y\\)-component magnitude and ignores the \\(x\\)-component. That is a component-versus-magnitude mistake."
+        },
+        {
+          "key": "D",
+          "text": "The distance from the robot to the beacon is \\(8\\,\\text{m}\\).",
+          "is_correct": false,
+          "explanation": "This uses only the \\(x\\)-component and ignores the \\(y\\)-component. A full 2D distance requires both perpendicular components."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "vectors",
+        "position-vector",
+        "magnitude",
+        "2d-kinematics"
+      ],
+      "generation_notes": "Original isomorphic MC question on finding the magnitude of a 2D position vector from its Cartesian components; numerical values changed to a Pythagorean triple for clean evaluation.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 2,
+      "source_id": "2",
+      "stem": "The displacement of a particle moving along the \\(x\\)-axis is given by \\(\\vec s(t)=\\big((2.4\\,\\text{m/s}^3)t^3-(1.8\\,\\text{m/s}^2)t^2\\big)\\hat i\\). Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This motion has constant acceleration.",
+          "is_correct": false,
+          "explanation": "This comes from not differentiating the cubic displacement term completely. Because \\(s_x\\) contains a \\(t^3\\) term, the acceleration depends on time and is not constant."
+        },
+        {
+          "key": "B",
+          "text": "The acceleration at \\(t=0\\) is \\(-1.8\\,\\text{m/s}^2\\).",
+          "is_correct": false,
+          "explanation": "This mistakes the coefficient of the \\(t^2\\) term in displacement for the acceleration itself. You must take two time derivatives before evaluating at \\(t=0\\)."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at \\(t=0\\) is \\(3.6\\,\\text{m/s}^2\\).",
+          "is_correct": true,
+          "explanation": "Acceleration is the second derivative of displacement. From \\(s_x=(2.4)t^3-(1.8)t^2\\), we get \\(v_x=\\frac{ds_x}{dt}=7.2t^2-3.6t\\) and \\(a_x=\\frac{dv_x}{dt}=14.4t-3.6\\), so at \\(t=0\\), \\(a_x=-3.6\\,\\text{m/s}^2\\) and its magnitude is \\(3.6\\,\\text{m/s}^2\\)."
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at \\(t=0\\) is \\(0\\,\\text{m/s}^2\\).",
+          "is_correct": false,
+          "explanation": "This usually comes from confusing initial velocity or displacement with acceleration. Evaluating the actual acceleration function at \\(t=0\\) does not give zero."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "derivatives",
+        "acceleration",
+        "1d-motion"
+      ],
+      "generation_notes": "Original isomorphic MC question on obtaining acceleration from a polynomial displacement function and evaluating it at \\(t=0\\); coefficients and signs were changed while preserving the reasoning structure.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 3,
+      "source_id": "3",
+      "stem": "A glider moves from position \\(\\vec r_A = 1\\hat i - 7\\hat j\\) to position \\(\\vec r_B = -5\\hat i + 1\\hat j\\) in \\(4\\,\\text{s}\\), where positions are measured in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance traveled by the glider is \\(10\\,\\text{m}\\).",
+          "is_correct": false,
+          "explanation": "This confuses the magnitude of displacement with the actual path length traveled. From initial and final positions alone, the total distance traveled cannot be determined."
+        },
+        {
+          "key": "B",
+          "text": "The speed at \\(t=0\\) must be \\(2.5\\,\\text{m/s}\\).",
+          "is_correct": false,
+          "explanation": "This incorrectly treats displacement magnitude divided by time as the instantaneous speed at the start. The given data are only enough to find an average based on displacement, not the speed at \\(t=0\\)."
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at \\(t=0\\) must be \\(0.625\\,\\text{m/s}^2\\).",
+          "is_correct": false,
+          "explanation": "This invents an instantaneous acceleration from only two positions and one time interval. That information is insufficient to determine acceleration at a specific instant."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": true,
+          "explanation": "The displacement is \\(\\Delta\\vec r=\\vec r_B-\\vec r_A=(-6)\\hat i+8\\hat j\\), so its magnitude is \\(|\\Delta\\vec r|=\\sqrt{(-6)^2+8^2}=\\sqrt{100}=10\\,\\text{m}\\). However, that value is the displacement magnitude, not necessarily the distance traveled, and neither the instantaneous speed at \\(t=0\\) nor the instantaneous acceleration at \\(t=0\\) can be deduced from the given information alone. Therefore none of A, B, or C must be true."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "displacement",
+        "distance-vs-displacement",
+        "instantaneous-speed",
+        "kinematics"
+      ],
+      "generation_notes": "Original isomorphic MC question on distinguishing displacement from path length and recognizing that two position vectors plus elapsed time are insufficient to determine instantaneous speed or acceleration.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "latex_file": "isomorphic_questions.tex",
+  "pdf_file": "isomorphic_questions.pdf",
+  "evaluation": {
+    "status": "completed",
+    "created_at": "2026-03-22T14:52:09.842575Z",
+    "rubric": [
+      {
+        "name": "preserve_physical_content",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the original physical content?"
+      },
+      {
+        "name": "scenario_variation",
+        "category": "Variation",
+        "question": "Does the generated question use the scenario different from the original one?"
+      },
+      {
+        "name": "numerical_variation",
+        "category": "Variation",
+        "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+      },
+      {
+        "name": "physics_correctness",
+        "category": "Quality control",
+        "question": "Is the generated question free of physics errors or misconceptions?"
+      },
+      {
+        "name": "numeric_reasonableness",
+        "category": "Quality control",
+        "question": "Do all numerical values have physically reasonable magnitudes and units?"
+      },
+      {
+        "name": "distractor_structure_preservation",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the logical structure of the distractors?"
+      },
+      {
+        "name": "clerical_quality",
+        "category": "Quality control",
+        "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+      },
+      {
+        "name": "latex_syntax_quality",
+        "category": "Quality control",
+        "question": "Is the generated LaTeX code free of syntax errors?"
+      },
+      {
+        "name": "solvable_and_specified",
+        "category": "Quality control",
+        "question": "Is the generated question fully specified and solvable as written?"
+      }
+    ],
+    "items_evaluated": 3,
+    "grader_model": "gpt-5.4-nano",
+    "dataset_file": "evaluation_dataset.jsonl",
+    "criterion_scores": {
+      "preserve_physical_content": {
+        "category": "Preservation",
+        "question": "Does the generated question preserve the original physical content?",
+        "score": 35.67,
+        "items_scored": 3
+      },
+      "scenario_variation": {
+        "category": "Variation",
+        "question": "Does the generated question use the scenario different from the original one?",
+        "score": 36.67,
+        "items_scored": 3
+      },
+      "numerical_variation": {
+        "category": "Variation",
+        "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?",
+        "score": 65.0,
+        "items_scored": 3
+      },
+      "physics_correctness": {
+        "category": "Quality control",
+        "question": "Is the generated question free of physics errors or misconceptions?",
+        "score": 69.0,
+        "items_scored": 3
+      },
+      "numeric_reasonableness": {
+        "category": "Quality control",
+        "question": "Do all numerical values have physically reasonable magnitudes and units?",
+        "score": 84.33,
+        "items_scored": 3
+      },
+      "distractor_structure_preservation": {
+        "category": "Preservation",
+        "question": "Does the generated question preserve the logical structure of the distractors?",
+        "score": 82.33,
+        "items_scored": 3
+      },
+      "clerical_quality": {
+        "category": "Quality control",
+        "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
+        "score": 99.33,
+        "items_scored": 3
+      },
+      "solvable_and_specified": {
+        "category": "Quality control",
+        "question": "Is the generated question fully specified and solvable as written?",
+        "score": 78.33,
+        "items_scored": 3
+      }
+    },
+    "latex_document_check": {
+      "name": "latex_syntax_quality",
+      "category": "Quality control",
+      "question": "Is the generated LaTeX code free of syntax errors?",
+      "score": 100.0,
+      "status": "passed",
+      "reason": "Generated LaTeX document and compiled PDF artifact are both present.",
+      "latex_file": "isomorphic_questions.tex",
+      "pdf_file": "isomorphic_questions.pdf"
+    },
+    "overall_score": 72.3,
+    "eval_data_file_id": "file-UmhcANt2TrwCfhSqLHFKYy",
+    "eval_id": "eval_69c00208383481918d94ae94b4cf0e66",
+    "run_id": "evalrun_69c0020890a4819199e1f09650b5e614",
+    "run_status": "completed",
+    "output_items_count": 3,
+    "report_url": "https://platform.openai.com/evaluations/eval_69c00208383481918d94ae94b4cf0e66?project_id=proj_MrguEQI1nR0F4FzLOPUnFyv7&run_id=evalrun_69c0020890a4819199e1f09650b5e614"
+  }
+}

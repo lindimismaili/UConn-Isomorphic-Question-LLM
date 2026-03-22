@@ -1,0 +1,151 @@
+{
+  "status": "completed",
+  "created_at": "2026-03-22T14:11:52.406201Z",
+  "rubric": [
+    {
+      "name": "preserve_physical_content",
+      "category": "Preservation",
+      "question": "Does the generated question preserve the original physical content?"
+    },
+    {
+      "name": "scenario_variation",
+      "category": "Variation",
+      "question": "Does the generated question use the scenario different from the original one?"
+    },
+    {
+      "name": "numerical_variation",
+      "category": "Variation",
+      "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+    },
+    {
+      "name": "physics_correctness",
+      "category": "Quality control",
+      "question": "Is the generated question free of physics errors or misconceptions?"
+    },
+    {
+      "name": "numeric_reasonableness",
+      "category": "Quality control",
+      "question": "Do all numerical values have physically reasonable magnitudes and units?"
+    },
+    {
+      "name": "distractor_structure_preservation",
+      "category": "Preservation",
+      "question": "Does the generated question preserve the logical structure of the distractors?"
+    },
+    {
+      "name": "clerical_quality",
+      "category": "Quality control",
+      "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+    },
+    {
+      "name": "latex_syntax_quality",
+      "category": "Quality control",
+      "question": "Is the generated LaTeX code free of syntax errors?"
+    },
+    {
+      "name": "solvable_and_specified",
+      "category": "Quality control",
+      "question": "Is the generated question fully specified and solvable as written?"
+    }
+  ],
+  "items_evaluated": 13,
+  "grader_model": "gpt-5.4-nano",
+  "dataset_file": "evaluation_dataset.jsonl",
+  "eval_data_file_id": "file-N4q9NKmQxAez6dsUrDagLS",
+  "eval_id": "eval_69bff8a124bc819187cd4dff8664f0e9",
+  "run_id": "evalrun_69bff8a1768c8191bee65d687efed9fb",
+  "run_status": "completed",
+  "run": {
+    "id": "evalrun_69bff8a1768c8191bee65d687efed9fb",
+    "created_at": 1774188705,
+    "data_source": {
+      "source": {
+        "id": "file-N4q9NKmQxAez6dsUrDagLS",
+        "type": "file_id"
+      },
+      "type": "jsonl"
+    },
+    "error": null,
+    "eval_id": "eval_69bff8a124bc819187cd4dff8664f0e9",
+    "metadata": {},
+    "model": null,
+    "name": "Rubric Run",
+    "object": "eval.run",
+    "per_model_usage": [
+      {
+        "cached_tokens": 0,
+        "completion_tokens": 8440,
+        "invocation_count": 117,
+        "run_model_name": "gpt-5.4-nano-2026-03-17",
+        "prompt_tokens": 21229,
+        "total_tokens": 29669,
+        "model_name": "gpt-5.4-nano-2026-03-17"
+      }
+    ],
+    "per_testing_criteria_results": [
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "preserve_physical_content-ff34ba6f-fb0c-4b76-a153-6e0cba452183",
+        "testing_criteria_id": "preserve_physical_content-ff34ba6f-fb0c-4b76-a153-6e0cba452183"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "scenario_variation-9c9b837b-d51d-42c7-9c9b-2af42a2443bb",
+        "testing_criteria_id": "scenario_variation-9c9b837b-d51d-42c7-9c9b-2af42a2443bb"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "numerical_variation-10de985a-9eac-471b-a289-16f626e5aa77",
+        "testing_criteria_id": "numerical_variation-10de985a-9eac-471b-a289-16f626e5aa77"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "physics_correctness-93d912ed-5d70-4400-b59e-d52c344ad506",
+        "testing_criteria_id": "physics_correctness-93d912ed-5d70-4400-b59e-d52c344ad506"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "numeric_reasonableness-b06fdd91-9839-4a30-b2d3-19c330949dcd",
+        "testing_criteria_id": "numeric_reasonableness-b06fdd91-9839-4a30-b2d3-19c330949dcd"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "distractor_structure_preservation-082af45f-cb4e-497e-8c83-682a869c7845",
+        "testing_criteria_id": "distractor_structure_preservation-082af45f-cb4e-497e-8c83-682a869c7845"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "clerical_quality-0c0f8ee2-4a93-4238-a8db-0c0317dac305",
+        "testing_criteria_id": "clerical_quality-0c0f8ee2-4a93-4238-a8db-0c0317dac305"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "latex_syntax_quality-66f4305e-7afd-4afc-a472-dc59e6d78a76",
+        "testing_criteria_id": "latex_syntax_quality-66f4305e-7afd-4afc-a472-dc59e6d78a76"
+      },
+      {
+        "failed": 0,
+        "passed": 13,
+        "testing_criteria": "solvable_and_specified-2e23c488-2d5d-484b-8506-769b546714dc",
+        "testing_criteria_id": "solvable_and_specified-2e23c488-2d5d-484b-8506-769b546714dc"
+      }
+    ],
+    "report_url": "https://platform.openai.com/evaluations/eval_69bff8a124bc819187cd4dff8664f0e9?project_id=proj_MrguEQI1nR0F4FzLOPUnFyv7&run_id=evalrun_69bff8a1768c8191bee65d687efed9fb",
+    "result_counts": {
+      "errored": 0,
+      "failed": 0,
+      "passed": 13,
+      "total": 13
+    },
+    "status": "completed",
+    "shared_with_openai": true
+  }
+}

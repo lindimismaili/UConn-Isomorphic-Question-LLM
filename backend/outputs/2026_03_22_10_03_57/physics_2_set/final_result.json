@@ -1,0 +1,1876 @@
+{
+  "config": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": "User provided an empty prompt and attached file physics_2_set.pdf. No additional constraints were specified."
+  },
+  "source_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. Two point charges are placed in vacuum. A positive charge +𝑞1 is located at the origin, and \na negative charge −𝑞2 is located at a position on the positive 𝑥-axis. What is the direction of \nthe Coulomb force acting on −𝑞2, and what is the direction of the unit vector used in the \nCoulomb force equation for that force?\nA. Force on −𝑞2 points in the +𝑥 direction; unit vector points in the +𝑥 direction\nB. Force on −𝑞2 points in the −𝑥 direction; unit vector points in the −𝑥 direction\nC. Force on −𝑞2 points in the −𝑥 direction; unit vector points in the +𝑥 direction\nD. Force on −𝑞2 points in the +𝑥 direction; unit vector points in the −𝑥 direction",
+      "stem": "Two point charges are placed in vacuum. A positive charge +𝑞1 is located at the origin, and a negative charge −𝑞2 is located at a position on the positive 𝑥-axis. What is the direction of the Coulomb force acting on −𝑞2, and what is the direction of the unit vector used in the Coulomb force equation for that force?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Force on −𝑞2 points in the +𝑥 direction; unit vector points in the +𝑥 direction",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Force on −𝑞2 points in the −𝑥 direction; unit vector points in the −𝑥 direction",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Force on −𝑞2 points in the −𝑥 direction; unit vector points in the +𝑥 direction",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Force on −𝑞2 points in the +𝑥 direction; unit vector points in the −𝑥 direction",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2. A positive point charge +𝑄 is fixed at the origin. A negative point charge −𝑄 is placed on \nthe positive 𝑦-axis. Which statement correctly describes the direction of the electric field at \nthat point and the direction of the electric force on this negative charge?\nA. Electric field upward; electric force upward\nB. Electric field upward; electric force downward\nC. Electric field downward; electric force upward\nD. Electric field downward; electric force downward",
+      "stem": "A positive point charge +𝑄 is fixed at the origin. A negative point charge −𝑄 is placed on the positive 𝑦-axis. Which statement correctly describes the direction of the electric field at that point and the direction of the electric force on this negative charge?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Electric field upward; electric force upward",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Electric field upward; electric force downward",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Electric field downward; electric force upward",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Electric field downward; electric force downward",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. A point charge is located at the center of a cube that acts as a Gaussian surface. Which \nstatement is correct?\nA. Electric flux is zero through each face\nB. Electric flux is the same through each face\nC. The magnitude of electric field is the same everywhere on each face\nD. None of the above is correct.",
+      "stem": "A point charge is located at the center of a cube that acts as a Gaussian surface. Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Electric flux is zero through each face",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Electric flux is the same through each face",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of electric field is the same everywhere on each face",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "4. An infinitely long straight line carries a uniform positive linear charge density. A closed \ncylindrical Gaussian surface is coaxial with the line charge. Which part(s) of the surface have \nnonzero electric flux?\nA. Only the curved side surface\nB. Only the two flat circular end caps\nC. Both the curved surface and the end caps\nD. No part of the surface",
+      "stem": "An infinitely long straight line carries a uniform positive linear charge density. A closed cylindrical Gaussian surface is coaxial with the line charge. Which part(s) of the surface have nonzero electric flux?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Only the curved side surface",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Only the two flat circular end caps",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Both the curved surface and the end caps",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "No part of the surface",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "5",
+      "source_raw": "5. A positive point charge +𝑞 and a negative point charge −𝑞 are separated by a distance 𝑟 in \nvacuum. The distance between the two charges is then increased to 2𝑟. How does the electric \npotential energy of the two-charge system change?\nA. It increases (i.e., becomes more positive or less negative)\nB. It decreases (i.e., becomes less positive or more negative)\nC. It becomes zero.\nD. It remains unchanged (but not zero).",
+      "stem": "A positive point charge +𝑞 and a negative point charge −𝑞 are separated by a distance 𝑟 in vacuum. The distance between the two charges is then increased to 2𝑟. How does the electric potential energy of the two-charge system change?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It increases (i.e., becomes more positive or less negative)",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "It decreases (i.e., becomes less positive or more negative)",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "It becomes zero.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "It remains unchanged (but not zero).",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "6",
+      "source_raw": "6. A charged particle moves from point A to point B in a uniform electric field. Which factor \ndetermines the electric potential difference between A and B?\nA. The path taken between A and B\nB. The speed of the particle\nC. The displacement component along the electric field\nD. The mass of the particle",
+      "stem": "A charged particle moves from point A to point B in a uniform electric field. Which factor determines the electric potential difference between A and B?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The path taken between A and B",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The speed of the particle",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The displacement component along the electric field",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "The mass of the particle",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "7",
+      "source_raw": "7. A parallel-plate capacitor has plate area 𝐴 and plate separation 𝑑. If the plate separation is \ndoubled while the plate area remains unchanged, the capacitance:\nA. Doubles\nB. Is unchanged\nC. Is reduced by a factor of 2\nD. Is reduced by a factor of 4",
+      "stem": "A parallel-plate capacitor has plate area 𝐴 and plate separation 𝑑. If the plate separation is doubled while the plate area remains unchanged, the capacitance:",
+      "options": [
+        {
+          "key": "A",
+          "text": "Doubles",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Is unchanged",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Is reduced by a factor of 2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Is reduced by a factor of 4",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "8",
+      "source_raw": "8. Two point charges are separated by 10.0 cm and have charges of +2.00𝜇𝐶 and −2.00𝜇𝐶, \nrespectively. What is the magnitude of the electric field at a point midway between the two \ncharges? (𝑘 = 8.99 × 109𝑁 ∙ m2 𝐶\n2 ⁄ )\nA. 28.8 × 106𝑁/𝐶\nB. 14.4 × 106𝑁/𝐶\nC. 7.19 × 106𝑁/𝐶\nD. 0",
+      "stem": "Two point charges are separated by 10.0 cm and have charges of +2.00𝜇𝐶 and −2.00𝜇𝐶, respectively. What is the magnitude of the electric field at a point midway between the two charges? (𝑘 = 8.99 × 109𝑁 ∙ m2 𝐶\n2 ⁄ )",
+      "options": [
+        {
+          "key": "A",
+          "text": "28.8 × 106𝑁/𝐶",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "14.4 × 106𝑁/𝐶",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "7.19 × 106𝑁/𝐶",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "0",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "9",
+      "source_raw": "9. A total charge of −6.50𝜇𝐶 is uniformly distributed within an insulating sphere that has a \nradius of 0.150𝑚. What is the magnitude and direction of the electric field at 0.300𝑚 from \nthe surface of the sphere? \nA. 2.89 × 105𝑁/𝐶, radially inward\nB. 2.59 × 106𝑁/𝐶, radially outward\nC. 6.49 × 105𝑁/𝐶, radially inward\nD. None of the above is correct",
+      "stem": "A total charge of −6.50𝜇𝐶 is uniformly distributed within an insulating sphere that has a radius of 0.150𝑚. What is the magnitude and direction of the electric field at 0.300𝑚 from the surface of the sphere?",
+      "options": [
+        {
+          "key": "A",
+          "text": "2.89 × 105𝑁/𝐶, radially inward",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "2.59 × 106𝑁/𝐶, radially outward",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "6.49 × 105𝑁/𝐶, radially inward",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "10",
+      "source_raw": "10. A particle with charge +𝑄 is placed in the center of an initially uncharged conducting hollow \nsphere. What are the charges induced on the inner and outer surfaces of the sphere?\nA. Inner: −𝑄; outer: +𝑄\nB. Inner: −𝑄; outer: 0\nC. Inner: 0; outer: 0\nD. Inner: 0; outer: −𝑄",
+      "stem": "A particle with charge +𝑄 is placed in the center of an initially uncharged conducting hollow sphere. What are the charges induced on the inner and outer surfaces of the sphere?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Inner: −𝑄; outer: +𝑄",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Inner: −𝑄; outer: 0",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Inner: 0; outer: 0",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Inner: 0; outer: −𝑄",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "11",
+      "source_raw": "11. The electric potential at a certain point is given by 𝑉 = −7.5𝑥\n2 + 3𝑥, where 𝑉 is in volts and \n𝑥 is in meters. What is the electric field at that point?\nA. 𝐸⃗ = (15𝑥 − 3)𝑖̂\nB. 𝐸⃗ = (−15𝑥 + 3)𝑖̂\nC. 𝐸⃗ = (−2.5𝑥\n3 + 1.5𝑥\n2\n)𝑖̂\nD. 𝐸⃗ = (2.5𝑥\n3 − 1.5𝑥\n2\n)𝑖̂",
+      "stem": "The electric potential at a certain point is given by 𝑉 = −7.5𝑥^2 + 3𝑥, where 𝑉 is in volts and 𝑥 is in meters. What is the electric field at that point?",
+      "options": [
+        {
+          "key": "A",
+          "text": "𝐸⃗ = (15𝑥 − 3)𝑖̂",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "𝐸⃗ = (−15𝑥 + 3)𝑖̂",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "𝐸⃗ = (−2.5𝑥^3 + 1.5𝑥^2)𝑖̂",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "𝐸⃗ = (2.5𝑥^3 − 1.5𝑥^2)𝑖̂",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "12",
+      "source_raw": "12. A 10𝑉 battery is connected in series with a 2𝜇𝐹 capacitor, a 2Ω resistor, an ammeter, and a \nswitch that is initially open. A voltmeter is connected in parallel across the capacitor. At the \ninstant the switch is closed, what are the ammeter and voltmeter readings, respectively?\nA. 0A, 10V\nB. 0A, 0V\nC. 5A, 0V\nD. 5A, 10V",
+      "stem": "A 10𝑉 battery is connected in series with a 2𝜇𝐹 capacitor, a 2Ω resistor, an ammeter, and a switch that is initially open. A voltmeter is connected in parallel across the capacitor. At the instant the switch is closed, what are the ammeter and voltmeter readings, respectively?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0A, 10V",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "0A, 0V",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "5A, 0V",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "5A, 10V",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "13",
+      "source_raw": "13. A 6.5𝑉 battery with negligible internal resistance is used to charge a 1.8𝑚𝐹 capacitor \nthrough a 320Ω resistor. What is the time required for the capacitor charge to reach 44% of \nits maximum value?\nA. 0.47 s\nB. 0.33 𝑠\nC. 1.0 𝑠\nD. 1.4 𝑠",
+      "stem": "A 6.5𝑉 battery with negligible internal resistance is used to charge a 1.8𝑚𝐹 capacitor through a 320Ω resistor. What is the time required for the capacitor charge to reach 44% of its maximum value?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.47 s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "0.33 𝑠",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "1.0 𝑠",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "1.4 𝑠",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "14",
+      "source_raw": "14. At one instant an electron (𝑞 = −1.6 × 10−19𝐶) is moving in the xy plane, the components \nof its velocity being 𝑣𝑥 = 5.0 × 105𝑚/𝑠 and 𝑣𝑦 = 3.0 × 105𝑚/𝑠. A magnetic field of 0.80 T \nis in the positive y direction. At that instant, the magnetic force on the electron is:\nA. (3.8 × 10−14𝑁)𝑘̂\nB. (−6.4 × 10−14𝑁)𝑘̂\nC. (6.4 × 10−14𝑁)𝑘̂\nD. (−3.8 × 10−14𝑁)𝑘̂",
+      "stem": "At one instant an electron (𝑞 = −1.6 × 10−19𝐶) is moving in the xy plane, the components of its velocity being 𝑣𝑥 = 5.0 × 105𝑚/𝑠 and 𝑣𝑦 = 3.0 × 105𝑚/𝑠. A magnetic field of 0.80 T is in the positive y direction. At that instant, the magnetic force on the electron is:",
+      "options": [
+        {
+          "key": "A",
+          "text": "(3.8 × 10−14𝑁)𝑘̂",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "(−6.4 × 10−14𝑁)𝑘̂",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "(6.4 × 10−14𝑁)𝑘̂",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "(−3.8 × 10−14𝑁)𝑘̂",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "verified_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. Two point charges are placed in vacuum. A positive charge +𝑞1 is located at the origin, and \na negative charge −𝑞2 is located at a position on the positive 𝑥-axis. What is the direction of \nthe Coulomb force acting on −𝑞2, and what is the direction of the unit vector used in the \nCoulomb force equation for that force?\nA. Force on −𝑞2 points in the +𝑥 direction; unit vector points in the +𝑥 direction\nB. Force on −𝑞2 points in the −𝑥 direction; unit vector points in the −𝑥 direction\nC. Force on −𝑞2 points in the −𝑥 direction; unit vector points in the +𝑥 direction\nD. Force on −𝑞2 points in the +𝑥 direction; unit vector points in the −𝑥 direction",
+      "stem": "Two point charges are placed in vacuum. A positive charge +𝑞1 is located at the origin, and a negative charge −𝑞2 is located at a position on the positive 𝑥-axis. What is the direction of the Coulomb force acting on −𝑞2, and what is the direction of the unit vector used in the Coulomb force equation for that force?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Force on −𝑞2 points in the +𝑥 direction; unit vector points in the +𝑥 direction",
+          "is_correct": false,
+          "explanation": "This assumes unlike charges repel, which is the opposite of Coulomb’s law for charges of opposite sign."
+        },
+        {
+          "key": "B",
+          "text": "Force on −𝑞2 points in the −𝑥 direction; unit vector points in the −𝑥 direction",
+          "is_correct": false,
+          "explanation": "This confuses the force direction with the chosen separation unit vector in the standard Coulomb-law form."
+        },
+        {
+          "key": "C",
+          "text": "Force on −𝑞2 points in the −𝑥 direction; unit vector points in the +𝑥 direction",
+          "is_correct": true,
+          "explanation": "Unlike charges attract, so the force on −𝑞2 points toward +𝑞1, i.e. in the \u0000−𝑥 direction. In the common form \\(\\vec F = k\\,q_1 q_2\\,\\hat r/r^2\\), the unit vector \\(\\hat r\\) from +𝑞1 at the origin to −𝑞2 on the +𝑥-axis points in the \\(+𝑥\\) direction; the negative product \\(q_1q_2<0\\) makes the force opposite to \\(\\hat r\\)."
+        },
+        {
+          "key": "D",
+          "text": "Force on −𝑞2 points in the +𝑥 direction; unit vector points in the −𝑥 direction",
+          "is_correct": false,
+          "explanation": "This reverses both the attraction direction and the usual source-to-field-point unit-vector direction."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2. A positive point charge +𝑄 is fixed at the origin. A negative point charge −𝑄 is placed on \nthe positive 𝑦-axis. Which statement correctly describes the direction of the electric field at \nthat point and the direction of the electric force on this negative charge?\nA. Electric field upward; electric force upward\nB. Electric field upward; electric force downward\nC. Electric field downward; electric force upward\nD. Electric field downward; electric force downward",
+      "stem": "A positive point charge +𝑄 is fixed at the origin. A negative point charge −𝑄 is placed on the positive 𝑦-axis. Which statement correctly describes the direction of the electric field at that point and the direction of the electric force on this negative charge?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Electric field upward; electric force upward",
+          "is_correct": false,
+          "explanation": "This forgets that a negative charge feels force opposite to the electric field direction."
+        },
+        {
+          "key": "B",
+          "text": "Electric field upward; electric force downward",
+          "is_correct": true,
+          "explanation": "The electric field due to a positive source charge points away from the source, so at a point on the +𝑦-axis it is upward. The force is \\(\\vec F=q\\vec E\\); because the placed charge is negative, its force is opposite the field, so it points downward."
+        },
+        {
+          "key": "C",
+          "text": "Electric field downward; electric force upward",
+          "is_correct": false,
+          "explanation": "This uses the field direction for a negative source charge rather than for the given positive source charge."
+        },
+        {
+          "key": "D",
+          "text": "Electric field downward; electric force downward",
+          "is_correct": false,
+          "explanation": "This gets both directions wrong by reversing the field from a positive charge and then not reversing the force for a negative charge."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. A point charge is located at the center of a cube that acts as a Gaussian surface. Which \nstatement is correct?\nA. Electric flux is zero through each face\nB. Electric flux is the same through each face\nC. The magnitude of electric field is the same everywhere on each face\nD. None of the above is correct.",
+      "stem": "A point charge is located at the center of a cube that acts as a Gaussian surface. Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Electric flux is zero through each face",
+          "is_correct": false,
+          "explanation": "This ignores Gauss’s law, since a nonzero enclosed charge gives nonzero total flux and symmetry shares it among faces."
+        },
+        {
+          "key": "B",
+          "text": "Electric flux is the same through each face",
+          "is_correct": true,
+          "explanation": "By Gauss’s law, the total flux through the cube is \\(\\Phi_E=q_{\\text{enc}}/\\varepsilon_0\\). Because the charge is at the center and all six faces are symmetry-equivalent, the flux is equally divided, so each face has the same flux \\(\\Phi_E/6\\)."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of electric field is the same everywhere on each face",
+          "is_correct": false,
+          "explanation": "This confuses equal flux through a face with uniform field magnitude over that face; points on a face are at different distances from the central charge."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "This misses the symmetry argument that makes the flux through each face equal."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "4. An infinitely long straight line carries a uniform positive linear charge density. A closed \ncylindrical Gaussian surface is coaxial with the line charge. Which part(s) of the surface have \nnonzero electric flux?\nA. Only the curved side surface\nB. Only the two flat circular end caps\nC. Both the curved surface and the end caps\nD. No part of the surface",
+      "stem": "An infinitely long straight line carries a uniform positive linear charge density. A closed cylindrical Gaussian surface is coaxial with the line charge. Which part(s) of the surface have nonzero electric flux?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Only the curved side surface",
+          "is_correct": true,
+          "explanation": "For an infinite line charge, the electric field is radial: \\(E=\\lambda/(2\\pi\\varepsilon_0 r)\\), directed perpendicular to the cylinder’s axis. Thus \\(\\vec E\\cdot d\\vec A\\neq 0\\) on the curved side where the outward normal is radial, but \\(\\vec E\\cdot d\\vec A=0\\) on the flat end caps because their normals are along the axis."
+        },
+        {
+          "key": "B",
+          "text": "Only the two flat circular end caps",
+          "is_correct": false,
+          "explanation": "This treats the radial electric field as if it were along the cylinder axis, so it incorrectly assigns flux to the caps."
+        },
+        {
+          "key": "C",
+          "text": "Both the curved surface and the end caps",
+          "is_correct": false,
+          "explanation": "This ignores that the field is perpendicular to the end-cap normals, giving zero flux there."
+        },
+        {
+          "key": "D",
+          "text": "No part of the surface",
+          "is_correct": false,
+          "explanation": "This contradicts Gauss’s law because the cylinder encloses nonzero line charge, so the net flux cannot be zero."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "5",
+      "source_raw": "5. A positive point charge +𝑞 and a negative point charge −𝑞 are separated by a distance 𝑟 in \nvacuum. The distance between the two charges is then increased to 2𝑟. How does the electric \npotential energy of the two-charge system change?\nA. It increases (i.e., becomes more positive or less negative)\nB. It decreases (i.e., becomes less positive or more negative)\nC. It becomes zero.\nD. It remains unchanged (but not zero).",
+      "stem": "A positive point charge +𝑞 and a negative point charge −𝑞 are separated by a distance 𝑟 in vacuum. The distance between the two charges is then increased to 2𝑟. How does the electric potential energy of the two-charge system change?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It increases (i.e., becomes more positive or less negative)",
+          "is_correct": true,
+          "explanation": "The electric potential energy of two point charges is \\(U=kq_1q_2/r\\). Here \\(q_1q_2=-q^2\\), so initially \\(U_i=-kq^2/r\\) and finally \\(U_f=-kq^2/(2r)\\); the final value is less negative, so the potential energy increases."
+        },
+        {
+          "key": "B",
+          "text": "It decreases (i.e., becomes less positive or more negative)",
+          "is_correct": false,
+          "explanation": "This misses that for opposite charges the potential energy is negative and becomes less negative when the separation increases."
+        },
+        {
+          "key": "C",
+          "text": "It becomes zero.",
+          "is_correct": false,
+          "explanation": "This assumes infinite separation rather than merely doubling the distance."
+        },
+        {
+          "key": "D",
+          "text": "It remains unchanged (but not zero).",
+          "is_correct": false,
+          "explanation": "This ignores the explicit \\(1/r\\) dependence of electrostatic potential energy."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "6",
+      "source_raw": "6. A charged particle moves from point A to point B in a uniform electric field. Which factor \ndetermines the electric potential difference between A and B?\nA. The path taken between A and B\nB. The speed of the particle\nC. The displacement component along the electric field\nD. The mass of the particle",
+      "stem": "A charged particle moves from point A to point B in a uniform electric field. Which factor determines the electric potential difference between A and B?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The path taken between A and B",
+          "is_correct": false,
+          "explanation": "This mistakes electric potential for a path-dependent quantity, but electrostatic fields are conservative."
+        },
+        {
+          "key": "B",
+          "text": "The speed of the particle",
+          "is_correct": false,
+          "explanation": "This confuses kinematics with potential difference, which depends only on field and position."
+        },
+        {
+          "key": "C",
+          "text": "The displacement component along the electric field",
+          "is_correct": true,
+          "explanation": "In a uniform electric field, the potential difference is \\(\\Delta V=-\\vec E\\cdot \\Delta \\vec r\\). Therefore only the component of displacement parallel or antiparallel to the electric field affects \\(\\Delta V\\); perpendicular motion does not change the potential."
+        },
+        {
+          "key": "D",
+          "text": "The mass of the particle",
+          "is_correct": false,
+          "explanation": "This incorrectly treats electric potential difference as depending on inertial properties rather than on field geometry."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "7",
+      "source_raw": "7. A parallel-plate capacitor has plate area 𝐴 and plate separation 𝑑. If the plate separation is \ndoubled while the plate area remains unchanged, the capacitance:\nA. Doubles\nB. Is unchanged\nC. Is reduced by a factor of 2\nD. Is reduced by a factor of 4",
+      "stem": "A parallel-plate capacitor has plate area 𝐴 and plate separation 𝑑. If the plate separation is doubled while the plate area remains unchanged, the capacitance:",
+      "options": [
+        {
+          "key": "A",
+          "text": "Doubles",
+          "is_correct": false,
+          "explanation": "This reverses the proportionality; capacitance is inversely, not directly, proportional to plate spacing."
+        },
+        {
+          "key": "B",
+          "text": "Is unchanged",
+          "is_correct": false,
+          "explanation": "This ignores the formula for a parallel-plate capacitor."
+        },
+        {
+          "key": "C",
+          "text": "Is reduced by a factor of 2",
+          "is_correct": true,
+          "explanation": "For a parallel-plate capacitor, \\(C=\\varepsilon_0 A/d\\) (or \\(\\varepsilon A/d\\) with dielectric). Doubling \\(d\\) gives \\(C' = \\varepsilon_0 A/(2d)=C/2\\), so the capacitance is halved."
+        },
+        {
+          "key": "D",
+          "text": "Is reduced by a factor of 4",
+          "is_correct": false,
+          "explanation": "This incorrectly applies a square dependence to separation, but the relation is linear in \\(1/d\\)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "8",
+      "source_raw": "8. Two point charges are separated by 10.0 cm and have charges of +2.00𝜇𝐶 and −2.00𝜇𝐶, \nrespectively. What is the magnitude of the electric field at a point midway between the two \ncharges? (𝑘 = 8.99 × 109𝑁 ∙ m2 𝐶\n2 ⁄ )\nA. 28.8 × 106𝑁/𝐶\nB. 14.4 × 106𝑁/𝐶\nC. 7.19 × 106𝑁/𝐶\nD. 0",
+      "stem": "Two point charges are separated by 10.0 cm and have charges of +2.00𝜇𝐶 and −2.00𝜇𝐶, respectively. What is the magnitude of the electric field at a point midway between the two charges? (𝑘 = 8.99 × 109𝑁 ∙ m2 𝐶\n2 ⁄ )",
+      "options": [
+        {
+          "key": "A",
+          "text": "28.8 × 106𝑁/𝐶",
+          "is_correct": false,
+          "explanation": "This likely doubles the field one extra time or uses the wrong midpoint distance."
+        },
+        {
+          "key": "B",
+          "text": "14.4 × 106𝑁/𝐶",
+          "is_correct": true,
+          "explanation": "The midpoint is \\(r=0.050\\,\\text{m}\\) from each charge, so each field has magnitude \\(E=k|q|/r^2=(8.99\\times10^9)(2.00\\times10^{-6})/(0.050)^2\\approx 7.19\\times10^6\\,\\text{N/C}\\). The fields point in the same direction at the midpoint (away from +q and toward −q), so they add to give \\(2E\\approx 1.44\\times10^7\\,\\text{N/C}=14.4\\times10^6\\,\\text{N/C}\\)."
+        },
+        {
+          "key": "C",
+          "text": "7.19 × 106𝑁/𝐶",
+          "is_correct": false,
+          "explanation": "This uses the field from only one charge and forgets that the two contributions reinforce at the midpoint."
+        },
+        {
+          "key": "D",
+          "text": "0",
+          "is_correct": false,
+          "explanation": "This treats opposite charges like equal same-sign charges, but here the midpoint fields point the same way rather than canceling."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "9",
+      "source_raw": "9. A total charge of −6.50𝜇𝐶 is uniformly distributed within an insulating sphere that has a \nradius of 0.150𝑚. What is the magnitude and direction of the electric field at 0.300𝑚 from \nthe surface of the sphere? \nA. 2.89 × 105𝑁/𝐶, radially inward\nB. 2.59 × 106𝑁/𝐶, radially outward\nC. 6.49 × 105𝑁/𝐶, radially inward\nD. None of the above is correct",
+      "stem": "A total charge of −6.50𝜇𝐶 is uniformly distributed within an insulating sphere that has a radius of 0.150𝑚. What is the magnitude and direction of the electric field at 0.300𝑚 from the surface of the sphere?",
+      "options": [
+        {
+          "key": "A",
+          "text": "2.89 × 105𝑁/𝐶, radially inward",
+          "is_correct": true,
+          "explanation": "The point is outside the sphere, at distance \\(r=0.150+0.300=0.450\\,\\text{m}\\) from the center, so the field equals that of a point charge: \\(E=k|Q|/r^2\\). Thus \\(E=(8.99\\times10^9)(6.50\\times10^{-6})/(0.450)^2\\approx 2.89\\times10^5\\,\\text{N/C}\\), and because the charge is negative, the field points radially inward."
+        },
+        {
+          "key": "B",
+          "text": "2.59 × 106𝑁/𝐶, radially outward",
+          "is_correct": false,
+          "explanation": "This has both an incorrect magnitude and the wrong direction for a negative charge, whose field points inward."
+        },
+        {
+          "key": "C",
+          "text": "6.49 × 105𝑁/𝐶, radially inward",
+          "is_correct": false,
+          "explanation": "This likely uses the wrong distance from the center instead of the full outside radius \\(0.450\\,\\text{m}\\)."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct",
+          "is_correct": false,
+          "explanation": "This overlooks that option A matches the point-charge result for a spherically symmetric charge distribution outside the sphere."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "10",
+      "source_raw": "10. A particle with charge +𝑄 is placed in the center of an initially uncharged conducting hollow \nsphere. What are the charges induced on the inner and outer surfaces of the sphere?\nA. Inner: −𝑄; outer: +𝑄\nB. Inner: −𝑄; outer: 0\nC. Inner: 0; outer: 0\nD. Inner: 0; outer: −𝑄",
+      "stem": "A particle with charge +𝑄 is placed in the center of an initially uncharged conducting hollow sphere. What are the charges induced on the inner and outer surfaces of the sphere?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Inner: −𝑄; outer: +𝑄",
+          "is_correct": true,
+          "explanation": "In electrostatic equilibrium, the electric field inside the conducting material must be zero, so the inner surface must carry \\(-Q\\) to cancel the field from the central \\(+Q\\) within the conductor. Since the conductor was initially uncharged overall, charge conservation requires the outer surface to carry \\(+Q\\)."
+        },
+        {
+          "key": "B",
+          "text": "Inner: −𝑄; outer: 0",
+          "is_correct": false,
+          "explanation": "This violates charge conservation because the conductor would then have net charge \\(-Q\\) despite starting neutral."
+        },
+        {
+          "key": "C",
+          "text": "Inner: 0; outer: 0",
+          "is_correct": false,
+          "explanation": "This ignores the need for induced inner-surface charge to keep the field zero inside the conducting material."
+        },
+        {
+          "key": "D",
+          "text": "Inner: 0; outer: −𝑄",
+          "is_correct": false,
+          "explanation": "This places the compensating charge on the wrong surface and also gives the wrong net charge for the conductor."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "11",
+      "source_raw": "11. The electric potential at a certain point is given by 𝑉 = −7.5𝑥\n2 + 3𝑥, where 𝑉 is in volts and \n𝑥 is in meters. What is the electric field at that point?\nA. 𝐸⃗ = (15𝑥 − 3)𝑖̂\nB. 𝐸⃗ = (−15𝑥 + 3)𝑖̂\nC. 𝐸⃗ = (−2.5𝑥\n3 + 1.5𝑥\n2\n)𝑖̂\nD. 𝐸⃗ = (2.5𝑥\n3 − 1.5𝑥\n2\n)𝑖̂",
+      "stem": "The electric potential at a certain point is given by 𝑉 = −7.5𝑥^2 + 3𝑥, where 𝑉 is in volts and 𝑥 is in meters. What is the electric field at that point?",
+      "options": [
+        {
+          "key": "A",
+          "text": "𝐸⃗ = (15𝑥 − 3)𝑖̂",
+          "is_correct": true,
+          "explanation": "In one dimension, the electric field is the negative gradient of potential: \\(E_x=-\\,dV/dx\\). Since \\(V=-7.5x^2+3x\\), we have \\(dV/dx=-15x+3\\), so \\(\\vec E=(15x-3)\\hat i\\)."
+        },
+        {
+          "key": "B",
+          "text": "𝐸⃗ = (−15𝑥 + 3)𝑖̂",
+          "is_correct": false,
+          "explanation": "This forgets the minus sign in the relation \\(\\vec E=-\\nabla V\\)."
+        },
+        {
+          "key": "C",
+          "text": "𝐸⃗ = (−2.5𝑥^3 + 1.5𝑥^2)𝑖̂",
+          "is_correct": false,
+          "explanation": "This incorrectly integrates or otherwise changes the polynomial power instead of differentiating the potential."
+        },
+        {
+          "key": "D",
+          "text": "𝐸⃗ = (2.5𝑥^3 − 1.5𝑥^2)𝑖̂",
+          "is_correct": false,
+          "explanation": "This uses an incorrect power-law manipulation rather than applying \\(E_x=-dV/dx\\)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "12",
+      "source_raw": "12. A 10𝑉 battery is connected in series with a 2𝜇𝐹 capacitor, a 2Ω resistor, an ammeter, and a \nswitch that is initially open. A voltmeter is connected in parallel across the capacitor. At the \ninstant the switch is closed, what are the ammeter and voltmeter readings, respectively?\nA. 0A, 10V\nB. 0A, 0V\nC. 5A, 0V\nD. 5A, 10V",
+      "stem": "A 10𝑉 battery is connected in series with a 2𝜇𝐹 capacitor, a 2Ω resistor, an ammeter, and a switch that is initially open. A voltmeter is connected in parallel across the capacitor. At the instant the switch is closed, what are the ammeter and voltmeter readings, respectively?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0A, 10V",
+          "is_correct": false,
+          "explanation": "This treats the capacitor as already fully charged at the instant of switching, which it is not."
+        },
+        {
+          "key": "B",
+          "text": "0A, 0V",
+          "is_correct": false,
+          "explanation": "This gets the initial capacitor voltage right but ignores that an uncharged capacitor initially acts like a short, allowing maximum current."
+        },
+        {
+          "key": "C",
+          "text": "5A, 0V",
+          "is_correct": true,
+          "explanation": "At \\(t=0\\), the capacitor is initially uncharged, so its voltage is \\(V_C(0)=0\\). The entire battery voltage is across the resistor, giving initial current \\(I(0)=V/R=10/2=5\\,\\text{A}\\), so the ammeter reads 5 A and the voltmeter across the capacitor reads 0 V."
+        },
+        {
+          "key": "D",
+          "text": "5A, 10V",
+          "is_correct": false,
+          "explanation": "This incorrectly assigns the full battery voltage to both the resistor and the initially uncharged capacitor at the same instant."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "13",
+      "source_raw": "13. A 6.5𝑉 battery with negligible internal resistance is used to charge a 1.8𝑚𝐹 capacitor \nthrough a 320Ω resistor. What is the time required for the capacitor charge to reach 44% of \nits maximum value?\nA. 0.47 s\nB. 0.33 𝑠\nC. 1.0 𝑠\nD. 1.4 𝑠",
+      "stem": "A 6.5𝑉 battery with negligible internal resistance is used to charge a 1.8𝑚𝐹 capacitor through a 320Ω resistor. What is the time required for the capacitor charge to reach 44% of its maximum value?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.47 s",
+          "is_correct": false,
+          "explanation": "This uses the charging formula incorrectly or substitutes the wrong fraction into the exponential relation."
+        },
+        {
+          "key": "B",
+          "text": "0.33 𝑠",
+          "is_correct": true,
+          "explanation": "For charging, \\(q(t)=Q_{\\max}(1-e^{-t/RC})\\). Setting \\(q/Q_{\\max}=0.44\\) gives \\(e^{-t/RC}=0.56\\), so \\(t=-RC\\ln(0.56)\\); with \\(RC=(320)(1.8\\times10^{-3})=0.576\\,\\text{s}\\), we get \\(t\\approx0.334\\,\\text{s}\\), which rounds to 0.33 s."
+        },
+        {
+          "key": "C",
+          "text": "1.0 𝑠",
+          "is_correct": false,
+          "explanation": "This is much larger than the value from the RC time-constant calculation and likely confuses \\(t\\) with several time constants."
+        },
+        {
+          "key": "D",
+          "text": "1.4 𝑠",
+          "is_correct": false,
+          "explanation": "This overestimates the charging time by misapplying the exponential charging equation."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "14",
+      "source_raw": "14. At one instant an electron (𝑞 = −1.6 × 10−19𝐶) is moving in the xy plane, the components \nof its velocity being 𝑣𝑥 = 5.0 × 10^5𝑚/𝑠 and 𝑣𝑦 = 3.0 × 10^5𝑚/𝑠. A magnetic field of 0.80 T \nis in the positive y direction. At that instant, the magnetic force on the electron is:\nA. (3.8 × 10−14𝑁)𝑘̂\nB. (−6.4 × 10−14𝑁)𝑘̂\nC. (6.4 × 10−14𝑁)𝑘̂\nD. (−3.8 × 10−14𝑁)𝑘̂",
+      "stem": "At one instant an electron (𝑞 = −1.6 × 10−19𝐶) is moving in the xy plane, the components of its velocity being 𝑣𝑥 = 5.0 × 10^5𝑚/𝑠 and 𝑣𝑦 = 3.0 × 10^5𝑚/𝑠. A magnetic field of 0.80 T is in the positive y direction. At that instant, the magnetic force on the electron is:",
+      "options": [
+        {
+          "key": "A",
+          "text": "(3.8 × 10−14𝑁)𝑘̂",
+          "is_correct": false,
+          "explanation": "This uses an incorrect magnitude and also misses the sign reversal caused by the electron’s negative charge."
+        },
+        {
+          "key": "B",
+          "text": "(−6.4 × 10−14𝑁)𝑘̂",
+          "is_correct": true,
+          "explanation": "The magnetic force is \\(\\vec F=q\\,\\vec v\\times\\vec B\\). Only \\(v_x\\) contributes because \\(v_y\\) is parallel to \\(\\vec B\\); thus \\(|\\vec v\\times\\vec B|=v_xB=(5.0\\times10^5)(0.80)\\), giving \\(|F|=(1.6\\times10^{-19})(4.0\\times10^5)=6.4\\times10^{-14}\\,\\text{N}\\). For a positive charge, \\(\\hat i\\times\\hat j=\\hat k\\), but the electron is negative, so the force points in the \\(-\\hat k\\) direction."
+        },
+        {
+          "key": "C",
+          "text": "(6.4 × 10−14𝑁)𝑘̂",
+          "is_correct": false,
+          "explanation": "This gets the magnitude right for a positive charge but forgets that the electron’s negative charge reverses the direction."
+        },
+        {
+          "key": "D",
+          "text": "(−3.8 × 10−14𝑁)𝑘̂",
+          "is_correct": false,
+          "explanation": "This uses the wrong magnitude, likely by combining both velocity components instead of only the component perpendicular to \\(\\vec B\\)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "generated_questions": [
+    {
+      "id": 1,
+      "source_id": "1",
+      "stem": "Two point charges are placed in vacuum. A negative charge \\(-q_1\\) is fixed at the origin, and a positive charge \\(+q_2\\) is located on the negative \\(y\\)-axis. What is the direction of the Coulomb force acting on \\(+q_2\\), and what is the direction of the unit vector used in the standard form of Coulomb’s law for that force?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Force on \\(+q_2\\) points in the \\(-y\\) direction; unit vector points in the \\(-y\\) direction",
+          "is_correct": false,
+          "explanation": "This treats unlike charges as if they repel, but opposite charges attract."
+        },
+        {
+          "key": "B",
+          "text": "Force on \\(+q_2\\) points in the \\(+y\\) direction; unit vector points in the \\(+y\\) direction",
+          "is_correct": false,
+          "explanation": "This matches the attraction direction for the force but incorrectly makes the unit vector point toward the source instead of from the source charge to the field point."
+        },
+        {
+          "key": "C",
+          "text": "Force on \\(+q_2\\) points in the \\(-y\\) direction; unit vector points in the \\(+y\\) direction",
+          "is_correct": false,
+          "explanation": "This reverses both the force direction and the usual source-to-field-point direction of \\(\\hat r\\)."
+        },
+        {
+          "key": "D",
+          "text": "Force on \\(+q_2\\) points in the \\(+y\\) direction; unit vector points in the \\(-y\\) direction",
+          "is_correct": true,
+          "explanation": "Opposite charges attract, so the force on \\(+q_2\\) points toward the origin, which is in the \\(+y\\) direction. In the form \\(\\vec F = k\\,q_1q_2\\,\\hat r/r^2\\), the unit vector \\(\\hat r\\) from the source charge at the origin to the positive charge on the negative \\(y\\)-axis points in the \\(-y\\) direction; because \\(q_1q_2<0\\), the force is opposite to \\(\\hat r\\)."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electrostatics",
+        "coulomb_law",
+        "vector_direction"
+      ],
+      "generation_notes": "Isomorphic to the source: same reasoning about attraction between opposite charges and the distinction between force direction and the separation unit vector, but with different signs and axis orientation.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 2,
+      "source_id": "2",
+      "stem": "A negative point charge \\(-Q\\) is fixed at the origin. A positive point charge \\(+Q\\) is placed on the negative \\(x\\)-axis. Which statement correctly describes the direction of the electric field at that point and the direction of the electric force on this positive charge?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Electric field in the \\(+x\\) direction; electric force in the \\(+x\\) direction",
+          "is_correct": true,
+          "explanation": "The electric field due to a negative source charge points toward the source. At a point on the negative \\(x\\)-axis, that means the field points toward the origin, i.e. in the \\(+x\\) direction; since \\(\\vec F=q\\vec E\\) and the placed charge is positive, the force is in the same direction as the field."
+        },
+        {
+          "key": "B",
+          "text": "Electric field in the \\(+x\\) direction; electric force in the \\(-x\\) direction",
+          "is_correct": false,
+          "explanation": "This incorrectly reverses the force direction as if the placed charge were negative rather than positive."
+        },
+        {
+          "key": "C",
+          "text": "Electric field in the \\(-x\\) direction; electric force in the \\(+x\\) direction",
+          "is_correct": false,
+          "explanation": "This uses the field direction for a positive source charge instead of a negative source charge."
+        },
+        {
+          "key": "D",
+          "text": "Electric field in the \\(-x\\) direction; electric force in the \\(-x\\) direction",
+          "is_correct": false,
+          "explanation": "This gets the field direction wrong and then carries that mistake into the force direction."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electrostatics",
+        "electric_field",
+        "force_from_field"
+      ],
+      "generation_notes": "Isomorphic to the source: same distinction between electric-field direction and force direction, with the sign of the source and placement axis changed.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 3,
+      "source_id": "3",
+      "stem": "A point charge is located at the center of a regular tetrahedron that acts as a Gaussian surface. Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Electric flux is zero through each face",
+          "is_correct": false,
+          "explanation": "A nonzero enclosed charge gives a nonzero total flux by Gauss’s law, so the flux through each face cannot all be zero."
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the electric field is the same everywhere on each face",
+          "is_correct": false,
+          "explanation": "Although the faces are symmetry-equivalent as whole surfaces, points on a given face are at different distances from the central charge, so the field magnitude is not uniform over the face."
+        },
+        {
+          "key": "C",
+          "text": "Electric flux is the same through each face",
+          "is_correct": true,
+          "explanation": "Gauss’s law gives the total flux as \\(\\Phi_E=q_{\\text{enc}}/\\varepsilon_0\\). Because the charge is at the center of a regular tetrahedron, all four faces are related by symmetry, so the total flux is shared equally and each face has flux \\(\\Phi_E/4\\)."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct",
+          "is_correct": false,
+          "explanation": "This ignores the symmetry argument that makes the flux equal through all faces."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "gauss_law",
+        "symmetry",
+        "electric_flux"
+      ],
+      "generation_notes": "Isomorphic to the source: same Gauss’s-law symmetry argument, but using a regular tetrahedron instead of a cube.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 4,
+      "source_id": "4",
+      "stem": "A very long straight wire carries a uniform positive linear charge density. A closed cylindrical Gaussian surface is placed coaxially around the wire. Which part or parts of the surface have nonzero electric flux?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Only the two flat circular end caps",
+          "is_correct": false,
+          "explanation": "This treats the electric field as if it were along the axis, but the field of a line charge is radial."
+        },
+        {
+          "key": "B",
+          "text": "Both the curved surface and the end caps",
+          "is_correct": false,
+          "explanation": "The radial electric field is perpendicular to the end-cap normals, so the flux through the end caps is zero."
+        },
+        {
+          "key": "C",
+          "text": "Only the curved side surface",
+          "is_correct": true,
+          "explanation": "For a long line charge, the field is radial with magnitude \\(E=\\lambda/(2\\pi\\varepsilon_0 r)\\). The outward area vector on the curved side is also radial, so \\(\\vec E\\cdot d\\vec A\\neq 0\\) there, while the end-cap area vectors are along the cylinder axis and give \\(\\vec E\\cdot d\\vec A=0\\)."
+        },
+        {
+          "key": "D",
+          "text": "No part of the surface",
+          "is_correct": false,
+          "explanation": "If no part had flux, the net flux would be zero, contradicting Gauss’s law for a surface enclosing nonzero charge."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "gauss_law",
+        "line_charge",
+        "cylindrical_symmetry"
+      ],
+      "generation_notes": "Isomorphic to the source: same cylindrical Gaussian surface around a line charge and the same flux-direction reasoning, but reworded with a different physical description.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 5,
+      "source_id": "5",
+      "stem": "A positive point charge \\(+2q\\) and a negative point charge \\(-q\\) are separated by a distance \\(d\\) in vacuum. The distance between them is then increased to \\(3d\\). How does the electric potential energy of the two-charge system change?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It decreases, becoming more negative",
+          "is_correct": false,
+          "explanation": "This ignores that for opposite charges \\(U=kq_1q_2/r\\) is negative and becomes less negative when the separation increases."
+        },
+        {
+          "key": "B",
+          "text": "It increases, becoming less negative",
+          "is_correct": true,
+          "explanation": "The electrostatic potential energy is \\(U=kq_1q_2/r\\). Since \\(q_1q_2=-2q^2<0\\), increasing the separation from \\(d\\) to \\(3d\\) changes the energy from \\(U_i=-2kq^2/d\\) to \\(U_f=-2kq^2/(3d)\\); the final value is closer to zero, so the potential energy increases."
+        },
+        {
+          "key": "C",
+          "text": "It becomes exactly zero",
+          "is_correct": false,
+          "explanation": "The energy approaches zero only at infinite separation, not merely at three times the original distance."
+        },
+        {
+          "key": "D",
+          "text": "It remains unchanged because the charges are unchanged",
+          "is_correct": false,
+          "explanation": "Potential energy depends on both the charges and their separation, so changing \\(r\\) changes \\(U\\)."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electric_potential_energy",
+        "point_charges",
+        "inverse_distance"
+      ],
+      "generation_notes": "Isomorphic to the source: same concept of how \\(U=kq_1q_2/r\\) changes for opposite charges when separation increases, with different charge magnitudes and a different distance change.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 6,
+      "source_id": "6",
+      "stem": "An ion travels from point P to point Q in a uniform electric field. Which quantity determines the electric potential difference between P and Q?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The total length of the path between P and Q",
+          "is_correct": false,
+          "explanation": "Electric potential difference in an electrostatic field is not determined by path length because the field is conservative."
+        },
+        {
+          "key": "B",
+          "text": "The kinetic energy of the ion",
+          "is_correct": false,
+          "explanation": "The particle’s energy may change because of the potential difference, but it does not determine the potential difference itself."
+        },
+        {
+          "key": "C",
+          "text": "The component of the displacement from P to Q perpendicular to the field",
+          "is_correct": false,
+          "explanation": "Only the component parallel to the field enters the dot product \\(\\Delta V=-\\vec E\\cdot\\Delta\\vec r\\); perpendicular displacement does not change the potential."
+        },
+        {
+          "key": "D",
+          "text": "The component of the displacement from P to Q along the electric field",
+          "is_correct": true,
+          "explanation": "In a uniform electric field, the potential difference is \\(\\Delta V=-\\vec E\\cdot\\Delta\\vec r\\). Therefore the change in potential depends only on the component of displacement parallel or antiparallel to \\(\\vec E\\), not on the particular path taken or on the particle’s properties."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electric_potential",
+        "uniform_field",
+        "conservative_fields"
+      ],
+      "generation_notes": "Isomorphic to the source: same conservative-field idea and same dot-product dependence, with a different wording and particle type.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 7,
+      "source_id": "7",
+      "stem": "A parallel-plate capacitor has plate area \\(A\\) and plate separation \\(d\\). If the plate separation is tripled while the plate area remains unchanged, the capacitance:",
+      "options": [
+        {
+          "key": "A",
+          "text": "Triples",
+          "is_correct": false,
+          "explanation": "This reverses the relationship; capacitance is inversely proportional to plate separation."
+        },
+        {
+          "key": "B",
+          "text": "Becomes one-third of its original value",
+          "is_correct": true,
+          "explanation": "For a parallel-plate capacitor, \\(C=\\varepsilon A/d\\). Replacing \\(d\\) with \\(3d\\) gives \\(C' = \\varepsilon A/(3d)=C/3\\), so the capacitance is reduced to one-third of its initial value."
+        },
+        {
+          "key": "C",
+          "text": "Stays the same",
+          "is_correct": false,
+          "explanation": "This ignores the explicit dependence of \\(C\\) on the plate spacing."
+        },
+        {
+          "key": "D",
+          "text": "Becomes one-ninth of its original value",
+          "is_correct": false,
+          "explanation": "This incorrectly assumes a square dependence on separation instead of the correct linear inverse dependence."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "capacitance",
+        "parallel_plate_capacitor",
+        "geometry_dependence"
+      ],
+      "generation_notes": "Isomorphic to the source: same formula \\(C=\\varepsilon A/d\\) and same geometric dependence, but with a tripling rather than doubling of the separation.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 8,
+      "source_id": "8",
+      "stem": "Two point charges are separated by \\(16.0\\,\\text{cm}\\) and have charges \\(+3.50\\,\\mu\\text{C}\\) and \\(-3.50\\,\\mu\\text{C}\\), respectively. What is the magnitude of the electric field at the point midway between the two charges? \\(k=8.99\\times10^9\\,\\text{N·m}^2/\\text{C}^2\\)",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(1.97\\times10^7\\,\\text{N/C}\\)",
+          "is_correct": false,
+          "explanation": "This likely doubles the already-combined field one extra time or uses an incorrect midpoint distance."
+        },
+        {
+          "key": "B",
+          "text": "\\(4.92\\times10^6\\,\\text{N/C}\\)",
+          "is_correct": false,
+          "explanation": "This is the field due to only one charge and neglects that the two contributions add at the midpoint."
+        },
+        {
+          "key": "C",
+          "text": "\\(9.83\\times10^6\\,\\text{N/C}\\)",
+          "is_correct": true,
+          "explanation": "The midpoint is \\(0.080\\,\\text{m}\\) from each charge, so the field from one charge is \\(E_1=k|q|/r^2=(8.99\\times10^9)(3.50\\times10^{-6})/(0.080)^2\\approx4.92\\times10^6\\,\\text{N/C}\\). At the midpoint, the field from the positive charge points away from it and the field from the negative charge points toward it, so the two fields are in the same direction and add to give \\(E\\approx 2E_1=9.83\\times10^6\\,\\text{N/C}\\)."
+        },
+        {
+          "key": "D",
+          "text": "\\(0\\)",
+          "is_correct": false,
+          "explanation": "This would be true for equal charges of the same sign at the midpoint, but for opposite charges the midpoint fields reinforce rather than cancel."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electric_field",
+        "superposition",
+        "dipole_like_configuration"
+      ],
+      "generation_notes": "Isomorphic to the source: same midpoint-superposition calculation for equal and opposite charges, with substantially different numerical values.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 9,
+      "source_id": "9",
+      "stem": "A total charge of \\(+8.00\\,\\mu\\text{C}\\) is uniformly distributed throughout an insulating sphere of radius \\(0.200\\,\\text{m}\\). What is the magnitude and direction of the electric field at a point \\(0.100\\,\\text{m}\\) outside the surface of the sphere?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(7.99\\times10^5\\,\\text{N/C}\\), radially outward",
+          "is_correct": true,
+          "explanation": "Because the point is outside a spherically symmetric charge distribution, the sphere acts like a point charge located at its center. The distance from the center is \\(r=0.200+0.100=0.300\\,\\text{m}\\), so \\(E=kQ/r^2=(8.99\\times10^9)(8.00\\times10^{-6})/(0.300)^2\\approx7.99\\times10^5\\,\\text{N/C}\\); since the total charge is positive, the field points radially outward."
+        },
+        {
+          "key": "B",
+          "text": "\\(7.99\\times10^5\\,\\text{N/C}\\), radially inward",
+          "is_correct": false,
+          "explanation": "The magnitude is correct, but the direction is wrong because the field of a positive charge points outward, not inward."
+        },
+        {
+          "key": "C",
+          "text": "\\(1.80\\times10^6\\,\\text{N/C}\\), radially outward",
+          "is_correct": false,
+          "explanation": "This likely uses the wrong distance from the center, such as the distance outside the surface instead of the full radius to the point."
+        },
+        {
+          "key": "D",
+          "text": "\\(3.60\\times10^5\\,\\text{N/C}\\), radially outward",
+          "is_correct": false,
+          "explanation": "This underestimates the field, typically from an algebra or distance-substitution error in \\(E=kQ/r^2\\)."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "gauss_law",
+        "spherical_symmetry",
+        "electric_field_outside_sphere"
+      ],
+      "generation_notes": "Isomorphic to the source: same outside-the-sphere field calculation using spherical symmetry, but with different sign, radius, and observation distance.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 10,
+      "source_id": "10",
+      "stem": "A particle with charge \\(-Q\\) is placed at the center of an initially uncharged conducting hollow sphere. What charges are induced on the inner and outer surfaces of the sphere?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Inner: \\(-Q\\); outer: \\(+Q\\)",
+          "is_correct": false,
+          "explanation": "This reverses the induced charges; the inner surface must have the opposite sign to the enclosed charge."
+        },
+        {
+          "key": "B",
+          "text": "Inner: \\(0\\); outer: \\(-Q\\)",
+          "is_correct": false,
+          "explanation": "This ignores the need for induced charge on the inner surface to make the electric field zero inside the conducting material."
+        },
+        {
+          "key": "C",
+          "text": "Inner: \\(+Q\\); outer: \\(-Q\\)",
+          "is_correct": true,
+          "explanation": "To keep the electric field zero inside the conductor, the inner surface must acquire charge \\(+Q\\), opposite to the enclosed charge \\(-Q\\). Because the conductor as a whole was initially neutral, charge conservation requires the outer surface to carry \\(-Q\\)."
+        },
+        {
+          "key": "D",
+          "text": "Inner: \\(+Q\\); outer: \\(0\\)",
+          "is_correct": false,
+          "explanation": "This gets the inner surface right but violates overall charge conservation for a conductor that started neutral."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "conductors",
+        "electrostatic_equilibrium",
+        "induced_charge"
+      ],
+      "generation_notes": "Isomorphic to the source: same induced-charge reasoning for a neutral conducting shell with a central point charge, but with the enclosed charge sign reversed.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 11,
+      "source_id": "11",
+      "stem": "The electric potential along the \\(x\\)-axis is given by \\(V(x)=4x^3-6x\\), where \\(V\\) is in volts and \\(x\\) is in meters. What is the electric field \\(\\vec E\\) at that point?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(\\vec E=(12x^2-6)\\,\\hat i\\)",
+          "is_correct": false,
+          "explanation": "This is \\(dV/dx\\) and misses the minus sign in the relation \\(\\vec E=-\\nabla V\\)."
+        },
+        {
+          "key": "B",
+          "text": "\\(\\vec E=(-12x^2+6)\\,\\hat i\\)",
+          "is_correct": true,
+          "explanation": "In one dimension, the field is related to the potential by \\(E_x=-\\,dV/dx\\). Differentiating \\(V(x)=4x^3-6x\\) gives \\(dV/dx=12x^2-6\\), so \\(\\vec E=(-12x^2+6)\\hat i\\)."
+        },
+        {
+          "key": "C",
+          "text": "\\(\\vec E=(x^4-3x^2)\\,\\hat i\\)",
+          "is_correct": false,
+          "explanation": "This changes the powers as if the potential were integrated or manipulated algebraically instead of differentiated."
+        },
+        {
+          "key": "D",
+          "text": "\\(\\vec E=(-x^4+3x^2)\\,\\hat i\\)",
+          "is_correct": false,
+          "explanation": "This combines the wrong power-law operation with the minus sign, rather than applying \\(E_x=-dV/dx\\) correctly."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electric_potential",
+        "gradient",
+        "electric_field_from_potential"
+      ],
+      "generation_notes": "Isomorphic to the source: same one-dimensional differentiation and sign convention, but with a different polynomial potential.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 12,
+      "source_id": "12",
+      "stem": "A \\(12\\,\\text{V}\\) battery is connected in series with a \\(5\\,\\mu\\text{F}\\) capacitor, a \\(4\\,\\Omega\\) resistor, an ammeter, and a switch that is initially open. A voltmeter is connected across the capacitor. At the instant the switch is closed, what are the ammeter and voltmeter readings, respectively?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(0\\,\\text{A},\\ 12\\,\\text{V}\\)",
+          "is_correct": false,
+          "explanation": "This would describe a capacitor that is already fully charged, not one that starts uncharged at the instant of switching."
+        },
+        {
+          "key": "B",
+          "text": "\\(0\\,\\text{A},\\ 0\\,\\text{V}\\)",
+          "is_correct": false,
+          "explanation": "The initial capacitor voltage is correct, but the current is not zero because an uncharged capacitor initially behaves like a short circuit."
+        },
+        {
+          "key": "C",
+          "text": "\\(3\\,\\text{A},\\ 12\\,\\text{V}\\)",
+          "is_correct": false,
+          "explanation": "This incorrectly assigns the full battery voltage across the capacitor at the same instant that it still behaves like an uncharged capacitor."
+        },
+        {
+          "key": "D",
+          "text": "\\(3\\,\\text{A},\\ 0\\,\\text{V}\\)",
+          "is_correct": true,
+          "explanation": "At \\(t=0\\), the capacitor is initially uncharged, so its voltage is \\(V_C(0)=0\\). The entire battery voltage is therefore across the resistor, giving the initial current \\(I(0)=V/R=12/4=3\\,\\text{A}\\), so the ammeter reads \\(3\\,\\text{A}\\) and the voltmeter across the capacitor reads \\(0\\,\\text{V}\\)."
+        }
+      ],
+      "difficulty": "",
+      "theme": "engineering",
+      "topic_tags": [
+        "rc_circuits",
+        "capacitor_charging",
+        "initial_conditions"
+      ],
+      "generation_notes": "Isomorphic to the source: same initial-condition reasoning for an RC charging circuit, with different circuit values.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 13,
+      "source_id": "13",
+      "stem": "A \\(9.0\\,\\text{V}\\) battery with negligible internal resistance is used to charge a \\(2.5\\,\\text{mF}\\) capacitor through a \\(240\\,\\Omega\\) resistor. What is the time required for the capacitor charge to reach \\(70\\%\\) of its maximum value?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(0.18\\,\\text{s}\\)",
+          "is_correct": false,
+          "explanation": "This is too small and usually comes from using the wrong fraction inside the logarithm or omitting the factor \\(RC\\)."
+        },
+        {
+          "key": "B",
+          "text": "\\(0.42\\,\\text{s}\\)",
+          "is_correct": false,
+          "explanation": "This can result from using \\(-RC\\ln(0.50)\\) or another incorrect target fraction rather than \\(0.70\\)."
+        },
+        {
+          "key": "C",
+          "text": "\\(0.72\\,\\text{s}\\)",
+          "is_correct": true,
+          "explanation": "For charging, \\(q(t)=Q_{\\max}(1-e^{-t/RC})\\). Setting \\(q/Q_{\\max}=0.70\\) gives \\(e^{-t/RC}=0.30\\), so \\(t=-RC\\ln(0.30)\\); with \\(RC=(240)(2.5\\times10^{-3})=0.600\\,\\text{s}\\), the time is \\(t\\approx0.600\\ln(1/0.30)\\approx0.72\\,\\text{s}\\)."
+        },
+        {
+          "key": "D",
+          "text": "\\(1.20\\,\\text{s}\\)",
+          "is_correct": false,
+          "explanation": "This overestimates the time, as if the capacitor needed about two time constants to reach \\(70\\%\\), which is not consistent with the exponential charging law."
+        }
+      ],
+      "difficulty": "",
+      "theme": "engineering",
+      "topic_tags": [
+        "rc_circuits",
+        "exponential_charging",
+        "time_constant"
+      ],
+      "generation_notes": "Isomorphic to the source: same RC charging exponential with a different resistance, capacitance, and target fraction.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 14,
+      "source_id": "14",
+      "stem": "At one instant a proton \\((q=+1.60\\times10^{-19}\\,\\text{C})\\) is moving in the \\(xz\\)-plane with velocity components \\(v_x=2.0\\times10^5\\,\\text{m/s}\\) and \\(v_z=4.0\\times10^5\\,\\text{m/s}\\). A magnetic field of \\(0.50\\,\\text{T}\\) is in the positive \\(x\\)-direction. At that instant, the magnetic force on the proton is:",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\((3.2\\times10^{-14}\\,\\text{N})\\,\\hat j\\)",
+          "is_correct": true,
+          "explanation": "The magnetic force is \\(\\vec F=q\\,\\vec v\\times\\vec B\\). Only the \\(v_z\\) component contributes because \\(v_x\\) is parallel to \\(\\vec B\\); thus \\(|\\vec F|=qv_zB=(1.60\\times10^{-19})(4.0\\times10^5)(0.50)=3.2\\times10^{-14}\\,\\text{N}\\), and since \\(\\hat k\\times\\hat i=\\hat j\\) for a positive charge, the direction is \\(+\\hat j\\)."
+        },
+        {
+          "key": "B",
+          "text": "\\((-3.2\\times10^{-14}\\,\\text{N})\\,\\hat j\\)",
+          "is_correct": false,
+          "explanation": "This gets the magnitude right but reverses the direction, as if the particle had negative charge instead of positive charge."
+        },
+        {
+          "key": "C",
+          "text": "\\((1.6\\times10^{-14}\\,\\text{N})\\,\\hat j\\)",
+          "is_correct": false,
+          "explanation": "This uses only half the correct magnitude, typically from substituting the wrong velocity component or field value."
+        },
+        {
+          "key": "D",
+          "text": "\\((4.5\\times10^{-14}\\,\\text{N})\\,\\hat j\\)",
+          "is_correct": false,
+          "explanation": "This likely combines both velocity components as if all of \\(\\vec v\\) were perpendicular to \\(\\vec B\\), which is not true here."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "magnetic_force",
+        "lorentz_force",
+        "cross_product"
+      ],
+      "generation_notes": "Isomorphic to the source: same Lorentz-force reasoning that only the component of velocity perpendicular to \\(\\vec B\\) contributes, with a different plane, field direction, and particle sign.",
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "latex_file": "isomorphic_questions.tex",
+  "pdf_file": "isomorphic_questions.pdf",
+  "evaluation": {
+    "status": "completed",
+    "created_at": "2026-03-22T14:13:33.440944Z",
+    "rubric": [
+      {
+        "name": "preserve_physical_content",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the original physical content?"
+      },
+      {
+        "name": "scenario_variation",
+        "category": "Variation",
+        "question": "Does the generated question use the scenario different from the original one?"
+      },
+      {
+        "name": "numerical_variation",
+        "category": "Variation",
+        "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+      },
+      {
+        "name": "physics_correctness",
+        "category": "Quality control",
+        "question": "Is the generated question free of physics errors or misconceptions?"
+      },
+      {
+        "name": "numeric_reasonableness",
+        "category": "Quality control",
+        "question": "Do all numerical values have physically reasonable magnitudes and units?"
+      },
+      {
+        "name": "distractor_structure_preservation",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the logical structure of the distractors?"
+      },
+      {
+        "name": "clerical_quality",
+        "category": "Quality control",
+        "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+      },
+      {
+        "name": "latex_syntax_quality",
+        "category": "Quality control",
+        "question": "Is the generated LaTeX code free of syntax errors?"
+      },
+      {
+        "name": "solvable_and_specified",
+        "category": "Quality control",
+        "question": "Is the generated question fully specified and solvable as written?"
+      }
+    ],
+    "items_evaluated": 14,
+    "grader_model": "gpt-5.4-nano",
+    "dataset_file": "evaluation_dataset.jsonl",
+    "eval_data_file_id": "file-HuVtx4EKozs6fi6XxRBqrW",
+    "eval_id": "eval_69bff90615a48191ae125f9b2a6dfd36",
+    "run_id": "evalrun_69bff9066ce88191bbe7b515764a318f",
+    "run_status": "completed",
+    "run": {
+      "id": "evalrun_69bff9066ce88191bbe7b515764a318f",
+      "created_at": 1774188806,
+      "data_source": {
+        "source": {
+          "id": "file-HuVtx4EKozs6fi6XxRBqrW",
+          "type": "file_id"
+        },
+        "type": "jsonl"
+      },
+      "error": null,
+      "eval_id": "eval_69bff90615a48191ae125f9b2a6dfd36",
+      "metadata": {},
+      "model": null,
+      "name": "Rubric Run",
+      "object": "eval.run",
+      "per_model_usage": [
+        {
+          "cached_tokens": 0,
+          "completion_tokens": 8890,
+          "invocation_count": 126,
+          "run_model_name": "gpt-5.4-nano-2026-03-17",
+          "prompt_tokens": 22862,
+          "total_tokens": 31752,
+          "model_name": "gpt-5.4-nano-2026-03-17"
+        }
+      ],
+      "per_testing_criteria_results": [
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "preserve_physical_content-4f8decfe-2f0b-4dba-ac6c-730948c35909",
+          "testing_criteria_id": "preserve_physical_content-4f8decfe-2f0b-4dba-ac6c-730948c35909"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "scenario_variation-03238584-fc0c-4447-b234-e6b690fb1cf2",
+          "testing_criteria_id": "scenario_variation-03238584-fc0c-4447-b234-e6b690fb1cf2"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "numerical_variation-b36de007-917c-4ff2-bdab-f97c5de5ddc4",
+          "testing_criteria_id": "numerical_variation-b36de007-917c-4ff2-bdab-f97c5de5ddc4"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "physics_correctness-67abe120-f88e-442d-93bd-62bdbf585267",
+          "testing_criteria_id": "physics_correctness-67abe120-f88e-442d-93bd-62bdbf585267"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "numeric_reasonableness-763ab5bd-309e-4f80-97a9-ed1185ad51f0",
+          "testing_criteria_id": "numeric_reasonableness-763ab5bd-309e-4f80-97a9-ed1185ad51f0"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "distractor_structure_preservation-12d84aeb-d2fe-4c1d-916d-2ead2bacbe9d",
+          "testing_criteria_id": "distractor_structure_preservation-12d84aeb-d2fe-4c1d-916d-2ead2bacbe9d"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "clerical_quality-994e7f4a-22f7-4b39-a967-af0d5982675b",
+          "testing_criteria_id": "clerical_quality-994e7f4a-22f7-4b39-a967-af0d5982675b"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "latex_syntax_quality-027a4317-8fb7-40f9-a6b7-a6e7f05960e8",
+          "testing_criteria_id": "latex_syntax_quality-027a4317-8fb7-40f9-a6b7-a6e7f05960e8"
+        },
+        {
+          "failed": 0,
+          "passed": 14,
+          "testing_criteria": "solvable_and_specified-46d9e2c0-0203-4754-bfd5-3f2e8e8675ee",
+          "testing_criteria_id": "solvable_and_specified-46d9e2c0-0203-4754-bfd5-3f2e8e8675ee"
+        }
+      ],
+      "report_url": "https://platform.openai.com/evaluations/eval_69bff90615a48191ae125f9b2a6dfd36?project_id=proj_MrguEQI1nR0F4FzLOPUnFyv7&run_id=evalrun_69bff9066ce88191bbe7b515764a318f",
+      "result_counts": {
+        "errored": 0,
+        "failed": 0,
+        "passed": 14,
+        "total": 14
+      },
+      "status": "completed",
+      "shared_with_openai": true
+    }
+  }
+}

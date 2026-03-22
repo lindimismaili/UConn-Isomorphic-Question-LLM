@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-03-22T10:17:19.649795",
+  "batch_id": "7d76ed74",
+  "prompt": "",
+  "output_folder": "2026_03_22_10_03_57",
+  "total_files": 4,
+  "completed_files": 4,
+  "failed_files": 0,
+  "entries": [
+    {
+      "name": "physics_1_set.pdf",
+      "relativePath": "physics_1_set.pdf",
+      "folderName": "physics_1_set",
+      "status": "completed",
+      "workflowId": "b6ea77f6",
+      "outputFolder": "2026_03_22_10_03_57/physics_1_set",
+      "error": "",
+      "currentStepIndex": 6,
+      "totalSteps": 6,
+      "currentAgentKey": "output",
+      "currentAgentName": "Output",
+      "stepLabel": "6/6"
+    },
+    {
+      "name": "physics_2_set.pdf",
+      "relativePath": "physics_2_set.pdf",
+      "folderName": "physics_2_set",
+      "status": "completed",
+      "workflowId": "f945ce33",
+      "outputFolder": "2026_03_22_10_03_57/physics_2_set",
+      "error": "",
+      "currentStepIndex": 6,
+      "totalSteps": 6,
+      "currentAgentKey": "output",
+      "currentAgentName": "Output",
+      "stepLabel": "6/6"
+    },
+    {
+      "name": "quantum_set.pdf",
+      "relativePath": "quantum_set.pdf",
+      "folderName": "quantum_set",
+      "status": "completed",
+      "workflowId": "b606ec02",
+      "outputFolder": "2026_03_22_10_03_57/quantum_set",
+      "error": "",
+      "currentStepIndex": 6,
+      "totalSteps": 6,
+      "currentAgentKey": "output",
+      "currentAgentName": "Output",
+      "stepLabel": "6/6"
+    },
+    {
+      "name": "short_set.pdf",
+      "relativePath": "short_set.pdf",
+      "folderName": "short_set",
+      "status": "completed",
+      "workflowId": "ad32182b",
+      "outputFolder": "2026_03_22_10_03_57/short_set",
+      "error": "",
+      "currentStepIndex": 6,
+      "totalSteps": 6,
+      "currentAgentKey": "output",
+      "currentAgentName": "Output",
+      "stepLabel": "6/6"
+    }
+  ]
+}
