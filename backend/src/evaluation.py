@@ -25,6 +25,7 @@ REPO_ROOT = THIS_DIR.parent
 DATA_DIR = REPO_ROOT / "data"
 RUBRIC_PATH = DATA_DIR / "rubric.json"
 LATEX_CRITERION_NAME = "latex_syntax_quality"
+PASSING_SCORE_THRESHOLD = 70.0
 
 
 DEFAULT_RUBRIC_CRITERIA: list[dict[str, str]] = [
@@ -348,6 +349,12 @@ def _compute_overall_score(
     return round(sum(numeric_scores) / len(numeric_scores), 2)
 
 
+def _resolve_score_status(overall_score: Optional[float]) -> str:
+    if not isinstance(overall_score, (int, float)):
+        return "incomplete"
+    return "passed" if float(overall_score) >= PASSING_SCORE_THRESHOLD else "failed"
+
+
 def _build_base_report(
     *,
     status: str,
@@ -367,6 +374,7 @@ def _build_base_report(
         "criterion_scores": {},
         "latex_document_check": latex_document_check,
         "overall_score": _compute_overall_score({}, latex_document_check),
+        "passing_score_threshold": PASSING_SCORE_THRESHOLD,
     }
     if reason:
         report["reason"] = reason
@@ -499,6 +507,8 @@ def run_openai_output_evaluation(
             criterion_scores, aggregation_notes = _aggregate_question_scores(output_items)
 
         overall_score = _compute_overall_score(criterion_scores, latex_document_check)
+        if report_status == "completed":
+            report_status = _resolve_score_status(overall_score)
         report = {
             "status": report_status,
             "created_at": _utc_timestamp(),
@@ -509,6 +519,7 @@ def run_openai_output_evaluation(
             "criterion_scores": criterion_scores,
             "latex_document_check": latex_document_check,
             "overall_score": overall_score,
+            "passing_score_threshold": PASSING_SCORE_THRESHOLD,
             "eval_data_file_id": eval_data_file.id,
             "eval_id": eval_obj.id,
             "run_id": current.id,
@@ -542,6 +553,7 @@ def run_openai_output_evaluation(
             "criterion_scores": {},
             "latex_document_check": latex_document_check,
             "overall_score": _compute_overall_score({}, latex_document_check),
+            "passing_score_threshold": PASSING_SCORE_THRESHOLD,
             "error": str(exc),
             "traceback": traceback.format_exc(),
         }
