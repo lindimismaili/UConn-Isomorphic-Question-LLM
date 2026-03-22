@@ -11,6 +11,7 @@
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
+npm install
 ```
 
 ## Start Web App
@@ -18,7 +19,6 @@ pip install -r backend/requirements.txt
 From repository root:
 
 ```bash
-npm install
 npm start
 ```
 
@@ -35,7 +35,6 @@ Optional flags:
 In two terminals:
 
 ```bash
-npm install
 npm run dev
 ```
 
