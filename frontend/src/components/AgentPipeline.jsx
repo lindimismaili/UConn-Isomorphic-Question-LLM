@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AgentCard from './AgentCard.jsx';
 
-// Fixed pipeline layout: two rows of 3
+// Fixed pipeline layout: three rows
 const ROW1 = ['setup', 'normalizer', 'extracter'];
 const ROW2 = ['verifier', 'generator', 'latex'];
+const ROW3 = ['evaluation'];
 const CONNECTIONS = [
   { id: 'setup-normalizer', from: 'setup', to: 'normalizer', type: 'horizontal' },
   { id: 'normalizer-extracter', from: 'normalizer', to: 'extracter', type: 'horizontal' },
   { id: 'extracter-verifier', from: 'extracter', to: 'verifier', type: 'turn' },
   { id: 'verifier-generator', from: 'verifier', to: 'generator', type: 'horizontal' },
   { id: 'generator-latex', from: 'generator', to: 'latex', type: 'horizontal' },
+  { id: 'latex-evaluation', from: 'latex', to: 'evaluation', type: 'turn' },
 ];
 
 function statusForLine(sourceStatus, previousStatus) {
@@ -143,6 +145,7 @@ export default function AgentPipeline({ agents, onCardClick }) {
       </svg>
       <AgentRow keys={ROW1} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
       <AgentRow keys={ROW2} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
+      <AgentRow keys={ROW3} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
     </div>
   );
 }

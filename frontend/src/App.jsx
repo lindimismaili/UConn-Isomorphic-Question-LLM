@@ -81,7 +81,17 @@ const INITIAL_AGENTS = {
     reasoningLevel: 'Unavailable',
     status: 'inactive',
     startTime: null, endTime: null, executionTime: null,
-    inputFrom: 'Generator', outputTo: 'User',
+    inputFrom: 'Generator', outputTo: 'Evaluation',
+    inputText: '', outputText: '',
+  },
+  evaluation: {
+    name: 'Evaluation',
+    description: 'Scores generated outputs and writes evaluation artifacts',
+    model: 'Workflow Runtime',
+    reasoningLevel: 'none',
+    status: 'inactive',
+    startTime: null, endTime: null, executionTime: null,
+    inputFrom: 'LaTeX Formatter', outputTo: 'User',
     inputText: '', outputText: '',
   },
 };
@@ -93,6 +103,7 @@ const NEXT_AGENT_BY_KEY = {
   extracter: 'verifier',
   verifier: 'generator',
   generator: 'latex',
+  latex: 'evaluation',
 };
 
 function makeLog(message, level) {

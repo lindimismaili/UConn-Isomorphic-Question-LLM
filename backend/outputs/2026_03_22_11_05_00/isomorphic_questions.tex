@@ -1,0 +1,177 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Isomorphic Questions}}\\[0.25em]
+{\Large Vectors and Kinematics}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A probe is located relative to a space station at the position vector \(\vec r = -8\hat i + 15\hat j\), where distances are measured in kilometers. Which of the following statements is correct?}{
+\Wrong{The distance between the probe and the space station is 23 km.}{This comes from adding the component magnitudes, \(8+15\), instead of finding the vector magnitude. Distance from the origin must be computed using \(|\vec r|=\sqrt{x^2+y^2}\), not by simple addition of components.}
+\Correct{The distance between the probe and the space station is 17 km.}{The probe's distance from the station is the magnitude of its position vector. Using \(|\vec r|=\sqrt{(-8)^2+15^2}=\sqrt{64+225}=\sqrt{289}=17\,\text{km}\), we find the correct distance is \(17\,\text{km}\).}
+\Wrong{The distance between the probe and the space station is 15 km.}{This uses only the \(y\)-component and ignores the horizontal displacement. A single component is not the same as the full distance from the origin.}
+\Wrong{The distance between the probe and the space station is 8 km.}{This uses only the \(x\)-component magnitude and neglects the \(y\)-component. That is a component-versus-magnitude error.}
+}{B}
+
+\QBlock{Q2}{The position of a particle moving along the \(y\)-axis is given by \(\vec s(t) = \big((0.9\,\text{m/s}^3)t^3 + (2.4\,\text{m/s}^2)t^2\big)\hat j\). Which of the following statements is correct?}{
+\Wrong{This is motion with constant acceleration.}{Taking the second derivative of position gives an acceleration that depends on \(t\). The presence of a \(t^3\) term in position means the acceleration is not constant.}
+\Correct{The magnitude of the acceleration at \(t=0\) is \(4.8\,\text{m/s}^2\).}{Differentiate twice: \(\vec v(t)=\big(2.7t^2+4.8t\big)\hat j\) and \(\vec a(t)=\big(5.4t+4.8\big)\hat j\). Evaluating at \(t=0\) gives \(|\vec a(0)|=4.8\,\text{m/s}^2\), so this statement is correct.}
+\Wrong{The magnitude of the acceleration is \(2.4\,\text{m/s}^2\).}{The coefficient \(2.4\) belongs to the \(t^2\) term in position, not directly to acceleration. You must take the second derivative before identifying the acceleration.}
+\Wrong{The magnitude of the acceleration at \(t=0\) is \(0\,\text{m/s}^2\).}{This would only be true if the constant term in \(\vec a(t)\) were zero. After differentiating twice, the acceleration contains the nonzero constant term \(4.8\).}
+}{B}
+
+\QBlock{Q3}{An object takes \(4.0\,\text{s}\) to move from position \(\vec r_A = 1\hat i - 7\hat j\) to position \(\vec r_B = -5\hat i + 2\hat j\), where position is measured in meters. Which of the following statements is correct?}{
+\Wrong{The total distance traveled is \(10.8\,\text{m}\).}{\(10.8\,\text{m}\) is the magnitude of the displacement, found from \(|\Delta \vec r|=\sqrt{(-6)^2+9^2}=\sqrt{117}\approx 10.8\,\text{m}\). The actual distance traveled depends on the path taken, which is not given.}
+\Wrong{The speed at \(t=0\) must be \(2.7\,\text{m/s}\).}{Dividing displacement magnitude by elapsed time gives information related to average motion, not the instantaneous speed at the start. Instantaneous speed at \(t=0\) cannot be determined from only initial and final positions plus total time.}
+\Correct{None of the above is correct.}{The displacement is \(\Delta \vec r = (-5-1)\hat i + (2-(-7))\hat j = -6\hat i + 9\hat j\), with magnitude \(|\Delta \vec r|=\sqrt{117}\approx 10.8\,\text{m}\). However, that value is not necessarily the path length, and neither the initial speed nor the initial acceleration is uniquely determined from the information provided, so the other statements are not correct.}
+\Wrong{The acceleration at \(t=0\) must be \(0.68\,\text{m/s}^2\).}{Acceleration requires more detailed information about how velocity changes with time. Initial and final positions together with elapsed time are insufficient to determine the acceleration at a particular instant.}
+}{C}
+
+\end{document}

@@ -1,0 +1,283 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Quantum Mechanics Questions}}\\[0.25em]
+{\Large Wavefunctions, Probability, Stationary States, and the Infinite Square Well}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\MPBlock{Q1}{A particle of mass $m$ has the wave function
+\[
+\Phi(x,t)=B\,e^{-\beta\left(\frac{m x^2}{\hbar}+2it\right)},
+\]
+where $\beta>0$ is a real constant.}{%
+\OEPart{a}{Find the normalization constant $B$.}{Normalize the state with
+\[
+\int_{-\infty}^{\infty}|\Phi(x,t)|^2\,dx=1.
+\]
+Since
+\[
+|\Phi|^2=|B|^2 e^{-2\beta m x^2/\hbar},
+\]
+we get
+\[
+1=|B|^2\int_{-\infty}^{\infty} e^{-2\beta m x^2/\hbar}\,dx=|B|^2\sqrt{\frac{\pi\hbar}{2\beta m}},
+\]
+so
+\[
+B=\left(\frac{2\beta m}{\pi\hbar}\right)^{1/4}
+\]
+if we choose the positive real normalization constant. The factor $e^{-2i\beta t}$ is a pure phase and does not affect normalization.}
+\OEPart{b}{What integral should be used to compute $\langle x\rangle$? Evaluate it.}{Use
+\[
+\langle x\rangle=\int_{-\infty}^{\infty}\Phi^*(x,t)\,x\,\Phi(x,t)\,dx=\int_{-\infty}^{\infty}x\,|\Phi(x,t)|^2\,dx.
+\]
+Here $|\Phi(x,t)|^2=|B|^2 e^{-2\beta m x^2/\hbar}$ is even in $x$, so the integrand $x|\Phi|^2$ is odd. Therefore the integral over $(-\infty,\infty)$ vanishes, and
+\[
+\langle x\rangle=0.
+\]}
+}
+
+\OEBlock{Q2}{At time $t=0$, a particle is described by
+\[
+\Psi(x,0)=\begin{cases}
+D\,\dfrac{x}{c}, & 0\le x\le c,\\[6pt]
+D\,\dfrac{d-x}{d-c}, & c\le x\le d,\\[6pt]
+0, & \text{otherwise,}
+\end{cases}
+\]
+where $0<c<d$ and $D$ is a normalization constant. What is the probability of finding the particle in the region $x<c$?}{The desired probability is
+\[
+P(x<c)=\int_0^c\left|D\frac{x}{c}\right|^2 dx=\frac{D^2 c}{3}.
+\]
+Normalization gives
+\[
+1=\int_0^c\left|D\frac{x}{c}\right|^2dx+\int_c^d\left|D\frac{d-x}{d-c}\right|^2dx=\frac{D^2 c}{3}+\frac{D^2(d-c)}{3}=\frac{D^2 d}{3},
+\]
+so $D^2=3/d$. Therefore
+\[
+P(x<c)=\frac{D^2 c}{3}=\frac{c}{d}.
+\]}
+
+\OEBlock{Q3}{A quantum state is written as
+\[
+\Phi_n(x,t)=\varphi_n(x)e^{-i\mathcal{E}_n t/\hbar}.
+\]
+Explain why this represents a stationary state by discussing its probability density.}{This is a stationary state because the time dependence appears only as the phase factor $e^{-i\mathcal{E}_n t/\hbar}$. Its probability density is
+\[
+|\Phi_n(x,t)|^2=\Phi_n^*(x,t)\Phi_n(x,t)=|\varphi_n(x)|^2 e^{i\mathcal{E}_n t/\hbar}e^{-i\mathcal{E}_n t/\hbar}=|\varphi_n(x)|^2,
+\]
+which does not depend on time. Since all measurable position probabilities remain unchanged, the state is stationary.}
+
+\MPBlock{Q4}{Consider the general expansion of a normalized quantum state in an energy eigenbasis,
+\[
+\Psi(x,t)=\sum_{k=1}^{\infty} a_k\,u_k(x)e^{-i\varepsilon_k t/\hbar}.
+\]
+Separately, consider a particle of mass $M$ in a one-dimensional rigid box of width $L$ with potential
+\[
+V(x)=\begin{cases}0,&0\le x\le L,\\ \infty,&\text{otherwise.}\end{cases}
+\]
+For the box problem, use $q^2=2ME/\hbar^2$.}{%
+\OEPart{a}{What is the physical meaning of $|a_k|^2$?}{In the expansion
+\[
+\Psi(x,t)=\sum_k a_k u_k(x)e^{-i\varepsilon_k t/\hbar},
+\]
+the quantity $|a_k|^2$ is the probability of obtaining the energy eigenvalue $\varepsilon_k$ when the energy is measured. It is also the fractional weight of the $k$th energy eigenstate in the normalized state.}
+\OEPart{b}{Write the expectation value of the energy, $\langle H\rangle$, in terms of $|a_k|^2$.}{Because the states $u_k(x)$ are energy eigenstates of $\hat H$, the expectation value is the probability-weighted average of the allowed energies:
+\[
+\langle H\rangle=\sum_{k=1}^{\infty}|a_k|^2\varepsilon_k.
+\]
+This follows directly from expanding the state in the energy eigenbasis.}
+\OEPart{a}{Using $q^2=2ME/\hbar^2$, write the time-independent Schr\"odinger equation inside the box and give its general solution.}{Inside the box, $V(x)=0$, so the time-independent Schr\"odinger equation becomes
+\[
+-\frac{\hbar^2}{2M}\frac{d^2\psi}{dx^2}=E\psi,
+\]
+or equivalently
+\[
+\frac{d^2\psi}{dx^2}+q^2\psi=0.
+\]
+Its general solution for $0\le x\le L$ is
+\[
+\psi(x)=A\sin(qx)+B\cos(qx),
+\]
+while outside the box the wavefunction is zero because the potential is infinite.}
+\OEPart{b}{Use the boundary conditions to determine the allowed energies.}{The infinite walls require
+\[
+\psi(0)=0\quad\text{and}\quad \psi(L)=0.
+\]
+From $\psi(0)=0$ we obtain $B=0$, and then $\psi(L)=0$ gives
+\[
+\sin(qL)=0\Rightarrow qL=n\pi,\qquad n=1,2,3,\dots
+\]
+Hence
+\[
+q_n=\frac{n\pi}{L},\qquad E_n=\frac{\hbar^2 q_n^2}{2M}=\frac{n^2\pi^2\hbar^2}{2ML^2}.
+\]}
+\OEPart{c}{Find the normalized stationary-state wavefunctions.}{Using the allowed values of $q_n$, the eigenfunctions are proportional to $\sin(n\pi x/L)$. Imposing
+\[
+\int_0^L |\psi_n(x)|^2\,dx=1
+\]
+gives the normalization constant $\sqrt{2/L}$, so
+\[
+\psi_n(x)=\sqrt{\frac{2}{L}}\sin\left(\frac{n\pi x}{L}\right),\qquad 0\le x\le L,
+\]
+and $\psi_n(x)=0$ outside the box.}
+\OEPart{d}{Show that $\psi_n(x)$ and $\psi_m(x)$ are orthogonal when $n\ne m$.}{For $n\ne m$,
+\[
+\int_0^L \psi_n(x)\psi_m(x)\,dx=\frac{2}{L}\int_0^L \sin\left(\frac{n\pi x}{L}\right)\sin\left(\frac{m\pi x}{L}\right)dx.
+\]
+The standard orthogonality relation for sine functions on $[0,L]$ makes this integral zero whenever $n\ne m$. Therefore
+\[
+\int_0^L \psi_n(x)\psi_m(x)\,dx=0,
+\]
+so the eigenfunctions are orthogonal.}
+}
+
+\end{document}

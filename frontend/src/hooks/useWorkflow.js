@@ -28,6 +28,7 @@ const AGENT_LABELS = {
   verifier: 'Verifier',
   generator: 'Generator',
   latex: 'LaTeX',
+  evaluation: 'Evaluation',
 };
 
 const AGENT_COUNT_LOGS = {
@@ -130,7 +131,7 @@ export function useWorkflow(dispatch) {
       dispatch({ type: 'LOG', message: `Workflow started (${workflowId})`, level: 'info' });
 
       // Step 3: Poll for status
-      const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex'];
+      const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation'];
 
       while (true) {
         if (signal.aborted) return;
@@ -200,6 +201,7 @@ export function useWorkflow(dispatch) {
                 workflowId,
                 outputFolder: result.outputFolder,
                 files: result.files || [],
+                workflowResult: result.result || null,
                 elapsedTimeSeconds: totalElapsedSeconds,
               },
               elapsedTimeSeconds: totalElapsedSeconds,

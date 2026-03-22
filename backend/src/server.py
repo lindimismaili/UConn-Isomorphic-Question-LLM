@@ -10,6 +10,7 @@ Provides REST API endpoints for:
 
 import asyncio
 import json
+import mimetypes
 import os
 import re
 import shutil
@@ -49,6 +50,7 @@ try:
         GeneratorOutput,
         LaTeXOutput,
         NormalizerOutput,
+        VerifierOutput,
         WorkflowResult,
     )
     from .helpers import (
@@ -67,6 +69,7 @@ except ImportError:
         GeneratorOutput,
         LaTeXOutput,
         NormalizerOutput,
+        VerifierOutput,
         WorkflowResult,
     )
     from helpers import (
@@ -365,6 +368,7 @@ def _new_workflow_record() -> dict[str, Any]:
             "verifier": {"status": "inactive", "data": {}},
             "generator": {"status": "inactive", "data": {}},
             "latex": {"status": "inactive", "data": {}},
+            "evaluation": {"status": "inactive", "data": {}},
             "output": {"status": "inactive", "data": {}},
         },
         "files": [],
@@ -418,6 +422,7 @@ CREATE_DATA_STEP_SEQUENCE: list[tuple[str, str]] = [
     ("verifier", "Verifier"),
     ("generator", "Generator"),
     ("latex", "LaTeX"),
+    ("evaluation", "Evaluation"),
     ("output", "Output"),
 ]
 
@@ -812,7 +817,7 @@ async def get_workflow_result(workflow_id: str):
 
 
 @app.get("/api/download/{workflow_id}/{filename}")
-async def download_file(workflow_id: str, filename: str):
+async def download_file(workflow_id: str, filename: str, inline: bool = False):
     """Download a file from a completed workflow."""
     _prune_workflows()
     _prune_batch_jobs()
@@ -836,10 +841,14 @@ async def download_file(workflow_id: str, filename: str):
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     
+    media_type, _ = mimetypes.guess_type(str(file_path))
+    content_disposition_type = "inline" if inline and media_type == "application/pdf" else "attachment"
+
     return FileResponse(
         path=file_path,
         filename=safe_filename,
-        media_type="application/octet-stream",
+        media_type=media_type or "application/octet-stream",
+        content_disposition_type=content_disposition_type,
     )
 
 
@@ -1460,7 +1469,7 @@ async def _execute_workflow(
             }
             latex_input = build_json_message(latex_input_payload)
             workflow["agents"]["latex"]["data"]["receivedFrom"] = "generator"
-            workflow["agents"]["latex"]["data"]["sentTo"] = "user"
+            workflow["agents"]["latex"]["data"]["sentTo"] = "evaluation"
             workflow["agents"]["latex"]["data"]["input"] = latex_input_payload
             _touch_workflow(workflow)
 
@@ -1475,6 +1484,8 @@ async def _execute_workflow(
             workflow["agents"]["latex"]["data"]["endTime"] = datetime.now().isoformat()
             workflow["agents"]["latex"]["data"]["executionTime"] = elapsed
             workflow["agents"]["latex"]["data"]["output"] = latex_output.model_dump()
+            workflow["agents"]["evaluation"]["status"] = "thinking"
+            workflow["agents"]["evaluation"]["data"]["startTime"] = datetime.now().isoformat()
             _touch_workflow(workflow)
 
             latex_filename = latex_output.filename or "isomorphic_questions.tex"
@@ -1491,7 +1502,7 @@ async def _execute_workflow(
                     "agent_name": "LaTeX Formatter",
                     "execution_time_seconds": elapsed,
                     "received_from_node": "generator",
-                    "sent_to_node": "user",
+                    "sent_to_node": "evaluation",
                     "input_messages": latex_input,
                     "filename": latex_filename,
                     "pdf_filename": pdf_filename,
@@ -1499,15 +1510,13 @@ async def _execute_workflow(
                 }
             )
 
-            output_stage_start = time.time()
-            workflow["agents"]["output"]["status"] = "thinking"
-            workflow["agents"]["output"]["data"]["startTime"] = datetime.now().isoformat()
-            workflow["agents"]["output"]["data"]["receivedFrom"] = "latex"
-            workflow["agents"]["output"]["data"]["sentTo"] = "user"
-            workflow["agents"]["output"]["data"]["input"] = (
-                f"Finalize local output files in outputs/{output_folder_label}"
+            evaluation_stage_start = time.time()
+            workflow["agents"]["evaluation"]["data"]["receivedFrom"] = "latex"
+            workflow["agents"]["evaluation"]["data"]["sentTo"] = "output"
+            workflow["agents"]["evaluation"]["data"]["input"] = (
+                f"Evaluate generated questions for workflow {workflow_id}"
             )
-            workflow["agents"]["output"]["data"]["output"] = "Writing local artifacts..."
+            workflow["agents"]["evaluation"]["data"]["output"] = "Running evaluation..."
             _touch_workflow(workflow)
 
             evaluation_report = await asyncio.to_thread(
@@ -1521,6 +1530,34 @@ async def _execute_workflow(
                 outputs_dir=outputs_dir,
                 latex_path=latex_path,
             )
+            evaluation_elapsed = time.time() - evaluation_stage_start
+
+            workflow["agents"]["evaluation"]["status"] = "completed"
+            workflow["agents"]["evaluation"]["data"]["endTime"] = datetime.now().isoformat()
+            workflow["agents"]["evaluation"]["data"]["executionTime"] = evaluation_elapsed
+            workflow["agents"]["evaluation"]["data"]["output"] = evaluation_report
+            workflow["agents"]["output"]["status"] = "thinking"
+            workflow["agents"]["output"]["data"]["startTime"] = datetime.now().isoformat()
+            workflow["agents"]["output"]["data"]["receivedFrom"] = "evaluation"
+            workflow["agents"]["output"]["data"]["sentTo"] = "user"
+            workflow["agents"]["output"]["data"]["input"] = (
+                f"Finalize local output files in outputs/{output_folder_label}"
+            )
+            workflow["agents"]["output"]["data"]["output"] = "Writing local artifacts..."
+            _touch_workflow(workflow)
+
+            agent_outputs.append(
+                {
+                    "agent_name": "Evaluation",
+                    "execution_time_seconds": evaluation_elapsed,
+                    "received_from_node": "latex",
+                    "sent_to_node": "output",
+                    "input_summary": f"Evaluate generated output artifacts for workflow {workflow_id}",
+                    "output": evaluation_report,
+                }
+            )
+
+            output_stage_start = time.time()
 
             final_result = WorkflowResult(
                 config=normalizer_output,
@@ -1555,7 +1592,7 @@ async def _execute_workflow(
             output_payload = {
                 "agent_name": "Output",
                 "execution_time_seconds": None,
-                "received_from_node": "latex",
+                "received_from_node": "evaluation",
                 "sent_to_node": "user",
                 "input_summary": f"Finalize output files for workflow {workflow_id}",
                 "output": {
