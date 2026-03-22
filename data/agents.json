@@ -2,16 +2,16 @@
   "normalizer": {
     "name": "Normalizer",
     "description": "Parses user request into configuration",
-    "model": "gpt-5.2",
+    "model": "gpt-5.4-mini",
     "reasoning": "none",
     "inputFrom": "User",
     "outputTo": "Extracter",
-    "useCodeInterpreter": false
+    "useCodeInterpreter": true
   },
   "extracter": {
     "name": "Extracter",
     "description": "Reads files and extracts questions",
-    "model": "gpt-5.2",
+    "model": "gpt-5.4-mini",
     "reasoning": "none",
     "inputFrom": "Normalizer",
     "outputTo": "Verifier",
@@ -20,8 +20,8 @@
   "verifier": {
     "name": "Verifier",
     "description": "Validates answers and adds explanations",
-    "model": "gpt-5.2",
-    "reasoning": "low",
+    "model": "gpt-5.4",
+    "reasoning": "medium",
     "inputFrom": "Extracter",
     "outputTo": "Generator",
     "useCodeInterpreter": true
@@ -29,7 +29,7 @@
   "generator": {
     "name": "Generator",
     "description": "Creates isomorphic questions",
-    "model": "gpt-5.2",
+    "model": "gpt-5.4",
     "reasoning": "medium",
     "inputFrom": "Verifier",
     "outputTo": "LaTeX Formatter",
@@ -38,10 +38,10 @@
   "latex": {
     "name": "LaTeX Formatter",
     "description": "Converts questions to LaTeX format",
-    "model": "gpt-5.2",
+    "model": "gpt-5.4",
     "reasoning": "medium",
     "inputFrom": "Generator",
     "outputTo": "User",
-    "useCodeInterpreter": false
+    "useCodeInterpreter": true
   }
 }

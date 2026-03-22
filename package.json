@@ -2,8 +2,8 @@
   "name": "uconn-isomorphicquestionllm",
   "private": true,
   "scripts": {
-    "backend:start": "node scripts/backend.mjs",
-    "backend:dev": "node scripts/backend.mjs -- --reload",
+    "backend:start": "\"C:\\Users\\lindi\\venvs\\main\\Scripts\\python.exe\" src/run.py",
+    "backend:dev": "\"C:\\Users\\lindi\\venvs\\main\\Scripts\\python.exe\" src/run.py --reload",
     "frontend:dev": "npm -C frontend run dev:ui",
     "frontend:build": "npm -C frontend run build",
     "dev": "concurrently -k \"npm:backend:dev\" \"npm:frontend:dev\"",
@@ -15,4 +15,3 @@
     "concurrently": "^9.2.0"
   }
 }
-

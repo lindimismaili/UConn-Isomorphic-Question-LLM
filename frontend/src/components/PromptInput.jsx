@@ -12,6 +12,8 @@ export default function PromptInput({
   onClearAgents,
   onShowFiles,
   onShowTestFiles,
+  onCreateData,
+  isCreateDataRunning,
 }) {
   const [prompt, setPrompt] = useState('');
   const [resetFeedback, setResetFeedback] = useState(false);
@@ -136,6 +138,15 @@ export default function PromptInput({
             >
               <IconFile className="btn-icon" />
               <span className="btn-label">Test Files</span>
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={() => onCreateData(prompt)}
+              disabled={isRunning || serviceInactive || isCreateDataRunning}
+            >
+              <IconList className="btn-icon" />
+              <span className="btn-label">{isCreateDataRunning ? 'Creating Data...' : 'Create Data'}</span>
             </button>
 
             <div className="upload-group">

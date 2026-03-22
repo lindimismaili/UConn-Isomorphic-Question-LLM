@@ -9,6 +9,7 @@ import FailureSection from './components/FailureSection.jsx';
 
 import FilesModal from './components/modals/FilesModal.jsx';
 import TestFilesModal from './components/modals/TestFilesModal.jsx';
+import CreateDataModal from './components/modals/CreateDataModal.jsx';
 import AgentDetailModal from './components/modals/AgentDetailModal.jsx';
 import SetupModal from './components/modals/SetupModal.jsx';
 import HelpModal from './components/modals/HelpModal.jsx';
@@ -16,6 +17,7 @@ import SkillsModal from './components/modals/SkillsModal.jsx';
 
 import { useWorkflow } from './hooks/useWorkflow.js';
 import { useAgents } from './hooks/useAgents.js';
+import { useCreateData } from './hooks/useCreateData.js';
 
 // =============================================================================
 // Initial State
@@ -341,6 +343,7 @@ export default function App() {
   });
 
   const { run: runWorkflow, abort: abortWorkflow } = useWorkflow(dispatch);
+  const { state: createDataState, start: startCreateData } = useCreateData();
   useAgents(dispatch);
 
   useEffect(() => {
@@ -416,6 +419,13 @@ export default function App() {
 
   const closeModal = () => dispatch({ type: 'CLOSE_MODAL' });
 
+  const handleCreateData = (prompt) => {
+    dispatch({ type: 'OPEN_MODAL', modal: 'create-data' });
+    if (!createDataState.isRunning && !createDataState.isStarting) {
+      startCreateData(prompt);
+    }
+  };
+
   return (
     <>
       {serviceInactive && (
@@ -449,6 +459,8 @@ export default function App() {
           onClearAgents={handleClearAgents}
           onShowFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'files' })}
           onShowTestFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'test-files' })}
+          onCreateData={handleCreateData}
+          isCreateDataRunning={createDataState.isRunning || createDataState.isStarting}
         />
 
         {state.pipelineVisible && (
@@ -488,6 +500,11 @@ export default function App() {
         files={state.files}
         dispatch={dispatch}
         isRunning={state.isRunning}
+      />
+      <CreateDataModal
+        isOpen={state.activeModal === 'create-data'}
+        onClose={closeModal}
+        createData={createDataState}
       />
       <AgentDetailModal
         isOpen={state.activeModal === 'agent'}
