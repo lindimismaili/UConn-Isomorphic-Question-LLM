@@ -28,7 +28,7 @@ cd /var/www/uconn
 ```bash
 cd /var/www/uconn
 python3 -m venv .venv
-./.venv/bin/pip install -r requirements.txt
+./.venv/bin/pip install -r backend/requirements.txt
 ```
 
 ## 4) Configure env vars (OpenAI key)

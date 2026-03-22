@@ -1,0 +1,408 @@
+{
+  "config": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": "No explicit generation instructions provided in prompt; a file named \"short_set.pdf\" was referenced but its contents were not provided here."
+  },
+  "source_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "The raven is sent from the Castle Black, which is at the origin, observing the white\nwalkers at the coordinates 𝑟⃗ = 3𝑖̂+6𝑗̂ at the beginning of season 4, where length\n4\nunits are in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kiolofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\vec{r} = 3\\hat{\\imath}+6\\hat{\\jmath} at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kiolofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "If the displacement of an object is given by the function 𝑠⃗ = ((1.3𝑚/𝑠3)𝑡3 +\n(2.7𝑚/𝑠2)𝑡2)𝑖̂, which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0s is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\vec{s} = ((1.3m/s^3)t^3 + (2.7m/s^2)t^2)\\hat{\\imath}, which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0s is 5.4 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "An object takes 3 second to move from position A (𝑟⃗ = −4.0𝑖̂+10𝑗)̂ to position B\n𝐴\n(𝑟⃗ = 2.0𝑖̂+5.0𝑗)̂ , where length units are in meters. Which of the following\n𝐵\nstatements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\vec{r} = -4.0\\hat{\\imath}+10\\hat{\\jmath}) to position B (\\vec{r} = 2.0\\hat{\\imath}+5.0\\hat{\\jmath}) , where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    }
+  ],
+  "verified_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "The raven is sent from the Castle Black, which is at the origin, observing the white\nwalkers at the coordinates 𝑟⃗ = 3𝑖̂+6𝑗̂ at the beginning of season 4, where length\n4\nunits are in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kiolofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\vec{r} = 3\\hat{\\imath}+6\\hat{\\jmath} at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": "This incorrectly treats the distance as the simple sum of components (3+6) instead of using the Euclidean distance formula."
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": "This confuses one coordinate component (the y-component is 6) with the actual distance from the origin."
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kiolofurlongs.",
+          "is_correct": false,
+          "explanation": "This confuses one coordinate component (the x-component is 3) with the actual distance from the origin."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": true,
+          "explanation": "The distance from the origin to \\(\\vec r=3\\hat\\imath+6\\hat\\jmath\\) is found by \\(r=\\sqrt{x^2+y^2}=\\sqrt{3^2+6^2}=\\sqrt{45}\\approx 6.71\\) kilofurlongs. Since 6.71 is not equal to 9, 6, or 3, none of A–C is correct."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "If the displacement of an object is given by the function 𝑠⃗ = ((1.3𝑚/𝑠3)𝑡3 +\n(2.7𝑚/𝑠2)𝑡2)𝑖̂, which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0s is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\vec{s} = ((1.3m/s^3)t^3 + (2.7m/s^2)t^2)\\hat{\\imath}, which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": "Differentiating shows the acceleration depends on time, so it is not constant-acceleration motion."
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s^2",
+          "is_correct": false,
+          "explanation": "2.7 m/s^2 is a coefficient in the displacement term, not the (time-dependent) acceleration value."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s^2",
+          "is_correct": false,
+          "explanation": "After differentiating twice, the acceleration has a nonzero constant term, so \\(a(0)\\neq 0\\)."
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0s is 5.4 m/s^2",
+          "is_correct": true,
+          "explanation": "Velocity is \\(\\vec v=\\frac{d\\vec s}{dt}=(3\\cdot 1.3\\,t^2+2\\cdot 2.7\\,t)\\hat\\imath=(3.9t^2+5.4t)\\hat\\imath\\). Acceleration is \\(\\vec a=\\frac{d\\vec v}{dt}=(7.8t+5.4)\\hat\\imath\\), so at \\(t=0\\), \\(|\\vec a|=5.4\\,\\text{m/s}^2\\)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "An object takes 3 second to move from position A (𝑟⃗ = −4.0𝑖̂+10𝑗)̂ to position B\n𝐴\n(𝑟⃗ = 2.0𝑖̂+5.0𝑗)̂ , where length units are in meters. Which of the following\n𝐵\nstatements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\vec{r} = -4.0\\hat{\\imath}+10\\hat{\\jmath}) to position B (\\vec{r} = 2.0\\hat{\\imath}+5.0\\hat{\\jmath}) , where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": true,
+          "explanation": "The displacement from A to B is \\(\\Delta \\vec r = (2-(-4))\\hat\\imath + (5-10)\\hat\\jmath = 6\\hat\\imath-5\\hat\\jmath\\). Its magnitude is \\(|\\Delta \\vec r|=\\sqrt{6^2+(-5)^2}=\\sqrt{61}\\approx 7.81\\,\\text{m}\\), which rounds to 7.8 m."
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": "Knowing only initial and final positions and the travel time does not uniquely determine the initial speed; many motions could connect the points in 3 s."
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s^2",
+          "is_correct": false,
+          "explanation": "The acceleration at \\(t=0\\) cannot be determined from just endpoint positions and elapsed time without additional kinematic information (e.g., constant acceleration plus velocity data)."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "Option A is correct because the straight-line separation between the two position vectors is \\(\\sqrt{61}\\approx 7.8\\,\\text{m}\\)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    }
+  ],
+  "generated_questions": [
+    {
+      "id": 1,
+      "source_id": "1",
+      "stem": "A tracking station is located at the origin. A weather balloon is observed at position \\(\\vec r = 8\\hat{\\imath}+15\\hat{\\jmath}\\), where distances are measured in kilometers. Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the balloon and the station is 23 km.",
+          "is_correct": false,
+          "explanation": "This adds components (\\(8+15\\)) as if distance in 2D were the Manhattan distance, instead of using \\(\\sqrt{x^2+y^2}\\)."
+        },
+        {
+          "key": "B",
+          "text": "The distance between the balloon and the station is 17 km.",
+          "is_correct": true,
+          "explanation": "The distance from the origin to \\((x,y)\\) is the magnitude of the position vector: \\(r=\\|\\vec r\\|=\\sqrt{x^2+y^2}\\). Here \\(r=\\sqrt{8^2+15^2}=\\sqrt{64+225}=\\sqrt{289}=17\\,\\text{km}\\)."
+        },
+        {
+          "key": "C",
+          "text": "The distance between the balloon and the station is 15 km.",
+          "is_correct": false,
+          "explanation": "This confuses the \\(y\\)-component (15 km) with the total distance from the origin."
+        },
+        {
+          "key": "D",
+          "text": "The distance between the balloon and the station is 8 km.",
+          "is_correct": false,
+          "explanation": "This confuses the \\(x\\)-component (8 km) with the total distance from the origin."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "vectors",
+        "magnitude",
+        "2D distance"
+      ],
+      "generation_notes": "Isomorphic to computing the magnitude of a 2D position vector from the origin; numbers changed to (8,15) so the correct distance is not a trivial small decimal. Distractors target common mistakes: adding components or mistaking a component for the magnitude."
+    },
+    {
+      "id": 2,
+      "source_id": "2",
+      "stem": "If the displacement of an object along the \\(x\\)-axis is given by \\(\\vec s(t)=\\big((0.60\\,\\text{m/s}^3)t^3+(5.5\\,\\text{m/s}^2)t^2\\big)\\hat{\\imath}\\), which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant-acceleration motion.",
+          "is_correct": false,
+          "explanation": "Because \\(s(t)\\) contains a \\(t^3\\) term, differentiating twice gives an acceleration that depends on \\(t\\), so it is not constant."
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is \\(5.5\\,\\text{m/s}^2\\).",
+          "is_correct": false,
+          "explanation": "\\(5.5\\,\\text{m/s}^2\\) is a coefficient in the displacement function, not the acceleration itself; you must differentiate twice to find \\(a(t)\\)."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at \\(t=0\\) is \\(0\\,\\text{m/s}^2\\).",
+          "is_correct": false,
+          "explanation": "Differentiating twice leaves a nonzero constant term in \\(a(t)\\), so \\(a(0)\\neq 0\\)."
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at \\(t=0\\) is \\(11.0\\,\\text{m/s}^2\\).",
+          "is_correct": true,
+          "explanation": "Differentiate: \\(\\vec v(t)=\\frac{d\\vec s}{dt}=(3\\cdot 0.60\\,t^2+2\\cdot 5.5\\,t)\\hat{\\imath}=(1.8t^2+11t)\\hat{\\imath}\\). Then \\(\\vec a(t)=\\frac{d\\vec v}{dt}=(3.6t+11)\\hat{\\imath}\\), so at \\(t=0\\), \\(|\\vec a(0)|=11.0\\,\\text{m/s}^2\\)."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "derivatives",
+        "acceleration vs time"
+      ],
+      "generation_notes": "Isomorphic to finding acceleration from a polynomial position function by differentiating twice and evaluating at t=0. Coefficients were changed to yield a distinct nonzero a(0). Distractors reflect common errors: assuming constant acceleration, reading coefficients as acceleration, or assuming a(0)=0."
+    },
+    {
+      "id": 3,
+      "source_id": "3",
+      "stem": "An object takes 4.0 s to move from position A \\(\\big(\\vec r_A=-3.0\\hat{\\imath}-8.0\\hat{\\jmath}\\big)\\) to position B \\(\\big(\\vec r_B=9.0\\hat{\\imath}+5.0\\hat{\\jmath}\\big)\\), where length units are in meters. Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The straight-line distance between A and B is about 17.7 m.",
+          "is_correct": true,
+          "explanation": "The displacement is \\(\\Delta\\vec r=\\vec r_B-\\vec r_A=(9-(-3))\\hat{\\imath}+(5-(-8))\\hat{\\jmath}=12\\hat{\\imath}+13\\hat{\\jmath}\\). Its magnitude is \\(|\\Delta\\vec r|=\\sqrt{12^2+13^2}=\\sqrt{313}\\approx 17.69\\,\\text{m}\\approx 17.7\\,\\text{m}\\)."
+        },
+        {
+          "key": "B",
+          "text": "The speed at \\(t=0\\) must be \\(4.4\\,\\text{m/s}\\).",
+          "is_correct": false,
+          "explanation": "Dividing displacement magnitude by time gives an average speed (and even that assumes straight-line motion), but the initial speed is not determined by endpoints and total time alone."
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at \\(t=0\\) must be \\(2.2\\,\\text{m/s}^2\\).",
+          "is_correct": false,
+          "explanation": "You cannot determine acceleration (or its value at \\(t=0\\)) uniquely from only initial/final positions and elapsed time without additional constraints (e.g., constant acceleration plus velocity information)."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "Option A is correct because the straight-line separation is the magnitude of \\(\\Delta\\vec r\\), which is \\(\\sqrt{313}\\approx 17.7\\,\\text{m}\\)."
+        }
+      ],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "displacement",
+        "vector subtraction",
+        "distance between points"
+      ],
+      "generation_notes": "Isomorphic to computing the magnitude of the displacement between two 2D position vectors; time is included to tempt invalid inferences about initial speed/acceleration. Numbers changed substantially; distractors target the misconceptions that average speed fixes initial speed and that acceleration can be inferred from endpoints alone."
+    }
+  ],
+  "latex_file": "isomorphic_questions.tex",
+  "evaluation": {
+    "status": "failed",
+    "created_at": "2026-02-23T06:18:37.064151Z",
+    "rubric": [
+      {
+        "name": "preserve_physical_content",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the original physical content?"
+      },
+      {
+        "name": "scenario_variation",
+        "category": "Variation",
+        "question": "Does the generated question use the scenario different from the original one?"
+      },
+      {
+        "name": "numerical_variation",
+        "category": "Variation",
+        "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+      },
+      {
+        "name": "physics_correctness",
+        "category": "Quality control",
+        "question": "Is the generated question free of physics errors or misconceptions?"
+      },
+      {
+        "name": "numeric_reasonableness",
+        "category": "Quality control",
+        "question": "Do all numerical values have physically reasonable magnitudes and units?"
+      },
+      {
+        "name": "distractor_structure_preservation",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the logical structure of the distractors?"
+      },
+      {
+        "name": "clerical_quality",
+        "category": "Quality control",
+        "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+      },
+      {
+        "name": "latex_syntax_quality",
+        "category": "Quality control",
+        "question": "Is the generated LaTeX code free of syntax or compilation errors?"
+      },
+      {
+        "name": "solvable_and_specified",
+        "category": "Quality control",
+        "question": "Is the generated question fully specified and solvable as written?"
+      }
+    ],
+    "items_evaluated": 3,
+    "grader_model": "o4-mini",
+    "dataset_file": "evaluation_dataset.jsonl",
+    "error": "Error code: 400 - {'error': {'message': \"Missing required parameter: 'data_source.model' or 'data_source.input_messages'.\", 'type': 'invalid_request_error', 'param': None, 'code': None}}",
+    "latex_compile_check": {
+      "status": "skipped",
+      "reason": "pdflatex not installed on host"
+    }
+  }
+}

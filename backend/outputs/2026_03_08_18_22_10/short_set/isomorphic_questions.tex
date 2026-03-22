@@ -1,0 +1,181 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics: Vectors and Kinematics}}\\[0.25em]
+{\Large Isomorphic Practice Questions}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A park ranger station is located at the origin of a coordinate map. A lost hiker is spotted at position $\vec r = -8\,\hat{\imath}+15\,\hat{\jmath}$, where distances are in kilometers. Which statement is correct?}{
+  \Wrong{The distance from the station to the hiker is $23\ \text{km}$.}{This adds the coordinate magnitudes (using $|x|+|y|$) instead of the Euclidean distance. The correct distance is the vector magnitude $|\vec r|=\sqrt{x^2+y^2}$, not $|x|+|y|$.}
+  \Wrong{The distance from the station to the hiker is $15\ \text{km}$.}{This confuses the $y$-component with the total distance from the origin. The distance should be $|\vec r|=\sqrt{(-8)^2+15^2}$, which is greater than $15\ \text{km}$ only if $x\neq 0$ (and here $x\neq 0$).}
+  \Correct{The distance from the station to the hiker is $17\ \text{km}$.}{The distance from the origin is the magnitude of the position vector: $|\vec r|=\sqrt{x^2+y^2}$. Here $|\vec r|=\sqrt{(-8)^2+15^2}=\sqrt{64+225}=\sqrt{289}=17\ \text{km}$, so this statement is correct.}
+  \Wrong{The distance from the station to the hiker is $8\ \text{km}$.}{This confuses the magnitude of the $x$-component with the total distance from the origin. Since there is also a nonzero $y$-component, the total distance must exceed $8\ \text{km}$.}
+}{C}
+
+\QBlock{Q2}{A cart moves along the $x$-axis with displacement
+\[
+\vec s(t)=\left(\left(2.2\,\mathrm{m/s^3}\right)t^3+\left(1.5\,\mathrm{m/s^2}\right)t^2\right)\hat{\imath}.
+\]
+Which statement is correct?}{
+  \Wrong{This motion has constant acceleration.}{Because $s(t)$ contains a $t^3$ term, taking two derivatives produces an acceleration that depends on $t$. Constant acceleration would require $s(t)$ to be at most quadratic in $t$.}
+  \Wrong{The magnitude of the acceleration is $1.5\ \mathrm{m/s^2}$.}{This incorrectly treats the coefficient of $t^2$ in position as the acceleration. Acceleration is $a(t)=\dfrac{d^2 s}{dt^2}$, not the raw coefficient in $s(t)$.}
+  \Correct{The magnitude of the acceleration at $t=0$ is $3.0\ \mathrm{m/s^2}$.}{Differentiate: $v(t)=\dfrac{ds}{dt}=6.6t^2+3.0t$ and $a(t)=\dfrac{dv}{dt}=13.2t+3.0$. Thus $a(0)=3.0\ \mathrm{m/s^2}$, so the acceleration magnitude at $t=0$ is $3.0\ \mathrm{m/s^2}$.}
+  \Wrong{The magnitude of the acceleration at $t=0$ is $0\ \mathrm{m/s^2}$.}{This is a common mistaken assumption that acceleration must start at zero. From $a(t)=13.2t+3.0$, we get $a(0)=3.0\ \mathrm{m/s^2}$, not zero.}
+}{C}
+
+\QBlock{Q3}{A robot moves from position A to position B in $5\ \text{s}$. The initial position is $\vec r_A=7.0\,\hat{\imath}-3.0\,\hat{\jmath}$ (m) and the final position is $\vec r_B=-5.0\,\hat{\imath}+4.0\,\hat{\jmath}$ (m). Which statement is correct?}{
+  \Correct{The straight-line displacement magnitude from A to B is about $13.9\ \text{m}$.}{Compute displacement $\Delta\vec r=\vec r_B-\vec r_A = (-5-7)\hat\imath+(4-(-3))\hat\jmath = -12\hat\imath+7\hat\jmath$. Its magnitude is $|\Delta\vec r|=\sqrt{(-12)^2+7^2}=\sqrt{193}\approx 13.9\ \text{m}$, so this statement is correct.}
+  \Wrong{The speed at $t=0$ must be $2.8\ \text{m/s}$.}{$|\Delta\vec r|/\Delta t\approx 13.9/5\approx 2.8\ \text{m/s}$ is the magnitude of the average velocity (or an average speed only if it moved straight at constant speed). The initial speed $v(0)$ is not determined by just the endpoints and total time.}
+  \Wrong{The acceleration at $t=0$ must be $0.56\ \text{m/s}^2$.}{This incorrectly invents an acceleration from endpoint data (e.g., dividing an average speed by time). Without additional constraints (like constant acceleration plus known initial velocity), $\vec a(0)$ cannot be uniquely determined.}
+  \Wrong{None of the above is correct.}{Option A is correct because it uses the displacement magnitude $|\Delta\vec r|=\sqrt{193}\approx 13.9\ \text{m}$. Therefore it is not true that none of the statements is correct.}
+}{A}
+
+\end{document}

@@ -1,0 +1,1536 @@
+{
+  "config": {
+    "new_questions_per_question": 1,
+    "difficulty": "decently harder than the original",
+    "theme": "",
+    "title": "",
+    "notes": "Change the theme and context to be noticeably different from the original. Vary the numeric values moderately from the original values. Source file provided: Quiz_Compilation.pdf."
+  },
+  "source_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. Which of the following statements is correct?\nA. We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.\nB. We can safely assume a cow is a point mass when analyzing its position change in the\nscale of a mile over a certain time period.\nC. We can never assume the cow is in a vacuum, even when we need to ignore the effect\nof air resistance.\nD. None of the above is correct.",
+      "stem": "Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2. Which of the following equations is correct?\nA. 1 ¢ = 1 $\nB. 1 = 0.01\nC. 1 ¢ = 0.01 $\nD. 100 ¢ = 0.01 $",
+      "stem": "Which of the following equations is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1 ¢ = 1 $",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "1 = 0.01",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "1 ¢ = 0.01 $",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "100 ¢ = 0.01 $",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. Which option has the incorrect unit?\nA. Energy: joule\nB. Velocity: meter/second\nC. Acceleration: meter2/second2\nD. Force: kilogram ∙ meter/second2",
+      "stem": "Which option has the incorrect unit?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Energy: joule",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Velocity: meter/second",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Acceleration: meter^2/second^2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Force: kilogram \\cdot  meter/second^2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "4. The raven is sent from the Castle Black, which is at the origin, observing the white\nwalkers at the coordinates 𝑟⃗ = 3𝑖̂+6𝑗̂ at the beginning of season 4, where length units\n4\nare in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kilofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\vec{r} = 3\\hat{i}+6\\hat{j} at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": []
+    },
+    {
+      "source_id": "5",
+      "source_raw": "5. If the displacement of an object is given by the function 𝑠⃗ = ((1.3𝑚/𝑠3)𝑡3 +\n(2.7𝑚/𝑠2)𝑡2)𝑖̂, which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0 is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\vec{s} = ((1.3m/s^3)t3 + (2.7m/s^2)t2)\\hat{i}, which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0 is 5.4 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "6",
+      "source_raw": "6. An object takes 3 second to move from position A (𝑟⃗ = −4.0𝑖̂+10𝑗̂) to position B\n𝐴\n(𝑟⃗ = 2.0𝑖̂+5.0𝑗̂) along a straight path, where length units are in meters. Which of the\n𝐵\nfollowing statements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\vec{r} = −4.0\\hat{i}+10\\hat{j}) to position B (\\vec{r} = 2.0\\hat{i}+5.0\\hat{j}) along a straight path, where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s^2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "7",
+      "source_raw": "7. A Chinook salmon can jump out of water with a speed v and an angle 𝜃 above the\n0\nhorizontal. What is the speed of the fish when it is at the maximum height?\nA. 𝑣 .\n0\nB. 𝑣 cos𝜃.\n0\nC. 𝑣 sin𝜃.\n0\nD. 0.",
+      "stem": "A Chinook salmon can jump out of water with a speed v_0 and an angle \\theta above the horizontal. What is the speed of the fish when it is at the maximum height?",
+      "options": [
+        {
+          "key": "A",
+          "text": "v_0.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "v_0 cos\\theta.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "v_0 sin\\theta.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "0.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": []
+    },
+    {
+      "source_id": "8",
+      "source_raw": "8. A spaceship is traveling with an initial velocity of 𝑣⃗ = (20.1 𝑚/𝑠)𝑖 ̂when its rockets\n0\nfire, imparting an acceleration of 𝑎⃗ = (2.02𝑚⁄𝑠2)𝑖̂+(4.03𝑚⁄𝑠2)𝑗.̂ Based on this\nscenario, which of the following statements is correct?\nA. The x-component of the spaceship’s velocity remains constant.\nB. The y-component of the spaceship’s velocity remains constant.\nC. Both the direction of motion and speed change.\nD. None of the above is correct.",
+      "stem": "A spaceship is traveling with an initial velocity of \\vec{v} = (20.1 m/s)\\hat{i} when its rockets fire, imparting an acceleration of \\vec{a} = (2.02m/s^2)\\hat{i}+(4.03m/s^2)\\hat{j}. Based on this scenario, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The x-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The y-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Both the direction of motion and speed change.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": []
+    },
+    {
+      "source_id": "9",
+      "source_raw": "9. If the magnitudes of both charges are tripled and their separation is also tripled, what\nhappens to the magnitude of the electrostatic force that each charge exerts on the other?\nA. It stays the same.\nB. It decreases by a factor of 31/2.\nC. It increases by a factor of 3.\nD. It increases by a factor of 9.\nE. It increases by a factor of 31/2.",
+      "stem": "If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It stays the same.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "It decreases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "It increases by a factor of 3.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "It increases by a factor of 9.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "E",
+          "text": "It increases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "10",
+      "source_raw": "10. An object can escape a planet with radius R and mass M at an escape speed given by 𝑣 =\n√2𝐺𝑀⁄𝑅, where 𝐺 is the universal gravitational constant. Based on this expression for\nescape speed, which of the following statements is correct?\nA. A heavier object requires a higher speed to escape from the planet.\nB. A lighter object requires a lower speed to escape from the planet.\nC. An object requires a higher speed to escape from a planet with smaller mass and a\nlarger radius.\nD. An object requires a higher speed to escape from a planet with greater mass and a\nsmaller radius.",
+      "stem": "An object can escape a planet with radius R and mass M at an escape speed given by v = \\sqrt{2GM/R}, where G is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "A heavier object requires a higher speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "A lighter object requires a lower speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "An object requires a higher speed to escape from a planet with smaller mass and a larger radius.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "An object requires a higher speed to escape from a planet with greater mass and a smaller radius.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "11",
+      "source_raw": "11. The force 𝐹⃗ = (3.04N)𝑖̂+(4.01N)𝑗̂. acts on a particle as it moves along the x axis from\nx = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?\nA. 20.5 J\nB. 14.3 J\nC. 5.00 J\nD. 35.7 J",
+      "stem": "The force \\vec{F} = (3.04N)\\hat{i}+(4.01N)\\hat{j}. acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?",
+      "options": [
+        {
+          "key": "A",
+          "text": "20.5 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "14.3 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "5.00 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "35.7 J",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "12",
+      "source_raw": "12. A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of\n1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force\nexerted on the cart during the collision?\nA. 47.3 N.\nB. 18 N.\nC. 76.5 N.\nD. None of the above is correct.",
+      "stem": "A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?",
+      "options": [
+        {
+          "key": "A",
+          "text": "47.3 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "18 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "76.5 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": []
+    },
+    {
+      "source_id": "13",
+      "source_raw": "13. A 78kg hockey goalie is originally at rest protecting his goal. The opposing team\nattempts a shot on goal, however the goalie catches the 170g puck with his glove. The\ninitial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of\nthe goalie after catching the puck?\nA. 0.077 m/s\nB. 0.091 m/s\nC. 102 m/s\nD. 28.6 m/s",
+      "stem": "A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.077 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "0.091 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "102 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "28.6 m/s",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "everyday_activity",
+      "topic_tags": []
+    }
+  ],
+  "verified_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. Which of the following statements is correct?\nA. We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.\nB. We can safely assume a cow is a point mass when analyzing its position change in the\nscale of a mile over a certain time period.\nC. We can never assume the cow is in a vacuum, even when we need to ignore the effect\nof air resistance.\nD. None of the above is correct.",
+      "stem": "Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.",
+          "is_correct": false,
+          "explanation": "This treats an extended, articulated leg as an oversimplified shape and will generally miss rotational/joint dynamics that matter for leg motion."
+        },
+        {
+          "key": "B",
+          "text": "We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.",
+          "is_correct": true,
+          "explanation": "For large-scale translational motion, an object’s size is often negligible compared with the distance traveled, so treating it as a point mass is a valid approximation. In that case we track the center-of-mass position versus time and ignore internal structure without significantly affecting the position-change analysis."
+        },
+        {
+          "key": "C",
+          "text": "We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.",
+          "is_correct": false,
+          "explanation": "This is incorrect because “ignore air resistance” is effectively the same modeling step as treating the motion as if in vacuum for many problems."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "Since option B is a reasonable approximation, it is not true that none of the statements is correct."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2. Which of the following equations is correct?\nA. 1 ¢ = 1 $\nB. 1 = 0.01\nC. 1 ¢ = 0.01 $\nD. 100 ¢ = 0.01 $",
+      "stem": "Which of the following equations is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1 ¢ = 1 $",
+          "is_correct": false,
+          "explanation": "This confuses cents and dollars; 1 cent is not equal to 1 dollar."
+        },
+        {
+          "key": "B",
+          "text": "1 = 0.01",
+          "is_correct": false,
+          "explanation": "This is a false numerical equality (1 is not equal to 0.01)."
+        },
+        {
+          "key": "C",
+          "text": "1 ¢ = 0.01 $",
+          "is_correct": true,
+          "explanation": "Currency conversion uses 100¢ = $1, so dividing by 100 gives 1¢ = $0.01. This is a correct statement of equivalent monetary value in different units."
+        },
+        {
+          "key": "D",
+          "text": "100 ¢ = 0.01 $",
+          "is_correct": false,
+          "explanation": "This inverts the conversion; 100 cents equals 1 dollar, not 0.01 dollars."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. Which option has the incorrect unit?\nA. Energy: joule\nB. Velocity: meter/second\nC. Acceleration: meter2/second2\nD. Force: kilogram ∙ meter/second2",
+      "stem": "Which option has the incorrect unit?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Energy: joule",
+          "is_correct": false,
+          "explanation": "Energy is correctly measured in joules (J)."
+        },
+        {
+          "key": "B",
+          "text": "Velocity: meter/second",
+          "is_correct": false,
+          "explanation": "Velocity is correctly measured in meters per second (m/s)."
+        },
+        {
+          "key": "C",
+          "text": "Acceleration: meter^2/second^2",
+          "is_correct": true,
+          "explanation": "Acceleration is defined as the time derivative of velocity, so its SI unit is (m/s)/s = m/s^2. The unit m^2/s^2 corresponds to something like specific energy (e.g., v^2) rather than acceleration."
+        },
+        {
+          "key": "D",
+          "text": "Force: kilogram \\cdot  meter/second^2",
+          "is_correct": false,
+          "explanation": "Force is correctly measured in newtons, and 1 N = 1 kg·m/s^2."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "4. The raven is sent from the Castle Black, which is at the origin, observing the white\nwalkers at the coordinates 𝑟⃗ = 3𝑖̂+6𝑗̂ at the beginning of season 4, where length units\n4\nare in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kilofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\vec{r} = 3\\hat{i}+6\\hat{j} at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": "This likely comes from adding components (3+6) instead of using the Euclidean distance formula."
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": "This incorrectly uses only the y-component magnitude as the distance."
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kilofurlongs.",
+          "is_correct": false,
+          "explanation": "This incorrectly uses only the x-component magnitude as the distance."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": true,
+          "explanation": "The distance from the origin to \\(\\vec r=(3,6)\\) is \\(\\sqrt{3^2+6^2}=\\sqrt{45}=3\\sqrt{5}\\approx 6.71\\) kilofurlongs. Since 6.71 is not equal to 9, 6, or 3, none of A–C is correct."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": []
+    },
+    {
+      "source_id": "5",
+      "source_raw": "5. If the displacement of an object is given by the function 𝑠⃗ = ((1.3𝑚/𝑠3)𝑡3 +\n(2.7𝑚/𝑠2)𝑡2)𝑖̂, which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0 is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\vec{s} = ((1.3m/s^3)t3 + (2.7m/s^2)t2)\\hat{i}, which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": "Because \\(s(t)\\) contains a \\(t^3\\) term, the second derivative (acceleration) is not constant."
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s^2",
+          "is_correct": false,
+          "explanation": "The coefficient 2.7 appears in position, not directly as acceleration, so reading it as the acceleration is a units/derivative mistake."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s^2",
+          "is_correct": false,
+          "explanation": "Differentiating twice gives a nonzero constant term in \\(a(t)\\), so \\(a(0)\\neq 0\\)."
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0 is 5.4 m/s^2",
+          "is_correct": true,
+          "explanation": "Velocity is \\(v(t)=ds/dt=(3.9t^2+5.4t)\\hat{i}\\) and acceleration is \\(a(t)=dv/dt=(7.8t+5.4)\\hat{i}\\). Evaluating at \\(t=0\\) gives \\(|a(0)|=5.4\\,\\text{m/s}^2\\)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "6",
+      "source_raw": "6. An object takes 3 second to move from position A (𝑟⃗ = −4.0𝑖̂+10𝑗̂) to position B\n𝐴\n(𝑟⃗ = 2.0𝑖̂+5.0𝑗̂) along a straight path, where length units are in meters. Which of the\n𝐵\nfollowing statements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\vec{r} = −4.0\\hat{i}+10\\hat{j}) to position B (\\vec{r} = 2.0\\hat{i}+5.0\\hat{j}) along a straight path, where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": true,
+          "explanation": "Along a straight path, the distance traveled equals the magnitude of the displacement: \\(\\Delta \\vec r=(2-(-4),5-10)=(6,-5)\\,\\text{m}\\). Thus \\(|\\Delta \\vec r|=\\sqrt{6^2+(-5)^2}=\\sqrt{61}\\approx 7.81\\,\\text{m}\\), which rounds to 7.8 m."
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": "Only the average speed (distance/3 s) can be inferred; the initial speed depends on the (unspecified) time dependence of the motion."
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s^2",
+          "is_correct": false,
+          "explanation": "Acceleration cannot be determined from just initial/final positions and total time without additional constraints (e.g., constant acceleration)."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "Option A is correct because the straight-line distance is \\(\\sqrt{61}\\approx 7.8\\) m."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "7",
+      "source_raw": "7. A Chinook salmon can jump out of water with a speed v and an angle 𝜃 above the\n0\nhorizontal. What is the speed of the fish when it is at the maximum height?\nA. 𝑣 .\n0\nB. 𝑣 cos𝜃.\n0\nC. 𝑣 sin𝜃.\n0\nD. 0.",
+      "stem": "A Chinook salmon can jump out of water with a speed v_0 and an angle \\theta above the horizontal. What is the speed of the fish when it is at the maximum height?",
+      "options": [
+        {
+          "key": "A",
+          "text": "v_0.",
+          "is_correct": false,
+          "explanation": "At maximum height the vertical component has dropped to zero, so the speed is less than \\(v_0\\) unless \\(\\theta=0\\)."
+        },
+        {
+          "key": "B",
+          "text": "v_0 cos\\theta.",
+          "is_correct": true,
+          "explanation": "In projectile motion without air resistance, the horizontal component of velocity remains constant at \\(v_x=v_0\\cos\\theta\\). At maximum height the vertical component is zero, so the speed equals the horizontal component: \\(v=v_0\\cos\\theta\\)."
+        },
+        {
+          "key": "C",
+          "text": "v_0 sin\\theta.",
+          "is_correct": false,
+          "explanation": "\\(v_0\\sin\\theta\\) is the initial vertical component, which becomes zero at maximum height."
+        },
+        {
+          "key": "D",
+          "text": "0.",
+          "is_correct": false,
+          "explanation": "Only the vertical component is zero at the top; the fish still has horizontal speed \\(v_0\\cos\\theta\\) (unless launched straight up)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": []
+    },
+    {
+      "source_id": "8",
+      "source_raw": "8. A spaceship is traveling with an initial velocity of 𝑣⃗ = (20.1 𝑚/𝑠)𝑖 ̂when its rockets\n0\nfire, imparting an acceleration of 𝑎⃗ = (2.02𝑚⁄𝑠2)𝑖̂+(4.03𝑚⁄𝑠2)𝑗.̂ Based on this\nscenario, which of the following statements is correct?\nA. The x-component of the spaceship’s velocity remains constant.\nB. The y-component of the spaceship’s velocity remains constant.\nC. Both the direction of motion and speed change.\nD. None of the above is correct.",
+      "stem": "A spaceship is traveling with an initial velocity of \\vec{v} = (20.1 m/s)\\hat{i} when its rockets fire, imparting an acceleration of \\vec{a} = (2.02m/s^2)\\hat{i}+(4.03m/s^2)\\hat{j}. Based on this scenario, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The x-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": "Since \\(a_x=2.02\\,\\text{m/s}^2\\neq 0\\), the x-component of velocity changes with time."
+        },
+        {
+          "key": "B",
+          "text": "The y-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": "Since \\(a_y=4.03\\,\\text{m/s}^2\\neq 0\\), the y-component of velocity changes with time."
+        },
+        {
+          "key": "C",
+          "text": "Both the direction of motion and speed change.",
+          "is_correct": true,
+          "explanation": "A nonzero \\(a_x\\) changes the magnitude of the x-velocity, and a nonzero \\(a_y\\) creates/grows a y-velocity component, so the velocity vector changes in both magnitude and direction. Therefore both the speed and the direction of motion change over time."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "Option C is correct because acceleration has both x and y components, changing speed and direction."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": []
+    },
+    {
+      "source_id": "9",
+      "source_raw": "9. If the magnitudes of both charges are tripled and their separation is also tripled, what\nhappens to the magnitude of the electrostatic force that each charge exerts on the other?\nA. It stays the same.\nB. It decreases by a factor of 31/2.\nC. It increases by a factor of 3.\nD. It increases by a factor of 9.\nE. It increases by a factor of 31/2.",
+      "stem": "If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It stays the same.",
+          "is_correct": true,
+          "explanation": "By Coulomb’s law, \\(F = k\\,|q_1 q_2|/r^2\\). Tripling both charges multiplies the numerator by \\(3\\times 3=9\\), while tripling the separation multiplies \\(r^2\\) by \\(3^2=9\\), so the factors cancel and \\(F\\) is unchanged."
+        },
+        {
+          "key": "B",
+          "text": "It decreases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": "This mixes up how powers of 3 enter Coulomb’s law (it depends on \\(r^2\\), not \\(r^{1/2}\\))."
+        },
+        {
+          "key": "C",
+          "text": "It increases by a factor of 3.",
+          "is_correct": false,
+          "explanation": "This ignores that both charges change (giving a factor 9) and that distance changes squared (giving a factor 1/9)."
+        },
+        {
+          "key": "D",
+          "text": "It increases by a factor of 9.",
+          "is_correct": false,
+          "explanation": "This accounts for tripling both charges but neglects the \\(1/r^2\\) reduction from tripling the separation."
+        },
+        {
+          "key": "E",
+          "text": "It increases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": "This uses an incorrect scaling with distance; the force scales with \\(1/r^2\\), not with \\(1/\\sqrt{r}\\)."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "10",
+      "source_raw": "10. An object can escape a planet with radius R and mass M at an escape speed given by 𝑣 =\n√2𝐺𝑀⁄𝑅, where 𝐺 is the universal gravitational constant. Based on this expression for\nescape speed, which of the following statements is correct?\nA. A heavier object requires a higher speed to escape from the planet.\nB. A lighter object requires a lower speed to escape from the planet.\nC. An object requires a higher speed to escape from a planet with smaller mass and a\nlarger radius.\nD. An object requires a higher speed to escape from a planet with greater mass and a\nsmaller radius.",
+      "stem": "An object can escape a planet with radius R and mass M at an escape speed given by v = \\sqrt{2GM/R}, where G is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "A heavier object requires a higher speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": "Escape speed depends on the planet (M and R), not on the escaping object’s mass, so this is a common misconception."
+        },
+        {
+          "key": "B",
+          "text": "A lighter object requires a lower speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": "This incorrectly assumes the object’s mass affects escape speed; it does not in \\(v=\\sqrt{2GM/R}\\)."
+        },
+        {
+          "key": "C",
+          "text": "An object requires a higher speed to escape from a planet with smaller mass and a larger radius.",
+          "is_correct": false,
+          "explanation": "Smaller \\(M\\) and larger \\(R\\) both decrease \\(GM/R\\), so they reduce escape speed rather than increase it."
+        },
+        {
+          "key": "D",
+          "text": "An object requires a higher speed to escape from a planet with greater mass and a smaller radius.",
+          "is_correct": true,
+          "explanation": "From \\(v=\\sqrt{2GM/R}\\), increasing \\(M\\) increases \\(GM/R\\) and decreasing \\(R\\) also increases \\(GM/R\\). Since \\(v\\) grows with \\(\\sqrt{GM/R}\\), a more massive and more compact planet requires a higher escape speed."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "11",
+      "source_raw": "11. The force 𝐹⃗ = (3.04N)𝑖̂+(4.01N)𝑗̂. acts on a particle as it moves along the x axis from\nx = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?\nA. 20.5 J\nB. 14.3 J\nC. 5.00 J\nD. 35.7 J",
+      "stem": "The force \\vec{F} = (3.04N)\\hat{i}+(4.01N)\\hat{j}. acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?",
+      "options": [
+        {
+          "key": "A",
+          "text": "20.5 J",
+          "is_correct": false,
+          "explanation": "This does not match \\(W=\\vec F\\cdot \\Delta \\vec r\\) for motion purely along x, so it likely comes from using the wrong displacement or including the y-force incorrectly."
+        },
+        {
+          "key": "B",
+          "text": "14.3 J",
+          "is_correct": true,
+          "explanation": "Work is \\(W=\\int \\vec F\\cdot d\\vec r\\); along the x-axis, \\(d\\vec r = dx\\,\\hat{i}\\) so only \\(F_x\\) contributes. Thus \\(W=F_x\\Delta x = 3.04\\,(5.03-0.33)=3.04\\times 4.70\\approx 14.3\\,\\text{J}\\)."
+        },
+        {
+          "key": "C",
+          "text": "5.00 J",
+          "is_correct": false,
+          "explanation": "This is too small and likely results from using only part of \\(\\Delta x\\) or an incorrect component of the force."
+        },
+        {
+          "key": "D",
+          "text": "35.7 J",
+          "is_correct": false,
+          "explanation": "This likely comes from (incorrectly) using the full force magnitude instead of the dot product with a purely x-direction displacement."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": []
+    },
+    {
+      "source_id": "12",
+      "source_raw": "12. A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of\n1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force\nexerted on the cart during the collision?\nA. 47.3 N.\nB. 18 N.\nC. 76.5 N.\nD. None of the above is correct.",
+      "stem": "A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?",
+      "options": [
+        {
+          "key": "A",
+          "text": "47.3 N.",
+          "is_correct": false,
+          "explanation": "This corresponds to using \\(|\\Delta v|=2.1-1.3\\) instead of reversing direction (the velocity changes sign)."
+        },
+        {
+          "key": "B",
+          "text": "18 N.",
+          "is_correct": false,
+          "explanation": "This is far too small and likely comes from dividing by the wrong time or using the wrong \\(\\Delta v\\)."
+        },
+        {
+          "key": "C",
+          "text": "76.5 N.",
+          "is_correct": true,
+          "explanation": "Use impulse-momentum: \\(\\vec F_{avg}\\Delta t = m\\Delta \\vec v\\). Taking the initial direction as positive, \\(v_i=+2.1\\) m/s and \\(v_f=-1.3\\) m/s, so \\(\\Delta v=-3.4\\) m/s and \\(F_{avg}=m\\Delta v/\\Delta t=4.5(-3.4)/0.2=-76.5\\) N (magnitude 76.5 N)."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "Option C matches the impulse calculation (average force magnitude 76.5 N), so this is not correct."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": []
+    },
+    {
+      "source_id": "13",
+      "source_raw": "13. A 78kg hockey goalie is originally at rest protecting his goal. The opposing team\nattempts a shot on goal, however the goalie catches the 170g puck with his glove. The\ninitial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of\nthe goalie after catching the puck?\nA. 0.077 m/s\nB. 0.091 m/s\nC. 102 m/s\nD. 28.6 m/s",
+      "stem": "A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.077 m/s",
+          "is_correct": false,
+          "explanation": "This is somewhat close but results from using an incorrect total mass, puck mass, or a wrong unit conversion for 150 km/hr."
+        },
+        {
+          "key": "B",
+          "text": "0.091 m/s",
+          "is_correct": true,
+          "explanation": "Treat the catch as a perfectly inelastic collision and conserve momentum: \\((m_p v_p)=(m_p+m_g)v_f\\). With \\(m_p=0.170\\) kg, \\(m_g=78\\) kg, and \\(v_p=150\\,\\text{km/hr}=41.67\\,\\text{m/s}\\), \\(v_f=\\frac{0.170\\cdot 41.67}{78.17}\\approx 0.0906\\,\\text{m/s}\\approx 0.091\\,\\text{m/s}\\)."
+        },
+        {
+          "key": "C",
+          "text": "102 m/s",
+          "is_correct": false,
+          "explanation": "This is unrealistically large and comes from not accounting for the goalie’s much larger mass (or failing to apply momentum conservation correctly)."
+        },
+        {
+          "key": "D",
+          "text": "28.6 m/s",
+          "is_correct": false,
+          "explanation": "This is on the order of the puck speed and ignores that the goalie+puck combined mass is much larger than the puck mass."
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "everyday_activity",
+      "topic_tags": []
+    }
+  ],
+  "generated_questions": [
+    {
+      "id": 1,
+      "source_id": "1",
+      "stem": "Which modeling/approximation statement is the most justified in a typical introductory-physics calculation?",
+      "options": [
+        {
+          "key": "A",
+          "text": "You can model a spinning ceiling fan blade as a point mass when calculating the torque on the fan motor.",
+          "is_correct": false,
+          "explanation": "This ignores the blade’s extended shape and mass distribution, which directly affects rotational inertia and torque. Treating an extended rotating object as a point mass is the wrong model for torque/rotation problems."
+        },
+        {
+          "key": "B",
+          "text": "When analyzing the bending stress inside a diving board, you can treat the board as a point particle located at its center.",
+          "is_correct": false,
+          "explanation": "Bending stress depends on how forces and geometry vary along the board, so a point-particle model throws away the essential spatial information. This is a common confusion between translational motion models and deformation/elasticity models."
+        },
+        {
+          "key": "C",
+          "text": "If air drag is described as “small,” you must still include it explicitly; you are never allowed to approximate the motion as if in vacuum.",
+          "is_correct": false,
+          "explanation": "Neglecting drag is often modeled as motion “in vacuum” (or with only gravity), which can be an excellent approximation. The mistake is thinking approximations are never allowed in physics modeling."
+        },
+        {
+          "key": "D",
+          "text": "To estimate a car’s change in position while it travels \\(12\\,\\text{km}\\) along a straight highway segment, it is usually reasonable to treat the car as a point mass.",
+          "is_correct": true,
+          "explanation": "For large-scale translational motion, the object’s size (a few meters) is negligible compared with the distance traveled (\\(12\\,\\text{km}\\)). In that case we track the center-of-mass position and can model the car as a point mass without significantly affecting \\(\\Delta \\vec r\\) calculations."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "modeling",
+        "approximations",
+        "point_particle"
+      ],
+      "generation_notes": "Isomorphic to source Q1: tests when a point-mass (or simplified) model is appropriate vs when internal structure/rotation matters. Context changed from “cow” to engineering/everyday modeling examples."
+    },
+    {
+      "id": 2,
+      "source_id": "2",
+      "stem": "A student records a small electric charge as \\(7.5\\,\\text{nC}\\) (nanocoulombs). Which of the following equations is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(7.5\\,\\text{nC} = 7.5\\times 10^{-9}\\,\\text{C}\\)",
+          "is_correct": true,
+          "explanation": "Metric prefixes encode powers of ten: \\(\\text{n} = 10^{-9}\\). Therefore \\(7.5\\,\\text{nC} = 7.5\\times 10^{-9}\\,\\text{C}\\), which is the same physical quantity written in different units."
+        },
+        {
+          "key": "B",
+          "text": "\\(7.5\\,\\text{nC} = 7.5\\times 10^{9}\\,\\text{C}\\)",
+          "is_correct": false,
+          "explanation": "This incorrectly flips the prefix; nano means \\(10^{-9}\\), not \\(10^{+9}\\). It’s a common sign/exponent error with metric prefixes."
+        },
+        {
+          "key": "C",
+          "text": "\\(1\\,\\text{nC} = 10^{-6}\\,\\text{C}\\)",
+          "is_correct": false,
+          "explanation": "This confuses nano (\\(10^{-9}\\)) with micro (\\(10^{-6}\\)). The mistake is using the wrong metric prefix."
+        },
+        {
+          "key": "D",
+          "text": "\\(7.5\\,\\text{nC} = 0.75\\times 10^{-9}\\,\\text{C}\\)",
+          "is_correct": false,
+          "explanation": "This is off by a factor of 10 due to a decimal-place shift. It’s a common scientific-notation slip when rewriting numbers."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "units",
+        "metric_prefixes",
+        "scientific_notation"
+      ],
+      "generation_notes": "Isomorphic to source Q2: tests correct unit conversion via a scaling factor (now metric prefixes instead of cents/dollars). Numeric values changed and made slightly less trivial by using scientific notation."
+    },
+    {
+      "id": 3,
+      "source_id": "3",
+      "stem": "Which option lists an incorrect SI unit for the stated physical quantity?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Power: watt \\(\\,(\\text{W})\\)",
+          "is_correct": false,
+          "explanation": "Power is correctly measured in watts, with \\(1\\,\\text{W}=1\\,\\text{J/s}\\)."
+        },
+        {
+          "key": "B",
+          "text": "Pressure: pascal \\(\\,(\\text{Pa}) = \\text{N/m}^2\\)",
+          "is_correct": false,
+          "explanation": "Pressure is correctly measured in pascals, and \\(1\\,\\text{Pa}=1\\,\\text{N/m}^2\\)."
+        },
+        {
+          "key": "C",
+          "text": "Momentum: \\(\\text{kg}\\cdot\\text{m/s}\\)",
+          "is_correct": false,
+          "explanation": "Momentum \\(\\vec p = m\\vec v\\) has units \\(\\text{kg}\\cdot\\text{m/s}\\)."
+        },
+        {
+          "key": "D",
+          "text": "Electric potential (voltage): \\(\\text{C/J}\\)",
+          "is_correct": true,
+          "explanation": "Electric potential is energy per unit charge: \\(V=\\dfrac{U}{q}\\). Thus the SI unit is \\(\\text{J/C}\\), which is the volt (V), not \\(\\text{C/J}\\). Using \\(\\text{C/J}\\) is an inversion error (reciprocal unit mistake)."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "units",
+        "SI_units",
+        "dimensional_analysis"
+      ],
+      "generation_notes": "Isomorphic to source Q3: identify the single mismatched unit among otherwise correct quantity-unit pairs. Uses a more conceptually subtle inversion (J/C vs C/J)."
+    },
+    {
+      "id": 4,
+      "source_id": "4",
+      "stem": "A wildlife biologist uses a 2D coordinate grid (units: kilometers) to track a tagged bird. At a certain moment, the bird’s position relative to the nesting site at the origin is \\(\\vec r = 4.5\\,\\hat{i} - 7.2\\,\\hat{j}\\,\\text{km}\\). Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The bird is \\(11.7\\,\\text{km}\\) from the nest.",
+          "is_correct": false,
+          "explanation": "This adds components (\\(4.5+7.2\\)) instead of using the Euclidean distance formula. That’s a common mistake of treating perpendicular components as if they were colinear."
+        },
+        {
+          "key": "B",
+          "text": "The bird is \\(7.2\\,\\text{km}\\) from the nest.",
+          "is_correct": false,
+          "explanation": "This uses only the \\(y\\)-component magnitude as the distance, ignoring the \\(x\\)-component. The distance depends on both components via the Pythagorean theorem."
+        },
+        {
+          "key": "C",
+          "text": "The bird is approximately \\(8.5\\,\\text{km}\\) from the nest.",
+          "is_correct": true,
+          "explanation": "Distance from the origin is the magnitude \\(|\\vec r|=\\sqrt{x^2+y^2}=\\sqrt{(4.5)^2+(-7.2)^2}\\,\\text{km}\\). This equals \\(\\sqrt{20.25+51.84}=\\sqrt{72.09}\\approx 8.49\\,\\text{km}\\approx 8.5\\,\\text{km}\\) (verified by calculation)."
+        },
+        {
+          "key": "D",
+          "text": "The bird is \\(4.5\\,\\text{km}\\) from the nest.",
+          "is_correct": false,
+          "explanation": "This uses only the \\(x\\)-component magnitude as the distance. The error is ignoring the perpendicular \\(y\\)-component contribution to \\(|\\vec r|\\)."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "life_science",
+      "topic_tags": [
+        "vectors",
+        "distance",
+        "magnitude"
+      ],
+      "generation_notes": "Isomorphic to source Q4: compute distance from origin given a position vector using \\(|\\vec r|=\\sqrt{x^2+y^2}\\). New numbers chosen; distance \\(\\approx 8.49\\) km verified with Python."
+    },
+    {
+      "id": 5,
+      "source_id": "5",
+      "stem": "A cart moves along the \\(x\\)-axis with displacement \\(\\vec s(t)=\\big((0.80\\,\\text{m/s}^4)t^4-(3.6\\,\\text{m/s}^2)t^2\\big)\\hat{i}\\). Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This motion has constant acceleration.",
+          "is_correct": false,
+          "explanation": "Because \\(s(t)\\) contains a \\(t^4\\) term, the second derivative \\(a(t)\\) depends on time. The misconception is assuming any polynomial motion implies constant acceleration."
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration at \\(t=0\\) is \\(7.2\\,\\text{m/s}^2\\).",
+          "is_correct": true,
+          "explanation": "Differentiate: \\(v(t)=\\dfrac{ds}{dt}=(3.2t^3-7.2t)\\hat{i}\\) and \\(a(t)=\\dfrac{dv}{dt}=(9.6t^2-7.2)\\hat{i}\\). At \\(t=0\\), \\(a(0)=-7.2\\,\\text{m/s}^2\\), so the magnitude is \\(|a(0)|=7.2\\,\\text{m/s}^2\\)."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration is \\(3.6\\,\\text{m/s}^2\\).",
+          "is_correct": false,
+          "explanation": "The \\(3.6\\) coefficient is in the displacement function, not the acceleration. This is the common error of reading a position coefficient as if it were an acceleration."
+        },
+        {
+          "key": "D",
+          "text": "The acceleration at \\(t=0\\) is \\(0\\,\\text{m/s}^2\\) because the displacement is zero at \\(t=0\\).",
+          "is_correct": false,
+          "explanation": "Acceleration depends on the second derivative of position, not on whether \\(s(0)=0\\). The misconception is conflating position value with derivatives (velocity/acceleration)."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "derivatives",
+        "acceleration"
+      ],
+      "generation_notes": "Isomorphic to source Q5: take two time-derivatives of a polynomial displacement and evaluate acceleration at \\(t=0\\). Numbers and polynomial order changed; derivatives checked with Python arithmetic."
+    },
+    {
+      "id": 6,
+      "source_id": "6",
+      "stem": "A warehouse robot moves in a straight line from point \\(A\\) at \\(\\vec r_A=-3.5\\hat{i}+12.0\\hat{j}\\,\\text{m}\\) to point \\(B\\) at \\(\\vec r_B=4.5\\hat{i}+7.0\\hat{j}\\,\\text{m}\\) in \\(4.0\\,\\text{s}\\). Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance traveled is approximately \\(9.4\\,\\text{m}\\).",
+          "is_correct": true,
+          "explanation": "Because the path is straight, the distance equals the magnitude of the displacement \\(\\Delta\\vec r=\\vec r_B-\\vec r_A=(8.0\\hat{i}-5.0\\hat{j})\\,\\text{m}\\). Thus \\(|\\Delta\\vec r|=\\sqrt{8.0^2+(-5.0)^2}=\\sqrt{89}\\approx 9.43\\,\\text{m}\\approx 9.4\\,\\text{m}\\) (verified by calculation)."
+        },
+        {
+          "key": "B",
+          "text": "The speed at \\(t=0\\) must be \\(\\dfrac{9.4\\,\\text{m}}{4.0\\,\\text{s}}\\approx 2.35\\,\\text{m/s}\\).",
+          "is_correct": false,
+          "explanation": "\\(\\dfrac{\\text{distance}}{\\text{time}}\\) gives the average speed, not necessarily the initial speed. The error is assuming constant speed without it being stated."
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at \\(t=0\\) must be \\(0\\,\\text{m/s}^2\\) because the motion is along a straight line.",
+          "is_correct": false,
+          "explanation": "Straight-line motion can still have nonzero acceleration (speeding up/slowing down). The misconception is confusing “straight path” with “constant velocity.”"
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "Option A follows directly from \\(|\\Delta\\vec r|\\) for a straight path, so “none” is incorrect."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "displacement",
+        "distance",
+        "average_speed"
+      ],
+      "generation_notes": "Isomorphic to source Q6: only the straight-line distance (magnitude of displacement) is determined from endpoints; initial speed/acceleration cannot be deduced without more info. Distance \\(\\sqrt{89}\\approx 9.43\\) verified with Python."
+    },
+    {
+      "id": 7,
+      "source_id": "7",
+      "stem": "A dolphin leaps out of the water with speed \\(v_0=14.0\\,\\text{m/s}\\) at an angle \\(\\theta=40^\\circ\\) above the horizontal (ignore air resistance). What is the dolphin’s speed at maximum height?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(14.0\\,\\text{m/s}\\)",
+          "is_correct": false,
+          "explanation": "At the top, the vertical component is zero, so the speed is less than \\(v_0\\) unless \\(\\theta=0\\). The mistake is assuming speed stays constant in projectile motion."
+        },
+        {
+          "key": "B",
+          "text": "\\(9.00\\,\\text{m/s}\\)",
+          "is_correct": false,
+          "explanation": "This equals \\(v_0\\sin\\theta\\), the initial vertical component, which becomes zero at maximum height. The misconception is swapping sine and cosine roles for components."
+        },
+        {
+          "key": "C",
+          "text": "\\(0\\,\\text{m/s}\\)",
+          "is_correct": false,
+          "explanation": "Only the vertical velocity becomes zero at the top; the horizontal component remains. The mistake is thinking the projectile “stops” at maximum height."
+        },
+        {
+          "key": "D",
+          "text": "\\(10.7\\,\\text{m/s}\\)",
+          "is_correct": true,
+          "explanation": "In projectile motion with no drag, the horizontal velocity stays constant: \\(v_x=v_0\\cos\\theta\\). At maximum height, \\(v_y=0\\), so the speed is \\(v=|v_x|=v_0\\cos\\theta=14.0\\cos 40^\\circ\\approx 10.7\\,\\text{m/s}\\) (verified by calculation)."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "life_science",
+      "topic_tags": [
+        "projectile_motion",
+        "components",
+        "kinematics"
+      ],
+      "generation_notes": "Isomorphic to source Q7: speed at maximum height equals constant horizontal component \\(v_0\\cos\\theta\\). Made harder by requiring numerical evaluation; value \\(\\approx 10.725\\) m/s verified with Python."
+    },
+    {
+      "id": 8,
+      "source_id": "8",
+      "stem": "A quadcopter’s initial velocity is \\(\\vec v_0=(18.4\\,\\text{m/s})\\hat{i}\\). It then experiences a constant acceleration \\(\\vec a = (-1.6\\,\\text{m/s}^2)\\hat{i}+(3.8\\,\\text{m/s}^2)\\hat{j}\\). Which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The \\(x\\)-component of the velocity remains constant.",
+          "is_correct": false,
+          "explanation": "Since \\(a_x\\neq 0\\), the \\(x\\)-component changes as \\(v_x(t)=v_{0x}+a_x t\\). The misconception is that only changes in direction affect components."
+        },
+        {
+          "key": "B",
+          "text": "Both the direction of motion and the speed change with time.",
+          "is_correct": true,
+          "explanation": "Because \\(a_x\\neq 0\\), the magnitude of the \\(x\\)-velocity changes, which affects the speed. Because \\(a_y\\neq 0\\), a \\(y\\)-component of velocity develops, so the velocity vector’s direction changes; thus both direction and speed change."
+        },
+        {
+          "key": "C",
+          "text": "The speed stays constant, but the direction changes.",
+          "is_correct": false,
+          "explanation": "A constant speed would require acceleration always perpendicular to velocity. Here \\(a_x\\) is parallel/antiparallel to the initial velocity, so the speed must change."
+        },
+        {
+          "key": "D",
+          "text": "The \\(y\\)-component of the velocity remains zero because the initial \\(y\\)-velocity is zero.",
+          "is_correct": false,
+          "explanation": "With \\(a_y\\neq 0\\), the \\(y\\)-velocity becomes \\(v_y(t)=a_y t\\), so it does not remain zero. The misconception is thinking an initially zero component must stay zero."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "engineering",
+      "topic_tags": [
+        "kinematics",
+        "2D_motion",
+        "acceleration_components"
+      ],
+      "generation_notes": "Isomorphic to source Q8: nonzero acceleration components imply changing velocity components, so both speed and direction change. Context changed from spaceship to quadcopter; new numbers."
+    },
+    {
+      "id": 9,
+      "source_id": "9",
+      "stem": "Two point charges exert an electrostatic force on each other. If the magnitude of each charge is multiplied by \\(4\\) and their separation distance is multiplied by \\(2\\), what happens to the magnitude of the force?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It stays the same.",
+          "is_correct": false,
+          "explanation": "Coulomb’s law scales as \\(F\\propto \\dfrac{q_1 q_2}{r^2}\\); the factors do not cancel here. The error is assuming “both changed” means no net change."
+        },
+        {
+          "key": "B",
+          "text": "It decreases by a factor of \\(4\\).",
+          "is_correct": false,
+          "explanation": "This treats the distance factor \\((2)\\) as if it were not squared, or it applies scaling in the wrong direction. The misconception is mishandling the \\(r^2\\) dependence."
+        },
+        {
+          "key": "C",
+          "text": "It increases by a factor of \\(16\\).",
+          "is_correct": false,
+          "explanation": "This accounts for multiplying each charge by \\(4\\) (giving \\(\\times 16\\)) but forgets that doubling the distance reduces force by \\(2^2=4\\)."
+        },
+        {
+          "key": "D",
+          "text": "It decreases by a factor of \\(16\\).",
+          "is_correct": false,
+          "explanation": "This incorrectly combines both effects as reductions, rather than recognizing that increasing charges increases the force. It reflects a sign/direction confusion in proportional reasoning."
+        },
+        {
+          "key": "E",
+          "text": "It increases by a factor of \\(4\\).",
+          "is_correct": true,
+          "explanation": "By Coulomb’s law, \\(F = k\\dfrac{|q_1 q_2|}{r^2}\\). Scaling gives \\(F' = k\\dfrac{|(4q_1)(4q_2)|}{(2r)^2}=k\\dfrac{16|q_1 q_2|}{4r^2}=4F\\), so the force quadruples."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electrostatics",
+        "Coulombs_law",
+        "scaling"
+      ],
+      "generation_notes": "Isomorphic to source Q9: proportional reasoning with Coulomb’s law under simultaneous scaling of charges and distance. Factors chosen so result is nontrivial (\\(\\times 4\\))."
+    },
+    {
+      "id": 10,
+      "source_id": "10",
+      "stem": "For a planet of mass \\(M\\) and radius \\(R\\), the escape speed is \\(v=\\sqrt{\\dfrac{2GM}{R}}\\). A second planet has mass \\(4M\\) and radius \\(\\dfrac{R}{2}\\). By what factor is the escape speed from the second planet larger than from the first?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(\\sqrt{8}\\approx 2.83\\)",
+          "is_correct": true,
+          "explanation": "Use the ratio \\(\\dfrac{v_2}{v_1}=\\sqrt{\\dfrac{(2G)(4M)/(R/2)}{(2G)M/R}}\\). Inside the square root the factor is \\(\\dfrac{4}{1/2}=8\\), so \\(v_2/v_1=\\sqrt{8}\\approx 2.83\\)."
+        },
+        {
+          "key": "B",
+          "text": "\\(2\\)",
+          "is_correct": false,
+          "explanation": "This treats only the mass change (\\(\\sqrt{4}=2\\)) and ignores the radius change. The misconception is forgetting the \\(1/\\sqrt{R}\\) dependence."
+        },
+        {
+          "key": "C",
+          "text": "\\(\\sqrt{2}\\approx 1.41\\)",
+          "is_correct": false,
+          "explanation": "This typically comes from incorrectly combining factors, e.g., using \\(\\sqrt{4/(2)}\\) instead of \\(\\sqrt{4/(1/2)}\\). It’s an algebraic inversion error with \\(R/2\\)."
+        },
+        {
+          "key": "D",
+          "text": "\\(8\\)",
+          "is_correct": false,
+          "explanation": "This forgets the square root in \\(v=\\sqrt{2GM/R}\\). The misconception is assuming escape speed scales linearly with \\(GM/R\\) instead of with its square root."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "gravitation",
+        "escape_velocity",
+        "scaling"
+      ],
+      "generation_notes": "Isomorphic to source Q10: dependence of escape speed on \\(M\\) and \\(R\\); made harder by asking for a scaling factor. Ratio \\(\\sqrt{8}\\) checked with Python."
+    },
+    {
+      "id": 11,
+      "source_id": "11",
+      "stem": "A constant force \\(\\vec F = (-2.8\\,\\text{N})\\hat{i} + (6.5\\,\\text{N})\\hat{j}\\) acts on a particle while it moves along the \\(y\\)-axis from \\(y=-1.2\\,\\text{m}\\) to \\(y=4.6\\,\\text{m}\\). What is the work done by the force?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(-16.2\\,\\text{J}\\)",
+          "is_correct": false,
+          "explanation": "This uses the \\(x\\)-component \\(F_x\\) even though \\(\\Delta x=0\\). The misconception is thinking any force component contributes regardless of displacement direction."
+        },
+        {
+          "key": "B",
+          "text": "\\(41.0\\,\\text{J}\\)",
+          "is_correct": false,
+          "explanation": "This likely comes from using the force magnitude \\(|\\vec F|\\) times distance instead of the dot product \\(\\vec F\\cdot\\Delta\\vec r\\)."
+        },
+        {
+          "key": "C",
+          "text": "\\(37.7\\,\\text{J}\\)",
+          "is_correct": true,
+          "explanation": "Work is \\(W=\\int \\vec F\\cdot d\\vec r\\). Since motion is purely along \\(y\\), \\(d\\vec r = dy\\,\\hat{j}\\), so \\(W=\\int F_y\\,dy = F_y\\Delta y = (6.5)(4.6-(-1.2))\\approx 37.7\\,\\text{J}\\) (verified by calculation)."
+        },
+        {
+          "key": "D",
+          "text": "\\(45.0\\,\\text{J}\\)",
+          "is_correct": false,
+          "explanation": "This corresponds to using an incorrect displacement (wrong \\(\\Delta y\\)) or rounding too early. The underlying error is not applying \\(W=\\vec F\\cdot\\Delta\\vec r\\) carefully."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "work",
+        "dot_product",
+        "vectors"
+      ],
+      "generation_notes": "Isomorphic to source Q11: compute work via dot product; only the force component parallel to displacement contributes (now along \\(y\\) instead of \\(x\\)). Work \\(=37.7\\) J verified with Python."
+    },
+    {
+      "id": 12,
+      "source_id": "12",
+      "stem": "In a crash-test, a \\(6.2\\,\\text{kg}\\) cart moves toward a barrier at \\(3.6\\,\\text{m/s}\\) and rebounds straight back at \\(2.4\\,\\text{m/s}\\). The contact time is \\(0.15\\,\\text{s}\\). What is the magnitude of the average force on the cart during the collision?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(49.6\\,\\text{N}\\)",
+          "is_correct": false,
+          "explanation": "This comes from using \\(|\\Delta v|=3.6-2.4=1.2\\,\\text{m/s}\\), incorrectly ignoring the direction reversal. The misconception is failing to treat velocity as a signed quantity."
+        },
+        {
+          "key": "B",
+          "text": "\\(248\\,\\text{N}\\)",
+          "is_correct": true,
+          "explanation": "Use impulse-momentum: \\(\\vec F_{\\text{avg}}\\Delta t = m\\Delta \\vec v\\). Taking the initial direction as positive, \\(v_i=+3.6\\) and \\(v_f=-2.4\\), so \\(\\Delta v=v_f-v_i=-6.0\\,\\text{m/s}\\); hence \\(|F_{\\text{avg}}|=\\dfrac{m|\\Delta v|}{\\Delta t}=\\dfrac{6.2\\times 6.0}{0.15}\\approx 2.48\\times 10^2\\,\\text{N}\\)."
+        },
+        {
+          "key": "C",
+          "text": "\\(149\\,\\text{N}\\)",
+          "is_correct": false,
+          "explanation": "This typically results from dividing by the wrong time or using only one of the speeds. The error is an arithmetic/impulse setup mistake rather than applying \\(m\\Delta v\\) correctly."
+        },
+        {
+          "key": "D",
+          "text": "\\(0\\,\\text{N}\\)",
+          "is_correct": false,
+          "explanation": "A rebound requires a significant momentum change, so the average force cannot be zero. The misconception is confusing “starts and ends moving” with “no net impulse.”"
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "engineering",
+      "topic_tags": [
+        "impulse",
+        "momentum",
+        "average_force"
+      ],
+      "generation_notes": "Isomorphic to source Q12: average force from impulse during a rebound, requiring sign change in velocity. New numbers chosen; force magnitude \\(\\approx 248\\) N verified with Python."
+    },
+    {
+      "id": 13,
+      "source_id": "13",
+      "stem": "A \\(62\\,\\text{kg}\\) skateboarder is initially at rest on level ground. A friend throws a \\(2.5\\,\\text{kg}\\) backpack horizontally toward them at \\(25\\,\\text{mph}\\), and the skateboarder catches it (they move together afterward). What is their speed immediately after the catch? (Use \\(1\\,\\text{mph}=0.44704\\,\\text{m/s}\\).)",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(0.43\\,\\text{m/s}\\)",
+          "is_correct": true,
+          "explanation": "Treat the catch as a perfectly inelastic collision and conserve momentum: \\(m_b v_b = (m_s+m_b)v_f\\). Convert \\(25\\,\\text{mph}\\) to \\(v_b=25(0.44704)\\approx 11.18\\,\\text{m/s}\\), so \\(v_f=\\dfrac{(2.5)(11.18)}{62+2.5}\\approx 0.433\\,\\text{m/s}\\approx 0.43\\,\\text{m/s}\\) (verified by calculation)."
+        },
+        {
+          "key": "B",
+          "text": "\\(0.50\\,\\text{m/s}\\)",
+          "is_correct": false,
+          "explanation": "This is a plausible estimate but comes from rounding too aggressively or using an incorrect combined mass. The misconception is treating approximations as exact without checking the conservation equation carefully."
+        },
+        {
+          "key": "C",
+          "text": "\\(4.3\\,\\text{m/s}\\)",
+          "is_correct": false,
+          "explanation": "This often comes from forgetting to divide by the total mass \\((m_s+m_b)\\). It reflects the mistake of conserving speed rather than momentum."
+        },
+        {
+          "key": "D",
+          "text": "\\(11.2\\,\\text{m/s}\\)",
+          "is_correct": false,
+          "explanation": "This is essentially the backpack’s speed after unit conversion and ignores the skateboarder’s much larger mass. The misconception is assuming the heavier person doesn’t affect the final velocity in an inelastic catch."
+        }
+      ],
+      "difficulty": "decently harder than the original",
+      "theme": "everyday_activity",
+      "topic_tags": [
+        "momentum_conservation",
+        "inelastic_collision",
+        "unit_conversion"
+      ],
+      "generation_notes": "Isomorphic to source Q13: perfectly inelastic catch with momentum conservation; includes non-SI speed requiring conversion (mph to m/s) for added difficulty. Final speed \\(\\approx 0.433\\) m/s verified with Python."
+    }
+  ],
+  "latex_file": "isomorphic_questions.tex",
+  "evaluation": {
+    "status": "failed",
+    "created_at": "2026-02-20T04:39:08.783881Z",
+    "rubric": [
+      {
+        "name": "preserve_physical_content",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the original physical content?"
+      },
+      {
+        "name": "scenario_variation",
+        "category": "Variation",
+        "question": "Does the generated question use the scenario different from the original one?"
+      },
+      {
+        "name": "numerical_variation",
+        "category": "Variation",
+        "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+      },
+      {
+        "name": "physics_correctness",
+        "category": "Quality control",
+        "question": "Is the generated question free of physics errors or misconceptions?"
+      },
+      {
+        "name": "numeric_reasonableness",
+        "category": "Quality control",
+        "question": "Do all numerical values have physically reasonable magnitudes and units?"
+      },
+      {
+        "name": "distractor_structure_preservation",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the logical structure of the distractors?"
+      },
+      {
+        "name": "clerical_quality",
+        "category": "Quality control",
+        "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+      },
+      {
+        "name": "latex_syntax_quality",
+        "category": "Quality control",
+        "question": "Is the generated LaTeX code free of syntax or compilation errors?"
+      },
+      {
+        "name": "solvable_and_specified",
+        "category": "Quality control",
+        "question": "Is the generated question fully specified and solvable as written?"
+      }
+    ],
+    "items_evaluated": 13,
+    "grader_model": "o4-mini",
+    "dataset_file": "evaluation_dataset.jsonl",
+    "error": "Error code: 400 - {'error': {'message': \"Missing required parameter: 'data_source.model' or 'data_source.input_messages'.\", 'type': 'invalid_request_error', 'param': None, 'code': None}}",
+    "latex_compile_check": {
+      "status": "skipped",
+      "reason": "pdflatex not installed on host"
+    }
+  }
+}
