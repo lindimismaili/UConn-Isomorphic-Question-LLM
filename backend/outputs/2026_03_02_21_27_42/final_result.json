@@ -1,0 +1,592 @@
+{
+  "config": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": "User provided an empty prompt and referenced a file 'quantum_set.pdf' but gave no explicit instructions. No theme/difficulty/title requested."
+  },
+  "source_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "QUESTION 1 (20 points) A particle of mass m has the wave function:\nΨ(x,t) = Ae^{−a[(mx^2/ℏ)+it]}\na) (10 points) Find A.\nb) (10 points) What is the equation that you need to use to compute the expectation value of x? What is the answer?",
+      "stem": "A particle of mass m has the wave function:\n\\(\\Psi(x,t)=A e^{-a[(m x^2/\\hbar)+ i t]}\\).",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multi_part",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "Find \\(A\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "b",
+          "stem": "What is the equation that you need to use to compute the expectation value of \\(x\\)? What is the answer?",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        }
+      ]
+    },
+    {
+      "source_id": "2",
+      "source_raw": "QUESTION 2 (10 points) At time t = 0, a particle is represented by the wave function:\n⎧A(x/a), if 0 ≤ x ≤ a\nΨ(x,0) = ⎨A(b − x)/(b − a), if a ≤ x ≤ b\n⎩ 0 otherwise\nwhere A = 3/b, and a and b are (positive) constants. What is the probability of finding the particle to the left of a?",
+      "stem": "At time \\(t=0\\), a particle is represented by the wave function:\n\\[\n\\Psi(x,0)=\\begin{cases}\nA(x/a), & 0\\le x\\le a\\\\\nA(b-x)/(b-a), & a\\le x\\le b\\\\\n0, & \\text{otherwise}\n\\end{cases}\n\\]\nwhere \\(A=3/b\\), and \\(a\\) and \\(b\\) are (positive) constants. What is the probability of finding the particle to the left of \\(a\\)?",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "QUESTION 3 (10 points) Why is the following wave function a stationary state?\nΨ1(x,t) = ψ1(x)e^{−iE1 t/ℏ}\nExplain your answer using the probability density of Ψ1(x,t).",
+      "stem": "Why is the following wave function a stationary state?\n\\(\\Psi_1(x,t)=\\psi_1(x)e^{-iE_1 t/\\hbar}\\).\nExplain your answer using the probability density of \\(\\Psi_1(x,t)\\).",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "QUESTION 4 (20 points) Given the general solution of the time-dependent Schrödinger equation,\n∞\nΨ(x,t) = ∑ c_n ψ_n(x)e^{−iE_n t/ℏ}\nn=1\na) (10 points) What is the physical meaning of |c_n|^2?\nb) (10 points) Write the expectation value of the energy, ⟨H⟩, using |c_n|^2.",
+      "stem": "Given the general solution of the time-dependent Schrödinger equation,\n\\(\\Psi(x,t)=\\sum_{n=1}^{\\infty} c_n\\,\\psi_n(x)e^{-iE_n t/\\hbar}\\),",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multi_part",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "What is the physical meaning of \\(|c_n|^2\\)?",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "b",
+          "stem": "Write the expectation value of the energy, \\(\\langle H\\rangle\\), using \\(|c_n|^2\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        }
+      ]
+    },
+    {
+      "source_id": "4_dup",
+      "source_raw": "QUESTION 4 (40 points) [Duplicate Numbering in Original] The infinite square well potential is given by:\nV(x) = { 0, if 0 ≤ x ≤ a; ∞, otherwise }\na) (10 points) Using k^2 = 2mE/ℏ^2, write down the time independent Schrödinger equation for this potential and its general solution.\nb) (10 points) Use the boundary conditions to find the allowed energies.\nc) (10 points) Find the normalized solution of the time independent Schrödinger equation.\nd) (10 points) Show that the solutions ψ_n(x) and ψ_m(x) are orthogonal for n ≠ m.",
+      "stem": "The infinite square well potential is given by:\n\\(V(x)=\\begin{cases}0, & 0\\le x\\le a\\\\ \\infty, & \\text{otherwise}\\end{cases}\\).",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multi_part",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "Using \\(k^2=2mE/\\hbar^2\\), write down the time independent Schrödinger equation for this potential and its general solution.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "b",
+          "stem": "Use the boundary conditions to find the allowed energies.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "c",
+          "stem": "Find the normalized solution of the time independent Schrödinger equation.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "d",
+          "stem": "Show that the solutions \\(\\psi_n(x)\\) and \\(\\psi_m(x)\\) are orthogonal for \\(n\\ne m\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "",
+          "has_explicit_answer": false
+        }
+      ]
+    },
+    {
+      "source_id": "extra_points",
+      "source_raw": "EXTRA POINTS (This question is OPTIONAL): (10 points) Suppose that a particle in the infinite square well has as its initial wave function an even mixture of the first two stationary states:\n1\nΨ(x,0) = [ψ1(x) + ψ2(x)]\n2\nFind the expectation value of the particle’s energy.",
+      "stem": "EXTRA POINTS (OPTIONAL) (10 points): Suppose that a particle in the infinite square well has as its initial wave function an even mixture of the first two stationary states:\n\\(\\Psi(x,0)=\\frac{1}{2}[\\psi_1(x)+\\psi_2(x)]\\).\nFind the expectation value of the particle’s energy.",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "verified_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "QUESTION 1 (20 points) A particle of mass m has the wave function:\nΨ(x,t) = Ae^{−a[(mx^2/ℏ)+it]}\na) (10 points) Find A.\nb) (10 points) What is the equation that you need to use to compute the expectation value of x? What is the answer?",
+      "stem": "A particle of mass m has the wave function:\n\\(\\Psi(x,t)=A e^{-a[(m x^2/\\hbar)+ i t]}\\).",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multi_part",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "Find \\(A\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "\\(\\Psi(x,t)=A e^{-a m x^2/\\hbar}\\,e^{-iat}\\), so \\(|\\Psi|^2=|A|^2 e^{-2amx^2/\\hbar}\\). Normalization requires \\(\\int_{-\\infty}^{\\infty}|\\Psi|^2\\,dx=|A|^2\\sqrt{\\frac{\\pi\\hbar}{2am}}=1\\). Thus \\(|A|=\\left(\\frac{2am}{\\pi\\hbar}\\right)^{1/4}\\) (choose \\(A\\) real and positive).",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "b",
+          "stem": "What is the equation that you need to use to compute the expectation value of \\(x\\)? What is the answer?",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Use \\(\\langle x\\rangle=\\int_{-\\infty}^{\\infty}\\Psi^*(x,t)\\,x\\,\\Psi(x,t)\\,dx\\). Here \\(|\\Psi(x,t)|^2\\propto e^{-2amx^2/\\hbar}\\) is even in \\(x\\), so the integrand \\(x|\\Psi|^2\\) is odd and \\(\\langle x\\rangle=0\\).",
+          "has_explicit_answer": false
+        }
+      ]
+    },
+    {
+      "source_id": "2",
+      "source_raw": "QUESTION 2 (10 points) At time t = 0, a particle is represented by the wave function:\n⎧A(x/a), if 0 ≤ x ≤ a\nΨ(x,0) = ⎨A(b − x)/(b − a), if a ≤ x ≤ b\n⎩ 0 otherwise\nwhere A = 3/b, and a and b are (positive) constants. What is the probability of finding the particle to the left of a?",
+      "stem": "At time \\(t=0\\), a particle is represented by the wave function:\n\\[\n\\Psi(x,0)=\\begin{cases}\nA(x/a), & 0\\le x\\le a\\\\\nA(b-x)/(b-a), & a\\le x\\le b\\\\\n0, & \\text{otherwise}\n\\end{cases}\n\\]\nwhere \\(A=3/b\\), and \\(a\\) and \\(b\\) are (positive) constants. What is the probability of finding the particle to the left of \\(a\\)?",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "The probability to the left of \\(a\\) is \\(P(x<a)=\\int_{-\\infty}^{a}|\\Psi(x,0)|^2dx=\\int_{0}^{a}\\left|A\\frac{x}{a}\\right|^2dx\\). This gives \\(P=\\frac{A^2}{a^2}\\int_{0}^{a}x^2dx=\\frac{A^2}{a^2}\\cdot\\frac{a^3}{3}=\\frac{A^2 a}{3}\\). With \\(A=\\frac{3}{b}\\), \\(P(x<a)=\\frac{3a}{b^2}\\).",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "QUESTION 3 (10 points) Why is the following wave function a stationary state?\nΨ1(x,t) = ψ1(x)e^{−iE1 t/ℏ}\nExplain your answer using the probability density of Ψ1(x,t).",
+      "stem": "Why is the following wave function a stationary state?\n\\(\\Psi_1(x,t)=\\psi_1(x)e^{-iE_1 t/\\hbar}\\).\nExplain your answer using the probability density of \\(\\Psi_1(x,t)\\).",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "Its probability density is time-independent: \\(|\\Psi_1(x,t)|^2=\\Psi_1^*\\Psi_1=|\\psi_1(x)|^2\\), because the phase factors \\(e^{\\pm iE_1 t/\\hbar}\\) cancel. Therefore all position-space probabilities (and expectation values of time-independent observables) do not change with time, which is why it is a stationary state.",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "QUESTION 4 (20 points) Given the general solution of the time-dependent Schrödinger equation,\n∞\nΨ(x,t) = ∑ c_n ψ_n(x)e^{−iE_n t/ℏ}\nn=1\na) (10 points) What is the physical meaning of |c_n|^2?\nb) (10 points) Write the expectation value of the energy, ⟨H⟩, using |c_n|^2.",
+      "stem": "Given the general solution of the time-dependent Schrödinger equation,\n\\(\\Psi(x,t)=\\sum_{n=1}^{\\infty} c_n\\,\\psi_n(x)e^{-iE_n t/\\hbar}\\),",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multi_part",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "What is the physical meaning of \\(|c_n|^2\\)?",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "If \\(\\{\\psi_n\\}\\) are normalized energy eigenstates, then \\(|c_n|^2\\) is the probability that an energy measurement yields \\(E_n\\) (i.e., that the system is found in eigenstate \\(n\\)). For a normalized state, \\(\\sum_{n=1}^\\infty |c_n|^2=1\\).",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "b",
+          "stem": "Write the expectation value of the energy, \\(\\langle H\\rangle\\), using \\(|c_n|^2\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "The energy expectation value is the probability-weighted average of eigenvalues:\n\\[\\langle H\\rangle=\\sum_{n=1}^{\\infty} |c_n|^2\\,E_n.\\]",
+          "has_explicit_answer": false
+        }
+      ]
+    },
+    {
+      "source_id": "4_dup",
+      "source_raw": "QUESTION 4 (40 points) [Duplicate Numbering in Original] The infinite square well potential is given by:\nV(x) = { 0, if 0 ≤ x ≤ a; ∞, otherwise }\na) (10 points) Using k^2 = 2mE/ℏ^2, write down the time independent Schrödinger equation for this potential and its general solution.\nb) (10 points) Use the boundary conditions to find the allowed energies.\nc) (10 points) Find the normalized solution of the time independent Schrödinger equation.\nd) (10 points) Show that the solutions ψ_n(x) and ψ_m(x) are orthogonal for n ≠ m.",
+      "stem": "The infinite square well potential is given by:\n\\(V(x)=\\begin{cases}0, & 0\\le x\\le a\\\\ \\infty, & \\text{otherwise}\\end{cases}\\).",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multi_part",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "Using \\(k^2=2mE/\\hbar^2\\), write down the time independent Schrödinger equation for this potential and its general solution.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Inside the well \\((0<x<a)\\), \\(V=0\\) so\n\\[-\\frac{\\hbar^2}{2m}\\frac{d^2\\psi}{dx^2}=E\\psi\\quad\\Rightarrow\\quad \\psi''+k^2\\psi=0\\ (k^2=2mE/\\hbar^2).\\]\nThe general solution for \\(0<x<a\\) is \\(\\psi(x)=A\\sin(kx)+B\\cos(kx)\\), and \\(\\psi=0\\) outside the well.",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "b",
+          "stem": "Use the boundary conditions to find the allowed energies.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Boundary conditions are \\(\\psi(0)=0\\Rightarrow B=0\\) and \\(\\psi(a)=0\\Rightarrow \\sin(ka)=0\\Rightarrow ka=n\\pi\\) with \\(n=1,2,3,\\dots\\). Thus \\(k_n=\\frac{n\\pi}{a}\\) and\n\\[E_n=\\frac{\\hbar^2 k_n^2}{2m}=\\frac{n^2\\pi^2\\hbar^2}{2ma^2}.\\]",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "c",
+          "stem": "Find the normalized solution of the time independent Schrödinger equation.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "With \\(B=0\\) and \\(k_n=n\\pi/a\\), the eigenfunctions are \\(\\psi_n(x)=A_n\\sin\\left(\\frac{n\\pi x}{a}\\right)\\) for \\(0<x<a\\). Normalizing \\(\\int_0^a|\\psi_n|^2dx=1\\) gives \\(A_n=\\sqrt{\\frac{2}{a}}\\), so\n\\[\\psi_n(x)=\\sqrt{\\frac{2}{a}}\\sin\\left(\\frac{n\\pi x}{a}\\right),\\quad 0<x<a\\ (\\text{and }0\\text{ otherwise}).\\]",
+          "has_explicit_answer": false
+        },
+        {
+          "part_label": "d",
+          "stem": "Show that the solutions \\(\\psi_n(x)\\) and \\(\\psi_m(x)\\) are orthogonal for \\(n\\ne m\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Using the normalized forms, orthogonality follows from the sine orthogonality relation:\n\\[\\int_0^a \\psi_n(x)\\psi_m(x)\\,dx=\\frac{2}{a}\\int_0^a \\sin\\left(\\frac{n\\pi x}{a}\\right)\\sin\\left(\\frac{m\\pi x}{a}\\right)dx=0\\quad (n\\ne m).\\]\nEquivalently, apply \\(\\sin\\alpha\\sin\\beta=\\tfrac12[\\cos(\\alpha-\\beta)-\\cos(\\alpha+\\beta)]\\) and evaluate to get zero because the cosines complete an integer number of half-periods over \\([0,a]\\).",
+          "has_explicit_answer": false
+        }
+      ]
+    },
+    {
+      "source_id": "extra_points",
+      "source_raw": "EXTRA POINTS (This question is OPTIONAL): (10 points) Suppose that a particle in the infinite square well has as its initial wave function an even mixture of the first two stationary states:\n1\nΨ(x,0) = [ψ1(x) + ψ2(x)]\n2\nFind the expectation value of the particle’s energy.",
+      "stem": "EXTRA POINTS (OPTIONAL) (10 points): Suppose that a particle in the infinite square well has as its initial wave function an even mixture of the first two stationary states:\n\\(\\Psi(x,0)=\\frac{1}{2}[\\psi_1(x)+\\psi_2(x)]\\).\nFind the expectation value of the particle’s energy.",
+      "options": [],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "open_ended",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "For an even mixture (equal probabilities), take \\(c_1=c_2=1/\\sqrt{2}\\), so \\(\\langle E\\rangle=|c_1|^2E_1+|c_2|^2E_2=\\frac{E_1+E_2}{2}\\). In an infinite well of width \\(a\\), \\(E_n=\\frac{n^2\\pi^2\\hbar^2}{2ma^2}\\), hence \\(\\langle E\\rangle=\\frac{1}{2}\\left(\\frac{\\pi^2\\hbar^2}{2ma^2}+\\frac{4\\pi^2\\hbar^2}{2ma^2}\\right)=\\frac{5\\pi^2\\hbar^2}{4ma^2}\\). (If one starts from \\(\\Psi=\\tfrac12(\\psi_1+\\psi_2)\\), renormalizing gives the same equal-weight result.)",
+      "parts": []
+    }
+  ],
+  "generated_questions": [
+    {
+      "id": 1,
+      "source_id": "1",
+      "stem": "A particle of mass \\(m\\) in one dimension has the wave function\n\\[\n\\Psi(x,t)=C\\,\\exp\\!\\left[-\\alpha\\left(\\frac{m x^2}{\\hbar}\\right)\\right]\\,e^{-i\\Omega t},\n\\]\nwhere \\(\\alpha>0\\) and \\(\\Omega\\) are real constants.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "quantum_mechanics",
+        "wavefunction_normalization",
+        "expectation_value",
+        "parity_symmetry",
+        "gaussian_wavepacket"
+      ],
+      "generation_notes": "Isomorphic to Gaussian normalization + use of Born rule for \\(\\langle x\\rangle\\); changed functional form slightly (separated phase), introduced \\(\\alpha,\\Omega\\) instead of the original parameters while keeping the same even-in-\\(x\\) Gaussian probability density.",
+      "question_type": "multi_part",
+      "skipped": false,
+      "skip_reason": "",
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "Find the normalization constant \\(C\\) (take \\(C\\) real and positive).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Since the global phase does not affect probabilities, \\(|\\Psi(x,t)|^2=C^2\\exp\\!\\left[-2\\alpha\\left(\\frac{m x^2}{\\hbar}\\right)\\right]\\). Normalization requires \\(\\int_{-\\infty}^{\\infty} |\\Psi|^2\\,dx=1\\), so\n\\[\nC^2\\int_{-\\infty}^{\\infty}e^{-\\frac{2\\alpha m}{\\hbar}x^2}\\,dx= C^2\\sqrt{\\frac{\\pi\\hbar}{2\\alpha m}}=1,\n\\]\nwhich gives \\(C=\\left(\\frac{2\\alpha m}{\\pi\\hbar}\\right)^{1/4}.\\)"
+        },
+        {
+          "part_label": "b",
+          "stem": "Write the integral expression used to compute \\(\\langle x\\rangle\\) and evaluate it for this state.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Use the Born-rule expectation value\n\\[\\langle x\\rangle=\\int_{-\\infty}^{\\infty}\\Psi^*(x,t)\\,x\\,\\Psi(x,t)\\,dx.\\]\nHere \\(|\\Psi|^2=C^2 e^{-\\frac{2\\alpha m}{\\hbar}x^2}\\) is an even function of \\(x\\), so the integrand \\(x|\\Psi|^2\\) is odd and therefore \\(\\langle x\\rangle=0\\)."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "source_id": "2",
+      "stem": "At time \\(t=0\\), a particle is described by the (real) wave function\n\\[\n\\Psi(x,0)=\\begin{cases}\nA\\,(x/c), & 0\\le x\\le c\\\\\nA\\,(L-x)/(L-c), & c\\le x\\le L\\\\\n0, & \\text{otherwise}\n\\end{cases}\n\\]\nwhere \\(0<c<L\\) and \\(A=\\dfrac{5}{L}\\). What is the probability of finding the particle in the region \\(x<c\\)?",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "quantum_mechanics",
+        "probability_density",
+        "piecewise_wavefunction",
+        "born_rule",
+        "integration"
+      ],
+      "generation_notes": "Isomorphic to the piecewise linear (triangular) wavefunction probability calculation; changed symbols and amplitude (now \\(A=5/L\\)) while keeping the same left-of-the-peak integral structure.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "The probability to the left of \\(c\\) is \\(P(x<c)=\\int_{-\\infty}^{c}|\\Psi(x,0)|^2dx=\\int_{0}^{c}\\left(A\\frac{x}{c}\\right)^2dx\\). Evaluating gives \\(P=\\frac{A^2}{c^2}\\cdot\\frac{c^3}{3}=\\frac{A^2 c}{3}\\). With \\(A=\\frac{5}{L}\\),\n\\[P(x<c)=\\frac{25c}{3L^2}.\\]",
+      "parts": []
+    },
+    {
+      "id": 3,
+      "source_id": "3",
+      "stem": "A state is given by\n\\[\n\\Phi(x,t)=\\varphi(x)\\,e^{-i\\varepsilon t/\\hbar},\n\\]\nwhere \\(\\varepsilon\\) is a constant. Using the probability density, explain why this is a stationary state.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "quantum_mechanics",
+        "stationary_states",
+        "probability_density",
+        "global_phase"
+      ],
+      "generation_notes": "Isomorphic to identifying stationarity via time-independent probability density; changed notation (\\(\\Phi,\\varphi,\\varepsilon\\)) but kept the same reasoning with phase cancellation.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "The probability density is\n\\[|\tPhi(x,t)|^2=\\Phi^*(x,t)\\Phi(x,t)=|\\varphi(x)|^2\\,\\big(e^{+i\\varepsilon t/\\hbar}e^{-i\\varepsilon t/\\hbar}\\big)=|\\varphi(x)|^2,\\]\nwhich is independent of time because the phase factors cancel. Since all position probabilities are time-independent, the state is stationary.",
+      "parts": []
+    },
+    {
+      "id": 4,
+      "source_id": "4",
+      "stem": "A normalized wave function can be expanded in a complete set of Hamiltonian energy eigenstates \\(\\{u_n(x)\\}\\) as\n\\[\n\\Psi(x,t)=\\sum_{n=1}^{\\infty} d_n\\,u_n(x)\\,e^{-i\\mathcal{E}_n t/\\hbar}.\n\\]\nAssume the \\(u_n\\) are orthonormal and satisfy \\(\\hat H u_n=\\mathcal{E}_n u_n\\).",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "quantum_mechanics",
+        "superposition",
+        "measurement_postulate",
+        "energy_expectation"
+      ],
+      "generation_notes": "Isomorphic to interpreting expansion coefficients in the energy basis and computing \\(\\langle H\\rangle\\); changed coefficient symbols and eigenvalue notation but kept the same postulates and equations.",
+      "question_type": "multi_part",
+      "skipped": false,
+      "skip_reason": "",
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "What is the physical meaning of \\(|d_n|^2\\)?",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "In an energy eigenbasis, \\(|d_n|^2\\) is the probability that an energy measurement yields the eigenvalue \\(\\mathcal{E}_n\\) (equivalently, that the post-measurement state is found in eigenstate \\(u_n\\)). For a normalized state, the probabilities satisfy \\(\\sum_{n=1}^{\\infty}|d_n|^2=1\\)."
+        },
+        {
+          "part_label": "b",
+          "stem": "Write the expectation value \\(\\langle H\\rangle\\) in terms of \\(|d_n|^2\\) and \\(\\mathcal{E}_n\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Because the measurement outcomes are \\(\\mathcal{E}_n\\) with probabilities \\(|d_n|^2\\), the energy expectation value is the probability-weighted average\n\\[\\langle H\\rangle=\\sum_{n=1}^{\\infty}|d_n|^2\\,\\mathcal{E}_n.\\]"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "source_id": "4_dup",
+      "stem": "Consider a one-dimensional infinite square well of width \\(L\\):\n\\[\nV(x)=\\begin{cases}\n0, & 0<x<L\\\\\n\\infty, & \\text{otherwise.}\n\\end{cases}\n\\]\nInside the well define \\(k^2\\equiv 2mE/\\hbar^2\\).",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "infinite_square_well",
+        "time_independent_schrodinger",
+        "boundary_conditions",
+        "normalization",
+        "orthogonality"
+      ],
+      "generation_notes": "Isomorphic to the standard infinite square well derivation: write TISE and general solution, apply boundary conditions for quantized energies, normalize eigenfunctions, and show orthogonality; changed notation to width \\(L\\) and kept the same physics steps.",
+      "question_type": "multi_part",
+      "skipped": false,
+      "skip_reason": "",
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "Write the time-independent Schrödinger equation in the region \\(0<x<L\\) and give its general solution there.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "For \\(0<x<L\\), \\(V=0\\) so\n\\[-\\frac{\\hbar^2}{2m}\\frac{d^2\\psi}{dx^2}=E\\psi \\quad\\Rightarrow\\quad \\psi''+k^2\\psi=0\\ \\ (k^2=2mE/\\hbar^2).\\]\nThe general solution inside the well is \\(\\psi(x)=A\\sin(kx)+B\\cos(kx)\\), and \\(\\psi=0\\) outside because the potential is infinite."
+        },
+        {
+          "part_label": "b",
+          "stem": "Apply the boundary conditions to find the allowed energies \\(E_n\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "The infinite walls impose \\(\\psi(0)=0\\Rightarrow B=0\\) and \\(\\psi(L)=0\\Rightarrow \\sin(kL)=0\\). Thus \\(kL=n\\pi\\) with \\(n=1,2,3,\\dots\\), so \\(k_n=\\frac{n\\pi}{L}\\) and\n\\[E_n=\\frac{\\hbar^2 k_n^2}{2m}=\\frac{n^2\\pi^2\\hbar^2}{2mL^2}.\\]"
+        },
+        {
+          "part_label": "c",
+          "stem": "Find the normalized eigenfunctions \\(\\psi_n(x)\\) in the interval \\(0<x<L\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "With \\(B=0\\) and \\(k_n=n\\pi/L\\), the eigenfunctions are \\(\\psi_n(x)=A_n\\sin\\left(\\frac{n\\pi x}{L}\\right)\\) for \\(0<x<L\\). Normalization requires \\(\\int_0^L |\\psi_n(x)|^2dx=1\\), giving \\(A_n=\\sqrt{\\frac{2}{L}}\\). Hence\n\\[\\psi_n(x)=\\sqrt{\\frac{2}{L}}\\sin\\left(\\frac{n\\pi x}{L}\\right)\\quad (0<x<L),\\]\nand \\(\\psi_n=0\\) outside."
+        },
+        {
+          "part_label": "d",
+          "stem": "Show that \\(\\psi_n\\) and \\(\\psi_m\\) are orthogonal when \\(n\\ne m\\).",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "Using the normalized functions,\n\\[\\int_0^L \\psi_n(x)\\psi_m(x)\\,dx=\\frac{2}{L}\\int_0^L \\sin\\left(\\frac{n\\pi x}{L}\\right)\\sin\\left(\\frac{m\\pi x}{L}\\right)dx.\\]\nThe sine functions form an orthogonal set on \\([0,L]\\), so this integral equals \\(0\\) for \\(n\\ne m\\) (e.g., by using \\(\\sin\\alpha\\sin\\beta=\\tfrac12[\\cos(\\alpha-\\beta)-\\cos(\\alpha+\\beta)]\\) and evaluating at the limits)."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "source_id": "extra_points",
+      "stem": "(Optional) A particle in a 1D infinite square well of width \\(L\\) is prepared at \\(t=0\\) in an equal superposition of the \\(n=2\\) and \\(n=5\\) stationary states:\n\\[\n\\Psi(x,0)=\\frac{1}{\\sqrt{2}}\\big(\\psi_2(x)+\\psi_5(x)\\big).\n\\]\nFind the expectation value of the energy \\(\\langle E\\rangle\\).",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "infinite_square_well",
+        "superposition",
+        "energy_expectation",
+        "quantum_measurement"
+      ],
+      "generation_notes": "Isomorphic to computing \\(\\langle E\\rangle\\) for an equal-weight superposition in an infinite well; changed which eigenstates are mixed (now \\(n=2\\) and \\(n=5\\)) to significantly vary the resulting energy while keeping the same probability-weighted-average reasoning.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "scenario_group": "",
+      "scenario_preamble": "",
+      "answer": "For \\(\\Psi=\\frac{1}{\\sqrt{2}}(\\psi_2+\\psi_5)\\), the expansion coefficients have magnitudes \\(|c_2|^2=|c_5|^2=\\tfrac12\\), so\n\\[\\langle E\\rangle=\\tfrac12 E_2+\\tfrac12 E_5=\\frac{E_2+E_5}{2}.\\]\nIn an infinite well, \\(E_n=\\frac{n^2\\pi^2\\hbar^2}{2mL^2}\\), hence\n\\[\\langle E\\rangle=\\frac{1}{2}\\left(\\frac{4\\pi^2\\hbar^2}{2mL^2}+\\frac{25\\pi^2\\hbar^2}{2mL^2}\\right)=\\frac{29\\pi^2\\hbar^2}{4mL^2}.\\]",
+      "parts": []
+    }
+  ],
+  "latex_file": "isomorphic_questions.tex",
+  "evaluation": {
+    "status": "failed",
+    "created_at": "2026-03-03T02:31:33.006578Z",
+    "rubric": [
+      {
+        "name": "preserve_physical_content",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the original physical content?"
+      },
+      {
+        "name": "scenario_variation",
+        "category": "Variation",
+        "question": "Does the generated question use the scenario different from the original one?"
+      },
+      {
+        "name": "numerical_variation",
+        "category": "Variation",
+        "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+      },
+      {
+        "name": "physics_correctness",
+        "category": "Quality control",
+        "question": "Is the generated question free of physics errors or misconceptions?"
+      },
+      {
+        "name": "numeric_reasonableness",
+        "category": "Quality control",
+        "question": "Do all numerical values have physically reasonable magnitudes and units?"
+      },
+      {
+        "name": "distractor_structure_preservation",
+        "category": "Preservation",
+        "question": "Does the generated question preserve the logical structure of the distractors?"
+      },
+      {
+        "name": "clerical_quality",
+        "category": "Quality control",
+        "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+      },
+      {
+        "name": "latex_syntax_quality",
+        "category": "Quality control",
+        "question": "Is the generated LaTeX code free of syntax errors?"
+      },
+      {
+        "name": "solvable_and_specified",
+        "category": "Quality control",
+        "question": "Is the generated question fully specified and solvable as written?"
+      }
+    ],
+    "items_evaluated": 6,
+    "grader_model": "o4-mini",
+    "dataset_file": "evaluation_dataset.jsonl",
+    "error": "Error code: 400 - {'error': {'message': \"Missing required parameter: 'data_source.model' or 'data_source.input_messages'.\", 'type': 'invalid_request_error', 'param': None, 'code': None}}",
+    "traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\lindi\\GitHub\\UConn-IsomorphicQuestionLLM\\src\\evaluation.py\", line 221, in run_openai_output_evaluation\n    run = client.evals.runs.create(\n          ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\lindi\\GitHub\\UConn-IsomorphicQuestionLLM\\.venv\\Lib\\site-packages\\openai\\resources\\evals\\runs\\runs.py\", line 102, in create\n    return self._post(\n           ^^^^^^^^^^^\n  File \"C:\\Users\\lindi\\GitHub\\UConn-IsomorphicQuestionLLM\\.venv\\Lib\\site-packages\\openai\\_base_client.py\", line 1297, in post\n    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\lindi\\GitHub\\UConn-IsomorphicQuestionLLM\\.venv\\Lib\\site-packages\\openai\\_base_client.py\", line 1070, in request\n    raise self._make_status_error_from_response(err.response) from None\nopenai.BadRequestError: Error code: 400 - {'error': {'message': \"Missing required parameter: 'data_source.model' or 'data_source.input_messages'.\", 'type': 'invalid_request_error', 'param': None, 'code': None}}\n"
+  }
+}

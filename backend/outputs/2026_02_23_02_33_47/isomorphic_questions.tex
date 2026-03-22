@@ -1,0 +1,104 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}
+
+\newcommand{\QBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Vectors and Kinematics Practice}}\\[0.25em]
+{\Large Isomorphic Multiple-Choice Questions}\\[0.25em]
+{\large Multiple choice questions generated below. Answers in RED and incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A camper sets up a tent at the origin of a coordinate map. Later, they spot a trail marker at the position vector $\vec r = 7\hat{i}+11\hat{j}$, where distances are measured in kilometers. Which of the following statements is correct?}{
+  \Wrong{The distance between the trail marker and the tent is 18 km.}{This corresponds to adding components, $|7|+|11|$, which is the Manhattan distance, not the straight-line distance. The physical distance on a flat map is found using $\sqrt{x^2+y^2}$.}
+  \Wrong{The distance between the trail marker and the tent is 11 km.}{This confuses the distance with the $y$-component of the position vector. The distance must include both the $x$ and $y$ components via the Pythagorean theorem.}
+  \Wrong{The distance between the trail marker and the tent is 7 km.}{This confuses the distance with the $x$-component of the position vector. The magnitude depends on both components, not just one.}
+  \Correct{None of the above is correct.}{The distance from the origin is the magnitude of the position vector: $|\vec r|=\sqrt{7^2+11^2}=\sqrt{170}\approx 13.04\ \text{km}$. Since $13.04$ km is not equal to $18$, $11$, or $7$ km, none of A--C is correct.}
+}
+
+\QBlock{Q2}{If the displacement of an object is given by the function $\vec{s}(t)=\left((0.90\,\mathrm{m/s^3})t^3-(4.0\,\mathrm{m/s^2})t^2\right)\hat{i}$, which of the following statements is correct?}{
+  \Wrong{This is a constant-acceleration motion.}{Taking two time derivatives shows $a(t)$ contains a term proportional to $t$, so it is not constant. A $t^3$ term in $s(t)$ generally produces a time-dependent acceleration.}
+  \Correct{The magnitude of the acceleration at $t=0\,\mathrm{s}$ is $8.0\,\mathrm{m/s^2}$.}{Differentiate twice: $\vec v(t)=\dfrac{d\vec s}{dt}=(2.70t^2-8.0t)\hat i$ and $\vec a(t)=\dfrac{d\vec v}{dt}=(5.40t-8.0)\hat i$. At $t=0$, $\vec a(0)=-8.0\hat i$, so the magnitude is $|\vec a(0)|=8.0\,\mathrm{m/s^2}$.}
+  \Wrong{The magnitude of the acceleration is $4.0\,\mathrm{m/s^2}$.}{This incorrectly reads the coefficient of the $t^2$ term in position as the acceleration. Acceleration comes from the second derivative of position, not directly from a position coefficient.}
+  \Wrong{The magnitude of the acceleration at $t=0\,\mathrm{s}$ is $0\,\mathrm{m/s^2}$.}{This mistake typically comes from assuming the acceleration must vanish at $t=0$ or from differentiating incorrectly. The second derivative gives a nonzero constant term at $t=0$.}
+}
+
+\QBlock{Q3}{An object takes $5.0\,\mathrm{s}$ to move from position A ($\vec{r}_A=-6.0\hat{i}-1.0\hat{j}$) to position B ($\vec{r}_B=4.0\hat{i}+7.0\hat{j}$), where length units are in meters. Which of the following statements is correct?}{
+  \Wrong{The speed at $t=0$ must be $2.6\,\mathrm{m/s}$.}{This confuses an average rate (like $|\Delta\vec r|/\Delta t$) with the instantaneous speed at $t=0$. Many different motions can connect the same endpoints in $5.0$ s with different initial speeds.}
+  \Wrong{The acceleration at $t=0$ must be $0.51\,\mathrm{m/s^2}$.}{With only two position vectors and a total time, the acceleration at a specific time is not uniquely determined. A numerical value like $0.51\,\mathrm{m/s^2}$ would require extra assumptions (e.g., constant acceleration and more data).}
+  \Correct{The moving distance is $12.8\,\mathrm{m}$.}{Compute the displacement: $\Delta\vec r=\vec r_B-\vec r_A=(4-(-6))\hat i+(7-(-1))\hat j=10\hat i+8\hat j$. Its magnitude is $|\Delta\vec r|=\sqrt{10^2+8^2}=\sqrt{164}\approx 12.8\,\mathrm{m}$, so this statement matches the straight-line separation between A and B.}
+  \Wrong{None of the above is correct.}{Option C is correct because the magnitude of the displacement between the given positions is about $12.8\,\mathrm{m}$. Therefore it is not true that none of the statements are correct.}
+}
+
+\end{document}

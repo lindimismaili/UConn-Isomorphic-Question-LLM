@@ -180,10 +180,10 @@ deploy_static() {
 setup_python_venv_at_destination() {
   local dst="$1"
 
-  if [[ -f "$dst/requirements.txt" ]]; then
+  if [[ -f "$dst/backend/requirements.txt" ]]; then
     echo "---- python venv at destination: $dst ----"
 
-    local req_file="$dst/requirements.txt"
+    local req_file="$dst/backend/requirements.txt"
     local venv_dir="$dst/.venv"
     local pip_bin="$venv_dir/bin/pip"
     local hash_file="$venv_dir/.requirements.sha256"
@@ -211,10 +211,10 @@ setup_python_venv_at_destination() {
       echo "FORCE_PIP_SYNC=1 set; forcing dependency sync."
       needs_install=1
     elif [[ "$current_hash" != "$previous_hash" ]]; then
-      echo "requirements.txt changed; syncing dependencies."
+      echo "backend/requirements.txt changed; syncing dependencies."
       needs_install=1
     else
-      echo "requirements.txt unchanged; skipping pip install."
+      echo "backend/requirements.txt unchanged; skipping pip install."
     fi
 
     if [[ "$needs_install" -eq 1 ]]; then
@@ -228,7 +228,7 @@ setup_python_venv_at_destination() {
 
     echo "OK: venv ready at $venv_dir"
   else
-    echo "---- skip venv (no requirements.txt): $dst ----"
+    echo "---- skip venv (no backend/requirements.txt): $dst ----"
   fi
 }
 
@@ -341,7 +341,7 @@ Environment=HOST=127.0.0.1
 Environment=PORT=3002
 EnvironmentFile=-/var/www/uconn/.env
 
-ExecStart=/var/www/uconn/.venv/bin/uvicorn src.server:app --host ${HOST} --port ${PORT}
+ExecStart=/var/www/uconn/.venv/bin/uvicorn backend.src.server:app --host ${HOST} --port ${PORT}
 Restart=on-failure
 RestartSec=3
 
@@ -366,8 +366,8 @@ SERVICE_EOF
 # MAIN
 # =====================================================
 require_dir "$REPO_DIR"
-require_file "$REPO_DIR/requirements.txt"
-require_file "$REPO_DIR/src/server.py"
+require_file "$REPO_DIR/backend/requirements.txt"
+require_file "$REPO_DIR/backend/src/server.py"
 
 ensure_git_pull_deploy_hooks "$UCONN_SRC"
 ensure_frontend_dist "$UCONN_SRC"

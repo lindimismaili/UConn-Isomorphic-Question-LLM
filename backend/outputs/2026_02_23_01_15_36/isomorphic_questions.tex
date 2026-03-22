@@ -1,0 +1,104 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}
+
+\newcommand{\QBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Isomorphic Physics Questions}}\\[0.25em]
+{\Large Vectors and 1D/2D Kinematics (Position, Displacement, Acceleration)}\\[0.25em]
+{\large Multiple choice questions generated below. Answers in RED and incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A tracking station is located at the origin. A weather balloon is observed at position \(\vec r = 8\hat{\imath}+15\hat{\jmath}\), where distances are measured in kilometers. Which statement is correct?}{
+  \Wrong{The distance between the balloon and the station is 23 km.}{This adds components (\(8+15\)) as if distance in 2D were the Manhattan distance, instead of using \(\sqrt{x^2+y^2}\).}
+  \Correct{The distance between the balloon and the station is 17 km.}{The distance from the origin to \((x,y)\) is the magnitude of the position vector: \(r=\|\vec r\|=\sqrt{x^2+y^2}\). Here \(r=\sqrt{8^2+15^2}=\sqrt{64+225}=\sqrt{289}=17\,\text{km}\).}
+  \Wrong{The distance between the balloon and the station is 15 km.}{This confuses the \(y\)-component (15 km) with the total distance from the origin.}
+  \Wrong{The distance between the balloon and the station is 8 km.}{This confuses the \(x\)-component (8 km) with the total distance from the origin.}
+}
+
+\QBlock{Q2}{If the displacement of an object along the \(x\)-axis is given by \(\vec s(t)=\big((0.60\,\text{m/s}^3)t^3+(5.5\,\text{m/s}^2)t^2\big)\hat{\imath}\), which statement is correct?}{
+  \Wrong{This is a constant-acceleration motion.}{Because \(s(t)\) contains a \(t^3\) term, differentiating twice gives an acceleration that depends on \(t\), so it is not constant.}
+  \Wrong{The magnitude of the acceleration is \(5.5\,\text{m/s}^2\).}{\(5.5\,\text{m/s}^2\) is a coefficient in the displacement function, not the acceleration itself; you must differentiate twice to find \(a(t)\).}
+  \Wrong{The magnitude of the acceleration at \(t=0\) is \(0\,\text{m/s}^2\).}{Differentiating twice leaves a nonzero constant term in \(a(t)\), so \(a(0)\neq 0\).}
+  \Correct{The magnitude of the acceleration at \(t=0\) is \(11.0\,\text{m/s}^2\).}{Differentiate: \(\vec v(t)=\frac{d\vec s}{dt}=(3\cdot 0.60\,t^2+2\cdot 5.5\,t)\hat{\imath}=(1.8t^2+11t)\hat{\imath}\). Then \(\vec a(t)=\frac{d\vec v}{dt}=(3.6t+11)\hat{\imath}\), so at \(t=0\), \(|\vec a(0)|=11.0\,\text{m/s}^2\).}
+}
+
+\QBlock{Q3}{An object takes 4.0 s to move from position A \(\big(\vec r_A=-3.0\hat{\imath}-8.0\hat{\jmath}\big)\) to position B \(\big(\vec r_B=9.0\hat{\imath}+5.0\hat{\jmath}\big)\), where length units are in meters. Which statement is correct?}{
+  \Correct{The straight-line distance between A and B is about 17.7 m.}{The displacement is \(\Delta\vec r=\vec r_B-\vec r_A=(9-(-3))\hat{\imath}+(5-(-8))\hat{\jmath}=12\hat{\imath}+13\hat{\jmath}\). Its magnitude is \(|\Delta\vec r|=\sqrt{12^2+13^2}=\sqrt{313}\approx 17.69\,\text{m}\approx 17.7\,\text{m}\).}
+  \Wrong{The speed at \(t=0\) must be \(4.4\,\text{m/s}\).}{Dividing displacement magnitude by time gives an average speed (and even that assumes straight-line motion), but the initial speed is not determined by endpoints and total time alone.}
+  \Wrong{The acceleration at \(t=0\) must be \(2.2\,\text{m/s}^2\).}{You cannot determine acceleration (or its value at \(t=0\)) uniquely from only initial/final positions and elapsed time without additional constraints (e.g., constant acceleration plus velocity information).}
+  \Wrong{None of the above is correct.}{Option A is correct because the straight-line separation is the magnitude of \(\Delta\vec r\), which is \(\sqrt{313}\approx 17.7\,\text{m}\).}
+}
+
+\end{document}

@@ -9,28 +9,24 @@ Generate original, isomorphic physics multiple-choice questions from source PDFs
 - 5-agent pipeline with structured outputs
 - Web UI + FastAPI backend
 - PDF/DOCX/TXT upload support
-- LaTeX output (`isomorphic_questions.tex`)
+- LaTeX + compiled PDF output (`isomorphic_questions.tex`, `isomorphic_questions.pdf`)
+- Single shared OpenAI container per workflow for all agent/tool runtime work
 - OpenAI Evals report per run
 
 ## 🗂️ Repository Layout
 
-- `src/`
-  - `src/server.py` FastAPI API server
-  - `src/main.py` CLI workflow runner
-  - `src/run.py` server startup wrapper
-  - `src/evaluation.py` OpenAI Evals integration
-- `data/`
-  - `data/prompts/` agent prompts
-  - `data/agents.json` agent model/tool config
-  - `data/sliders.json` UI slider prompt config
-  - `data/rubric.json` eval rubric
+- `backend/`
+  - `backend/src/server.py` FastAPI API server
+  - `backend/src/main.py` CLI workflow runner
+  - `backend/src/run.py` server startup wrapper
+  - `backend/src/evaluation.py` OpenAI Evals integration
+  - `backend/data/` prompts, skills, agents config, eval data
+  - `backend/uploads/` uploaded files by session
+  - `backend/outputs/` workflow outputs by timestamp
 - `frontend/`
   - Vite + React web UI (dev server + build)
 - `dist/`
   - Built frontend output served by FastAPI (created by `npm -C frontend run build`)
-- Runtime directories
-  - `uploads/` uploaded files by session
-  - `outputs/` workflow outputs by timestamp
 - Historical artifacts
   - `archive/`
 
@@ -44,7 +40,7 @@ Generate original, isomorphic physics multiple-choice questions from source PDFs
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ## ▶️ Run Server on Local Machine
@@ -64,15 +60,16 @@ Open [http://localhost:8000](http://localhost:8000).
 ## 🖥️ Run CLI
 
 ```bash
-python3 src/main.py "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
+python3 -m backend.src.main "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
 ```
 
 ## 📦 Output Files
 
-Each run writes to `outputs/<timestamp>/`:
+Each run writes to `backend/outputs/<timestamp>/`:
 
 - `final_result.json`
 - `isomorphic_questions.tex`
+- `isomorphic_questions.pdf`
 - `1_normalizer.json` ... `5_latex.json`
 - `evaluation_report.json` (if eval ran)
 - `evaluation_dataset.jsonl` (if eval ran)

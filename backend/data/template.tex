@@ -1,0 +1,93 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}
+
+\newcommand{\QBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{<TITLE>}}\\[0.25em]
+{\Large <Subtitle>}\\[0.25em]
+{\large Multiple choice questions generated below. Answers in RED and incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{Hello}{
+  \Wrong{test}{This is not a greeting and does not match the prompt.}
+  \Correct{Hey}{This is a valid informal greeting that matches the prompt.}
+}
+
+\QBlock{Q2}{Compute $5 + 2\frac{10}{20}$.}{
+  \Wrong{$5$}{This ignores the contribution from the fractional term.}
+  \Correct{$6$}{Since $\frac{10}{20}=\frac{1}{2}$, we have $2\cdot\frac{1}{2}=1$, and thus $5+1=6$.}
+}
+
+\end{document}

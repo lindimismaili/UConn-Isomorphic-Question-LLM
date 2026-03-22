@@ -1,0 +1,235 @@
+# Example Input (JSON)
+
+```json
+{
+  "questions": [
+    {
+      "source_id": "1",
+      "stem": "What is the SI unit for force?",
+      "options": [
+        {"key": "A", "text": "kg", "is_correct": false, "explanation": "This is the unit for mass."},
+        {"key": "B", "text": "N", "is_correct": true, "explanation": "Newton (N) is the SI unit of force, $F = ma$."},
+        {"key": "C", "text": "W", "is_correct": false, "explanation": "This is the unit for power."}
+      ],
+      "question_type": "multiple_choice",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "stem": "",
+      "options": [],
+      "question_type": "multiple_choice",
+      "skipped": true,
+      "skip_reason": "Question references a figure",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "stem": "A car of mass $1200\\,\\text{kg}$ travels at $20\\,\\text{m/s}$. What is its kinetic energy?",
+      "options": [],
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "Using $KE = \\frac{1}{2}mv^2 = \\frac{1}{2}(1200)(20)^2 = 240\\,000\\,\\text{J} = 240\\,\\text{kJ}$.",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "stem": "A block of mass $2\\,\\text{kg}$ is pushed along a frictionless surface.",
+      "options": [],
+      "question_type": "multi_part",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "If a force of $10\\,\\text{N}$ is applied, what is the acceleration?",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "By Newton's second law: $a = F/m = 10/2 = 5\\,\\text{m/s}^2$."
+        },
+        {
+          "part_label": "b",
+          "stem": "Which of the following gives the velocity after $3\\,\\text{s}$?",
+          "question_type": "multiple_choice",
+          "options": [
+            {"key": "A", "text": "$10\\,\\text{m/s}$", "is_correct": false, "explanation": "Forgot to multiply by time."},
+            {"key": "B", "text": "$15\\,\\text{m/s}$", "is_correct": true, "explanation": "Using $v = at = 5 \\times 3 = 15\\,\\text{m/s}$."},
+            {"key": "C", "text": "$30\\,\\text{m/s}$", "is_correct": false, "explanation": "Used $2a$ instead of $a$."}
+          ],
+          "answer": ""
+        }
+      ]
+    }
+  ]
+}
+```
+
+# Example Output
+
+```latex
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics: Forces and Motion}}\\[0.25em]
+{\Large Isomorphic Practice Questions}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{What is the SI unit for force?}{
+  \Wrong{kg}{This is the unit for mass, not force.}
+  \Correct{N}{Newton (N) is the SI unit of force, defined as $F = ma$, so $[\text{N}] = \text{kg}\cdot\text{m/s}^2$.}
+  \Wrong{W}{This is the unit for power, not force.}
+}{B}
+
+\SkipBlock{Q2}{Question references a figure}
+
+\OEBlock{Q3}{A car of mass $1200\,\text{kg}$ travels at $20\,\text{m/s}$. What is its kinetic energy?}{Using $KE = \frac{1}{2}mv^2 = \frac{1}{2}(1200)(20)^2 = 240\,000\,\text{J} = 240\,\text{kJ}$.}
+
+\MPBlock{Q4}{A block of mass $2\,\text{kg}$ is pushed along a frictionless surface.}{
+  \OEPart{a}{If a force of $10\,\text{N}$ is applied, what is the acceleration?}{By Newton's second law: $a = F/m = 10/2 = 5\,\text{m/s}^2$.}
+  \MCPart{b}{Which of the following gives the velocity after $3\,\text{s}$?}{
+    \Wrong{$10\,\text{m/s}$}{Forgot to multiply by time.}
+    \Correct{$15\,\text{m/s}$}{Using $v = at = 5 \times 3 = 15\,\text{m/s}$.}
+    \Wrong{$30\,\text{m/s}$}{Used $2a$ instead of $a$.}
+  }{B}
+}
+
+\end{document}
+```
