@@ -41,12 +41,12 @@ Generate original, isomorphic physics multiple-choice questions from source PDFs
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
+npm install
 ```
 
 ## ▶️ Run Server on Local Machine
 
 ```bash
-npm install
 npm start
 ```
 
@@ -54,7 +54,6 @@ Open [http://localhost:8000](http://localhost:8000).
 
 ### Dev UI (hot reload)
 
-- `npm install`
 - `npm run dev`
 
 ## 🖥️ Run CLI
@@ -182,10 +181,10 @@ This enables the versioned hook folder and makes the hook/deploy scripts executa
 ### 6. ✅ Run first deploy manually
 
 ```bash
-bash raspi-deploy.sh
+bash deploy/raspi-deploy.sh
 ```
 
-This runs a first deployment immediately so you can confirm everything works.
+This now installs required OS packages on the Pi if they are missing, builds the frontend, syncs the app into `/var/www/uconn`, copies `.env` when present, and configures nginx + systemd.
 
 ### 7. 🔄 Normal update flow (from now on)
 

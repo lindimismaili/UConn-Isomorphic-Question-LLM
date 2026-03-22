@@ -11,6 +11,7 @@ UCONN_DST="/var/www/uconn"
 
 UCONN_NGINX_DST="/etc/nginx/sites-available/uconn"
 UCONN_SERVICE_DST="/etc/systemd/system/uconn.service"
+APT_UPDATED=0
 
 # =====================================================
 # HELPERS
@@ -25,6 +26,37 @@ require_file() {
 
 require_index() {
   [[ -f "$1/index.html" ]] || { echo "ERROR: Missing index.html in: $1" >&2; exit 1; }
+}
+
+apt_install_if_missing() {
+  local package_name="$1"
+  local command_name="${2:-$1}"
+
+  if command -v "$command_name" >/dev/null 2>&1; then
+    return
+  fi
+
+  if [[ "$APT_UPDATED" -eq 0 ]]; then
+    echo "---- apt update ----"
+    sudo apt-get update
+    APT_UPDATED=1
+  fi
+
+  echo "Installing missing package: $package_name"
+  sudo apt-get install -y "$package_name"
+}
+
+ensure_system_packages() {
+  echo "---- system packages ----"
+
+  apt_install_if_missing git
+  apt_install_if_missing rsync
+  apt_install_if_missing nginx
+  apt_install_if_missing python3
+  apt_install_if_missing python3-venv
+  apt_install_if_missing python3-pip pip3
+  apt_install_if_missing nodejs node
+  apt_install_if_missing npm
 }
 
 ensure_git_pull_deploy_hooks() {
@@ -97,31 +129,15 @@ ensure_frontend_dist() {
     return
   fi
 
-  if ! command -v npm >/dev/null 2>&1; then
-    echo "ERROR: npm is required to build frontend. Install Node.js/npm on this host." >&2
-    exit 1
-  fi
-
-  if [[ ! -d "$src/node_modules" ]]; then
-    echo "Installing Node dependencies at repo root..."
-    if [[ -f "$src/package-lock.json" ]]; then
-      (cd "$src" && npm ci --no-audit --no-fund)
-    else
-      (cd "$src" && npm install --no-audit --no-fund)
-    fi
-  fi
-
-  if [[ ! -x "$src/frontend/node_modules/.bin/vite" ]]; then
-    echo "Installing frontend dependencies..."
-    if [[ -f "$src/frontend/package-lock.json" ]]; then
-      (cd "$src/frontend" && npm ci --no-audit --no-fund)
-    else
-      (cd "$src/frontend" && npm install --no-audit --no-fund)
-    fi
+  echo "Installing frontend dependencies..."
+  if [[ -f "$src/frontend/package-lock.json" ]]; then
+    (cd "$src/frontend" && npm ci --no-audit --no-fund)
+  else
+    (cd "$src/frontend" && npm install --no-audit --no-fund)
   fi
 
   echo "Building frontend (outputs to $src/dist)..."
-  (cd "$src" && npm run frontend:build)
+  (cd "$src" && npm -C frontend run build)
   require_index "$src/dist"
   echo "OK: frontend build ready at $src/dist"
 }
@@ -175,6 +191,28 @@ deploy_static() {
   fi
 
   echo "OK: deployed to $dst"
+}
+
+sync_runtime_env() {
+  local src="$1"
+  local dst="$2"
+  local src_env="$src/.env"
+  local dst_env="$dst/.env"
+
+  echo "---- sync runtime env ----"
+
+  if [[ -f "$src_env" ]]; then
+    sudo install -m 640 -o www-data -g www-data "$src_env" "$dst_env"
+    echo "OK: copied $src_env -> $dst_env"
+    return
+  fi
+
+  if [[ -f "$dst_env" ]]; then
+    echo "OK: keeping existing $dst_env"
+    return
+  fi
+
+  echo "WARN: no .env found in source or destination. OPENAI_API_KEY must be configured in $dst_env."
 }
 
 setup_python_venv_at_destination() {
@@ -313,10 +351,15 @@ NGINX_EOF
 
   sudo chmod 0644 "$UCONN_NGINX_DST"
 
+  if [[ -e "/etc/nginx/sites-enabled/default" ]]; then
+    sudo rm -f "/etc/nginx/sites-enabled/default"
+  fi
+
   if [[ ! -e "/etc/nginx/sites-enabled/uconn" ]]; then
     sudo ln -s "$UCONN_NGINX_DST" "/etc/nginx/sites-enabled/uconn"
   fi
 
+  sudo systemctl enable --now nginx
   sudo nginx -t
   sudo systemctl reload nginx
 }
@@ -369,9 +412,11 @@ require_dir "$REPO_DIR"
 require_file "$REPO_DIR/backend/requirements.txt"
 require_file "$REPO_DIR/backend/src/server.py"
 
+ensure_system_packages
 ensure_git_pull_deploy_hooks "$UCONN_SRC"
 ensure_frontend_dist "$UCONN_SRC"
 deploy_static "$UCONN_SRC" "$UCONN_DST"
+sync_runtime_env "$UCONN_SRC" "$UCONN_DST"
 setup_python_venv_at_destination "$UCONN_DST"
 write_version_metadata "$UCONN_SRC" "$UCONN_DST/dist"
 install_uconn_nginx_conf
