@@ -11,7 +11,7 @@ import json
 import logging
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -75,19 +75,36 @@ DEFAULT_RUBRIC_CRITERIA: list[dict[str, str]] = [
 ]
 
 
-def _load_rubric_criteria() -> list[dict[str, str]]:
-    if RUBRIC_PATH.exists():
-        try:
-            data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
-            if isinstance(data, list) and data:
-                return data
-            logger.warning("Rubric file %s is empty or not a list; using defaults", RUBRIC_PATH)
-        except Exception as exc:
-            logger.warning("Failed to load rubric from %s: %s; using defaults", RUBRIC_PATH, exc)
-    return DEFAULT_RUBRIC_CRITERIA
+def _load_rubric_config() -> dict[str, Any]:
+    if not RUBRIC_PATH.exists():
+        raise FileNotFoundError(f"Rubric file not found: {RUBRIC_PATH}")
+
+    data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"Rubric file {RUBRIC_PATH} must be a JSON object")
+
+    criteria = data.get("criteria")
+    model = data.get("model")
+    if not isinstance(criteria, list) or not criteria:
+        logger.warning(
+            "Rubric file %s is missing a valid criteria list; using default criteria",
+            RUBRIC_PATH,
+        )
+        criteria = DEFAULT_RUBRIC_CRITERIA
+
+    if not isinstance(model, str) or not model:
+        raise ValueError(f"Rubric file {RUBRIC_PATH} must define a non-empty 'model' string")
+
+    return {"criteria": criteria, "model": model}
 
 
-RUBRIC_CRITERIA = _load_rubric_criteria()
+RUBRIC_CONFIG = _load_rubric_config()
+RUBRIC_CRITERIA = RUBRIC_CONFIG["criteria"]
+RUBRIC_MODEL = RUBRIC_CONFIG["model"]
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _to_jsonl(items: list[dict[str, Any]]) -> str:
@@ -107,7 +124,7 @@ def _build_item_schema() -> dict[str, Any]:
     }
 
 
-def _build_testing_criteria(model: str = "o4-mini") -> list[dict[str, Any]]:
+def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
     criteria: list[dict[str, Any]] = []
     for criterion in RUBRIC_CRITERIA:
         criteria.append(
@@ -132,12 +149,19 @@ def _build_testing_criteria(model: str = "o4-mini") -> list[dict[str, Any]]:
     return criteria
 
 
+def _build_run_data_source(eval_data_file_id: str) -> dict[str, Any]:
+    return {
+        "type": "jsonl",
+        "source": {"type": "file_id", "id": eval_data_file_id},
+    }
+
+
 def run_openai_output_evaluation(
     client: OpenAI,
     final_result: dict[str, Any],
     outputs_dir: Path,
     latex_path: Optional[Path] = None,
-    grader_model: str = "o4-mini",
+    grader_model: Optional[str] = None,
     poll_interval_seconds: float = 3.0,
     max_wait_seconds: int = 900,
 ) -> dict[str, Any]:
@@ -145,13 +169,14 @@ def run_openai_output_evaluation(
     Evaluate generated questions using OpenAI Evals and save evaluation_report.json.
     """
     report_path = outputs_dir / "evaluation_report.json"
+    grader_model = grader_model or RUBRIC_MODEL
 
     generated_questions = final_result.get("generated_questions", [])
     if not generated_questions:
         report = {
             "status": "skipped",
             "reason": "No generated questions to evaluate",
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": _utc_timestamp(),
             "rubric": RUBRIC_CRITERIA,
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -161,7 +186,7 @@ def run_openai_output_evaluation(
         report = {
             "status": "skipped",
             "reason": "OpenAI client has no evals API surface",
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": _utc_timestamp(),
             "rubric": RUBRIC_CRITERIA,
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -194,7 +219,7 @@ def run_openai_output_evaluation(
         report = {
             "status": "skipped",
             "reason": "No source/generated pairs available for evaluation",
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": _utc_timestamp(),
             "rubric": RUBRIC_CRITERIA,
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -221,10 +246,7 @@ def run_openai_output_evaluation(
         run = client.evals.runs.create(
             eval_id=eval_obj.id,
             name="Rubric Run",
-            data_source={
-                "type": "completions",
-                "source": {"type": "file_id", "id": eval_data_file.id},
-            },
+            data_source=_build_run_data_source(eval_data_file.id),
         )
 
         started = time.time()
@@ -238,9 +260,18 @@ def run_openai_output_evaluation(
                 break
             time.sleep(poll_interval_seconds)
 
+        run_status = getattr(current, "status", "unknown")
+        report_status = "completed"
+        if run_status == "failed":
+            report_status = "failed"
+        elif run_status == "cancelled":
+            report_status = "cancelled"
+        elif run_status not in {"completed"}:
+            report_status = "incomplete"
+
         report: dict[str, Any] = {
-            "status": "completed",
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "status": report_status,
+            "created_at": _utc_timestamp(),
             "rubric": RUBRIC_CRITERIA,
             "items_evaluated": len(items),
             "grader_model": grader_model,
@@ -248,16 +279,21 @@ def run_openai_output_evaluation(
             "eval_data_file_id": eval_data_file.id,
             "eval_id": eval_obj.id,
             "run_id": current.id,
-            "run_status": getattr(current, "status", "unknown"),
+            "run_status": run_status,
             "run": current.model_dump() if hasattr(current, "model_dump") else str(current),
         }
+
+        if report_status == "incomplete":
+            report["reason"] = (
+                f"Eval run did not reach a terminal state within {max_wait_seconds} seconds"
+            )
 
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
     except Exception as exc:
         report = {
             "status": "failed",
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": _utc_timestamp(),
             "rubric": RUBRIC_CRITERIA,
             "items_evaluated": len(items),
             "grader_model": grader_model,
