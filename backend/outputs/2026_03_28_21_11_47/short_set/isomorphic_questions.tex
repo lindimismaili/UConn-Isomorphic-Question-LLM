@@ -1,0 +1,177 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Questions}}\\[0.25em]
+{\Large Vectors and Kinematics}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A research rover is located at the origin of an $xy$-plane. A sensor beacon is at position $\vec r = -9\hat{i} + 12\hat{j}$, where distances are measured in kilometers. Which statement is correct?}{%
+\Wrong{The beacon is 21 km from the rover.}{This adds the magnitudes of the components, $9+12$, instead of calculating the magnitude of the vector. Distance from the origin must be found using $|\vec r|=\sqrt{x^2+y^2}$, not by simple addition.}
+\Wrong{The beacon is 12 km from the rover.}{This uses only the $y$-component as the full distance. In two dimensions, both the $x$- and $y$-components contribute to the magnitude.}
+\Correct{The beacon is 15 km from the rover.}{The distance from the origin is the magnitude of the position vector. Using $|\vec r|=\sqrt{(-9)^2+12^2}=\sqrt{81+144}=\sqrt{225}=15\,\text{km}$, the beacon is 15 km away. This applies the Pythagorean theorem to the perpendicular vector components.}
+\Wrong{The beacon is 9 km from the rover.}{This uses only the $x$-component's magnitude as the total distance. A single component is not the same as the full vector magnitude unless the other component is zero.}
+}{C}
+
+\QBlock{Q2}{The position of a cart moving along the $x$-axis is given by $\vec s(t)=\big[(2.4\,\text{m/s}^3)t^3-(1.1\,\text{m/s}^2)t^2\big]\hat{i}$. Which statement is correct?}{%
+\Wrong{This motion has constant acceleration.}{A cubic position function does not lead to constant acceleration. Taking two derivatives gives an acceleration that still depends on $t$.}
+\Correct{The magnitude of the acceleration at $t=0$ is $2.2\,\text{m/s}^2$.}{Differentiate the position twice: $v(t)=\frac{ds}{dt}=7.2t^2-2.2t$ and $a(t)=\frac{dv}{dt}=14.4t-2.2$. At $t=0$, the acceleration is $a(0)=-2.2\,\text{m/s}^2$, so its magnitude is $2.2\,\text{m/s}^2$. The correct statement focuses on the magnitude, not the sign.}
+\Wrong{The acceleration is always $1.1\,\text{m/s}^2$.}{This incorrectly treats the coefficient of the $t^2$ term in position as the acceleration itself. Acceleration comes from the second derivative of position, not directly from a coefficient in $s(t)$.}
+\Wrong{The magnitude of the acceleration at $t=0$ is $0\,\text{m/s}^2$.}{This mistake comes from assuming every term vanishes at $t=0$ after differentiation. The second derivative leaves the constant term $-2.2\,\text{m/s}^2$, so the magnitude is not zero.}
+}{B}
+
+\QBlock{Q3}{A particle takes 4.0 s to move from position $\vec r_A = 3\hat{i}-2\hat{j}\,\text{m}$ to position $\vec r_B = -9\hat{i}+7\hat{j}\,\text{m}$. Which statement is correct?}{%
+\Wrong{The distance traveled by the particle is 15 m.}{The value 15 m is the magnitude of the displacement, not necessarily the actual path length. Distance traveled depends on the path taken, which is not specified.}
+\Wrong{The speed at $t=0$ must be $3.75\,\text{m/s}$.}{This divides displacement magnitude by elapsed time to get an average rate and then incorrectly treats it as the initial speed. Instantaneous speed at $t=0$ cannot be determined from only the starting point, ending point, and total time.}
+\Wrong{The acceleration at $t=0$ must be $0.94\,\text{m/s}^2$.}{Acceleration requires more detailed information about how velocity changes with time. Initial and final position plus total time are not enough to determine the acceleration at a specific instant.}
+\Correct{None of the above is correct.}{From the given data, the displacement is $\Delta \vec r=\vec r_B-\vec r_A=(-12\hat{i}+9\hat{j})\,\text{m}$, whose magnitude is $|\Delta \vec r|=\sqrt{(-12)^2+9^2}=15\,\text{m}$. However, that value is not guaranteed to equal the distance traveled, and the initial speed and initial acceleration cannot be inferred from the limited information provided. Therefore A, B, and C are all false.}
+}{D}
+
+\end{document}

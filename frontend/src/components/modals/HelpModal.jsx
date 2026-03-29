@@ -11,7 +11,7 @@ export default function HelpModal({ isOpen, onClose }) {
         <button className="btn btn-primary" onClick={onClose}>Got it!</button>
       }
     >
-      <div className="help-modal-body">
+      <div className="help-modal-body modal-body-stack">
         <p className="help-intro">
           This tool generates{' '}
           <strong>isomorphic multiple-choice physics questions</strong> based on

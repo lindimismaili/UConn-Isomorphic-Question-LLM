@@ -1,0 +1,254 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Electricity and Magnetism Isomorphic Questions}}\\[0.25em]
+{\Large Electrostatics, Circuits, and Magnetism}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A negative point charge $-Q_1$ is fixed at the origin. A positive point charge $+Q_2$ is located on the negative $x$-axis. What is the direction of the Coulomb force acting on $+Q_2$, and what is the direction of the unit vector $\hat r$ in $\vec F = k\dfrac{(-Q_1)(+Q_2)}{r^2}\hat r$ when $\hat r$ is defined from the charge at the origin to $+Q_2$?}{%
+\Wrong{Force on $+Q_2$ points in the $-x$ direction; unit vector points in the $-x$ direction}{This assumes the force must point in the same direction as $\hat r$. Because the charges are opposite, the force is attractive and points toward the origin, which is in the $+x$ direction from the location of $+Q_2$.}
+\Correct{Force on $+Q_2$ points in the $+x$ direction; unit vector points in the $-x$ direction}{The unit vector $\hat r$ is defined from the source charge at the origin to the field point where $+Q_2$ sits, so it points along the negative $x$ direction. Since $q_1q_2<0$, Coulomb's law gives a force opposite to $\hat r$, so the force on $+Q_2$ points in the positive $x$ direction, toward the origin.}
+\Wrong{Force on $+Q_2$ points in the $+x$ direction; unit vector points in the $+x$ direction}{This gets the attractive force direction right but reverses the definition of the separation unit vector. With the second charge on the negative $x$-axis, $\hat r$ from the origin to that charge must point in the $-x$ direction.}
+\Wrong{Force on $+Q_2$ points in the $-x$ direction; unit vector points in the $+x$ direction}{This reverses both directions. Opposite charges attract, so the force on the positive charge must point toward the origin, not farther into the negative $x$ region.}
+}{B}
+
+\QBlock{Q2}{A negative point charge $-Q$ is fixed at the origin. A positive test charge $+q$ is placed on the negative $y$-axis. Which statement correctly describes the direction of the electric field at that location and the direction of the electric force on the positive charge?}{%
+\Correct{Electric field upward; electric force upward}{The electric field of a negative source points toward the source. At a point on the negative $y$-axis, that means the field points upward toward the origin, and because $\vec F=q\vec E$ for a positive test charge, the force is in the same upward direction.}
+\Wrong{Electric field upward; electric force downward}{This treats the positive test charge as if it were negative. A positive charge experiences force in the same direction as the electric field, not opposite to it.}
+\Wrong{Electric field downward; electric force upward}{This reverses the electric field direction. The field due to a negative source points toward the origin, so from a point below the origin it must point upward.}
+\Wrong{Electric field downward; electric force downward}{This incorrectly makes both vectors point away from the source. A negative source creates a field toward itself, and a positive charge follows that field direction.}
+}{A}
+
+\QBlock{Q3}{A point charge is placed at the center of a regular octahedral Gaussian surface. Which statement is correct?}{%
+\Wrong{The electric flux through every face is zero}{This confuses zero field at some points with zero flux through a face. A closed surface enclosing a nonzero charge has nonzero total flux by Gauss's law.}
+\Wrong{The magnitude of the electric field is constant over each triangular face}{Equal flux does not require uniform field over a face. Different points on one face are at different distances from the central charge, so the field magnitude varies.}
+\Correct{The electric flux is the same through each face}{Gauss's law gives the total flux as $\Phi_E = q/\varepsilon_0$ for the closed surface. Because all faces of a regular octahedron are equivalent by symmetry when the charge is at the center, the total flux is shared equally among them, so each face has the same flux.}
+\Wrong{None of the other statements is correct}{This ignores the symmetry of the surface. The correct symmetric conclusion is that each face receives an equal share of the total electric flux.}
+}{C}
+
+\QBlock{Q4}{An infinitely long straight wire carries a uniform negative linear charge density. A closed cylindrical Gaussian surface is placed coaxially around the wire. Which part or parts of the surface have nonzero electric flux?}{%
+\Wrong{Only the two flat circular end caps}{This treats the field as if it were along the cylinder axis. For a line charge, the electric field is radial, so it is parallel to the end caps and gives zero flux there.}
+\Wrong{Both the curved surface and the end caps}{This ignores the dot product in $\Phi = \int \vec E\cdot d\vec A$. The end-cap area vectors are axial while the field is radial, so the end-cap contribution is zero.}
+\Wrong{No part of the surface has nonzero flux}{That would contradict Gauss's law for a surface enclosing charge. The net flux is nonzero and must pass through the curved side.}
+\Correct{Only the curved side surface}{For an infinite line charge, the electric field points radially inward or outward from the axis. On the curved side of a coaxial cylinder, $d\vec A$ is also radial, so $\vec E\cdot d\vec A \neq 0$, whereas on the end caps $d\vec A$ is along the axis and $\vec E\cdot d\vec A = 0$.}
+}{D}
+
+\QBlock{Q5}{Two identical negative point charges, each of charge $-q$, are separated by a distance $d$ in vacuum. Their separation is then increased to $3d$. How does the electric potential energy of the two-charge system change?}{%
+\Wrong{It increases}{This would be true if the charges were opposite in sign. For like charges, the potential energy is positive and decreases as the separation increases.}
+\Correct{It decreases}{The electric potential energy of two point charges is $U = k\dfrac{q_1q_2}{r}$. Here $q_1q_2 = (+q^2)$ in magnitude because both charges are negative, so $U = kq^2/r$ is positive; increasing the separation from $d$ to $3d$ changes it to $U = kq^2/(3d)$, which is smaller, so the energy decreases.}
+\Wrong{It becomes zero}{Potential energy approaches zero only as the separation goes to infinity. At the finite distance $3d$, the potential energy is still positive and nonzero.}
+\Wrong{It remains unchanged}{This ignores the $1/r$ dependence in $U = kq_1q_2/r$. Changing the separation necessarily changes the electric potential energy.}
+}{B}
+
+\QBlock{Q6}{A charged particle moves from point $P$ to point $Q$ in a uniform electric field. Which quantity determines the electric potential difference between $P$ and $Q$?}{%
+\Wrong{The total distance traveled along the path}{This treats potential difference as path-dependent. In electrostatics, the field is conservative, so only the endpoints matter.}
+\Wrong{The time required for the motion}{Potential difference is a property of the field and positions, not of how long the particle takes to move. Time enters kinematics, not the definition of electric potential.}
+\Correct{The component of displacement parallel to the electric field}{In a uniform electric field, the potential difference is $\Delta V = -\vec E\cdot \Delta \vec r$. Therefore only the displacement component along the field contributes; any displacement perpendicular to the field does not change the electric potential.}
+\Wrong{The mass of the particle}{Mass affects dynamics, not electric potential difference. The potential difference is set by the field and the locations of $P$ and $Q$.}
+}{C}
+
+\QBlock{Q7}{A parallel-plate capacitor has plate area $A$ and separation $d$. If the plate area is reduced to $A/4$ while the plate separation remains unchanged, the capacitance:}{%
+\Wrong{Quadruples}{This reverses the dependence on area. For parallel plates, larger area gives larger capacitance, so reducing area cannot make $C$ increase.}
+\Wrong{Remains unchanged}{This ignores the geometry dependence of a capacitor. The formula shows capacitance changes directly with plate area.}
+\Wrong{Is reduced by a factor of $2$}{This underestimates the effect of changing the area. Since $C \propto A$, reducing the area to one-fourth reduces the capacitance to one-fourth as well.}
+\Correct{Is reduced by a factor of $4$}{For a parallel-plate capacitor, $C = \varepsilon_0 A/d$ or $C=\varepsilon A/d$ if a dielectric is present. Because capacitance is directly proportional to area, replacing $A$ by $A/4$ makes the new capacitance $C/4$, so it is reduced by a factor of $4$.}
+}{D}
+
+\QBlock{Q8}{Two point charges are separated by $16.0\,\text{cm}$ and have charges $+3.50\,\mu\text{C}$ and $-3.50\,\mu\text{C}$, respectively. What is the magnitude of the electric field at the point midway between the charges? Use $k = 8.99\times 10^9\,\text{N}\cdot\text{m}^2/\text{C}^2$.}{%
+\Wrong{$0$}{This incorrectly assumes symmetry makes the fields cancel. At the midpoint between opposite charges, both field contributions point in the same direction, so they add rather than cancel.}
+\Wrong{$4.92 \times 10^6\,\text{N/C}$}{This is the field from only one charge at the midpoint. The net field must include both equal contributions, which point the same way.}
+\Correct{$9.83 \times 10^6\,\text{N/C}$}{The midpoint is $0.080\,\text{m}$ from each charge, so each charge produces $E = k|q|/r^2 = (8.99\times10^9)(3.50\times10^{-6})/(0.080)^2 \approx 4.92\times10^6\,\text{N/C}$. Because the charges are opposite, the two fields at the midpoint point in the same direction, so the net magnitude is $2E \approx 9.83\times10^6\,\text{N/C}$.}
+\Wrong{$1.97 \times 10^7\,\text{N/C}$}{This is too large, likely from doubling after already accounting for both charges or using half the distance incorrectly. The correct addition of the two equal fields gives $9.83\times10^6\,\text{N/C}$.}
+}{C}
+
+\QBlock{Q9}{A total charge of $+8.00\,\mu\text{C}$ is uniformly distributed throughout an insulating sphere of radius $0.120\,\text{m}$. What is the magnitude and direction of the electric field at a point $0.180\,\text{m}$ outside the surface of the sphere?}{%
+\Wrong{$2.22 \times 10^6\,\text{N/C}$, radially outward}{This likely uses $0.180\,\text{m}$ as the distance from the center instead of from the surface. Outside the sphere, the relevant radius in $E = kQ/r^2$ is the full center-to-point distance $0.120 + 0.180 = 0.300\,\text{m}$.}
+\Correct{$7.99 \times 10^5\,\text{N/C}$, radially outward}{Because the point lies outside a spherically symmetric charge distribution, Gauss's law lets us treat the sphere as if all its charge were concentrated at the center. Using $r = 0.120 + 0.180 = 0.300\,\text{m}$ gives $E = kQ/r^2 = (8.99\times10^9)(8.00\times10^{-6})/(0.300)^2 \approx 7.99\times10^5\,\text{N/C}$, and the field points radially outward because the total charge is positive.}
+\Wrong{$7.99 \times 10^5\,\text{N/C}$, radially inward}{The magnitude is correct, but the direction is not. A positive charge distribution produces an electric field directed away from the center, not toward it.}
+\Wrong{None of the above is correct}{This overlooks that option B matches both the correct outside-field magnitude and the correct outward direction. The point is outside the sphere, so the point-charge formula applies.}
+}{B}
+
+\QBlock{Q10}{A particle with charge $-2Q$ is placed at the center of an initially uncharged conducting hollow sphere. What charges are induced on the inner and outer surfaces of the sphere?}{%
+\Wrong{Inner: $-2Q$; outer: $+2Q$}{This gives the inner surface the wrong sign. The inner surface must carry charge opposite to the enclosed charge so that the electric field inside the conducting material is zero.}
+\Wrong{Inner: $+Q$; outer: $-Q$}{These amounts do not match the enclosed charge. To cancel the field inside the conductor, the inner surface must have total charge $+2Q$, not $+Q$.}
+\Wrong{Inner: $0$; outer: $-2Q$}{This ignores the required induction on the inner surface. A charge inside a cavity necessarily induces charge on the cavity wall so that the conducting material remains field-free.}
+\Correct{Inner: $+2Q$; outer: $-2Q$}{In electrostatic equilibrium, the electric field inside the conducting material must be zero, so a Gaussian surface just inside the conductor must enclose zero net charge. Therefore the inner surface must carry $+2Q$ to balance the central $-2Q$, and because the conductor as a whole started neutral, the outer surface must carry $-2Q$.}
+}{D}
+
+\QBlock{Q11}{The electric potential along the $x$-axis is given by $V(x) = 2x^3 - 4x$, where $V$ is in volts and $x$ is in meters. What is the electric field at that point?}{%
+\Wrong{$\vec E = (6x^2 - 4)\hat{i}$}{This is $dV/dx$, not $-dV/dx$. The common mistake is forgetting the minus sign in the relation between electric field and potential.}
+\Correct{$\vec E = (4 - 6x^2)\hat{i}$}{In one dimension, the electric field is $E_x = -\dfrac{dV}{dx}$. Since $\dfrac{dV}{dx} = 6x^2 - 4$, the field is $\vec E = -(6x^2 - 4)\hat{i} = (4 - 6x^2)\hat{i}$.}
+\Wrong{$\vec E = (2x^4 - 2x^2)\hat{i}$}{This comes from an incorrect power manipulation. Differentiating a cubic potential should give a quadratic expression, not a quartic one.}
+\Wrong{$\vec E = (6x - 4)\hat{i}$}{This differentiates $x^3$ incorrectly as if it were $x^2$. The derivative of $2x^3$ is $6x^2$, so the field must depend on $x^2$.}
+}{B}
+
+\QBlock{Q12}{An $18\,\text{V}$ battery is connected in series with a $4\,\mu\text{F}$ capacitor, a $6\,\Omega$ resistor, an ammeter, and a switch that is initially open. A voltmeter is connected across the capacitor. At the instant the switch is closed, what are the ammeter and voltmeter readings, respectively?}{%
+\Correct{$3.0\,\text{A},\ 0\,\text{V}$}{At $t=0$, an initially uncharged capacitor behaves like a short circuit, so its voltage cannot jump instantly and $V_C(0)=0$. The full battery voltage is across the resistor at that moment, so the current is $I(0)=V/R=18/6=3.0\,\text{A}$.}
+\Wrong{$0\,\text{A},\ 18\,\text{V}$}{This describes the long-time steady state after the capacitor is fully charged. It is not the behavior immediately after the switch is closed.}
+\Wrong{$0\,\text{A},\ 0\,\text{V}$}{This incorrectly assumes the capacitor blocks current instantly. Right after closing the switch, the uncharged capacitor allows maximum current in the charging circuit.}
+\Wrong{$3.0\,\text{A},\ 18\,\text{V}$}{The current value is correct for $t=0$, but the capacitor voltage is not. A capacitor's voltage cannot change discontinuously from $0$ to $18\,\text{V}$ at the switching instant.}
+}{A}
+
+\QBlock{Q13}{A battery charges a $2.2\,\text{mF}$ capacitor through a $470\,\Omega$ resistor. What time is required for the capacitor's charge to reach $70\%$ of its maximum value?}{%
+\Wrong{$0.36\,\text{s}$}{This is too short for reaching $70\%$ of the final charge with this time constant. It likely comes from using the logarithm incorrectly or using the wrong fraction in the exponential.}
+\Wrong{$1.03\,\text{s}$}{This equals approximately one time constant $RC$, but at $t=RC$ the charge is about $63\%$ of the maximum, not $70\%$. Reaching $70\%$ requires a slightly longer time.}
+\Correct{$1.24\,\text{s}$}{For charging, $q(t)=Q_{\max}\left(1-e^{-t/RC}\right)$. Setting $q=0.70Q_{\max}$ gives $0.70=1-e^{-t/RC}$, so $e^{-t/RC}=0.30$ and $t=-RC\ln(0.30)$; with $RC=(470)(2.2\times10^{-3})=1.034\,\text{s}$, this yields $t\approx1.24\,\text{s}$.}
+\Wrong{$2.50\,\text{s}$}{This is much too long for only $70\%$ charge. After this much time, the capacitor would be far closer to its final charge.}
+}{C}
+
+\QBlock{Q14}{At one instant an electron has velocity components $v_x=-6.0\times10^5\,\text{m/s}$ and $v_z=2.5\times10^5\,\text{m/s}$, so it is moving in the $xz$ plane. A magnetic field of magnitude $0.40\,\text{T}$ points in the positive $z$ direction. At that instant, the magnetic force on the electron is:}{%
+\Wrong{$(3.84 \times 10^{-14}\,\text{N})\hat{\jmath}$}{This gets the magnitude right but forgets that the particle is negatively charged. The electron's charge reverses the direction of $\vec v\times\vec B$.}
+\Wrong{$(-1.60 \times 10^{-14}\,\text{N})\hat{\jmath}$}{This uses an incorrect magnitude, likely by including the wrong velocity component or making an arithmetic error. Only the component perpendicular to $\vec B$ contributes to the magnetic force.}
+\Wrong{$(-3.84 \times 10^{-14}\,\text{N})\hat{k}$}{This puts the force along the field direction, which cannot happen for a magnetic force. Since $\vec F=q\vec v\times\vec B$, the force must be perpendicular to both $\vec v$ and $\vec B$.}
+\Correct{$(-3.84 \times 10^{-14}\,\text{N})\hat{\jmath}$}{The magnetic force is $\vec F=q\vec v\times\vec B$. With $\vec v=(v_x,0,v_z)$ and $\vec B=(0,0,0.40)$, only $v_x$ contributes, giving $\vec v\times\vec B=(0,-v_xB,0)=(0,2.4\times10^5,0)$; multiplying by $q=-1.60\times10^{-19}\,\text{C}$ gives $\vec F=(-3.84\times10^{-14}\,\text{N})\hat{\jmath}$.}
+}{D}
+
+\end{document}

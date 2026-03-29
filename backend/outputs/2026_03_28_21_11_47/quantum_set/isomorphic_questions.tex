@@ -1,0 +1,174 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Quantum Mechanics Wave Function Problems}}\\[0.25em]
+{\Large Formatted Problem Set}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\MPBlock{Q1}{A particle of mass $m$ is confined to the region $0<x<a$ and at $t=0$ has wave function $\psi(x)=A\,x(a-x)$ for $0<x<a$, with $\psi(x)=0$ elsewhere.}{%
+\OEPart{a}{Find the normalization constant $A$.}{Normalization requires $\int_0^a |\psi(x)|^2\,dx=1$, so $A^2\int_0^a x^2(a-x)^2\,dx=1$. Since $\int_0^a x^2(a-x)^2\,dx=\frac{a^5}{30}$, the constant is $A=\sqrt{\frac{30}{a^5}}$.}
+\OEPart{b}{What equation should be used to compute the expectation value $\langle x\rangle$? Evaluate it for this state.}{Use $\langle x\rangle=\int_{-\infty}^{\infty}\psi^*(x)\,x\,\psi(x)\,dx$, which here reduces to $\langle x\rangle=\int_0^a x|\psi(x)|^2\,dx$. Because $|\psi(x)|^2=A^2x^2(a-x)^2$ is symmetric about $x=\tfrac{a}{2}$, the result is $\langle x\rangle=\tfrac{a}{2}$.}
+}
+
+\OEBlock{Q2}{At time $t=0$, a particle on the half-line $x\ge 0$ is described by $\psi(x,0)=\sqrt{\frac{2}{b}}\,e^{-x/b}$ for $x\ge 0$, where $b>0$, and $\psi(x,0)=0$ for $x<0$. What is the probability of finding the particle to the left of $x=b$?}{The probability is $P(x<b)=\int_0^b |\psi(x,0)|^2\,dx=\int_0^b \frac{2}{b}e^{-2x/b}\,dx$. Evaluating the integral gives $P(x<b)=1-e^{-2}$.}
+
+\OEBlock{Q3}{Inside a one-dimensional box of length $L$, consider the wave function $\psi(x,t)=\sqrt{\frac{2}{L}}\sin\!\left(\frac{3\pi x}{L}\right)e^{-iE_3 t/\hbar}$ for $0<x<L$, with $\psi=0$ outside the box. Why is this a stationary state? Explain your answer using the probability density.}{This is a stationary state because the time dependence appears only as the phase factor $e^{-iE_3 t/\hbar}$, multiplying a single spatial eigenfunction. Therefore $|\psi(x,t)|^2=\frac{2}{L}\sin^2\!\left(\frac{3\pi x}{L}\right)$, which has no time dependence, so all position probabilities remain constant in time.}
+
+\MPBlock{Q4}{A particle of mass $m$ is trapped in a one-dimensional rigid box with walls at $y=0$ and $y=a$. The potential is $V(y)=0$ for $0<y<a$ and $V(y)=\infty$ elsewhere.}{%
+\OEPart{a}{Write the time-independent Schr\"odinger equation inside the box and give its general solution in the allowed region.}{For $0<y<a$, the potential is zero, so the equation is $-\frac{\hbar^2}{2m}\frac{d^2\psi}{dy^2}=E\psi$, or equivalently $\psi''+k^2\psi=0$ with $k^2=\frac{2mE}{\hbar^2}$. The general solution inside the box is $\psi(y)=C\sin(ky)+D\cos(ky)$, while $\psi=0$ outside because the walls are infinite.}
+\OEPart{b}{Apply the boundary conditions at the walls to determine the allowed energies.}{The boundary conditions are $\psi(0)=0$ and $\psi(a)=0$. From $\psi(0)=0$ we get $D=0$, and from $\psi(a)=0$ we require $\sin(ka)=0$, so $ka=n\pi$ with $n=1,2,3,\ldots$. Hence $E_n=\frac{n^2\pi^2\hbar^2}{2ma^2}$.}
+\OEPart{c}{Find the normalized energy eigenfunctions.}{Using $k_n=\frac{n\pi}{a}$, the eigenfunctions inside the box are $\psi_n(y)=N\sin\!\left(\frac{n\pi y}{a}\right)$. Normalization $\int_0^a |\psi_n(y)|^2\,dy=1$ gives $N=\sqrt{\frac{2}{a}}$, so $\psi_n(y)=\sqrt{\frac{2}{a}}\sin\!\left(\frac{n\pi y}{a}\right)$ for $0<y<a$, and zero elsewhere.}
+\OEPart{d}{Show that $\psi_n$ and $\psi_m$ are orthogonal when $n\neq m$.}{For $n\neq m$, $\int_0^a \psi_n(y)\psi_m(y)\,dy=\frac{2}{a}\int_0^a \sin\!\left(\frac{n\pi y}{a}\right)\sin\!\left(\frac{m\pi y}{a}\right)dy$. This standard sine integral is zero when $n\ne m$, so $\langle n|m\rangle=0$ and the eigenfunctions are orthogonal.}
+}
+
+\OEBlock{Q5}{A particle in a one-dimensional infinite square well of width $L$ has initial state $\Psi(x,0)=\frac{\sqrt{3}}{2}\,\psi_1(x)+\frac{1}{2}\,\psi_3(x)$, where $\psi_n$ is the $n$-th stationary state of the well. Find the expectation value of the particle's energy.}{Since the coefficients are $c_1=\frac{\sqrt{3}}{2}$ and $c_3=\frac{1}{2}$, the probabilities are $|c_1|^2=\frac{3}{4}$ and $|c_3|^2=\frac{1}{4}$. Therefore $\langle E\rangle=\frac{3}{4}E_1+\frac{1}{4}E_3=\frac{3}{4}E_1+\frac{9}{4}E_1=3E_1=\frac{3\pi^2\hbar^2}{2mL^2}$.}
+
+\end{document}

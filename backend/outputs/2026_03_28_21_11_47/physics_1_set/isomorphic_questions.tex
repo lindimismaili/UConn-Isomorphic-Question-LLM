@@ -1,0 +1,247 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Questions}}\\[0.25em]
+{\Large Isomorphic Multiple-Choice Set}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{Which of the following statements is correct?}{%
+\Correct{We can model a marathon runner as a point mass when tracking the runner's position over a 10 km race.}{This is a valid approximation because the runner's size is negligible compared with the total distance traveled. In large-scale translational motion, we often track only the center of mass, so a point-particle model is appropriate when the object's dimensions are much smaller than the motion scale.}
+\Wrong{We can model a marathon runner as a point mass when analyzing the bending motion of the runner's knee.}{This is incorrect because knee motion depends on the runner's detailed geometry and rotation, which a point-mass model cannot represent.}
+\Wrong{We can never imagine the runner moving in a vacuum, even if we want to ignore air resistance in a simplified model.}{This confuses an idealized model with literal reality; physicists often neglect drag by using a vacuum approximation when it is useful.}
+\Wrong{None of the above is correct.}{This is false because option A gives a standard and appropriate modeling approximation in kinematics.}
+}{A}
+
+\QBlock{Q2}{Which of the following equations is correct?}{%
+\Wrong{$1\,\mathrm{ms} = 1000\,\mathrm{s}$}{This reverses the milli- prefix; $\text{milli}=10^{-3}$, not $10^{3}$.}
+\Correct{$1\,\mathrm{ms} = 0.001\,\mathrm{s}$}{This is correct because the prefix milli means $10^{-3}$. Therefore $1\,\mathrm{ms}=10^{-3}\,\mathrm{s}=0.001\,\mathrm{s}$, and both the number and units are consistent.}
+\Wrong{$1000\,\mathrm{ms} = 0.001\,\mathrm{s}$}{This mishandles the conversion factor; in fact $1000\,\mathrm{ms}=1\,\mathrm{s}$.}
+\Wrong{$1 = 0.001$}{This omits units entirely, so it is not a meaningful unit-conversion equation.}
+}{B}
+
+\QBlock{Q3}{Which option has the incorrect unit?}{%
+\Wrong{Momentum: $\mathrm{kg\cdot m/s}$}{This is a correct SI unit for momentum, so selecting it would confuse a valid derived unit with an invalid one.}
+\Correct{Pressure: $\mathrm{N/m}$}{This is the incorrect unit because pressure is force per area, not force per length. The SI unit of pressure is $\mathrm{Pa}=\mathrm{N/m^2}$, so $\mathrm{N/m}$ has the wrong dimensions.}
+\Wrong{Power: watt}{This is correct because the SI unit of power is the watt $(\mathrm{W})$.}
+\Wrong{Acceleration: $\mathrm{m/s^2}$}{This is the standard SI unit of acceleration, so it is not the incorrect choice.}
+}{B}
+
+\QBlock{Q4}{A rescue drone starts at the origin and detects a beacon at coordinates $\vec r = 8\hat{i}+15\hat{j}$, where distance is measured in kilometers. Which of the following statements is correct?}{%
+\Wrong{The beacon is 23 km from the origin.}{This adds the vector components directly instead of finding the magnitude of the position vector.}
+\Wrong{The beacon is 15 km from the origin.}{This uses only the $y$-component and ignores the $x$-component in the distance calculation.}
+\Wrong{The beacon is 8 km from the origin.}{This uses only the $x$-component instead of the full two-dimensional displacement.}
+\Correct{The beacon is 17 km from the origin.}{The distance from the origin is the magnitude of the position vector, $|\vec r|=\sqrt{8^2+15^2}$. Evaluating gives $|\vec r|=\sqrt{64+225}=\sqrt{289}=17\,\mathrm{km}$, so this statement is correct.}
+}{D}
+
+\QBlock{Q5}{If the displacement of an object is given by $\vec s(t)=\left[(0.80\,\mathrm{m/s^3})t^3+(1.60\,\mathrm{m/s^2})t^2\right]\hat{i}$, which of the following statements is correct?}{%
+\Wrong{This is motion with constant acceleration.}{A cubic position function produces a time-dependent acceleration, so the acceleration cannot be constant.}
+\Wrong{The magnitude of the acceleration is $1.60\,\mathrm{m/s^2}$.}{This mistakes a coefficient in the position function for the actual second derivative needed to find acceleration.}
+\Correct{The magnitude of the acceleration at $t=0$ is $3.20\,\mathrm{m/s^2}$.}{Differentiate twice: $v_x=\dfrac{ds_x}{dt}=2.40t^2+3.20t$ and $a_x=\dfrac{dv_x}{dt}=4.80t+3.20$. At $t=0$, this gives $a_x(0)=3.20\,\mathrm{m/s^2}$, so the statement is correct.}
+\Wrong{The magnitude of the acceleration at $t=0$ is $0\,\mathrm{m/s^2}$.}{This comes from differentiating incorrectly or assuming the acceleration must vanish at the start.}
+}{C}
+
+\QBlock{Q6}{An object takes 4.0 s to move from position $\vec r_A = 1\hat{i}-2\hat{j}\,\mathrm{m}$ to position $\vec r_B = 9\hat{i}+4\hat{j}\,\mathrm{m}$ along a straight path. Which of the following statements is correct?}{%
+\Correct{The moving distance is $10\,\mathrm{m}$.}{Because the path is stated to be straight, the moving distance equals the magnitude of the displacement from A to B. Here $\Delta \vec r=(9-1)\hat i+(4-(-2))\hat j=8\hat i+6\hat j$, so the distance is $|\Delta \vec r|=\sqrt{8^2+6^2}=10\,\mathrm{m}$.}
+\Wrong{The speed at $t=0$ must be $2.5\,\mathrm{m/s}$.}{This confuses average speed over the trip with the instantaneous speed at the start, which is not determined from the given data.}
+\Wrong{The acceleration at $t=0$ must be $0.625\,\mathrm{m/s^2}$.}{Distance and travel time alone do not determine the acceleration without an additional model of the motion.}
+\Wrong{None of the above is correct.}{This is false because option A follows directly from the straight-line displacement magnitude.}
+}{A}
+
+\QBlock{Q7}{A grasshopper launches itself with speed $u$ at an angle $\phi$ above the horizontal. Neglecting air resistance, what is the speed of the grasshopper at the maximum height of its trajectory?}{%
+\Wrong{$u\sin\phi$}{This is the initial vertical component of the velocity, and that component becomes zero at the highest point.}
+\Wrong{$0$}{This assumes the entire velocity vanishes at maximum height, ignoring the nonzero horizontal component.}
+\Correct{$u\cos\phi$}{At maximum height, the vertical component of velocity is zero while the horizontal component remains constant when air resistance is neglected. Since the horizontal component is initially $u\cos\phi$, the speed there is $\sqrt{(u\cos\phi)^2+0^2}=u\cos\phi$.}
+\Wrong{$u$}{This ignores the reduction of the vertical component due to gravity during projectile motion.}
+}{C}
+
+\QBlock{Q8}{A drone is initially moving with velocity $\vec v_0=(12.0\,\mathrm{m/s})\hat{i}$. Its motors then produce a constant acceleration $\vec a=(1.5\,\mathrm{m/s^2})\hat{i}+(2.5\,\mathrm{m/s^2})\hat{j}$. Which of the following statements is correct?}{%
+\Wrong{The $x$-component of the drone's velocity remains constant.}{This ignores the nonzero $x$-acceleration, which changes $v_x$ over time.}
+\Wrong{The $y$-component of the drone's velocity remains constant.}{This ignores the nonzero $y$-acceleration, which causes $v_y$ to increase from zero.}
+\Correct{Both the direction of motion and the speed change.}{The velocity evolves as $\vec v(t)=\vec v_0+\vec a t$. Since both $a_x\neq 0$ and $a_y\neq 0$, the velocity components change, which changes the direction; and because the magnitude $|\vec v|$ depends on those components, the speed changes as well.}
+\Wrong{None of the above is correct.}{This is incorrect because option C correctly describes the effect of a two-dimensional acceleration on the motion.}
+}{C}
+
+\QBlock{Q9}{If the magnitudes of both charges are doubled and the separation between them is halved, what happens to the magnitude of the electrostatic force each exerts on the other?}{%
+\Wrong{It stays the same.}{This ignores that both the product of the charges and the inverse-square distance factor change.}
+\Wrong{It increases by a factor of 4.}{This counts only part of the scaling and misses the additional factor from halving the separation.}
+\Correct{It increases by a factor of 16.}{By Coulomb's law, $F=k\dfrac{|q_1q_2|}{r^2}$. Doubling both charges multiplies the numerator by $2\times 2=4$, and halving the separation makes the denominator $(r/2)^2=r^2/4$, which multiplies the force by another factor of $4$; overall, the force increases by $4\times 4=16$.}
+\Wrong{It increases by a factor of 8.}{This comes from incomplete scaling, typically by handling the charge change correctly but mishandling the squared dependence on distance.}
+}{C}
+
+\QBlock{Q10}{An object can escape a spherical moon of mass $M$ and radius $R$ if it reaches escape speed $v_{\text{esc}}=\sqrt{\dfrac{2GM}{R}}$. Based on this expression, which statement is correct?}{%
+\Correct{An object needs a higher escape speed from a moon with greater mass and smaller radius.}{The formula $v_{\text{esc}}=\sqrt{\dfrac{2GM}{R}}$ shows that escape speed increases with increasing $M$ and with decreasing $R$. A larger mass makes the numerator larger and a smaller radius makes the denominator smaller, so both effects raise the required escape speed.}
+\Wrong{A lighter spacecraft needs a lower escape speed from the same moon.}{This is incorrect because the spacecraft's own mass does not appear in the escape-speed formula.}
+\Wrong{A moon with smaller mass and larger radius requires a higher escape speed.}{This reverses the dependence in the formula, since smaller $M$ and larger $R$ both reduce $v_{\text{esc}}$.}
+\Wrong{Escape speed is independent of the moon's radius.}{This ignores the factor of $1/\sqrt{R}$ in the expression for escape speed.}
+}{A}
+
+\QBlock{Q11}{A constant force $\vec F=(5.2\,\mathrm{N})\hat{i}-(1.7\,\mathrm{N})\hat{j}$ acts on a particle as it moves along the $x$-axis from $x=1.1\,\mathrm{m}$ to $x=3.6\,\mathrm{m}$. What is the work done by the force on the particle?}{%
+\Wrong{$17.4\,\mathrm{J}$}{This likely uses the magnitude of the full force vector as if both components contributed to work, even though there is no $y$-displacement.}
+\Wrong{$-4.25\,\mathrm{J}$}{This incorrectly uses the $y$-component of force, which does no work because the displacement has no $y$-component.}
+\Correct{$13.0\,\mathrm{J}$}{Work is the dot product $W=\vec F\cdot \Delta \vec r$. Since the particle moves only along $x$, $\Delta x=3.6-1.1=2.5\,\mathrm{m}$ and $W=F_x\Delta x=(5.2\,\mathrm{N})(2.5\,\mathrm{m})=13.0\,\mathrm{J}$.}
+\Wrong{$3.5\,\mathrm{J}$}{This arises from an arithmetic or subtraction error rather than applying $W=F_x\Delta x$ correctly.}
+}{C}
+
+\QBlock{Q12}{A $3.0\,\mathrm{kg}$ cart moving at $4.0\,\mathrm{m/s}$ strikes a bumper and rebounds at $2.0\,\mathrm{m/s}$ in the opposite direction. The collision lasts $0.25\,\mathrm{s}$. What is the magnitude of the average force on the cart during the collision?}{%
+\Wrong{$24\,\mathrm{N}$}{This usually comes from using only one of the speeds instead of the full change in velocity when direction reverses.}
+\Wrong{$48\,\mathrm{N}$}{This underestimates the impulse by failing to account correctly for the rebound direction or the full momentum change.}
+\Correct{$72\,\mathrm{N}$}{Use the impulse-momentum theorem: $F_{\text{avg}}=\dfrac{\Delta p}{\Delta t}=\dfrac{m(v_f-v_i)}{\Delta t}$. Taking the initial direction as positive gives $v_i=+4.0\,\mathrm{m/s}$ and $v_f=-2.0\,\mathrm{m/s}$, so $|\Delta v|=6.0\,\mathrm{m/s}$ and $|F_{\text{avg}}|=\dfrac{(3.0)(6.0)}{0.25}=72\,\mathrm{N}$.}
+\Wrong{None of the above is correct.}{This is false because option C matches the correct impulse calculation.}
+}{C}
+
+\QBlock{Q13}{A $65\,\mathrm{kg}$ student standing at rest on a low-friction skateboard catches a $0.50\,\mathrm{kg}$ ball thrown horizontally at $20\,\mathrm{m/s}$. What is the student's speed immediately after catching the ball?}{%
+\Wrong{$0.076\,\mathrm{m/s}$}{This is a plausible arithmetic slip from using the wrong total mass or halving the momentum transfer.}
+\Correct{$0.153\,\mathrm{m/s}$}{Because the student catches the ball, this is a perfectly inelastic collision, so linear momentum is conserved: $m_bv_b=(M+m_b)v_f$. Substituting $m_b=0.50\,\mathrm{kg}$, $v_b=20\,\mathrm{m/s}$, and $M=65\,\mathrm{kg}$ gives $v_f=\dfrac{0.50\times 20}{65.5}\approx 0.153\,\mathrm{m/s}$.}
+\Wrong{$10.0\,\mathrm{m/s}$}{This is far too large and ignores that the ball's momentum must be shared with a much more massive person-plus-ball system.}
+\Wrong{$1.31\,\mathrm{m/s}$}{This overestimates the final speed, usually by dividing by the student's mass incorrectly or not using the combined mass after the catch.}
+}{B}
+
+\end{document}

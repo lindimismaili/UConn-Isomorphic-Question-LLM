@@ -4,6 +4,7 @@ import './styles/app.css';
 import PromptInput from './components/PromptInput.jsx';
 import AgentPipeline from './components/AgentPipeline.jsx';
 import LogPanel from './components/LogPanel.jsx';
+import DeveloperToolsPanel from './components/DeveloperToolsPanel.jsx';
 import ResultsSection from './components/ResultsSection.jsx';
 import FailureSection from './components/FailureSection.jsx';
 
@@ -126,7 +127,6 @@ const INITIAL_STATE = {
   errorFolder: '',
   activeModal: null,
   activeAgentKey: null,
-  pipelineVisible: false,
 };
 
 // =============================================================================
@@ -202,7 +202,6 @@ function reducer(state, action) {
         error: null,
         errorFolder: '',
         files: [],
-        pipelineVisible: true,
         logs: [
           ...state.logs,
           makeLog('------------------------------', 'info'),
@@ -347,6 +346,7 @@ function reducer(state, action) {
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [prompt, setPrompt] = useState('');
   const [footerVersion, setFooterVersion] = useState('Version -');
   const [openaiStatus, setOpenaiStatus] = useState({
     isDown: false,
@@ -411,11 +411,13 @@ export default function App() {
       return;
     }
     runWorkflow(prompt, files);
+    setPrompt('');
   };
 
   const handleClearInputs = () => {
     abortWorkflow();
     dispatch({ type: 'CLEAR_INPUTS' });
+    setPrompt('');
   };
 
   const handleClearAgents = () => {
@@ -430,7 +432,7 @@ export default function App() {
 
   const closeModal = () => dispatch({ type: 'CLOSE_MODAL' });
 
-  const handleCreateData = (prompt) => {
+  const handleCreateData = () => {
     dispatch({ type: 'OPEN_MODAL', modal: 'create-data' });
     if (!createDataState.isRunning && !createDataState.isStarting) {
       startCreateData(prompt);
@@ -460,35 +462,52 @@ export default function App() {
       </header>
 
       <main className="main-content">
-        <PromptInput
-          files={state.files}
-          dispatch={dispatch}
-          isRunning={state.isRunning}
-          serviceInactive={serviceInactive}
-          onSend={handleSend}
-          onClearInputs={handleClearInputs}
-          onClearAgents={handleClearAgents}
-          onShowFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'files' })}
-          onShowTestFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'test-files' })}
-          onCreateData={handleCreateData}
-          isCreateDataRunning={createDataState.isRunning || createDataState.isStarting}
-        />
+        <div className="content-shell">
+          <div className="content-primary">
+            <PromptInput
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              files={state.files}
+              dispatch={dispatch}
+              isRunning={state.isRunning}
+              serviceInactive={serviceInactive}
+              onSend={handleSend}
+              onClearInputs={handleClearInputs}
+              onClearAgents={handleClearAgents}
+              onShowFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'files' })}
+              onShowHelp={() => dispatch({ type: 'OPEN_MODAL', modal: 'help' })}
+            />
 
-        {state.pipelineVisible && (
-          <section className="agents-section">
-            <div className="pipeline-split">
-              <div className="pipeline-panel agents-panel">
-                <h3 className="section-title">Agent Pipeline</h3>
-                <p className="section-subtitle">Click a block to view more information</p>
-                <AgentPipeline agents={state.agents} onCardClick={handleAgentCardClick} />
+            <section className="agents-section">
+              <div className="pipeline-split">
+                <div className="card pipeline-panel agents-panel workflow-panel">
+                  <div className="card-header">
+                    <h2>Agent Pipeline</h2>
+                    <p className="subtitle">Click a block to inspect inputs, outputs, and execution details.</p>
+                  </div>
+                  <div className="card-body">
+                    <AgentPipeline agents={state.agents} onCardClick={handleAgentCardClick} />
+                  </div>
+                </div>
+                <LogPanel logs={state.logs} />
               </div>
-              <LogPanel logs={state.logs} />
-            </div>
-          </section>
-        )}
+            </section>
 
-        {state.result && <ResultsSection result={state.result} />}
-        {state.error && <FailureSection error={state.error} outputFolder={state.errorFolder} />}
+            {state.result && <ResultsSection result={state.result} />}
+            {state.error && <FailureSection error={state.error} outputFolder={state.errorFolder} />}
+          </div>
+
+          <aside className="content-tools">
+            <DeveloperToolsPanel
+              serviceInactive={serviceInactive}
+              isRunning={state.isRunning}
+              isCreateDataRunning={createDataState.isRunning || createDataState.isStarting}
+              onShowSkills={() => dispatch({ type: 'OPEN_MODAL', modal: 'skills' })}
+              onShowTestFiles={() => dispatch({ type: 'OPEN_MODAL', modal: 'test-files' })}
+              onCreateData={handleCreateData}
+            />
+          </aside>
+        </div>
       </main>
 
       <footer className="footer">

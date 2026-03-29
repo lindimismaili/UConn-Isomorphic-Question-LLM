@@ -46,19 +46,20 @@ export default function SkillsModal({ isOpen, onClose }) {
         isOpen={isOpen}
         onClose={onClose}
         title="Skills"
+        modalBodyClassName="modal-body-flush"
         footer={
           <button className="btn btn-secondary" onClick={onClose}>Close</button>
         }
       >
-        <div className="skills-list-body" style={{ padding: 0 }}>
+        <div className="skills-list-body">
           <p className="skills-list-intro">
             Click a skill to view its <code>SKILL.md</code>:
           </p>
           <div className="skills-list">
             {loading && (
-              <button className="skill-list-item" disabled>Loading skills...</button>
+              <div className="modal-empty-state">Loading skills...</div>
             )}
-            {!loading && skills && skills.map((skillName) => (
+            {!loading && skills && skills.length > 0 && skills.map((skillName) => (
               <button
                 key={skillName}
                 className="skill-list-item"
@@ -68,6 +69,9 @@ export default function SkillsModal({ isOpen, onClose }) {
                 {skillName}
               </button>
             ))}
+            {!loading && skills && skills.length === 0 && (
+              <div className="modal-empty-state">No skills were returned by the server.</div>
+            )}
           </div>
         </div>
       </Modal>

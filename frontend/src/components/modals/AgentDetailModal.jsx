@@ -85,6 +85,7 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
         onClose={onClose}
         title={agent ? `${agent.name} Details` : 'Agent Details'}
         large
+        modalBodyClassName="modal-body-flush"
         footer={
           <div className="agent-modal-footer">
             <div className="output-folder-note modal-file-location">
@@ -108,7 +109,7 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
         }
       >
         {agent && (
-          <div className="agent-modal-body" style={{ padding: 0 }}>
+          <div className="agent-modal-body">
             <div className="agent-details-sidebar">
               {[
                 { label: 'Agent Name', value: getValue(agent.name) },

@@ -14,6 +14,7 @@ export default function Modal({
   modalClassName = '',
   bodyClassName = '',
   contentClassName = '',
+  modalBodyClassName = '',
   children,
   footer,
 }) {
@@ -67,7 +68,7 @@ export default function Modal({
             <IconClose />
           </button>
         </div>
-        <div className="modal-body">
+        <div className={`modal-body${modalBodyClassName ? ` ${modalBodyClassName}` : ''}`}>
           {children}
         </div>
         {footer && (
