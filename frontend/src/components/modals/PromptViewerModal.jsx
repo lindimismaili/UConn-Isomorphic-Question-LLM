@@ -76,6 +76,7 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName, 
       onClose={onClose}
       title={title || 'Viewer'}
       large
+      modalBodyClassName="modal-body-flush"
       footer={
         <div className="modal-footer-row">
           <div className="output-folder-note modal-file-location">
@@ -91,7 +92,7 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName, 
         </div>
       }
     >
-      <div className="prompt-viewer-body" style={{ padding: 0 }}>
+      <div className="prompt-viewer-body">
         <pre className="prompt-viewer-content">{content}</pre>
       </div>
     </Modal>

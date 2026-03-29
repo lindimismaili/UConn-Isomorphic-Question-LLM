@@ -10,7 +10,7 @@ export default function SetupModal({ isOpen, onClose }) {
         <button className="btn btn-secondary" onClick={onClose}>Close</button>
       }
     >
-      <div className="setup-modal-body">
+      <div className="setup-modal-body modal-body-stack">
         <p>
           <strong>Setup</strong> is not an agent. It represents the time
           immediately after you click <strong>Send</strong> while the system

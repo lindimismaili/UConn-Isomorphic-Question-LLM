@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFileUpload } from '../hooks/useFileUpload.js';
-import { IconFile, IconUpload, IconTrash, IconSend, IconInfo, IconList } from './Icons.jsx';
+import { IconFile, IconUpload, IconTrash, IconSend, IconInfo } from './Icons.jsx';
 
 export default function PromptInput({
+  prompt,
+  onPromptChange,
   files,
   dispatch,
   isRunning,
@@ -11,11 +13,8 @@ export default function PromptInput({
   onClearInputs,
   onClearAgents,
   onShowFiles,
-  onShowTestFiles,
-  onCreateData,
-  isCreateDataRunning,
+  onShowHelp,
 }) {
-  const [prompt, setPrompt] = useState('');
   const [resetFeedback, setResetFeedback] = useState(false);
   const [uploadWarning, setUploadWarning] = useState(false);
   const fileInputRef = useRef(null);
@@ -48,14 +47,12 @@ export default function PromptInput({
       return;
     }
     onSend(prompt, files);
-    setPrompt('');
   };
 
   const handleReset = () => {
     onClearInputs();
     onClearAgents();
     dispatch({ type: 'CLEAR_LOGS' });
-    setPrompt('');
     setResetFeedback(true);
     clearTimeout(resetFeedbackTimerRef.current);
     resetFeedbackTimerRef.current = setTimeout(() => setResetFeedback(false), 1400);
@@ -75,14 +72,7 @@ export default function PromptInput({
           <div className="header-buttons">
             <button
               className="btn btn-secondary"
-              onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'skills' })}
-            >
-              <IconList className="btn-icon" />
-              <span>Skills</span>
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'help' })}
+              onClick={onShowHelp}
             >
               <IconInfo className="btn-icon" />
               <span>Summary</span>
@@ -105,7 +95,7 @@ export default function PromptInput({
             className="prompt-input"
             placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'"
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isRunning || serviceInactive}
           />
@@ -129,24 +119,6 @@ export default function PromptInput({
             >
               <IconTrash className="btn-icon" />
               <span className="btn-label">Reset</span>
-            </button>
-
-            <button
-              className="btn btn-secondary"
-              onClick={onShowTestFiles}
-              disabled={isRunning || serviceInactive}
-            >
-              <IconFile className="btn-icon" />
-              <span className="btn-label">Test Files</span>
-            </button>
-
-            <button
-              className="btn btn-secondary"
-              onClick={() => onCreateData(prompt)}
-              disabled={isRunning || serviceInactive || isCreateDataRunning}
-            >
-              <IconList className="btn-icon" />
-              <span className="btn-label">{isCreateDataRunning ? 'Creating Data...' : 'Create Data'}</span>
             </button>
 
             <div className="upload-group">

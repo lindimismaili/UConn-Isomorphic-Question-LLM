@@ -11,11 +11,10 @@ export default function FilesModal({ isOpen, onClose, files, onRemove }) {
         <button className="btn btn-secondary" onClick={onClose}>Close</button>
       }
     >
-      <div className="files-list">
+      <div className="modal-body-stack">
+        <div className="files-list">
         {files.length === 0 ? (
-          <p style={{ color: 'var(--color-text-muted)', textAlign: 'center' }}>
-            No files uploaded
-          </p>
+          <div className="modal-empty-state">No files uploaded.</div>
         ) : (
           files.map((file) => (
             <div key={file.id} className="file-item">
@@ -35,6 +34,7 @@ export default function FilesModal({ isOpen, onClose, files, onRemove }) {
             </div>
           ))
         )}
+        </div>
       </div>
     </Modal>
   );

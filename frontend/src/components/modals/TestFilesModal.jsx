@@ -81,23 +81,18 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
         <button className="btn btn-secondary" onClick={onClose}>Close</button>
       }
     >
-      <div className="files-list">
+      <div className="modal-body-stack">
+        <div className="files-list">
         {loading && (
-          <p style={{ color: 'var(--color-text-muted)', textAlign: 'center' }}>
-            Loading test files...
-          </p>
+          <div className="modal-empty-state">Loading test files...</div>
         )}
 
         {!loading && error && (
-          <p style={{ color: 'var(--color-error)', textAlign: 'center' }}>
-            {error}
-          </p>
+          <div className="modal-empty-state modal-empty-state-error">{error}</div>
         )}
 
         {!loading && !error && availableFiles.length === 0 && (
-          <p style={{ color: 'var(--color-text-muted)', textAlign: 'center' }}>
-            No test files found in data/evaluation
-          </p>
+          <div className="modal-empty-state">No test files found in `data/evaluation`.</div>
         )}
 
         {!loading && !error && availableFiles.map((item) => {
@@ -121,8 +116,8 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
             </div>
           );
         })}
+        </div>
       </div>
     </Modal>
   );
 }
-
