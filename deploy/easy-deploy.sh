@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # =====================================================
-# easy-deploy.sh — reserved for future use
+# easy-deploy.sh — Convenience wrapper for deploy.sh
 # =====================================================
 
-echo "easy-deploy.sh: not yet implemented." >&2
-exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec bash "$SCRIPT_DIR/deploy.sh" "$@"
