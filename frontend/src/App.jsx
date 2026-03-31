@@ -434,9 +434,6 @@ export default function App() {
 
   const handleCreateData = () => {
     dispatch({ type: 'OPEN_MODAL', modal: 'create-data' });
-    if (!createDataState.isRunning && !createDataState.isStarting) {
-      startCreateData(prompt);
-    }
   };
 
   return (
@@ -535,6 +532,7 @@ export default function App() {
         isOpen={state.activeModal === 'create-data'}
         onClose={closeModal}
         createData={createDataState}
+        onRun={() => startCreateData(prompt)}
       />
       <AgentDetailModal
         isOpen={state.activeModal === 'agent'}
