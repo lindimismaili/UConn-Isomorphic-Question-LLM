@@ -43,16 +43,53 @@ install_cloudflared() {
 
   info "Installing cloudflared..."
 
-  # Add Cloudflare GPG key
-  curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-    | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+  # Detect architecture for the correct binary
+  local arch
+  arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+  case "$arch" in
+    amd64|x86_64)  arch="amd64" ;;
+    arm64|aarch64) arch="arm64" ;;
+    armhf|armv7l)  arch="arm"   ;;
+    *)
+      err "Unsupported architecture: $arch"
+      exit 1
+      ;;
+  esac
 
-  # Add Cloudflare apt repo
-  echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared stable main" \
-    | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
+  # Try apt first (works on Ubuntu/Debian stable)
+  local apt_ok=0
+  if curl -fsSL --head "https://pkg.cloudflare.com/cloudflared/dists/stable/Release" >/dev/null 2>&1; then
+    curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
+      | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared stable main" \
+      | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
+    if sudo apt-get update -qq 2>/dev/null && sudo apt-get install -y cloudflared 2>/dev/null; then
+      apt_ok=1
+    fi
+  fi
 
-  sudo apt-get update
-  sudo apt-get install -y cloudflared
+  # Fallback: download binary directly from GitHub releases
+  if [[ "$apt_ok" -eq 0 ]]; then
+    info "apt repo unavailable — downloading cloudflared binary directly..."
+    # Clean up the broken apt source if it was added
+    sudo rm -f /etc/apt/sources.list.d/cloudflared.list
+
+    local url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${arch}"
+    local tmp_bin="/tmp/cloudflared"
+
+    if ! curl -fsSL -o "$tmp_bin" "$url"; then
+      err "Failed to download cloudflared from $url"
+      exit 1
+    fi
+
+    sudo install -m 755 "$tmp_bin" /usr/local/bin/cloudflared
+    rm -f "$tmp_bin"
+  fi
+
+  if ! command -v cloudflared >/dev/null 2>&1; then
+    err "cloudflared installation failed."
+    exit 1
+  fi
 
   info "Installed: $(cloudflared --version 2>&1 | head -1)"
 }
