@@ -23,7 +23,7 @@ function getStatusLabel(status) {
   }
 }
 
-export default function CreateDataModal({ isOpen, onClose, createData }) {
+export default function CreateDataModal({ isOpen, onClose, createData, onRun }) {
   const progressText = createData.totalFiles > 0
     ? `${createData.doneFiles}/${createData.totalFiles} files done`
     : 'Preparing evaluation files';
@@ -35,7 +35,14 @@ export default function CreateDataModal({ isOpen, onClose, createData }) {
       onClose={onClose}
       title="Create Data"
       large
-      footer={<button className="btn btn-secondary" onClick={onClose}>Close</button>}
+      footer={
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {createData.status === 'idle' && (
+            <button className="btn btn-primary" onClick={onRun}>Run</button>
+          )}
+          <button className="btn btn-secondary" onClick={onClose}>Close</button>
+        </div>
+      }
     >
       <div className="create-data-modal">
         <div className="create-data-summary">
