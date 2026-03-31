@@ -263,57 +263,51 @@ setup_system_credentials() {
 # -------------------------------------------------------------------------
 write_cloudflared_config() {
   local config_file="$CLOUDFLARED_SYSTEM_DIR/config.yml"
-  local uconn_rule="  - hostname: $HOSTNAME"
 
-  # Check if config already has our hostname
-  if [[ -f "$config_file" ]] && sudo grep -q "$HOSTNAME" "$config_file"; then
-    info "cloudflared config already contains $HOSTNAME"
-    return 0
+  # Always rewrite the config to ensure tunnel name + credentials-file are correct
+  # (e.g. after a tunnel delete/recreate, the UUID changes)
+  info "Writing cloudflared config..."
+
+  # Collect existing ingress rules (other than ours and the catch-all)
+  local extra_rules=""
+  if [[ -f "$config_file" ]]; then
+    extra_rules="$(sudo python3 -c "
+import sys
+lines = open('$config_file').readlines()
+rules = []
+i = 0
+while i < len(lines):
+    line = lines[i].rstrip()
+    if line.strip().startswith('- hostname:'):
+        hostname = line.strip().split(':', 1)[1].strip()
+        service_line = ''
+        if i + 1 < len(lines) and 'service:' in lines[i+1]:
+            service_line = lines[i+1].rstrip()
+        # Skip our hostname
+        if hostname != '$HOSTNAME':
+            rules.append(line)
+            if service_line:
+                rules.append(service_line)
+            i += 2
+            continue
+    i += 1
+print('\n'.join(rules))
+" 2>/dev/null || true)"
   fi
 
-  if [[ -f "$config_file" ]]; then
-    # Config exists but doesn't have our hostname — inject our rule before the catch-all
-    info "Adding $HOSTNAME to existing cloudflared config..."
-    # Insert our ingress rule before the final catch-all "- service: http_status:404"
-    sudo python3 -c "
-import sys
-config_path = '$config_file'
-with open(config_path, 'r') as f:
-    content = f.read()
-
-# Our ingress block
-new_rule = '''  - hostname: $HOSTNAME
-    service: http://localhost:80
-'''
-
-# Insert before the catch-all
-if '- service: http_status:404' in content:
-    content = content.replace('  - service: http_status:404', new_rule + '  - service: http_status:404')
-else:
-    # No catch-all found, append to ingress
-    content = content.rstrip() + '\n' + new_rule + '  - service: http_status:404\n'
-
-with open(config_path, 'w') as f:
-    f.write(content)
-"
-    info "Updated $config_file"
-  else
-    # Create fresh config
-    info "Creating new cloudflared config..."
-    sudo tee "$config_file" >/dev/null <<EOF
+  sudo tee "$config_file" >/dev/null <<EOF
 tunnel: ${TUNNEL_NAME}
 credentials-file: ${CLOUDFLARED_SYSTEM_DIR}/${TUNNEL_UUID}.json
 
 ingress:
   - hostname: ${HOSTNAME}
     service: http://localhost:80
-
+${extra_rules}
   - service: http_status:404
 EOF
-    info "Created $config_file"
-  fi
 
   sudo chmod 644 "$config_file"
+  info "Wrote $config_file (tunnel UUID: $TUNNEL_UUID)"
 }
 
 # -------------------------------------------------------------------------
