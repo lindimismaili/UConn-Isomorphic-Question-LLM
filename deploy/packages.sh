@@ -155,8 +155,10 @@ build_frontend() {
 
   info "Installing frontend Node.js dependencies..."
 
-  # npm needs write access
+  # npm + vite need write access to frontend/ and dist/ (at repo root)
   sudo chown -R "$(whoami)" "$frontend_dir"
+  sudo mkdir -p "$dist_dir"
+  sudo chown -R "$(whoami)" "$dist_dir"
 
   if [[ -f "$frontend_dir/package-lock.json" ]]; then
     (cd "$frontend_dir" && npm ci --no-audit --no-fund)
