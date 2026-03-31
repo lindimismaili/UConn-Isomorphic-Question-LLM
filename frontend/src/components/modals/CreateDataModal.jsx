@@ -1,32 +1,38 @@
-import Modal from './Modal.jsx';
-import { IconFile, IconFolder, IconZap } from '../Icons.jsx';
+import Modal from "./Modal.jsx";
+import { IconFile, IconFolder, IconZap } from "../Icons.jsx";
 
 function formatOutputFolder(folder) {
-  if (!folder) return 'outputs/';
-  return folder.startsWith('outputs/') ? folder : `outputs/${folder}`;
+  if (!folder) return "outputs/";
+  return folder.startsWith("outputs/") ? folder : `outputs/${folder}`;
 }
 
 function getStatusLabel(status) {
   switch (status) {
-    case 'queued':
-      return 'Queued';
-    case 'running':
-      return 'Running';
-    case 'completed':
-      return 'Done';
-    case 'errored':
-      return 'Error';
-    case 'starting':
-      return 'Starting';
+    case "queued":
+      return "Queued";
+    case "running":
+      return "Running";
+    case "completed":
+      return "Done";
+    case "errored":
+      return "Error";
+    case "starting":
+      return "Starting";
     default:
-      return 'Idle';
+      return "Idle";
   }
 }
 
-export default function CreateDataModal({ isOpen, onClose, createData, onRun }) {
-  const progressText = createData.totalFiles > 0
-    ? `${createData.doneFiles}/${createData.totalFiles} files done`
-    : 'Preparing evaluation files';
+export default function CreateDataModal({
+  isOpen,
+  onClose,
+  createData,
+  onRun,
+}) {
+  const progressText =
+    createData.totalFiles > 0
+      ? `${createData.doneFiles}/${createData.totalFiles} files done`
+      : "Preparing evaluation files";
   const outputFolder = formatOutputFolder(createData.outputFolder);
 
   return (
@@ -36,11 +42,15 @@ export default function CreateDataModal({ isOpen, onClose, createData, onRun }) 
       title="Create Data"
       large
       footer={
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {createData.status === 'idle' && (
-            <button className="btn btn-primary" onClick={onRun}>Run</button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          {createData.status === "idle" && (
+            <button className="btn btn-primary" onClick={onRun}>
+              Run
+            </button>
           )}
-          <button className="btn btn-secondary" onClick={onClose}>Close</button>
+          <button className="btn btn-secondary" onClick={onClose}>
+            Close
+          </button>
         </div>
       }
     >
@@ -51,30 +61,36 @@ export default function CreateDataModal({ isOpen, onClose, createData, onRun }) 
             <div>
               <div className="create-data-heading">Batch evaluation run</div>
               <div className="create-data-subheading">
-                Runs the full workflow on every file in <code>data/evaluation</code>.
+                Runs the full workflow on every file in{" "}
+                <code>data/evaluation</code>.
               </div>
             </div>
           </div>
           <div className="create-data-progress">
-            <span className={`create-data-pill is-${createData.status}`}>{getStatusLabel(createData.status)}</span>
+            <span className={`create-data-pill is-${createData.status}`}>
+              {getStatusLabel(createData.status)}
+            </span>
             <strong>{progressText}</strong>
             <span>
               {createData.completedFiles} completed
-              {createData.failedFiles > 0 ? `, ${createData.failedFiles} failed` : ''}
+              {createData.failedFiles > 0
+                ? `, ${createData.failedFiles} failed`
+                : ""}
             </span>
           </div>
         </div>
 
         {createData.error && (
-          <div className="create-data-alert">
-            {createData.error}
-          </div>
+          <div className="create-data-alert">{createData.error}</div>
         )}
 
         <div className="output-folder-note">
           <IconFolder />
           <span>
-            Batch folder: <code>{createData.status === 'completed' ? outputFolder : 'outputs/'}</code>
+            Batch folder:{" "}
+            <code>
+              {createData.status === "completed" ? outputFolder : "outputs/"}
+            </code>
           </span>
         </div>
 
@@ -92,9 +108,11 @@ export default function CreateDataModal({ isOpen, onClose, createData, onRun }) 
                   </div>
                   <div className="create-data-item-tracking">
                     <span className="create-data-step-chip">
-                      {`${entry.stepLabel || '1/6'} ${entry.currentAgentName || 'Normalizer'}`}
+                      {`${entry.stepLabel || "1/6"} ${entry.currentAgentName || "Normalizer"}`}
                     </span>
-                    <span className={`create-data-pill is-${entry.status}`}>{getStatusLabel(entry.status)}</span>
+                    <span className={`create-data-pill is-${entry.status}`}>
+                      {getStatusLabel(entry.status)}
+                    </span>
                   </div>
                 </div>
                 <div className="create-data-item-meta">
@@ -102,7 +120,9 @@ export default function CreateDataModal({ isOpen, onClose, createData, onRun }) 
                   <span>{`folder: ${entry.folderName}`}</span>
                 </div>
                 <div className="create-data-item-output">
-                  {entry.status === 'completed' && entry.outputFolder ? `outputs/${entry.outputFolder}` : 'outputs/'}
+                  {entry.status === "completed" && entry.outputFolder
+                    ? `outputs/${entry.outputFolder}`
+                    : "outputs/"}
                 </div>
                 {entry.error ? (
                   <div className="create-data-item-error">{entry.error}</div>
