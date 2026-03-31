@@ -329,10 +329,12 @@ setup_dns_route() {
 # -------------------------------------------------------------------------
 install_cloudflared_service() {
   local service_file="/etc/systemd/system/cloudflared.service"
+  local cloudflared_bin
+  cloudflared_bin="$(command -v cloudflared)"
 
-  info "Installing cloudflared systemd service..."
+  info "Installing cloudflared systemd service (binary: $cloudflared_bin)..."
 
-  sudo tee "$service_file" >/dev/null <<'EOF'
+  sudo tee "$service_file" >/dev/null <<EOF
 [Unit]
 Description=cloudflared tunnel
 After=network-online.target
@@ -340,7 +342,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
+ExecStart=${cloudflared_bin} --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
 Restart=on-failure
 RestartSec=5s
 
