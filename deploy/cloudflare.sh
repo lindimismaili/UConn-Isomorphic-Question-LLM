@@ -316,11 +316,108 @@ EOF
 setup_dns_route() {
   info "Setting up DNS route: $HOSTNAME → tunnel '$TUNNEL_NAME'..."
 
-  # This is idempotent — cloudflared will report if route already exists
-  if cloudflared tunnel route dns "$TUNNEL_NAME" "$HOSTNAME" 2>&1; then
-    info "DNS route configured for $HOSTNAME"
-  else
-    warn "DNS route may already exist (this is OK). Check Cloudflare dashboard if needed."
+  local expected_cname="${TUNNEL_UUID}.cfargotunnel.com"
+
+  # Check if CNAME already points to the correct tunnel
+  local current_cname=""
+  current_cname="$(dig +short CNAME "$HOSTNAME" 2>/dev/null | tr -d '.' | sed 's/$//' || true)"
+  # Normalize: dig may return trailing dot
+  current_cname="$(echo "$current_cname" | sed 's/\.$//')"
+  local expected_norm
+  expected_norm="$(echo "$expected_cname" | sed 's/\.$//')"
+
+  if [[ "$current_cname" == "$expected_norm" ]]; then
+    info "DNS CNAME already correct: $HOSTNAME → $expected_cname"
+    return 0
+  fi
+
+  # Try to add the route
+  local route_output
+  route_output="$(cloudflared tunnel route dns "$TUNNEL_NAME" "$HOSTNAME" 2>&1)" && {
+    info "DNS route configured: $HOSTNAME → $expected_cname"
+    return 0
+  }
+
+  # If it failed because record already exists, delete it via Cloudflare API and retry
+  if echo "$route_output" | grep -qi "already exists"; then
+    warn "Existing DNS record conflicts. Attempting to delete and recreate..."
+
+    # Get zone ID and record ID using cloudflared's cert.pem (which contains the API cert)
+    # We need the Cloudflare API token — try to extract zone from cert or use cloudflared
+    # The most reliable way: use cloudflared tunnel route dns with --overwrite-dns if available
+    # (added in cloudflared 2023.3.0+)
+    route_output="$(cloudflared tunnel route dns --overwrite-dns "$TUNNEL_NAME" "$HOSTNAME" 2>&1)" && {
+      info "DNS route updated (overwritten): $HOSTNAME → $expected_cname"
+      return 0
+    }
+
+    # If --overwrite-dns not available, try the Cloudflare API directly
+    # Extract API cert from cert.pem (it contains account info usable with the tunnel)
+    warn "Trying Cloudflare API to update DNS record..."
+
+    # Get the zone name (domain) from hostname
+    local domain
+    domain="$(echo "$HOSTNAME" | awk -F. '{print $(NF-1)"."$NF}')"
+
+    # Use cloudflared to list all tunnel routes — if it has API access, this works
+    # Otherwise, user must manually update the CNAME in Cloudflare dashboard
+    local api_token="${CLOUDFLARE_API_TOKEN:-}"
+    if [[ -n "$api_token" ]]; then
+      # Get zone ID
+      local zone_id
+      zone_id="$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$domain" \
+        -H "Authorization: Bearer $api_token" \
+        -H "Content-Type: application/json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+zones = data.get('result', [])
+if zones:
+    print(zones[0]['id'])
+" 2>/dev/null || true)"
+
+      if [[ -n "$zone_id" ]]; then
+        # Get record ID for our hostname
+        local record_id
+        record_id="$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?name=$HOSTNAME" \
+          -H "Authorization: Bearer $api_token" \
+          -H "Content-Type: application/json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+records = data.get('result', [])
+if records:
+    print(records[0]['id'])
+" 2>/dev/null || true)"
+
+        if [[ -n "$record_id" ]]; then
+          # Delete old record
+          curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$record_id" \
+            -H "Authorization: Bearer $api_token" \
+            -H "Content-Type: application/json" >/dev/null
+          info "Deleted old DNS record for $HOSTNAME"
+
+          # Recreate
+          sleep 2
+          cloudflared tunnel route dns "$TUNNEL_NAME" "$HOSTNAME" 2>&1 && {
+            info "DNS route recreated: $HOSTNAME → $expected_cname"
+            return 0
+          }
+        fi
+      fi
+    fi
+
+    echo ""
+    warn "Could not auto-update DNS record."
+    warn "Please do ONE of the following:"
+    warn ""
+    warn "  Option 1: Set CLOUDFLARE_API_TOKEN in .env and re-run deploy.sh"
+    warn "    (Create token at: https://dash.cloudflare.com/profile/api-tokens)"
+    warn "    (Needs: Zone.DNS edit permission for your domain)"
+    warn ""
+    warn "  Option 2: Manually update in Cloudflare Dashboard:"
+    warn "    DNS → $HOSTNAME → Edit CNAME → set target to:"
+    warn "    ${expected_cname}"
+    warn ""
+    warn "Continuing with the rest of the deploy..."
   fi
 }
 
