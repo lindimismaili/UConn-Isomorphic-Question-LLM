@@ -129,7 +129,7 @@ ensure_authenticated() {
 ensure_tunnel_exists() {
   local uuid=""
 
-  # Check if tunnel already exists
+  # Try JSON output first, then fall back to text parsing
   uuid="$(cloudflared tunnel list -o json 2>/dev/null \
     | python3 -c "
 import sys, json
@@ -139,26 +139,62 @@ for t in tunnels:
         print(t['id']); break
 " 2>/dev/null || true)"
 
+  # Fallback: parse text output (columns: ID NAME CREATED CONNECTIONS)
+  if [[ -z "$uuid" ]]; then
+    uuid="$(cloudflared tunnel list 2>/dev/null \
+      | awk -v name="${TUNNEL_NAME}" '$2 == name { print $1; exit }' || true)"
+  fi
+
+  # Fallback: check for credentials files matching the tunnel name
+  if [[ -z "$uuid" ]]; then
+    for f in "$CLOUDFLARED_USER_DIR"/*.json "$CLOUDFLARED_SYSTEM_DIR"/*.json; do
+      if [[ -f "$f" ]] && python3 -c "
+import json, sys
+d = json.load(open('$f'))
+if d.get('TunnelName','') == '${TUNNEL_NAME}' or d.get('AccountTag',''):
+    sys.exit(0)
+sys.exit(1)
+" 2>/dev/null; then
+        uuid="$(basename "$f" .json)"
+        break
+      fi
+    done
+  fi
+
   if [[ -n "$uuid" ]]; then
     info "Tunnel '$TUNNEL_NAME' already exists (UUID: $uuid)"
   else
     info "Creating tunnel '$TUNNEL_NAME'..."
-    cloudflared tunnel create "$TUNNEL_NAME"
+    # Capture output — cloudflared prints the UUID on creation
+    local create_output
+    create_output="$(cloudflared tunnel create "$TUNNEL_NAME" 2>&1)" || {
+      # If it fails because tunnel already exists, try to extract UUID from error or re-list
+      if echo "$create_output" | grep -qi "already exists"; then
+        warn "Tunnel already exists — trying to find its UUID..."
+        uuid="$(cloudflared tunnel list 2>/dev/null \
+          | awk -v name="${TUNNEL_NAME}" '$2 == name { print $1; exit }' || true)"
+      else
+        err "Failed to create tunnel: $create_output"
+        exit 1
+      fi
+    }
 
-    uuid="$(cloudflared tunnel list -o json 2>/dev/null \
-      | python3 -c "
-import sys, json
-tunnels = json.load(sys.stdin)
-for t in tunnels:
-    if t.get('name') == '${TUNNEL_NAME}' and not t.get('deleted_at'):
-        print(t['id']); break
-" 2>/dev/null || true)"
+    # Extract UUID from create output if we don't have it yet
+    if [[ -z "$uuid" ]]; then
+      uuid="$(echo "$create_output" | grep -oP '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)"
+    fi
+
+    # Last resort — re-list
+    if [[ -z "$uuid" ]]; then
+      uuid="$(cloudflared tunnel list 2>/dev/null \
+        | awk -v name="${TUNNEL_NAME}" '$2 == name { print $1; exit }' || true)"
+    fi
 
     if [[ -z "$uuid" ]]; then
-      err "Failed to create tunnel."
+      err "Could not determine tunnel UUID. Run 'cloudflared tunnel list' manually to check."
       exit 1
     fi
-    info "Tunnel created (UUID: $uuid)"
+    info "Tunnel ready (UUID: $uuid)"
   fi
 
   # Export for later use
