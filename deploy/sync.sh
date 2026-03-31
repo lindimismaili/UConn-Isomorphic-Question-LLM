@@ -195,6 +195,7 @@ fi
 # 4. Rebuild frontend + reinstall Python deps if needed
 # -------------------------------------------------------------------------
 export DEPLOY_DIR
+export REPO_DIR
 bash "$SCRIPT_DIR/packages.sh"
 
 # -------------------------------------------------------------------------
