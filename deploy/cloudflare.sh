@@ -215,9 +215,31 @@ setup_system_credentials() {
     info "Credentials already in system dir."
     cred_file=""
   else
-    err "Cannot find tunnel credentials file for UUID $TUNNEL_UUID"
-    err "Looked in: $CLOUDFLARED_USER_DIR/${TUNNEL_UUID}.json"
-    exit 1
+    # Credentials file missing — tunnel exists but creds were lost.
+    # Delete the tunnel and recreate it to get fresh credentials.
+    warn "Credentials file missing for tunnel '$TUNNEL_NAME' (UUID: $TUNNEL_UUID)."
+    warn "Deleting and recreating tunnel to generate new credentials..."
+
+    cloudflared tunnel delete "$TUNNEL_NAME" 2>/dev/null || true
+    cloudflared tunnel create "$TUNNEL_NAME"
+
+    # Re-read the new UUID
+    TUNNEL_UUID="$(cloudflared tunnel list 2>/dev/null \
+      | awk -v name="${TUNNEL_NAME}" '$2 == name { print $1; exit }' || true)"
+
+    if [[ -z "$TUNNEL_UUID" ]]; then
+      err "Failed to recreate tunnel."
+      exit 1
+    fi
+
+    if [[ -f "$CLOUDFLARED_USER_DIR/${TUNNEL_UUID}.json" ]]; then
+      cred_file="$CLOUDFLARED_USER_DIR/${TUNNEL_UUID}.json"
+      info "Tunnel recreated (UUID: $TUNNEL_UUID)"
+    else
+      err "Credentials file still not found after recreating tunnel."
+      err "Expected: $CLOUDFLARED_USER_DIR/${TUNNEL_UUID}.json"
+      exit 1
+    fi
   fi
 
   if [[ -n "$cred_file" ]]; then
