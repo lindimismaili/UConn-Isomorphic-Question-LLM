@@ -71,6 +71,11 @@ fi
 # ---------------------------------------------------------------------------
 banner "Step 1/4 — Cloudflare Tunnel Setup"
 # ---------------------------------------------------------------------------
+# Load CLOUDFLARE_API_TOKEN from .env if available (for DNS record management)
+if [[ -f "$REPO_DIR/.env" ]]; then
+  CLOUDFLARE_API_TOKEN="$(grep -oP '(?<=^CLOUDFLARE_API_TOKEN=).*' "$REPO_DIR/.env" || true)"
+  export CLOUDFLARE_API_TOKEN
+fi
 export DEPLOY_DIR TUNNEL_NAME HOSTNAME BACKEND_PORT REPO_DIR
 bash "$SCRIPT_DIR/cloudflare.sh"
 
