@@ -9,11 +9,14 @@ const INITIAL_STATE = {
   doneFiles: 0,
   completedFiles: 0,
   failedFiles: 0,
+  cancelledFiles: 0,
   outputFolder: '',
   summaryFile: '',
   entries: [],
   error: '',
 };
+
+const TERMINAL_STATUSES = new Set(['completed', 'errored', 'cancelled']);
 
 async function fetchJson(url, options, signal) {
   const response = await fetch(url, { ...options, signal });
@@ -27,18 +30,23 @@ async function fetchJson(url, options, signal) {
 function buildState(payload, fallback = {}) {
   const completedFiles = Number(payload?.completedFiles || 0);
   const failedFiles = Number(payload?.failedFiles || 0);
-  const doneFiles = Number(payload?.doneFiles ?? (completedFiles + failedFiles));
-  const terminal = payload?.status === 'completed' || payload?.status === 'errored';
+  const cancelledFiles = Number(payload?.cancelledFiles || 0);
+  const doneFiles = Number(
+    payload?.doneFiles ?? (completedFiles + failedFiles + cancelledFiles)
+  );
+  const status = payload?.status || fallback.status || 'idle';
+  const terminal = TERMINAL_STATUSES.has(status);
 
   return {
     batchId: payload?.batchId || fallback.batchId || null,
-    status: payload?.status || fallback.status || 'idle',
+    status,
     isStarting: false,
-    isRunning: !terminal,
+    isRunning: !terminal && status !== 'idle',
     totalFiles: Number(payload?.totalFiles || fallback.totalFiles || 0),
     doneFiles,
     completedFiles,
     failedFiles,
+    cancelledFiles,
     outputFolder: payload?.outputFolder || '',
     summaryFile: payload?.summaryFile || '',
     entries: Array.isArray(payload?.entries) ? payload.entries : [],
@@ -92,7 +100,7 @@ export function useCreateData() {
         nextState = buildState(statusPayload, nextState);
         setState(nextState);
 
-        if (statusPayload.status === 'completed' || statusPayload.status === 'errored') {
+        if (TERMINAL_STATUSES.has(statusPayload.status)) {
           try {
             const resultPayload = await fetchJson(`/api/create-data/${started.batchId}/result`, {}, signal);
             setState(buildState(resultPayload, nextState));
@@ -130,5 +138,42 @@ export function useCreateData() {
     }
   }, [state.isRunning, state.isStarting]);
 
-  return { state, start };
+  const stop = useCallback(async () => {
+    const batchId = state.batchId;
+    abortRef.current?.abort();
+    abortRef.current = null;
+
+    if (!batchId) {
+      setState({
+        ...INITIAL_STATE,
+        status: 'idle',
+      });
+      return;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      status: 'stopping',
+      isStarting: false,
+      isRunning: true,
+    }));
+
+    try {
+      const stopped = await fetchJson(
+        `/api/create-data/${batchId}/stop`,
+        { method: 'POST' },
+      );
+      setState(buildState(stopped, { batchId, status: 'cancelled' }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        status: 'errored',
+        isStarting: false,
+        isRunning: false,
+        error: error?.message || 'Failed to stop Create Data.',
+      }));
+    }
+  }, [state.batchId]);
+
+  return { state, start, stop };
 }

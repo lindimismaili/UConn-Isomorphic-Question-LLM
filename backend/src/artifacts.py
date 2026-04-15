@@ -1,0 +1,326 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+AGENT_ARTIFACTS_DIRNAME = "agent_outputs"
+AGENT_METADATA_FILENAME = "agent_metadata_output.json"
+LEGACY_AGENT_OUTPUTS_FILENAME = "agent_outputs.json"
+
+WORKFLOW_AGENT_SEQUENCE = [
+    "normalizer",
+    "extracter",
+    "verifier",
+    "generator",
+    "latex",
+    "evaluation",
+    "output",
+]
+
+AGENT_DISPLAY_NAMES = {
+    "normalizer": "Normalizer",
+    "extracter": "Extracter",
+    "verifier": "Verifier",
+    "generator": "Generator",
+    "latex": "LaTeX Formatter",
+    "evaluation": "Evaluation",
+    "output": "Output",
+}
+
+_METADATA_KEYS = {
+    "agent_key",
+    "agent_name",
+    "model",
+    "reasoning_level",
+    "execution_time_seconds",
+    "received_from_node",
+    "sent_to_node",
+    "agent_received_from",
+    "agent_sent_to",
+    "input_summary",
+    "questions_count",
+    "filename",
+    "pdf_filename",
+    "status",
+    "started_at",
+    "ended_at",
+    "reused_from_output_folder",
+    "output_folder",
+    "files",
+}
+
+
+def utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def to_jsonable(value: Any) -> Any:
+    if hasattr(value, "model_dump"):
+        try:
+            return value.model_dump(mode="json")
+        except TypeError:
+            return value.model_dump()
+    if isinstance(value, dict):
+        return {str(key): to_jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [to_jsonable(item) for item in value]
+    if isinstance(value, set):
+        return [to_jsonable(item) for item in sorted(value, key=str)]
+    if isinstance(value, Path):
+        return str(value)
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    try:
+        json.dumps(value)
+        return value
+    except TypeError:
+        return str(value)
+
+
+def agent_artifact_paths(outputs_dir: Path, agent_key: str) -> tuple[Path, Path]:
+    agent_dir = outputs_dir / AGENT_ARTIFACTS_DIRNAME / agent_key
+    return agent_dir / "agent_input.jsonl", agent_dir / "agent_output.jsonl"
+
+
+def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(to_jsonable(payload), ensure_ascii=False) + "\n")
+
+
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            records.append(value)
+    return records
+
+
+def read_last_jsonl(path: Path) -> dict[str, Any] | None:
+    records = read_jsonl(path)
+    return records[-1] if records else None
+
+
+def _relative_artifact_path(outputs_dir: Path, path: Path) -> str:
+    try:
+        return path.relative_to(outputs_dir).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _metadata_subset(metadata: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: to_jsonable(value)
+        for key, value in metadata.items()
+        if key in _METADATA_KEYS and value is not None
+    }
+
+
+def write_agent_artifacts(
+    *,
+    outputs_dir: Path,
+    workflow_id: str,
+    agent_key: str,
+    agent_name: str,
+    input_payload: Any,
+    output_payload: Any,
+    metadata: dict[str, Any] | None = None,
+    status: str = "completed",
+) -> dict[str, Any]:
+    metadata = metadata or {}
+    input_path, output_path = agent_artifact_paths(outputs_dir, agent_key)
+    attempt = len(read_jsonl(output_path)) + 1
+    recorded_at = utc_timestamp()
+    common = {
+        "recorded_at": recorded_at,
+        "workflow_id": workflow_id,
+        "agent_key": agent_key,
+        "agent_name": agent_name,
+        "attempt": attempt,
+        "status": status,
+        "received_from_node": metadata.get("received_from_node"),
+        "sent_to_node": metadata.get("sent_to_node"),
+    }
+
+    append_jsonl(input_path, {**common, "input": input_payload})
+    append_jsonl(output_path, {**common, "output": output_payload})
+
+    metadata_record = _metadata_subset(
+        {
+            **metadata,
+            "agent_key": agent_key,
+            "agent_name": agent_name,
+            "status": status,
+        }
+    )
+    metadata_record.update(
+        {
+            "attempt": attempt,
+            "recorded_at": recorded_at,
+            "input_artifact": _relative_artifact_path(outputs_dir, input_path),
+            "output_artifact": _relative_artifact_path(outputs_dir, output_path),
+        }
+    )
+    return metadata_record
+
+
+def write_workflow_metadata(
+    *,
+    outputs_dir: Path,
+    workflow_id: str,
+    agents: list[dict[str, Any]],
+    output_folder: str = "",
+    workflow_type: str = "full",
+    source_files: list[str] | None = None,
+    resumed_from: dict[str, Any] | None = None,
+) -> Path:
+    source_file_metadata = []
+    for raw_path in source_files or []:
+        path = Path(raw_path)
+        source_file_metadata.append(
+            {
+                "name": path.name,
+                "path": str(path),
+                "exists": path.exists(),
+            }
+        )
+
+    payload = {
+        "generated_at": utc_timestamp(),
+        "workflow_id": workflow_id,
+        "workflow_type": workflow_type,
+        "output_folder": output_folder,
+        "resumed_from": resumed_from,
+        "source_files": source_file_metadata,
+        "agents": agents,
+    }
+    metadata_path = outputs_dir / AGENT_METADATA_FILENAME
+    metadata_path.write_text(
+        json.dumps(to_jsonable(payload), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return metadata_path
+
+
+def load_workflow_metadata(outputs_dir: Path) -> dict[str, Any]:
+    metadata_path = outputs_dir / AGENT_METADATA_FILENAME
+    if not metadata_path.exists():
+        return {}
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def load_source_file_paths(outputs_dir: Path) -> list[str]:
+    metadata = load_workflow_metadata(outputs_dir)
+    source_files = metadata.get("source_files", [])
+    paths: list[str] = []
+    if isinstance(source_files, list):
+        for item in source_files:
+            if not isinstance(item, dict):
+                continue
+            path = item.get("path")
+            if isinstance(path, str) and Path(path).exists():
+                paths.append(path)
+    return paths
+
+
+def load_agent_input_payload(outputs_dir: Path, agent_key: str) -> Any:
+    input_path, _ = agent_artifact_paths(outputs_dir, agent_key)
+    record = read_last_jsonl(input_path)
+    if record and "input" in record:
+        return record["input"]
+
+    legacy_record = _load_legacy_agent_record(outputs_dir, agent_key)
+    if legacy_record is not None:
+        return legacy_record.get("input_messages")
+    return None
+
+
+def load_agent_output_payload(outputs_dir: Path, agent_key: str) -> Any:
+    _, output_path = agent_artifact_paths(outputs_dir, agent_key)
+    record = read_last_jsonl(output_path)
+    if record and "output" in record:
+        return record["output"]
+
+    legacy_record = _load_legacy_agent_record(outputs_dir, agent_key)
+    if legacy_record is not None:
+        for key in ("output", "output_object"):
+            if key in legacy_record:
+                return legacy_record[key]
+
+    return _load_final_result_agent_output(outputs_dir, agent_key)
+
+
+def _load_legacy_agent_record(outputs_dir: Path, agent_key: str) -> dict[str, Any] | None:
+    legacy_path = outputs_dir / LEGACY_AGENT_OUTPUTS_FILENAME
+    if not legacy_path.exists():
+        return None
+    try:
+        payload = json.loads(legacy_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    agents = payload.get("agents") if isinstance(payload, dict) else None
+    if not isinstance(agents, list):
+        return None
+
+    expected_names = {
+        AGENT_DISPLAY_NAMES.get(agent_key, agent_key).lower(),
+        agent_key.lower(),
+    }
+    if agent_key == "latex":
+        expected_names.update({"latex formatter", "latex"})
+    for record in reversed(agents):
+        if not isinstance(record, dict):
+            continue
+        agent_name = str(record.get("agent_name", "")).lower()
+        if agent_name in expected_names:
+            return record
+    return None
+
+
+def _load_final_result_agent_output(outputs_dir: Path, agent_key: str) -> Any:
+    result_path = outputs_dir / "final_result.json"
+    if not result_path.exists():
+        return None
+    try:
+        payload = json.loads(result_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+
+    if agent_key == "normalizer":
+        return payload.get("config")
+    if agent_key == "extracter":
+        return {"questions": payload.get("source_questions", [])}
+    if agent_key == "verifier":
+        return {"questions": payload.get("verified_questions", [])}
+    if agent_key == "generator":
+        return {"isomorphic_questions": payload.get("generated_questions", [])}
+    if agent_key == "latex":
+        filename = payload.get("latex_file") or "isomorphic_questions.tex"
+        latex_path = outputs_dir / str(filename)
+        latex_content = latex_path.read_text(encoding="utf-8") if latex_path.exists() else ""
+        return {
+            "latex_content": latex_content,
+            "filename": filename,
+            "pdf_filename": payload.get("pdf_file") or "",
+        }
+    if agent_key == "evaluation":
+        return payload.get("evaluation")
+    return None

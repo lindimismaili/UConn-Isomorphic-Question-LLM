@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AgentCard from './AgentCard.jsx';
 
 // Fixed pipeline layout: three rows
@@ -42,9 +42,14 @@ export default function AgentPipeline({ agents, onCardClick }) {
   const gridRef = useRef(null);
   const nodeRefs = useRef({});
   const [connector, setConnector] = useState({ width: 1, height: 1, paths: {} });
-  const [lineStatuses, setLineStatuses] = useState(() => (
-    Object.fromEntries(CONNECTIONS.map(({ id }) => [id, 'inactive']))
-  ));
+  const lineStatuses = useMemo(() => (
+    Object.fromEntries(
+      CONNECTIONS.map((connection) => {
+        const sourceStatus = agents?.[connection.from]?.status || 'inactive';
+        return [connection.id, statusForLine(sourceStatus, 'inactive')];
+      })
+    )
+  ), [agents]);
 
   const updateConnector = useCallback(() => {
     const grid = gridRef.current;
@@ -110,17 +115,6 @@ export default function AgentPipeline({ agents, onCardClick }) {
       if (observer) observer.disconnect();
     };
   }, [updateConnector, agents]);
-
-  useEffect(() => {
-    setLineStatuses((prev) => {
-      const next = { ...prev };
-      for (const connection of CONNECTIONS) {
-        const sourceStatus = agents?.[connection.from]?.status || 'inactive';
-        next[connection.id] = statusForLine(sourceStatus, prev[connection.id]);
-      }
-      return next;
-    });
-  }, [agents]);
 
   return (
     <div className="agents-grid" ref={gridRef}>

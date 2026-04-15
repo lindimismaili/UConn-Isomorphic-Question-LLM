@@ -45,11 +45,11 @@ export default function DeveloperToolsPanel({
           onClick={onShowSkills}
         />
         <ToolAction
-          title={isCreateDataRunning ? 'Creating Test Data...' : 'Create Test Data'}
-          description="Run the batch evaluation workflow with the current prompt and files from `data/evaluation`."
+          title={isCreateDataRunning ? 'Test Data Running...' : 'Create Test Data'}
+          description="Open batch controls for the current prompt and files from `data/evaluation`."
           icon={<IconZap className="btn-icon" />}
           onClick={onCreateData}
-          disabled={serviceInactive || isRunning || isCreateDataRunning}
+          disabled={isRunning || (serviceInactive && !isCreateDataRunning)}
         />
         <ToolAction
           title="Browse Test Files"

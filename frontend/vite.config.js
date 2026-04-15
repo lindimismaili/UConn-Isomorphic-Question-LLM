@@ -4,11 +4,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 function embedAgentsConfigAsset() {
-  const agentsPath = path.resolve(process.cwd(), '..', 'data', 'agents.json')
+  const agentsPath = [
+    path.resolve(process.cwd(), '..', 'backend', 'data', 'agents.json'),
+    path.resolve(process.cwd(), 'backend', 'data', 'agents.json'),
+    path.resolve(process.cwd(), '..', 'data', 'agents.json'),
+  ].find((candidate) => fs.existsSync(candidate))
   return {
     name: 'embed-agents-config-asset',
     generateBundle() {
-      if (!fs.existsSync(agentsPath)) return
+      if (!agentsPath) return
       const source = fs.readFileSync(agentsPath, 'utf-8')
       this.emitFile({ type: 'asset', fileName: 'agents.json', source })
       this.emitFile({ type: 'asset', fileName: 'data/agents.json', source })

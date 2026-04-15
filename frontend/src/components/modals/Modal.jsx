@@ -1,6 +1,41 @@
 import { useEffect } from 'react';
 import { IconClose } from '../Icons.jsx';
 
+let openModalCount = 0;
+let previousBodyOverflow = '';
+let previousBodyPaddingRight = '';
+
+function lockBodyScroll() {
+  if (openModalCount === 0) {
+    previousBodyOverflow = document.body.style.overflow;
+    previousBodyPaddingRight = document.body.style.paddingRight;
+
+    const scrollbarWidth = Math.max(
+      0,
+      window.innerWidth - document.documentElement.clientWidth,
+    );
+
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+  }
+
+  openModalCount += 1;
+}
+
+function unlockBodyScroll() {
+  openModalCount = Math.max(0, openModalCount - 1);
+  if (openModalCount > 0) return;
+
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = previousBodyOverflow;
+  document.body.style.paddingRight = previousBodyPaddingRight;
+  previousBodyOverflow = '';
+  previousBodyPaddingRight = '';
+}
+
 /**
  * Base modal wrapper. Handles backdrop, animation, keyboard close (Escape),
  * and body scroll lock. Children render inside modal-content.
@@ -20,25 +55,18 @@ export default function Modal({
 }) {
   // Lock body scroll and add modal-open class when open
   useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('modal-open');
-      if (bodyClassName) {
-        document.body.classList.add(bodyClassName);
-      }
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.classList.remove('modal-open');
-      if (bodyClassName) {
-        document.body.classList.remove(bodyClassName);
-      }
-      document.body.style.overflow = '';
+    if (!isOpen) return undefined;
+
+    lockBodyScroll();
+    if (bodyClassName) {
+      document.body.classList.add(bodyClassName);
     }
+
     return () => {
-      document.body.classList.remove('modal-open');
       if (bodyClassName) {
         document.body.classList.remove(bodyClassName);
       }
-      document.body.style.overflow = '';
+      unlockBodyScroll();
     };
   }, [bodyClassName, isOpen]);
 

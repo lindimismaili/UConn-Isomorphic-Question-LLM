@@ -33,6 +33,7 @@ coverage.xml
 # Logs / temp
 *.log
 *.tmp
+*old/
 
 # IDEs / editors
 .vscode/

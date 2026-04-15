@@ -53,9 +53,9 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName, 
 
   useEffect(() => {
     if (!isOpen) return;
-    setContent('Loading...');
 
     const load = async () => {
+      setContent('Loading...');
       try {
         if (promptName) {
           setContent(await fetchPromptContent(promptName));

@@ -33,11 +33,15 @@ export default function SkillsModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (!isOpen) return;
-    setLoading(true);
-    fetchSkillsList().then((list) => {
-      setSkills([...list].sort((a, b) => a.localeCompare(b)));
-      setLoading(false);
-    });
+    Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        return fetchSkillsList();
+      })
+      .then((list) => {
+        setSkills([...list].sort((a, b) => a.localeCompare(b)));
+      })
+      .finally(() => setLoading(false));
   }, [isOpen]);
 
   return (

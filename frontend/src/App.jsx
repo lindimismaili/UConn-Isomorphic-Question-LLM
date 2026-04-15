@@ -135,6 +135,12 @@ const NEXT_AGENT_BY_KEY = {
   latex: "evaluation",
 };
 
+function firstDefined(...values) {
+  return values.find(
+    (value) => value !== undefined && value !== null && value !== "",
+  );
+}
+
 function makeLog(message, level) {
   return {
     id: Math.random().toString(36).slice(2),
@@ -215,15 +221,23 @@ function reducer(state, action) {
       const updatedAgents = { ...state.agents };
       for (const [key, config] of Object.entries(action.config)) {
         if (updatedAgents[key]) {
+          const reasoningLevel = firstDefined(
+            config.reasoning,
+            config.reasoningLevel,
+            config.reasoning_level,
+            updatedAgents[key].reasoningLevel,
+          );
           updatedAgents[key] = {
             ...updatedAgents[key],
-            name: config.name || updatedAgents[key].name,
-            model: config.model || updatedAgents[key].model,
-            reasoningLevel:
-              config.reasoning || updatedAgents[key].reasoningLevel,
-            description: config.description || "",
-            inputFrom: config.inputFrom || updatedAgents[key].inputFrom,
-            outputTo: config.outputTo || updatedAgents[key].outputTo,
+            name: firstDefined(config.name, updatedAgents[key].name),
+            model: firstDefined(config.model, updatedAgents[key].model),
+            reasoningLevel,
+            description: firstDefined(
+              config.description,
+              updatedAgents[key].description,
+            ),
+            inputFrom: firstDefined(config.inputFrom, updatedAgents[key].inputFrom),
+            outputTo: firstDefined(config.outputTo, updatedAgents[key].outputTo),
           };
         }
       }
@@ -302,9 +316,14 @@ function reducer(state, action) {
     case "AGENT_UPDATE": {
       const agent = state.agents[action.agentKey];
       if (!agent) return state;
+      const patch = Object.fromEntries(
+        Object.entries(action.data || {}).filter(
+          ([, value]) => value !== undefined,
+        ),
+      );
       const nextAgents = {
         ...state.agents,
-        [action.agentKey]: { ...agent, status: action.status, ...action.data },
+        [action.agentKey]: { ...agent, ...patch, status: action.status },
       };
       if (action.status === "completed") {
         const nextKey = NEXT_AGENT_BY_KEY[action.agentKey];
@@ -428,7 +447,11 @@ export default function App() {
   });
 
   const { run: runWorkflow, abort: abortWorkflow } = useWorkflow(dispatch);
-  const { state: createDataState, start: startCreateData } = useCreateData();
+  const {
+    state: createDataState,
+    start: startCreateData,
+    stop: stopCreateData,
+  } = useCreateData();
   useAgents(dispatch);
 
   useEffect(() => {
@@ -640,6 +663,7 @@ export default function App() {
         onClose={closeModal}
         createData={createDataState}
         onRun={() => startCreateData(prompt)}
+        onStop={stopCreateData}
       />
       <AgentDetailModal
         isOpen={state.activeModal === "agent"}
