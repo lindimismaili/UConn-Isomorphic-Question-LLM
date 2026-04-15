@@ -16,6 +16,10 @@ function getStatusLabel(status) {
       return "Done";
     case "errored":
       return "Error";
+    case "cancelled":
+      return "Stopped";
+    case "stopping":
+      return "Stopping";
     case "starting":
       return "Starting";
     default:
@@ -28,7 +32,9 @@ export default function CreateDataModal({
   onClose,
   createData,
   onRun,
+  onStop,
 }) {
+  const isActive = createData.isStarting || createData.isRunning;
   const progressText =
     createData.totalFiles > 0
       ? `${createData.doneFiles}/${createData.totalFiles} files done`
@@ -42,12 +48,15 @@ export default function CreateDataModal({
       title="Create Data"
       large
       footer={
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          {createData.status === "idle" && (
-            <button className="btn btn-primary" onClick={onRun}>
-              Run
-            </button>
-          )}
+        <div className="create-data-footer-actions">
+          <button
+            className={`btn ${isActive ? "btn-danger" : "btn-primary"}`}
+            onClick={isActive ? onStop : onRun}
+            disabled={createData.status === "stopping"}
+            type="button"
+          >
+            {isActive ? "Stop" : "Start"}
+          </button>
           <button className="btn btn-secondary" onClick={onClose}>
             Close
           </button>
@@ -76,6 +85,9 @@ export default function CreateDataModal({
               {createData.failedFiles > 0
                 ? `, ${createData.failedFiles} failed`
                 : ""}
+              {createData.cancelledFiles > 0
+                ? `, ${createData.cancelledFiles} stopped`
+                : ""}
             </span>
           </div>
         </div>
@@ -89,7 +101,7 @@ export default function CreateDataModal({
           <span>
             Batch folder:{" "}
             <code>
-              {createData.status === "completed" ? outputFolder : "outputs/"}
+              {createData.outputFolder ? outputFolder : "outputs/"}
             </code>
           </span>
         </div>

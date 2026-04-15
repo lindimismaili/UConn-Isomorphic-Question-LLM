@@ -26,55 +26,113 @@ DATA_DIR = REPO_ROOT / "data"
 RUBRIC_PATH = DATA_DIR / "rubric.json"
 LATEX_CRITERION_NAME = "latex_syntax_quality"
 PASSING_SCORE_THRESHOLD = 70.0
+EVALUATION_ITEMS_FILENAME = "evaluation_items.jsonl"
 
 
-DEFAULT_RUBRIC_CRITERIA: list[dict[str, str]] = [
+DEFAULT_RUBRIC_CRITERIA: list[dict[str, Any]] = [
     {
         "name": "preserve_physical_content",
         "category": "Preservation",
         "question": "Does the generated question preserve the original physical content?",
+        "guidance": [
+            "Reward preservation of the underlying physics concept, law, modeling assumption, and required reasoning steps.",
+            "Do not require the same story, object names, numerical values, or final numeric answer.",
+            "Penalize changes that move to a different physics topic, require a different law, or change the intended conceptual distinction.",
+        ],
     },
     {
         "name": "scenario_variation",
         "category": "Variation",
         "question": "Does the generated question use a scenario different from the original one?",
+        "guidance": [
+            "This criterion rewards appropriate surface-context variation while keeping the same physics task.",
+            "A different real-world object, setting, or story should score high when the same concept and reasoning are preserved.",
+            "Do not mark a changed scenario as a failure merely because it is different. Penalize exact copying, overly superficial edits, or changes that break the isomorphic physics mapping.",
+        ],
     },
     {
         "name": "numerical_variation",
         "category": "Variation",
         "question": "If the original question is numerical, does the generated question appropriately modify numerical values?",
+        "guidance": [
+            "For numerical questions, reward changed values that are recalculated consistently throughout the stem, answer choices, and explanations.",
+            "The generated question may have a different final value or correct option if the new values support it.",
+            "For conceptual questions with only incidental scales or no meaningful numerical values, do not penalize the generated question for having little numerical variation.",
+        ],
     },
     {
         "name": "physics_correctness",
         "category": "Quality control",
         "question": "Is the generated question free of physics errors or misconceptions?",
+        "guidance": [
+            "Judge the generated question on its own physics correctness.",
+            "Check equations, units, signs, assumptions, and whether the marked or implied correct answer is actually correct.",
+            "Do not penalize for being a different scenario if the generated physics is internally correct.",
+        ],
     },
     {
         "name": "numeric_reasonableness",
         "category": "Quality control",
         "question": "Do all numerical values have physically reasonable magnitudes and units?",
+        "guidance": [
+            "Check dimensional consistency and whether magnitudes are plausible for the stated context.",
+            "Incorrect distractor values can still be reasonable if they are plausible wrong answers with correct units.",
+            "Penalize impossible units, nonsensical scales, or values that contradict the stated physical setup.",
+        ],
     },
     {
         "name": "distractor_structure_preservation",
         "category": "Preservation",
         "question": "Does the generated question preserve the logical structure of the distractors?",
+        "guidance": [
+            "Compare the role of each answer choice, not the option letter. The generated question may reorder choices and move the correct answer.",
+            "Reward preservation of the same misconception types, such as adding vector components instead of using magnitude, confusing coefficients with derivatives, or overgeneralizing an idealization.",
+            "Pay attention to structural roles such as 'none of the above', single-correct vs multi-correct, and whether the same kind of correct statement remains present.",
+        ],
     },
     {
         "name": "clerical_quality",
         "category": "Quality control",
         "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
+        "guidance": [
+            "Judge spelling, notation, missing symbols, grammar that affects meaning, and formatting ambiguity.",
+            "Do not penalize harmless wording changes or valid notation differences.",
+        ],
     },
     {
         "name": "latex_syntax_quality",
         "category": "Quality control",
         "question": "Is the generated LaTeX code free of syntax errors?",
+        "guidance": [
+            "This criterion is checked from generated LaTeX/PDF artifacts rather than by the score model.",
+        ],
     },
     {
         "name": "solvable_and_specified",
         "category": "Quality control",
         "question": "Is the generated question fully specified and solvable as written?",
+        "guidance": [
+            "Check whether the generated stem gives enough information for a unique intended answer.",
+            "For multiple-choice questions, verify that the answer choices do not create multiple correct answers unless the stem asks for them.",
+            "Do not require extra source details if the generated question is independently solvable.",
+        ],
     },
 ]
+
+
+GENERAL_GRADER_INSTRUCTIONS = """\
+You are grading one generated isomorphic physics question against its source.
+
+An isomorphic generated question should preserve the source question's core physics
+idea and reasoning pattern while changing surface details such as names, settings,
+numbers, and sometimes answer order. Grade only the current criterion. Do not
+double-penalize an issue that belongs to another criterion unless it directly
+affects the current criterion.
+
+Before scoring, identify the source's intended answer logic and the generated
+question's intended answer logic. For multiple-choice questions, compare answer
+choice roles and misconception patterns; option letters do not need to match.
+"""
 
 
 def _load_rubric_config() -> dict[str, Any]:
@@ -132,6 +190,44 @@ def _build_item_schema() -> dict[str, Any]:
         "required": ["source_id", "source_question_text", "generated_question_text"],
         "additionalProperties": False,
     }
+
+
+def _format_guidance_lines(value: Any) -> list[str]:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else []
+    if isinstance(value, list):
+        lines: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                stripped = item.strip()
+                if stripped:
+                    lines.append(stripped)
+        return lines
+    return []
+
+
+def _format_criterion_prompt(criterion: dict[str, Any]) -> str:
+    question = str(criterion.get("question", "")).strip()
+    lines = [f"Criterion: {question}" if question else "Criterion:"]
+
+    guidance = _format_guidance_lines(criterion.get("guidance"))
+    if guidance:
+        lines.append("\nCriterion-specific guidance:")
+        lines.extend(f"- {line}" for line in guidance)
+
+    scoring_guide = _format_guidance_lines(criterion.get("scoring_guide"))
+    if scoring_guide:
+        lines.append("\nScoring guide:")
+        lines.extend(f"- {line}" for line in scoring_guide)
+    else:
+        lines.append(
+            "\nScoring guide: 90-100 means the criterion is strongly satisfied; "
+            "70-89 means it is satisfied with minor issues; 40-69 means partial "
+            "satisfaction; 0-39 means the criterion is mostly not satisfied."
+        )
+
+    return "\n".join(lines)
 
 
 def _normalize_whitespace(value: str) -> str:
@@ -212,8 +308,8 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
                     {
                         "role": "system",
                         "content": (
-                            "You are grading one generated isomorphic physics question against its source. "
-                            f"Criterion: {criterion['question']} "
+                            f"{GENERAL_GRADER_INSTRUCTIONS}\n"
+                            f"{_format_criterion_prompt(criterion)}\n\n"
                             "Return a single numeric score from 0 to 100, where 0 means the criterion is not satisfied at all "
                             "and 100 means it is fully satisfied. Use the full range when appropriate. "
                             "Judge only the provided source and generated question text."
@@ -294,6 +390,26 @@ def _collect_output_items(client: OpenAI, eval_id: str, run_id: str) -> list[Any
     for page in first_page.iter_pages():
         items.extend(getattr(page, "data", []))
     return items
+
+
+def _to_jsonable(value: Any) -> Any:
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    if isinstance(value, dict):
+        return {str(key): _to_jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_to_jsonable(item) for item in value]
+    return value
+
+
+def _write_output_items_jsonl(path: Path, output_items: list[Any]) -> None:
+    lines = [
+        json.dumps(_to_jsonable(output_item), ensure_ascii=False, default=str)
+        for output_item in output_items
+    ]
+    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any], list[str]]:
@@ -505,11 +621,17 @@ def run_openai_output_evaluation(
 
         if run_status == "completed":
             output_items = _collect_output_items(client, eval_obj.id, current.id)
+            if output_items:
+                _write_output_items_jsonl(
+                    outputs_dir / EVALUATION_ITEMS_FILENAME,
+                    output_items,
+                )
             criterion_scores, aggregation_notes = _aggregate_question_scores(output_items)
 
         overall_score = _compute_overall_score(criterion_scores, latex_document_check)
         if report_status == "completed":
             report_status = _resolve_score_status(overall_score)
+        output_items_path = outputs_dir / EVALUATION_ITEMS_FILENAME
         report = {
             "status": report_status,
             "created_at": _utc_timestamp(),
@@ -527,6 +649,8 @@ def run_openai_output_evaluation(
             "run_status": run_status,
             "output_items_count": len(output_items),
         }
+        if output_items_path.exists():
+            report["output_items_file"] = EVALUATION_ITEMS_FILENAME
 
         if hasattr(current, "report_url"):
             report["report_url"] = current.report_url

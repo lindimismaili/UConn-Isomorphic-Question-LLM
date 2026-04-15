@@ -54,6 +54,53 @@ function getQuestionCount(agentKey, output) {
   return null;
 }
 
+function buildAgentPatch(agentStatus) {
+  const data = agentStatus?.data || {};
+  const patch = {};
+
+  if (Object.prototype.hasOwnProperty.call(data, 'startTime')) {
+    patch.startTime = data.startTime ? new Date(data.startTime) : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, 'endTime')) {
+    patch.endTime = data.endTime ? new Date(data.endTime) : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, 'executionTime')) {
+    patch.executionTime = data.executionTime ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, 'input')) {
+    patch.inputText = data.input ?? '';
+  }
+  if (Object.prototype.hasOwnProperty.call(data, 'output')) {
+    patch.outputText = data.output ?? '';
+  }
+
+  const inputFrom = data.receivedFrom ?? agentStatus?.receivedFrom;
+  const outputTo = data.sentTo ?? agentStatus?.sentTo;
+  const model = data.model ?? agentStatus?.model;
+  const reasoningLevel =
+    data.reasoningLevel ??
+    data.reasoning_level ??
+    data.reasoning ??
+    agentStatus?.reasoningLevel ??
+    agentStatus?.reasoning_level ??
+    agentStatus?.reasoning;
+
+  if (inputFrom !== undefined && inputFrom !== null && inputFrom !== '') {
+    patch.inputFrom = inputFrom;
+  }
+  if (outputTo !== undefined && outputTo !== null && outputTo !== '') {
+    patch.outputTo = outputTo;
+  }
+  if (model !== undefined && model !== null && model !== '') {
+    patch.model = model;
+  }
+  if (reasoningLevel !== undefined && reasoningLevel !== null && reasoningLevel !== '') {
+    patch.reasoningLevel = reasoningLevel;
+  }
+
+  return patch;
+}
+
 /**
  * Handles the full workflow lifecycle: upload → start → poll → complete/fail
  * All state updates go through dispatch.
@@ -164,6 +211,8 @@ export function useWorkflow(dispatch) {
                 }
               } else if (nextStatus === 'errored') {
                 dispatch({ type: 'LOG', message: `${label} errored`, level: 'error' });
+              } else if (nextStatus === 'cancelled') {
+                dispatch({ type: 'LOG', message: `${label} stopped`, level: 'info' });
               }
               statusRef.current[key] = nextStatus;
             }
@@ -172,15 +221,7 @@ export function useWorkflow(dispatch) {
               type: 'AGENT_UPDATE',
               agentKey: key,
               status: agentStatus.status,
-              data: {
-                startTime: data.startTime ? new Date(data.startTime) : null,
-                endTime: data.endTime ? new Date(data.endTime) : null,
-                executionTime: data.executionTime ?? null,
-                inputText: data.input ?? '',
-                outputText: data.output ?? '',
-                inputFrom: data.receivedFrom || undefined,
-                outputTo: data.sentTo || undefined,
-              },
+              data: buildAgentPatch(agentStatus),
             });
           }
         }
@@ -217,6 +258,12 @@ export function useWorkflow(dispatch) {
           const err = new Error('Workflow failed on the server');
           err.outputFolder = status.outputFolder || '';
           throw err;
+        }
+
+        if (status.status === 'cancelled') {
+          dispatch({ type: 'WORKFLOW_ABORTED' });
+          dispatch({ type: 'LOG', message: 'Workflow stopped', level: 'info' });
+          return;
         }
 
         await sleep(STATUS_POLL_INTERVAL_MS, signal);

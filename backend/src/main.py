@@ -26,8 +26,20 @@ from agents.logger import logger
 from openai import OpenAI
 from openai.types.shared.reasoning import Reasoning
 try:
+    from .artifacts import (
+        AGENT_DISPLAY_NAMES,
+        AGENT_METADATA_FILENAME,
+        write_agent_artifacts,
+        write_workflow_metadata,
+    )
     from .evaluation import run_openai_output_evaluation
 except ImportError:
+    from artifacts import (
+        AGENT_DISPLAY_NAMES,
+        AGENT_METADATA_FILENAME,
+        write_agent_artifacts,
+        write_workflow_metadata,
+    )
     from evaluation import run_openai_output_evaluation
 try:
     from .container import SharedWorkflowRuntime, allowed_domains_from_env
@@ -181,6 +193,76 @@ async def run_agent(
     
     logger.info("Completed: %s (%.2fs)", agent.name, elapsed)
     return result
+
+
+def _agent_key_from_display_name(agent_name: str) -> str:
+    normalized_name = agent_name.strip().lower()
+    for agent_key, display_name in AGENT_DISPLAY_NAMES.items():
+        if normalized_name == display_name.lower():
+            return agent_key
+    if normalized_name == "latex":
+        return "latex"
+    return normalized_name.replace(" ", "_")
+
+
+def _write_agent_artifact_layout(
+    *,
+    outputs_dir: Path,
+    workflow_id: str,
+    agent_outputs: list[dict[str, Any]],
+    output_folder_label: str,
+    source_files: list[str],
+) -> Path:
+    metadata_records: list[dict[str, Any]] = []
+    for record in agent_outputs:
+        agent_name = str(record.get("agent_name", "Agent"))
+        agent_key = _agent_key_from_display_name(agent_name)
+        input_payload = record.get("input_messages")
+        if input_payload is None:
+            input_payload = {"summary": record.get("input_summary", "")}
+        output_payload = record.get("output_object")
+        if output_payload is None:
+            output_payload = record.get("output")
+        if output_payload is None:
+            output_payload = record.get("output_as_text", "")
+
+        metadata_records.append(
+            write_agent_artifacts(
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_key=agent_key,
+                agent_name=agent_name,
+                input_payload=input_payload,
+                output_payload=output_payload,
+                metadata={
+                    "model": record.get("model"),
+                    "reasoning_level": record.get("reasoning_level"),
+                    "execution_time_seconds": record.get("execution_time_seconds"),
+                    "received_from_node": record.get("received_from_node"),
+                    "sent_to_node": record.get("sent_to_node"),
+                    "agent_received_from": record.get("agent_received_from"),
+                    "agent_sent_to": record.get("agent_sent_to"),
+                    "input_summary": record.get("input_summary"),
+                    "questions_count": record.get("questions_count"),
+                    "filename": record.get("filename"),
+                    "pdf_filename": record.get("pdf_filename"),
+                    "output_folder": record.get("output", {}).get("output_folder")
+                    if isinstance(record.get("output"), dict)
+                    else None,
+                    "files": record.get("output", {}).get("files")
+                    if isinstance(record.get("output"), dict)
+                    else None,
+                },
+            )
+        )
+
+    return write_workflow_metadata(
+        outputs_dir=outputs_dir,
+        workflow_id=workflow_id,
+        agents=metadata_records,
+        output_folder=output_folder_label,
+        source_files=source_files,
+    )
 
 # =============================================================================
 # Agent Definitions
@@ -712,7 +794,7 @@ Set filename to "isomorphic_questions.tex"
         print("\n" + "=" * 60)
         print("STEP 6: Writing output artifacts")
         print("=" * 60)
-        output_stage_start = time.time()
+        evaluation_stage_start = time.time()
 
         evaluation_report = run_openai_output_evaluation(
             client=client,
@@ -724,6 +806,19 @@ Set filename to "isomorphic_questions.tex"
             outputs_dir=outputs_dir,
             latex_path=latex_path,
         )
+        evaluation_elapsed = time.time() - evaluation_stage_start
+        agent_outputs.append(
+            {
+                "agent_name": "Evaluation",
+                "execution_time_seconds": evaluation_elapsed,
+                "received_from_node": "latex",
+                "sent_to_node": "output",
+                "input_summary": "Evaluate generated output artifacts",
+                "output": evaluation_report,
+            }
+        )
+
+        output_stage_start = time.time()
 
         final_result = WorkflowResult(
             config=normalizer_output,
@@ -743,8 +838,8 @@ Set filename to "isomorphic_questions.tex"
         output_files = sorted(
             file_path.name for file_path in outputs_dir.iterdir() if file_path.is_file()
         )
-        if "agent_outputs.json" not in output_files:
-            output_files.append("agent_outputs.json")
+        if AGENT_METADATA_FILENAME not in output_files:
+            output_files.append(AGENT_METADATA_FILENAME)
             output_files.sort()
         output_elapsed = time.time() - output_stage_start
         agent_outputs.append(
@@ -761,22 +856,18 @@ Set filename to "isomorphic_questions.tex"
             }
         )
 
-        agent_outputs_path = outputs_dir / "agent_outputs.json"
-        agent_outputs_path.write_text(
-            json.dumps(
-                {
-                    "generated_at": datetime.now().isoformat(),
-                    "agents": agent_outputs,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        agent_metadata_path = _write_agent_artifact_layout(
+            outputs_dir=outputs_dir,
+            workflow_id=f"cli-{timestamp}",
+            agent_outputs=agent_outputs,
+            output_folder_label=timestamp,
+            source_files=workflow_input.file_paths,
         )
 
         print(f"\n✅ Results saved to: {result_path}")
         print(f"✅ LaTeX file: {latex_path}")
         print(f"✅ PDF file: {pdf_path}")
-        print(f"✅ Agent outputs saved to: {agent_outputs_path}")
+        print(f"✅ Agent metadata saved to: {agent_metadata_path}")
         
         return final_result
 

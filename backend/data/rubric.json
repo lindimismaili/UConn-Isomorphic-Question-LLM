@@ -1,50 +1,147 @@
 {
-  "model": "gpt-5.4-nano",
+  "model": "gpt-5.4-mini",
   "criteria": [
     {
       "name": "preserve_physical_content",
       "category": "Preservation",
-      "question": "Does the generated question preserve the original physical content?"
+      "question": "Does the generated question preserve the original physical content?",
+      "guidance": [
+        "Reward preservation of the underlying physics concept, law, model, and reasoning path.",
+        "Do not require the same story, object names, answer letters, numerical values, or final numeric answer.",
+        "For an isomorphic variation, changed numbers and changed surface context are expected. Penalize them only when they change the physics task or invalidate the answer logic.",
+        "Examples: a cow point-mass idealization can become a runner point-mass idealization; a raven/coordinate-distance problem can become a drone/beacon coordinate-distance problem."
+      ],
+      "scoring_guide": [
+        "90-100: same physics concept and reasoning, with only acceptable surface or numerical variation.",
+        "70-89: same main concept but one minor mismatch in framing, wording, or emphasis.",
+        "40-69: partially related physics but important assumptions, answer logic, or subtask changed.",
+        "0-39: different topic, different law, or generated question cannot be matched to the source physics."
+      ]
     },
     {
       "name": "scenario_variation",
       "category": "Variation",
-      "question": "Does the generated question use the scenario different from the original one?"
+      "question": "Does the generated question use a different surface scenario while preserving the same underlying physics task?",
+      "guidance": [
+        "This criterion rewards appropriate scenario variation. A new object, setting, or story is good when the same physics reasoning is preserved.",
+        "Do not score low merely because the generated scenario is different from the source. That is the point of this criterion.",
+        "For abstract equation or unit-conversion items with no story, changed quantities, units, coefficients, or objects can count as scenario variation if the same kind of task remains.",
+        "Penalize exact copying, token-level rewrites with no meaningful contextual change, or a new scenario that changes the concept being tested."
+      ],
+      "scoring_guide": [
+        "90-100: clearly new surface scenario or context and the same physics task remains intact.",
+        "70-89: moderate scenario variation, or abstract problem varied through quantities/numbers, with only minor loss of freshness.",
+        "40-69: superficial variation, or a new context that partially disturbs the original task.",
+        "0-39: nearly copied scenario, or a changed scenario that is no longer isomorphic to the source."
+      ]
     },
     {
       "name": "numerical_variation",
       "category": "Variation",
-      "question": "If the original questions is numerical, does the generated question appropriately modify numerical values?"
+      "question": "If the original question is numerical, does the generated question appropriately modify numerical values?",
+      "guidance": [
+        "For numerical questions, values should usually be changed and all dependent values should be recalculated consistently.",
+        "The generated final answer, answer letter, or scale factor may differ from the source if the new numbers support it.",
+        "Check that units stay dimensionally consistent and that distractors remain plausible for the new values.",
+        "For mostly conceptual questions with no meaningful numbers, score high if there was no numerical work to vary; do not punish the absence of numerical variation."
+      ],
+      "scoring_guide": [
+        "90-100: numbers are changed and all derived answers/distractors are consistent.",
+        "70-89: numbers are changed with minor rounding, notation, or incidental consistency issues.",
+        "40-69: some numbers changed but important derived values, units, or dependencies are inconsistent.",
+        "0-39: source numbers are copied when they should vary, or numerical changes break the question."
+      ]
     },
     {
       "name": "physics_correctness",
       "category": "Quality control",
-      "question": "Is the generated question free of physics errors or misconceptions?"
+      "question": "Is the generated question free of physics errors or misconceptions?",
+      "guidance": [
+        "Judge the generated question on its own physics correctness.",
+        "Check equations, signs, vectors, units, derivatives, conservation laws, assumptions, and whether the implied correct answer is actually correct.",
+        "Incorrect answer choices may contain misconceptions when they are intentional distractors; the issue is whether the generated question labels or implies the correct choice accurately.",
+        "Do not penalize a different context or different numbers if the physics is internally correct."
+      ],
+      "scoring_guide": [
+        "90-100: generated question is physically sound and the intended answer is correct.",
+        "70-89: minor imprecision that does not change the answer.",
+        "40-69: one important physics ambiguity or a questionable assumption.",
+        "0-39: major physics error, wrong intended answer, or misleading misconception in the stem."
+      ]
     },
     {
       "name": "numeric_reasonableness",
       "category": "Quality control",
-      "question": "Do all numerical values have physically reasonable magnitudes and units?"
+      "question": "Do all numerical values have physically reasonable magnitudes and units?",
+      "guidance": [
+        "Check dimensional consistency in the generated stem and answer choices.",
+        "Values should be plausible for the stated setting unless the source intentionally uses abstract or fictional units.",
+        "A wrong distractor can still be reasonable if it is a plausible wrong value with appropriate units.",
+        "Penalize impossible units, absurd scales, or numerical magnitudes that contradict the setup."
+      ],
+      "scoring_guide": [
+        "90-100: all values and units are plausible and dimensionally consistent.",
+        "70-89: minor notation, rounding, or scale concern.",
+        "40-69: several questionable units or magnitudes, but the problem remains interpretable.",
+        "0-39: units or magnitudes are nonsensical enough to damage the question."
+      ]
     },
     {
       "name": "distractor_structure_preservation",
       "category": "Preservation",
-      "question": "Does the generated question preserve the logical structure of the distractors?"
+      "question": "Does the generated question preserve the logical structure of the distractors?",
+      "guidance": [
+        "Compare answer-choice roles and misconception patterns, not option letters. The generated question may reorder choices and move the correct answer.",
+        "Reward one-to-one preservation of distractor logic, such as component-vs-magnitude errors, coefficient-vs-derivative errors, sign errors, unit-dimension errors, or overgeneralized modeling assumptions.",
+        "If the source uses 'none of the above' as the correct answer because no listed numeric value is correct, the generated question should usually preserve that structural role to score very high.",
+        "If the generated question changes which misconception is tested, creates multiple correct answers, or removes the source's key distractor type, score lower even if the format still looks similar."
+      ],
+      "scoring_guide": [
+        "90-100: same correct-answer role and same distractor misconception roles, allowing reordered options.",
+        "70-89: most distractor roles preserved with one minor missing or softened misconception.",
+        "40-69: same multiple-choice shell but several distractor roles or the 'none of the above' structure changed.",
+        "0-39: distractors test different misconceptions, option logic is broken, or answer structure is not comparable."
+      ]
     },
     {
       "name": "clerical_quality",
       "category": "Quality control",
-      "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?"
+      "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
+      "guidance": [
+        "Check spelling, grammar, missing symbols, broken math notation, duplicated or missing options, and wording that creates ambiguity.",
+        "Do not penalize harmless notation differences, rephrasing, or improved grammar relative to the source."
+      ],
+      "scoring_guide": [
+        "90-100: clean wording and notation.",
+        "70-89: minor clerical issue that does not affect solvability.",
+        "40-69: noticeable ambiguity or formatting problems.",
+        "0-39: clerical errors make the question hard to interpret."
+      ]
     },
     {
       "name": "latex_syntax_quality",
       "category": "Quality control",
-      "question": "Is the generated LaTeX code free of syntax errors?"
+      "question": "Is the generated LaTeX code free of syntax errors?",
+      "guidance": [
+        "This criterion is evaluated from generated LaTeX and PDF artifacts instead of model grading."
+      ]
     },
     {
       "name": "solvable_and_specified",
       "category": "Quality control",
-      "question": "Is the generated question fully specified and solvable as written?"
+      "question": "Is the generated question fully specified and solvable as written?",
+      "guidance": [
+        "The generated question should provide enough information for a unique intended answer.",
+        "For multiple-choice items, check that exactly one answer is correct unless the stem explicitly asks for multiple answers.",
+        "Statements using words like 'must' need enough assumptions to be logically forced.",
+        "Do not require the generated question to include every source detail if it is independently solvable."
+      ],
+      "scoring_guide": [
+        "90-100: fully specified with one clear intended answer.",
+        "70-89: mostly solvable, with a minor assumption or wording gap.",
+        "40-69: answer can be guessed but important assumptions are missing or multiple answers are plausible.",
+        "0-39: underspecified, contradictory, or not solvable as written."
+      ]
     }
   ]
 }

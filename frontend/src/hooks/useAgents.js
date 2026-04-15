@@ -6,7 +6,15 @@ const AGENT_KEY_ALIASES = {
   latexformatter: 'latex',
 };
 
-const KNOWN_AGENT_KEYS = new Set(['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation']);
+const KNOWN_AGENT_KEYS = new Set([
+  'setup',
+  'normalizer',
+  'extracter',
+  'verifier',
+  'generator',
+  'latex',
+  'evaluation',
+]);
 
 function normalizeAgentsConfig(raw) {
   if (!raw || typeof raw !== 'object') return null;

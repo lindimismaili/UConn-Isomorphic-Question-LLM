@@ -25,10 +25,13 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
 
   useEffect(() => {
     if (!isOpen) return;
-    setLoading(true);
-    setError('');
 
-    fetch('/api/evaluation/files')
+    Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setError('');
+        return fetch('/api/evaluation/files');
+      })
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load test files (${res.status})`);
         return res.json();
