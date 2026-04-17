@@ -4,10 +4,19 @@ set -euo pipefail
 # =============================================================================
 # packages.sh — Install system packages, Python venv, Node deps, build frontend
 #
-# Runs inside the deploy directory (/var/www/uconn by default).
+# Runs against the deploy directory (/var/www/uconn by default).
 # Expects env var:
-#   DEPLOY_DIR — /var/www/uconn
+#   DEPLOY_DIR — deploy target, e.g. /var/www/uconn
 # =============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="${REPO_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
+DEPLOY_CONFIG_FILE="$REPO_DIR/.deploy.env"
+
+if [[ -f "$DEPLOY_CONFIG_FILE" ]]; then
+  # shellcheck source=/dev/null
+  source "$DEPLOY_CONFIG_FILE"
+fi
 
 DEPLOY_DIR="${DEPLOY_DIR:-/var/www/uconn}"
 
