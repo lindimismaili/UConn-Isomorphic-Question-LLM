@@ -1,0 +1,130 @@
+{
+  "generated_at": "2026-04-15T06:14:55.108517Z",
+  "workflow_id": "625d4332",
+  "workflow_type": "full",
+  "output_folder": "2026_04_15_02_11_19",
+  "resumed_from": null,
+  "source_files": [
+    {
+      "name": "short_set.pdf",
+      "path": "/Users/lindimismaili/GitHub/UConn-IsomorphicQuestionLLM/backend/data/evaluation/short_set.pdf",
+      "exists": true
+    }
+  ],
+  "agents": [
+    {
+      "model": "gpt-5.4-mini",
+      "execution_time_seconds": 2.10306715965271,
+      "received_from_node": "user",
+      "sent_to_node": "extracter",
+      "input_summary": "1 message(s)",
+      "agent_key": "normalizer",
+      "agent_name": "Normalizer",
+      "status": "completed",
+      "attempt": 1,
+      "recorded_at": "2026-04-15T06:11:41.323246Z",
+      "input_artifact": "agent_outputs/normalizer/agent_input.jsonl",
+      "output_artifact": "agent_outputs/normalizer/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "execution_time_seconds": 14.104701042175293,
+      "received_from_node": "normalizer",
+      "sent_to_node": "verifier",
+      "input_summary": "1 message(s)",
+      "questions_count": 3,
+      "agent_key": "extracter",
+      "agent_name": "Extracter",
+      "status": "completed",
+      "attempt": 1,
+      "recorded_at": "2026-04-15T06:11:55.428485Z",
+      "input_artifact": "agent_outputs/extracter/agent_input.jsonl",
+      "output_artifact": "agent_outputs/extracter/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4",
+      "reasoning_level": "medium",
+      "execution_time_seconds": 27.58069396018982,
+      "received_from_node": "extracter",
+      "sent_to_node": "generator",
+      "input_summary": "1 message(s)",
+      "questions_count": 3,
+      "agent_key": "verifier",
+      "agent_name": "Verifier",
+      "status": "completed",
+      "attempt": 1,
+      "recorded_at": "2026-04-15T06:12:23.010169Z",
+      "input_artifact": "agent_outputs/verifier/agent_input.jsonl",
+      "output_artifact": "agent_outputs/verifier/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4",
+      "reasoning_level": "medium",
+      "execution_time_seconds": 35.95402383804321,
+      "received_from_node": "verifier",
+      "sent_to_node": "latex",
+      "input_summary": "1 message(s)",
+      "questions_count": 3,
+      "agent_key": "generator",
+      "agent_name": "Generator",
+      "status": "completed",
+      "attempt": 1,
+      "recorded_at": "2026-04-15T06:12:58.965099Z",
+      "input_artifact": "agent_outputs/generator/agent_input.jsonl",
+      "output_artifact": "agent_outputs/generator/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4",
+      "reasoning_level": "medium",
+      "execution_time_seconds": 88.49999499320984,
+      "received_from_node": "generator",
+      "sent_to_node": "evaluation",
+      "input_summary": "1 message(s)",
+      "filename": "isomorphic_questions.tex",
+      "pdf_filename": "isomorphic_questions.pdf",
+      "agent_key": "latex",
+      "agent_name": "LaTeX Formatter",
+      "status": "completed",
+      "attempt": 1,
+      "recorded_at": "2026-04-15T06:14:27.466059Z",
+      "input_artifact": "agent_outputs/latex/agent_input.jsonl",
+      "output_artifact": "agent_outputs/latex/agent_output.jsonl"
+    },
+    {
+      "execution_time_seconds": 27.640493631362915,
+      "received_from_node": "latex",
+      "sent_to_node": "output",
+      "input_summary": "Evaluate generated output artifacts for workflow 625d4332",
+      "agent_key": "evaluation",
+      "agent_name": "Evaluation",
+      "status": "completed",
+      "attempt": 1,
+      "recorded_at": "2026-04-15T06:14:55.106992Z",
+      "input_artifact": "agent_outputs/evaluation/agent_input.jsonl",
+      "output_artifact": "agent_outputs/evaluation/agent_output.jsonl"
+    },
+    {
+      "execution_time_seconds": 0.0008909702301025391,
+      "received_from_node": "evaluation",
+      "sent_to_node": "user",
+      "input_summary": "Finalize output files for workflow 625d4332",
+      "output_folder": "/Users/lindimismaili/GitHub/UConn-IsomorphicQuestionLLM/backend/outputs/2026_04_15_02_11_19",
+      "files": [
+        "final_result.json",
+        "isomorphic_questions.tex",
+        "isomorphic_questions.pdf",
+        "evaluation_report.json",
+        "evaluation_dataset.jsonl",
+        "evaluation_items.jsonl",
+        "agent_metadata_output.json"
+      ],
+      "agent_key": "output",
+      "agent_name": "Output",
+      "status": "completed",
+      "attempt": 1,
+      "recorded_at": "2026-04-15T06:14:55.108287Z",
+      "input_artifact": "agent_outputs/output/agent_input.jsonl",
+      "output_artifact": "agent_outputs/output/agent_output.jsonl"
+    }
+  ]
+}

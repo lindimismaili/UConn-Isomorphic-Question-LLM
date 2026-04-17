@@ -1,6 +1,14 @@
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 
+function buildBrowserPdfViewerUrl(pdfUrl) {
+  if (!pdfUrl) return 'about:blank';
+  const inlineUrl = pdfUrl.includes('inline=1')
+    ? pdfUrl
+    : `${pdfUrl}${pdfUrl.includes('?') ? '&' : '?'}inline=1`;
+  return `${inlineUrl}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`;
+}
+
 export default function PdfPreviewModal({
   isOpen,
   onClose,
@@ -8,18 +16,15 @@ export default function PdfPreviewModal({
   pdfUrl,
   onDownload,
 }) {
-  if (!fileName || !pdfUrl) return null;
-
-  const pdfViewerUrl = `${pdfUrl}${pdfUrl.includes('?') ? '&' : '?'}inline=1`;
+  const pdfViewerUrl = buildBrowserPdfViewerUrl(pdfUrl);
+  const title = fileName ? `PDF Preview: ${fileName}` : 'PDF Preview';
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`PDF Preview: ${fileName}`}
+      title={title}
       size="full"
-      modalClassName="pdf-preview-root"
-      bodyClassName="pdf-preview-open"
       contentClassName="pdf-preview-modal"
       footer={(
         <div className="modal-footer-actions pdf-preview-footer-actions">
@@ -33,6 +38,7 @@ export default function PdfPreviewModal({
           <button
             className="btn btn-primary pdf-preview-download"
             onClick={() => onDownload(fileName)}
+            disabled={!fileName}
             type="button"
           >
             <IconDownload className="btn-icon" />
@@ -49,10 +55,6 @@ export default function PdfPreviewModal({
           title={`Preview of ${fileName}`}
         />
       </div>
-
-      <p className="pdf-preview-hint">
-        Use the modal scroll area and the PDF viewer scrollbars to inspect the full document.
-      </p>
     </Modal>
   );
 }

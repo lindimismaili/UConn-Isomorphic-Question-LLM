@@ -8,6 +8,7 @@ from typing import Any
 
 AGENT_ARTIFACTS_DIRNAME = "agent_outputs"
 AGENT_METADATA_FILENAME = "agent_metadata_output.json"
+AGENT_METADATA_RELATIVE_PATH = f"{AGENT_ARTIFACTS_DIRNAME}/{AGENT_METADATA_FILENAME}"
 LEGACY_AGENT_OUTPUTS_FILENAME = "agent_outputs.json"
 
 WORKFLOW_AGENT_SEQUENCE = [
@@ -33,6 +34,7 @@ AGENT_DISPLAY_NAMES = {
 _METADATA_KEYS = {
     "agent_key",
     "agent_name",
+    "workflow_id",
     "model",
     "reasoning_level",
     "execution_time_seconds",
@@ -50,7 +52,11 @@ _METADATA_KEYS = {
     "reused_from_output_folder",
     "output_folder",
     "files",
+    "input_metadata",
+    "output_metadata",
 }
+
+_WRAPPED_RECORD_MARKER_KEYS = {"recorded_at", "agent_key", "attempt"}
 
 
 def utc_timestamp() -> str:
@@ -85,16 +91,20 @@ def agent_artifact_paths(outputs_dir: Path, agent_key: str) -> tuple[Path, Path]
     return agent_dir / "agent_input.jsonl", agent_dir / "agent_output.jsonl"
 
 
-def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
+def workflow_metadata_path(outputs_dir: Path) -> Path:
+    return outputs_dir / AGENT_ARTIFACTS_DIRNAME / AGENT_METADATA_FILENAME
+
+
+def append_jsonl(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(to_jsonable(payload), ensure_ascii=False) + "\n")
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
+def read_jsonl(path: Path) -> list[Any]:
     if not path.exists():
         return []
-    records: list[dict[str, Any]] = []
+    records: list[Any] = []
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line:
@@ -103,12 +113,11 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
             value = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(value, dict):
-            records.append(value)
+        records.append(value)
     return records
 
 
-def read_last_jsonl(path: Path) -> dict[str, Any] | None:
+def read_last_jsonl(path: Path) -> Any | None:
     records = read_jsonl(path)
     return records[-1] if records else None
 
@@ -126,6 +135,158 @@ def _metadata_subset(metadata: dict[str, Any]) -> dict[str, Any]:
         for key, value in metadata.items()
         if key in _METADATA_KEYS and value is not None
     }
+
+
+def _json_type_name(value: Any) -> str:
+    if isinstance(value, dict):
+        return "object"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, int) and not isinstance(value, bool):
+        return "integer"
+    if isinstance(value, float):
+        return "number"
+    if value is None:
+        return "null"
+    return type(value).__name__
+
+
+def _json_shape_metadata(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return {
+            "json_type": "object",
+            "keys": [str(key) for key in value.keys()],
+            "field_types": {
+                str(key): _json_type_name(item) for key, item in value.items()
+            },
+        }
+    if isinstance(value, list):
+        item_types = sorted({_json_type_name(item) for item in value})
+        return {
+            "json_type": "array",
+            "length": len(value),
+            "item_types": item_types,
+        }
+    return {"json_type": _json_type_name(value)}
+
+
+def _text_metadata(value: Any) -> dict[str, Any]:
+    if not isinstance(value, str):
+        return {"type": _json_type_name(value)}
+
+    metadata: dict[str, Any] = {
+        "type": "text",
+        "length": len(value),
+        "format": "empty" if not value.strip() else "text",
+    }
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return metadata
+
+    metadata["format"] = "json"
+    metadata.update(_json_shape_metadata(parsed))
+    return metadata
+
+
+def _resource_reference_metadata(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return {
+            "type": "object",
+            "keys": [str(key) for key in value.keys()],
+        }
+    if isinstance(value, str):
+        return {
+            "type": "string",
+            "present": bool(value),
+        }
+    return {"type": _json_type_name(value)}
+
+
+def _content_item_metadata(item: Any) -> dict[str, Any]:
+    if not isinstance(item, dict):
+        metadata = {
+            "type": _json_type_name(item),
+            "length": len(item) if isinstance(item, (list, str)) else None,
+        }
+        return {key: value for key, value in metadata.items() if value is not None}
+
+    metadata: dict[str, Any] = {
+        "type": item.get("type") or "object",
+        "keys": [str(key) for key in item.keys()],
+    }
+    for key in ("file_id", "filename", "mime_type", "media_type", "detail"):
+        if key in item:
+            metadata[key] = to_jsonable(item[key])
+    if "text" in item:
+        metadata["text"] = _text_metadata(item["text"])
+    if "image_url" in item:
+        metadata["image_url"] = _resource_reference_metadata(item["image_url"])
+    return {key: value for key, value in metadata.items() if value is not None}
+
+
+def _message_metadata(message: Any) -> dict[str, Any]:
+    if not isinstance(message, dict):
+        metadata = {
+            "type": _json_type_name(message),
+            "length": len(message) if isinstance(message, (list, str)) else None,
+        }
+        return {key: value for key, value in metadata.items() if value is not None}
+
+    metadata: dict[str, Any] = {
+        "role": message.get("role"),
+        "keys": [str(key) for key in message.keys()],
+    }
+    content = message.get("content")
+    if isinstance(content, list):
+        metadata["content"] = [_content_item_metadata(item) for item in content]
+    elif content is not None:
+        metadata["content"] = _content_item_metadata(content)
+    return {key: value for key, value in metadata.items() if value is not None}
+
+
+def input_payload_metadata(input_payload: Any) -> dict[str, Any]:
+    if isinstance(input_payload, list) and all(
+        isinstance(item, dict) and "role" in item for item in input_payload
+    ):
+        return {
+            "payload_type": "messages",
+            "message_count": len(input_payload),
+            "messages": [_message_metadata(message) for message in input_payload],
+        }
+
+    jsonable = to_jsonable(input_payload)
+    metadata = {
+        "payload_type": _json_type_name(jsonable),
+        **_json_shape_metadata(jsonable),
+    }
+    if isinstance(jsonable, str):
+        metadata["text"] = _text_metadata(jsonable)
+    return metadata
+
+
+def output_payload_metadata(output_payload: Any) -> dict[str, Any]:
+    jsonable = to_jsonable(output_payload)
+    metadata = {
+        "payload_type": _json_type_name(jsonable),
+        "python_type": type(output_payload).__name__,
+        **_json_shape_metadata(jsonable),
+    }
+    if isinstance(jsonable, str):
+        metadata["text"] = _text_metadata(jsonable)
+    return metadata
+
+
+def _is_wrapped_agent_record(record: Any, payload_key: str) -> bool:
+    return (
+        isinstance(record, dict)
+        and payload_key in record
+        and _WRAPPED_RECORD_MARKER_KEYS.issubset(record.keys())
+    )
 
 
 def write_agent_artifacts(
@@ -154,21 +315,24 @@ def write_agent_artifacts(
         "sent_to_node": metadata.get("sent_to_node"),
     }
 
-    append_jsonl(input_path, {**common, "input": input_payload})
-    append_jsonl(output_path, {**common, "output": output_payload})
+    append_jsonl(input_path, input_payload)
+    append_jsonl(output_path, output_payload)
 
     metadata_record = _metadata_subset(
         {
             **metadata,
             "agent_key": agent_key,
             "agent_name": agent_name,
+            "workflow_id": workflow_id,
             "status": status,
+            "input_metadata": input_payload_metadata(input_payload),
+            "output_metadata": output_payload_metadata(output_payload),
         }
     )
     metadata_record.update(
         {
+            **common,
             "attempt": attempt,
-            "recorded_at": recorded_at,
             "input_artifact": _relative_artifact_path(outputs_dir, input_path),
             "output_artifact": _relative_artifact_path(outputs_dir, output_path),
         }
@@ -206,7 +370,8 @@ def write_workflow_metadata(
         "source_files": source_file_metadata,
         "agents": agents,
     }
-    metadata_path = outputs_dir / AGENT_METADATA_FILENAME
+    metadata_path = workflow_metadata_path(outputs_dir)
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
     metadata_path.write_text(
         json.dumps(to_jsonable(payload), ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -215,7 +380,9 @@ def write_workflow_metadata(
 
 
 def load_workflow_metadata(outputs_dir: Path) -> dict[str, Any]:
-    metadata_path = outputs_dir / AGENT_METADATA_FILENAME
+    metadata_path = workflow_metadata_path(outputs_dir)
+    if not metadata_path.exists():
+        metadata_path = outputs_dir / AGENT_METADATA_FILENAME
     if not metadata_path.exists():
         return {}
     try:
@@ -242,8 +409,10 @@ def load_source_file_paths(outputs_dir: Path) -> list[str]:
 def load_agent_input_payload(outputs_dir: Path, agent_key: str) -> Any:
     input_path, _ = agent_artifact_paths(outputs_dir, agent_key)
     record = read_last_jsonl(input_path)
-    if record and "input" in record:
+    if _is_wrapped_agent_record(record, "input"):
         return record["input"]
+    if record is not None:
+        return record
 
     legacy_record = _load_legacy_agent_record(outputs_dir, agent_key)
     if legacy_record is not None:
@@ -254,8 +423,10 @@ def load_agent_input_payload(outputs_dir: Path, agent_key: str) -> Any:
 def load_agent_output_payload(outputs_dir: Path, agent_key: str) -> Any:
     _, output_path = agent_artifact_paths(outputs_dir, agent_key)
     record = read_last_jsonl(output_path)
-    if record and "output" in record:
+    if _is_wrapped_agent_record(record, "output"):
         return record["output"]
+    if record is not None:
+        return record
 
     legacy_record = _load_legacy_agent_record(outputs_dir, agent_key)
     if legacy_record is not None:

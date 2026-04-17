@@ -4,7 +4,6 @@ import "./styles/app.css";
 import PromptInput from "./components/PromptInput.jsx";
 import AgentPipeline from "./components/AgentPipeline.jsx";
 import LogPanel from "./components/LogPanel.jsx";
-import DeveloperToolsPanel from "./components/DeveloperToolsPanel.jsx";
 import ResultsSection from "./components/ResultsSection.jsx";
 import FailureSection from "./components/FailureSection.jsx";
 
@@ -569,7 +568,7 @@ export default function App() {
 
       <main className="main-content">
         <div className="content-shell">
-          <div className="content-primary">
+          <div className="top-panels">
             <PromptInput
               prompt={prompt}
               onPromptChange={setPrompt}
@@ -584,42 +583,6 @@ export default function App() {
                 dispatch({ type: "OPEN_MODAL", modal: "files" })
               }
               onShowHelp={() => dispatch({ type: "OPEN_MODAL", modal: "help" })}
-            />
-
-            <section className="agents-section">
-              <div className="pipeline-split">
-                <div className="card pipeline-panel agents-panel workflow-panel">
-                  <div className="card-header">
-                    <h2>Agent Pipeline</h2>
-                    <p className="subtitle">
-                      Click a block to inspect inputs, outputs, and execution
-                      details.
-                    </p>
-                  </div>
-                  <div className="card-body">
-                    <AgentPipeline
-                      agents={state.agents}
-                      onCardClick={handleAgentCardClick}
-                    />
-                  </div>
-                </div>
-                <LogPanel logs={state.logs} />
-              </div>
-            </section>
-
-            {state.result && <ResultsSection result={state.result} />}
-            {state.error && (
-              <FailureSection
-                error={state.error}
-                outputFolder={state.errorFolder}
-              />
-            )}
-          </div>
-
-          <aside className="content-tools">
-            <DeveloperToolsPanel
-              serviceInactive={serviceInactive}
-              isRunning={state.isRunning}
               isCreateDataRunning={
                 createDataState.isRunning || createDataState.isStarting
               }
@@ -631,7 +594,36 @@ export default function App() {
               }
               onCreateData={handleCreateData}
             />
-          </aside>
+          </div>
+
+          <section className="agents-section">
+            <div className="pipeline-split">
+              <div className="card pipeline-panel agents-panel workflow-panel">
+                <div className="card-header">
+                  <h2>Agent Pipeline</h2>
+                  <p className="subtitle">
+                    Click a block to inspect inputs, outputs, and execution
+                    details.
+                  </p>
+                </div>
+                <div className="card-body">
+                  <AgentPipeline
+                    agents={state.agents}
+                    onCardClick={handleAgentCardClick}
+                  />
+                </div>
+              </div>
+              <LogPanel logs={state.logs} />
+            </div>
+          </section>
+
+          {state.result && <ResultsSection result={state.result} />}
+          {state.error && (
+            <FailureSection
+              error={state.error}
+              outputFolder={state.errorFolder}
+            />
+          )}
         </div>
       </main>
 

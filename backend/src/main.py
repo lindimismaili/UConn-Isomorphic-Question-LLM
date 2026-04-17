@@ -27,20 +27,28 @@ from openai import OpenAI
 from openai.types.shared.reasoning import Reasoning
 try:
     from .artifacts import (
+        AGENT_ARTIFACTS_DIRNAME,
         AGENT_DISPLAY_NAMES,
-        AGENT_METADATA_FILENAME,
+        AGENT_METADATA_RELATIVE_PATH,
         write_agent_artifacts,
         write_workflow_metadata,
     )
-    from .evaluation import run_openai_output_evaluation
+    from .evaluation import (
+        EVALUATION_OUTPUTS_DIRNAME,
+        run_openai_output_evaluation,
+    )
 except ImportError:
     from artifacts import (
+        AGENT_ARTIFACTS_DIRNAME,
         AGENT_DISPLAY_NAMES,
-        AGENT_METADATA_FILENAME,
+        AGENT_METADATA_RELATIVE_PATH,
         write_agent_artifacts,
         write_workflow_metadata,
     )
-    from evaluation import run_openai_output_evaluation
+    from evaluation import (
+        EVALUATION_OUTPUTS_DIRNAME,
+        run_openai_output_evaluation,
+    )
 try:
     from .container import SharedWorkflowRuntime, allowed_domains_from_env
     from .schemas import (
@@ -55,8 +63,10 @@ try:
         WorkflowResult,
     )
     from .helpers import (
+        apply_requested_difficulty,
         load_agents_config,
         load_prompt,
+        merge_extracted_metadata_into_config,
         missing_generation_source_ids,
         reconcile_verified_questions,
         upload_file_to_openai,
@@ -75,8 +85,10 @@ except ImportError:
         WorkflowResult,
     )
     from helpers import (
+        apply_requested_difficulty,
         load_agents_config,
         load_prompt,
+        merge_extracted_metadata_into_config,
         missing_generation_source_ids,
         reconcile_verified_questions,
         upload_file_to_openai,
@@ -470,8 +482,9 @@ User instructions:
 
 Defaults (use if not specified):
 - new_questions_per_question: 1
-- difficulty: "" (keep same as source)
-- title: "" (extract from source if available)
+- difficulty: "" (leave empty unless the user explicitly requests a difficulty target)
+- theme: "" (the extracter will infer source theme if the user does not request one)
+- title: "" (the extracter will infer source title if the user does not request one)
 """,
                     }
                 ],
@@ -508,6 +521,9 @@ Defaults (use if not specified):
                         "type": "input_text",
                         "text": f"""Extract all questions from the attached file(s).
 
+Normalizer config:
+{normalizer_output.model_dump_json(indent=2)}
+
 Use your code interpreter to:
 1. Read the PDF/DOCX file(s) - use PyPDF2, pdfplumber, or python-docx
 2. Extract all text content
@@ -518,11 +534,14 @@ Files attached: {', '.join(file_names)}
 
 Remember:
 - Preserve all mathematical notation (use LaTeX format)
+- Determine and populate the top-level title from the source header/title block, or a concise cleaned filename fallback
+- Determine and populate the top-level theme from the extracted questions
 - Extract metadata (title, author, date, course) from headers
 - Identify question types (multiple_choice vs open_ended)
 - Multiple-choice questions must not be skipped
 - For multiple choice, extract all options with their keys (A, B, C, D)
 - Set has_explicit_answer=true only if the correct answer is clearly marked
+- Leave difficulty empty unless normalizer_config.difficulty is non-empty
 """,
                     },
                 ],
@@ -550,8 +569,12 @@ Remember:
 
 Re-read every attached file and extract all questions and metadata.
 Multiple-choice questions must not be skipped.
+Determine title and theme from the extracted source information.
+Leave difficulty empty unless the user supplied an explicit difficulty target.
 
 Files attached: {', '.join(file_names)}
+Normalizer config:
+{normalizer_output.model_dump_json(indent=2)}
 """,
                         },
                     ],
@@ -572,6 +595,13 @@ Files attached: {', '.join(file_names)}
                 q.question_type = "multiple_choice"
         if file_ids and not extracter_output.questions:
             raise ValueError("Extractor returned zero questions after retry.")
+        merge_extracted_metadata_into_config(normalizer_output, extracter_output)
+        logger.info(
+            "Extractor metadata: title=%s theme=%s",
+            extracter_output.title or "",
+            extracter_output.theme or "",
+        )
+        logger.info("Effective config: %s", normalizer_output.model_dump_json())
         logger.info("Extracted %d questions", len(extracter_output.questions))
         
         # =================================================================
@@ -615,6 +645,7 @@ For each question:
             extracter_output.questions,
             verifier_output.questions,
         )
+        apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
         logger.info("Verified %d multiple-choice questions", len(verifier_output.questions))
         
         # =================================================================
@@ -718,6 +749,10 @@ Source Questions:
                 raise ValueError(
                     f"Generator failed to produce required outputs for source_id(s): {', '.join(missing_source_ids)}"
                 )
+        apply_requested_difficulty(
+            generator_output.isomorphic_questions,
+            normalizer_output.difficulty,
+        )
 
         logger.info("Generated %d new questions", len(generator_output.isomorphic_questions))
         
@@ -758,6 +793,9 @@ Create a complete LaTeX document with:
 4. Proper math formatting for all expressions
 
 Title: {normalizer_output.title or "Isomorphic Physics Questions"}
+Theme: {normalizer_output.theme or "physics_abstract"}
+Source title: {extracter_output.title or ""}
+Course: {extracter_output.course or ""}
 Set filename to "isomorphic_questions.tex"
 """,
                     }
@@ -838,9 +876,33 @@ Set filename to "isomorphic_questions.tex"
         output_files = sorted(
             file_path.name for file_path in outputs_dir.iterdir() if file_path.is_file()
         )
-        if AGENT_METADATA_FILENAME not in output_files:
-            output_files.append(AGENT_METADATA_FILENAME)
-            output_files.sort()
+        evaluation_outputs_dir = outputs_dir / EVALUATION_OUTPUTS_DIRNAME
+        if evaluation_outputs_dir.exists():
+            output_files.extend(
+                sorted(
+                    f"{EVALUATION_OUTPUTS_DIRNAME}/{file_path.name}"
+                    for file_path in evaluation_outputs_dir.iterdir()
+                    if file_path.is_file()
+                )
+            )
+        for record in agent_outputs:
+            agent_name = str(record.get("agent_name", "Agent"))
+            agent_key = _agent_key_from_display_name(agent_name)
+            output_files.extend(
+                [
+                    f"{AGENT_ARTIFACTS_DIRNAME}/{agent_key}/agent_input.jsonl",
+                    f"{AGENT_ARTIFACTS_DIRNAME}/{agent_key}/agent_output.jsonl",
+                ]
+            )
+        output_files.extend(
+            [
+                f"{AGENT_ARTIFACTS_DIRNAME}/output/agent_input.jsonl",
+                f"{AGENT_ARTIFACTS_DIRNAME}/output/agent_output.jsonl",
+            ]
+        )
+        if AGENT_METADATA_RELATIVE_PATH not in output_files:
+            output_files.append(AGENT_METADATA_RELATIVE_PATH)
+        output_files = sorted(dict.fromkeys(output_files))
         output_elapsed = time.time() - output_stage_start
         agent_outputs.append(
             {

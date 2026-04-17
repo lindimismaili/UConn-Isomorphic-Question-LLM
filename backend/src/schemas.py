@@ -33,7 +33,7 @@ class SourceQuestionItem(BaseModel):
     stem: str
     options: list[OptionItem]
     has_explicit_answer: bool
-    difficulty: str
+    difficulty: str = ""
     question_type: str
     theme: str = ""
     topic_tags: list[str]
@@ -59,7 +59,7 @@ class NewQuestionItem(BaseModel):
     source_id: str
     stem: str
     options: list[OptionItem]
-    difficulty: str
+    difficulty: str = ""
     theme: str = ""
     topic_tags: list[str]
     generation_notes: str
@@ -85,6 +85,7 @@ class ExtracterOutput(BaseModel):
 
     filename: str = ""
     title: str = ""
+    theme: str = ""
     author: str = ""
     date: str = ""
     course: str = ""

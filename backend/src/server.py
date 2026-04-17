@@ -41,7 +41,7 @@ from openai.types.shared.reasoning import Reasoning
 try:
     from .artifacts import (
         AGENT_DISPLAY_NAMES,
-        AGENT_METADATA_FILENAME,
+        AGENT_METADATA_RELATIVE_PATH,
         WORKFLOW_AGENT_SEQUENCE,
         load_agent_input_payload,
         load_agent_output_payload,
@@ -50,11 +50,17 @@ try:
         write_agent_artifacts,
         write_workflow_metadata,
     )
-    from .evaluation import run_openai_output_evaluation
+    from .evaluation import (
+        EVALUATION_DATASET_FILENAME,
+        EVALUATION_ITEMS_FILENAME,
+        EVALUATION_OUTPUTS_DIRNAME,
+        EVALUATION_REPORT_FILENAME,
+        run_openai_output_evaluation,
+    )
 except ImportError:
     from artifacts import (
         AGENT_DISPLAY_NAMES,
-        AGENT_METADATA_FILENAME,
+        AGENT_METADATA_RELATIVE_PATH,
         WORKFLOW_AGENT_SEQUENCE,
         load_agent_input_payload,
         load_agent_output_payload,
@@ -63,7 +69,13 @@ except ImportError:
         write_agent_artifacts,
         write_workflow_metadata,
     )
-    from evaluation import run_openai_output_evaluation
+    from evaluation import (
+        EVALUATION_DATASET_FILENAME,
+        EVALUATION_ITEMS_FILENAME,
+        EVALUATION_OUTPUTS_DIRNAME,
+        EVALUATION_REPORT_FILENAME,
+        run_openai_output_evaluation,
+    )
 try:
     from .container import SharedWorkflowRuntime, allowed_domains_from_env
     from .schemas import (
@@ -76,9 +88,11 @@ try:
         WorkflowResult,
     )
     from .helpers import (
+        apply_requested_difficulty,
         build_json_message,
         load_agents_config,
         load_prompt,
+        merge_extracted_metadata_into_config,
         missing_generation_source_ids,
         reconcile_verified_questions,
         upload_file_to_openai,
@@ -95,9 +109,11 @@ except ImportError:
         WorkflowResult,
     )
     from helpers import (
+        apply_requested_difficulty,
         build_json_message,
         load_agents_config,
         load_prompt,
+        merge_extracted_metadata_into_config,
         missing_generation_source_ids,
         reconcile_verified_questions,
         upload_file_to_openai,
@@ -845,17 +861,17 @@ async def upload_files(files: list[UploadFile] = File(...)):
     }
 
 
-@app.get("/api/sliders")
-async def get_sliders():
-    """Get the slider configuration for the frontend."""
-    sliders_path = DATA_DIR / "sliders.json"
-    if not sliders_path.exists():
-        raise HTTPException(status_code=404, detail="Sliders configuration not found")
-    
+@app.get("/api/dropdown")
+async def get_dropdown():
+    """Get the prompt dropdown configuration for the frontend."""
+    dropdown_path = DATA_DIR / "dropdown.json"
+    if not dropdown_path.exists():
+        raise HTTPException(status_code=404, detail="Dropdown configuration not found")
+
     try:
-        return json.loads(sliders_path.read_text(encoding="utf-8"))
+        return json.loads(dropdown_path.read_text(encoding="utf-8"))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load sliders: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load dropdown: {str(e)}")
 
 
 @app.get("/api/agents")
@@ -1016,8 +1032,8 @@ async def get_workflow_result(workflow_id: str):
     }
 
 
-@app.get("/api/download/{workflow_id}/{filename}")
-async def download_file(workflow_id: str, filename: str, inline: bool = False):
+@app.get("/api/download/{workflow_id}/{file_path:path}")
+async def download_file(workflow_id: str, file_path: str, inline: bool = False):
     """Download a file from a completed workflow."""
     _prune_workflows()
     _prune_batch_jobs()
@@ -1030,23 +1046,27 @@ async def download_file(workflow_id: str, filename: str, inline: bool = False):
     if not output_folder:
         raise HTTPException(status_code=404, detail="Output folder not found")
 
-    safe_filename = Path(filename).name
-    if safe_filename != filename:
+    relative_path = Path(file_path)
+    if (
+        relative_path.is_absolute()
+        or not relative_path.parts
+        or any(part in {"", ".", ".."} for part in relative_path.parts)
+    ):
         raise HTTPException(status_code=400, detail="Invalid filename")
 
     output_dir = (OUTPUTS_DIR / output_folder).resolve()
-    file_path = (output_dir / safe_filename).resolve()
-    if not _is_under_directory(file_path, output_dir):
+    resolved_file_path = (output_dir / relative_path).resolve()
+    if not _is_under_directory(resolved_file_path, output_dir):
         raise HTTPException(status_code=400, detail="Invalid file path")
-    if not file_path.exists() or not file_path.is_file():
+    if not resolved_file_path.exists() or not resolved_file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     
-    media_type, _ = mimetypes.guess_type(str(file_path))
+    media_type, _ = mimetypes.guess_type(str(resolved_file_path))
     content_disposition_type = "inline" if inline and media_type == "application/pdf" else "attachment"
 
     return FileResponse(
-        path=file_path,
-        filename=safe_filename,
+        path=resolved_file_path,
+        filename=relative_path.name,
         media_type=media_type or "application/octet-stream",
         content_disposition_type=content_disposition_type,
     )
@@ -1543,7 +1563,21 @@ async def _execute_workflow(
                     "defaults": {
                         "new_questions_per_question": 1,
                         "difficulty": "",
+                        "theme": "",
                         "title": "",
+                    },
+                    "rules": {
+                        "difficulty": (
+                            "leave empty unless the user explicitly requests a difficulty target"
+                        ),
+                        "theme": (
+                            "leave empty unless the user requests a target generation theme; "
+                            "the extracter determines source theme"
+                        ),
+                        "title": (
+                            "leave empty unless the user requests an output title; "
+                            "the extracter determines source title"
+                        ),
                     },
                 }
                 normalizer_input = build_json_message(normalizer_input_payload)
@@ -1622,10 +1656,16 @@ async def _execute_workflow(
                     "normalizer_config": normalizer_output.model_dump(),
                     "requirements": {
                         "preserve_math_latex": True,
-                        "extract_metadata": ["title", "author", "date", "course"],
+                        "extract_metadata": ["title", "theme", "author", "date", "course"],
+                        "determine_title_from_source": True,
+                        "determine_theme_from_extracted_information": True,
                         "must_include_multiple_choice": True,
                         "multiple_choice_option_keys": ["A", "B", "C", "D"],
                         "set_has_explicit_answer_only_if_marked": True,
+                        "difficulty_rule": (
+                            "leave question difficulty empty unless normalizer_config.difficulty "
+                            "is non-empty"
+                        ),
                     },
                 }
                 extracter_input = build_json_message(extracter_input_payload, file_refs=file_refs)
@@ -1644,8 +1684,15 @@ async def _execute_workflow(
                         "task": "extract_source_questions_retry",
                         "reason": "previous_result_had_zero_questions",
                         "files": file_names,
+                        "normalizer_config": normalizer_output.model_dump(),
                         "requirements": {
                             "must_include_multiple_choice": True,
+                            "determine_title_from_source": True,
+                            "determine_theme_from_extracted_information": True,
+                            "difficulty_rule": (
+                                "leave question difficulty empty unless "
+                                "normalizer_config.difficulty is non-empty"
+                            ),
                         },
                     }
                     retry_extract_input = build_json_message(
@@ -1664,6 +1711,14 @@ async def _execute_workflow(
                         q.question_type = "multiple_choice"
                 if file_ids and not extracter_output.questions:
                     raise ValueError("Extractor returned zero questions after retry.")
+                merge_extracted_metadata_into_config(normalizer_output, extracter_output)
+                workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
+                logger.info(
+                    "Extractor metadata for workflow %s: title=%s theme=%s",
+                    workflow_id,
+                    extracter_output.title or "",
+                    extracter_output.theme or "",
+                )
 
                 workflow["agents"]["extracter"]["status"] = "completed"
                 workflow["agents"]["extracter"]["data"]["endTime"] = datetime.now().isoformat()
@@ -1699,6 +1754,8 @@ async def _execute_workflow(
                 for q in extracter_output.questions:
                     if q.options:
                         q.question_type = "multiple_choice"
+                merge_extracted_metadata_into_config(normalizer_output, extracter_output)
+                workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
                 _mark_reused_agent_state(
                     workflow,
                     agent_key="extracter",
@@ -1752,6 +1809,7 @@ async def _execute_workflow(
                     extracter_output.questions,
                     verifier_output.questions,
                 )
+                apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
 
                 workflow["agents"]["verifier"]["status"] = "completed"
                 workflow["agents"]["verifier"]["data"]["endTime"] = datetime.now().isoformat()
@@ -1788,6 +1846,7 @@ async def _execute_workflow(
                     extracter_output.questions,
                     verifier_output.questions,
                 )
+                apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
                 _mark_reused_agent_state(
                     workflow,
                     agent_key="verifier",
@@ -1883,6 +1942,10 @@ async def _execute_workflow(
                             "Generator failed to produce required outputs for source_id(s): "
                             + ", ".join(missing_source_ids)
                         )
+                apply_requested_difficulty(
+                    generator_output.isomorphic_questions,
+                    normalizer_output.difficulty,
+                )
                 elapsed = time.time() - start_time
 
                 workflow["agents"]["generator"]["status"] = "completed"
@@ -1915,6 +1978,10 @@ async def _execute_workflow(
                 generator_output = _load_resume_agent_output(
                     resume_source_dir,
                     "generator",
+                )
+                apply_requested_difficulty(
+                    generator_output.isomorphic_questions,
+                    normalizer_output.difficulty,
                 )
                 _mark_reused_agent_state(
                     workflow,
@@ -1957,6 +2024,12 @@ async def _execute_workflow(
             if _should_run_agent("latex", resume_from_agent):
                 latex_input_payload = {
                     "task": "format_questions_to_latex",
+                    "document": {
+                        "title": normalizer_output.title or "Isomorphic Physics Questions",
+                        "theme": normalizer_output.theme,
+                        "source_title": extracter_output.title,
+                        "course": extracter_output.course,
+                    },
                     "questions": questions_for_latex,
                     "requirements": {
                         "include_document_preamble": True,
@@ -2162,9 +2235,10 @@ async def _execute_workflow(
             result_path = outputs_dir / "final_result.json"
             result_path.write_text(final_result.model_dump_json(indent=2), encoding="utf-8")
 
-            eval_report_path = outputs_dir / "evaluation_report.json"
-            eval_dataset_path = outputs_dir / "evaluation_dataset.jsonl"
-            eval_items_path = outputs_dir / "evaluation_items.jsonl"
+            evaluation_outputs_dir = outputs_dir / EVALUATION_OUTPUTS_DIRNAME
+            eval_report_path = evaluation_outputs_dir / EVALUATION_REPORT_FILENAME
+            eval_dataset_path = evaluation_outputs_dir / EVALUATION_DATASET_FILENAME
+            eval_items_path = evaluation_outputs_dir / EVALUATION_ITEMS_FILENAME
             files_metadata = [
                 {"name": "final_result.json", "size": result_path.stat().st_size},
                 {"name": latex_filename, "size": latex_path.stat().st_size},
@@ -2173,16 +2247,44 @@ async def _execute_workflow(
                 files_metadata.append({"name": pdf_filename, "size": pdf_path.stat().st_size})
             if eval_report_path.exists():
                 files_metadata.append(
-                    {"name": "evaluation_report.json", "size": eval_report_path.stat().st_size}
+                    {
+                        "name": f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_REPORT_FILENAME}",
+                        "size": eval_report_path.stat().st_size,
+                    }
                 )
             if eval_dataset_path.exists():
                 files_metadata.append(
-                    {"name": "evaluation_dataset.jsonl", "size": eval_dataset_path.stat().st_size}
+                    {
+                        "name": f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_DATASET_FILENAME}",
+                        "size": eval_dataset_path.stat().st_size,
+                    }
                 )
             if eval_items_path.exists():
                 files_metadata.append(
-                    {"name": "evaluation_items.jsonl", "size": eval_items_path.stat().st_size}
+                    {
+                        "name": f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_ITEMS_FILENAME}",
+                        "size": eval_items_path.stat().st_size,
+                    }
                 )
+
+            output_input_artifact = "agent_outputs/output/agent_input.jsonl"
+            output_output_artifact = "agent_outputs/output/agent_output.jsonl"
+            agent_artifact_file_names = []
+            for record in agent_metadata_records:
+                for artifact_key in ("input_artifact", "output_artifact"):
+                    artifact_name = record.get(artifact_key)
+                    if artifact_name:
+                        agent_artifact_file_names.append(str(artifact_name))
+            agent_artifact_file_names.extend(
+                [output_input_artifact, output_output_artifact]
+            )
+            output_file_names = list(
+                dict.fromkeys(
+                    [item["name"] for item in files_metadata]
+                    + agent_artifact_file_names
+                    + [AGENT_METADATA_RELATIVE_PATH]
+                )
+            )
 
             output_payload = {
                 "agent_name": "Output",
@@ -2192,37 +2294,33 @@ async def _execute_workflow(
                 "input_summary": f"Finalize output files for workflow {workflow_id}",
                 "output": {
                     "output_folder": str(outputs_dir),
-                    "files": [item["name"] for item in files_metadata] + [AGENT_METADATA_FILENAME],
+                    "files": output_file_names,
                 },
             }
 
             output_elapsed = time.time() - output_stage_start
             output_payload["execution_time_seconds"] = output_elapsed
-            output_payload["output"]["files"] = [
-                item["name"] for item in files_metadata
-            ] + [AGENT_METADATA_FILENAME]
-            agent_metadata_records.append(
-                write_agent_artifacts(
-                    outputs_dir=outputs_dir,
-                    workflow_id=workflow_id,
-                    agent_key="output",
-                    agent_name="Output",
-                    input_payload={
-                        "task": "finalize_output_files",
-                        "workflow_id": workflow_id,
-                        "output_folder": str(outputs_dir),
-                    },
-                    output_payload=output_payload["output"],
-                    metadata={
-                        "execution_time_seconds": output_elapsed,
-                        "received_from_node": "evaluation",
-                        "sent_to_node": "user",
-                        "input_summary": f"Finalize output files for workflow {workflow_id}",
-                        "output_folder": str(outputs_dir),
-                        "files": output_payload["output"]["files"],
-                    },
-                )
+            output_metadata_record = write_agent_artifacts(
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_key="output",
+                agent_name="Output",
+                input_payload={
+                    "task": "finalize_output_files",
+                    "workflow_id": workflow_id,
+                    "output_folder": str(outputs_dir),
+                },
+                output_payload=output_payload["output"],
+                metadata={
+                    "execution_time_seconds": output_elapsed,
+                    "received_from_node": "evaluation",
+                    "sent_to_node": "user",
+                    "input_summary": f"Finalize output files for workflow {workflow_id}",
+                    "output_folder": str(outputs_dir),
+                    "files": output_payload["output"]["files"],
+                },
             )
+            agent_metadata_records.append(output_metadata_record)
 
             metadata_path = write_workflow_metadata(
                 outputs_dir=outputs_dir,
@@ -2240,8 +2338,19 @@ async def _execute_workflow(
                     else None
                 ),
             )
+
+            for record in agent_metadata_records:
+                for artifact_key in ("input_artifact", "output_artifact"):
+                    artifact_name = record.get(artifact_key)
+                    if not artifact_name:
+                        continue
+                    artifact_path = outputs_dir / str(artifact_name)
+                    if artifact_path.exists():
+                        files_metadata.append(
+                            {"name": str(artifact_name), "size": artifact_path.stat().st_size}
+                        )
             files_metadata.append(
-                {"name": AGENT_METADATA_FILENAME, "size": metadata_path.stat().st_size}
+                {"name": AGENT_METADATA_RELATIVE_PATH, "size": metadata_path.stat().st_size}
             )
 
             workflow["files"] = files_metadata

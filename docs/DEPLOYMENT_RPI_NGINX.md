@@ -45,7 +45,7 @@ The script writes:
 ## 4) Test locally on the Pi
 
 ```bash
-curl -i http://127.0.0.1/api/sliders
+curl -i http://127.0.0.1/api/dropdown
 curl -i http://127.0.0.1/
 ```
 

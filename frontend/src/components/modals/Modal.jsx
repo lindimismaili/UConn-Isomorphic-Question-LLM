@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { IconClose } from '../Icons.jsx';
 
 let openModalCount = 0;
@@ -82,7 +83,7 @@ export default function Modal({
     ? ` modal-${size}`
     : (large ? ' modal-large' : '');
 
-  return (
+  const modal = (
     <div
       className={`modal${isOpen ? ' is-visible' : ''}${modalClassName ? ` ${modalClassName}` : ''}`}
       role="dialog"
@@ -107,4 +108,6 @@ export default function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

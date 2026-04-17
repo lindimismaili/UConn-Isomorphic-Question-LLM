@@ -1,0 +1,177 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Isomorphic Questions}}\\[0.25em]
+{\Large Vectors and One-Dimensional Kinematics}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A survey robot starts at the origin of an \(xy\)-coordinate system and detects a beacon at position \(\vec r=-8\hat i+15\hat j\), where distances are measured in meters. Which of the following statements is correct?}{
+\Wrong{The distance between the beacon and the origin is \(23\,\text{m}\).}{This comes from adding component magnitudes, \(8+15\), instead of finding the vector magnitude. Distance from the origin must be computed with the Pythagorean relation, not by direct addition of components.}
+\Correct{The distance between the beacon and the origin is \(17\,\text{m}\).}{The distance from the origin is the magnitude of the position vector: \(|\vec r|=\sqrt{(-8)^2+15^2}=\sqrt{64+225}=\sqrt{289}=17\,\text{m}\). The sign of the \(x\)-component does not make the distance negative; only the squared components matter in the magnitude formula.}
+\Wrong{The distance between the beacon and the origin is \(15\,\text{m}\).}{This uses only the \(y\)-component and ignores the horizontal displacement. That error treats one leg of the right triangle as if it were the full distance.}
+\Wrong{The distance between the beacon and the origin is \(8\,\text{m}\).}{This uses only the magnitude of the \(x\)-component and ignores the \(y\)-component. The full distance must include both perpendicular components.}
+}{B}
+
+\QBlock{Q2}{The displacement of a particle moving along the \(x\)-axis is given by \(\vec s(t)=\left[(0.80\,\text{m/s}^3)t^3-(1.90\,\text{m/s}^2)t^2\right]\hat i\). Which of the following statements is correct?}{
+\Wrong{This motion has constant acceleration.}{This is the common mistake of assuming any polynomial position function produces constant acceleration. Differentiating twice gives an acceleration that depends on \(t\), so it is not constant.}
+\Wrong{The magnitude of the acceleration is \(1.90\,\text{m/s}^2\).}{This incorrectly reads a coefficient from the displacement function as the acceleration itself. Acceleration must be obtained from the second derivative of displacement.}
+\Correct{The magnitude of the acceleration at \(t=0\) is \(3.8\,\text{m/s}^2\).}{Differentiate twice: \(s(t)=0.80t^3-1.90t^2\), so \(v(t)=2.40t^2-3.80t\) and \(a(t)=4.80t-3.80\). At \(t=0\), the acceleration is \(-3.80\,\text{m/s}^2\), so its magnitude is \(3.8\,\text{m/s}^2\).}
+\Wrong{The magnitude of the acceleration at \(t=0\) is \(0\,\text{m/s}^2\).}{This usually comes from thinking the cubic term makes the acceleration vanish at \(t=0\). However, the \(t^2\) term contributes a nonzero constant to the second derivative.}
+}{C}
+
+\QBlock{Q3}{A probe moves for \(4.0\,\text{s}\) from position \(\vec r_A=-7\hat i+1\hat j\) m to position \(\vec r_B=5\hat i-8\hat j\) m. Which of the following statements is correct?}{
+\Wrong{The moving distance is \(15\,\text{m}\).}{\(15\,\text{m}\) is the magnitude of the displacement, since \(|\Delta \vec r|=\sqrt{12^2+(-9)^2}=15\,\text{m}\). The actual distance traveled depends on the path taken, which is not given.}
+\Wrong{The speed at \(t=0\) must be \(3.75\,\text{m/s}\).}{This divides displacement magnitude by elapsed time and then mistakes that result for the initial speed. Average rate based on endpoints does not determine the instantaneous speed at the start.}
+\Wrong{The acceleration at \(t=0\) must be \(0.94\,\text{m/s}^2\).}{This assigns a unique acceleration from only two positions and a time interval. Many different motions with different accelerations could connect the same endpoints in \(4.0\,\text{s}\).}
+\Correct{None of the above is correct.}{The displacement is \(\Delta \vec r=(5-(-7))\hat i+(-8-1)\hat j=12\hat i-9\hat j\), whose magnitude is \(|\Delta \vec r|=\sqrt{12^2+(-9)^2}=15\,\text{m}\). But that value is not necessarily the distance traveled, and neither the initial speed nor the acceleration at \(t=0\) can be determined uniquely from only the initial position, final position, and elapsed time.}
+}{D}
+
+\end{document}

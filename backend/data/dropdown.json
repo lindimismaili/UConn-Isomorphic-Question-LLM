@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "value": "biology",
+      "label": "Biology",
+      "prompt": "Tailor the generated questions around biology contexts, such as cells, ecosystems, anatomy, genetics, lab measurements, or organism behavior, while preserving the original concept, difficulty, answer structure, and solution logic."
+    },
+    {
+      "value": "physics",
+      "label": "Physics",
+      "prompt": "Tailor the generated questions around physics contexts, such as motion, forces, energy, waves, circuits, fields, or measurement scenarios, while preserving the original concept, difficulty, answer structure, and solution logic."
+    },
+    {
+      "value": "quantum",
+      "label": "Quantum",
+      "prompt": "Tailor the generated questions around quantum contexts, such as particles, energy levels, probability amplitudes, uncertainty, spin, tunneling, or quantum measurement, while preserving the original concept, difficulty, answer structure, and solution logic."
+    },
+    {
+      "value": "historical",
+      "label": "Historical",
+      "prompt": "Tailor the generated questions around historical contexts, such as ancient engineering, exploration, archaeology, trade routes, inventions, or documented events, while preserving the original concept, difficulty, answer structure, and solution logic."
+    },
+    {
+      "value": "astronomy",
+      "label": "Astronomy",
+      "prompt": "Tailor the generated questions around astronomy contexts, such as planets, stars, moons, telescopes, orbits, galaxies, or space missions, while preserving the original concept, difficulty, answer structure, and solution logic."
+    },
+    {
+      "value": "video_games",
+      "label": "Video Games",
+      "prompt": "Tailor the generated questions around video game contexts, such as player movement, inventory systems, level design, game economies, physics engines, or combat mechanics, while preserving the original concept, difficulty, answer structure, and solution logic."
+    }
+  ]
+}
