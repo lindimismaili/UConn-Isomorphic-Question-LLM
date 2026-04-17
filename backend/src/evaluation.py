@@ -26,6 +26,9 @@ DATA_DIR = REPO_ROOT / "data"
 RUBRIC_PATH = DATA_DIR / "rubric.json"
 LATEX_CRITERION_NAME = "latex_syntax_quality"
 PASSING_SCORE_THRESHOLD = 70.0
+EVALUATION_OUTPUTS_DIRNAME = "evaluation_outputs"
+EVALUATION_REPORT_FILENAME = "evaluation_report.json"
+EVALUATION_DATASET_FILENAME = "evaluation_dataset.jsonl"
 EVALUATION_ITEMS_FILENAME = "evaluation_items.jsonl"
 
 
@@ -177,6 +180,10 @@ def _utc_timestamp() -> str:
 
 def _to_jsonl(items: list[dict[str, Any]]) -> str:
     return "\n".join(json.dumps({"item": item}, ensure_ascii=False) for item in items)
+
+
+def _evaluation_relative_path(path: Path) -> str:
+    return f"{EVALUATION_OUTPUTS_DIRNAME}/{path.name}"
 
 
 def _build_item_schema() -> dict[str, Any]:
@@ -487,7 +494,7 @@ def _build_base_report(
         "rubric": RUBRIC_CRITERIA,
         "grader_model": grader_model,
         "items_evaluated": items_evaluated,
-        "dataset_file": dataset_path.name if dataset_path else "",
+        "dataset_file": _evaluation_relative_path(dataset_path) if dataset_path else "",
         "criterion_scores": {},
         "latex_document_check": latex_document_check,
         "overall_score": _compute_overall_score({}, latex_document_check),
@@ -510,8 +517,10 @@ def run_openai_output_evaluation(
     """
     Evaluate generated questions using OpenAI Evals and save evaluation_report.json.
     """
-    report_path = outputs_dir / "evaluation_report.json"
-    dataset_path = outputs_dir / "evaluation_dataset.jsonl"
+    evaluation_outputs_dir = outputs_dir / EVALUATION_OUTPUTS_DIRNAME
+    evaluation_outputs_dir.mkdir(parents=True, exist_ok=True)
+    report_path = evaluation_outputs_dir / EVALUATION_REPORT_FILENAME
+    dataset_path = evaluation_outputs_dir / EVALUATION_DATASET_FILENAME
     grader_model = grader_model or RUBRIC_MODEL
     latex_document_check = _resolve_latex_check(latex_path)
 
@@ -623,7 +632,7 @@ def run_openai_output_evaluation(
             output_items = _collect_output_items(client, eval_obj.id, current.id)
             if output_items:
                 _write_output_items_jsonl(
-                    outputs_dir / EVALUATION_ITEMS_FILENAME,
+                    evaluation_outputs_dir / EVALUATION_ITEMS_FILENAME,
                     output_items,
                 )
             criterion_scores, aggregation_notes = _aggregate_question_scores(output_items)
@@ -631,14 +640,14 @@ def run_openai_output_evaluation(
         overall_score = _compute_overall_score(criterion_scores, latex_document_check)
         if report_status == "completed":
             report_status = _resolve_score_status(overall_score)
-        output_items_path = outputs_dir / EVALUATION_ITEMS_FILENAME
+        output_items_path = evaluation_outputs_dir / EVALUATION_ITEMS_FILENAME
         report = {
             "status": report_status,
             "created_at": _utc_timestamp(),
             "rubric": RUBRIC_CRITERIA,
             "items_evaluated": len(items),
             "grader_model": grader_model,
-            "dataset_file": str(dataset_path.name),
+            "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": criterion_scores,
             "latex_document_check": latex_document_check,
             "overall_score": overall_score,
@@ -650,7 +659,7 @@ def run_openai_output_evaluation(
             "output_items_count": len(output_items),
         }
         if output_items_path.exists():
-            report["output_items_file"] = EVALUATION_ITEMS_FILENAME
+            report["output_items_file"] = _evaluation_relative_path(output_items_path)
 
         if hasattr(current, "report_url"):
             report["report_url"] = current.report_url
@@ -674,7 +683,7 @@ def run_openai_output_evaluation(
             "rubric": RUBRIC_CRITERIA,
             "items_evaluated": len(items),
             "grader_model": grader_model,
-            "dataset_file": str(dataset_path.name),
+            "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": {},
             "latex_document_check": latex_document_check,
             "overall_score": _compute_overall_score({}, latex_document_check),

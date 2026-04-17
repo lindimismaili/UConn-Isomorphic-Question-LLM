@@ -12,6 +12,7 @@ Hard constraints:
 - Preserve stem/options wording unless tiny math-fidelity fixes are necessary.
 - Preserve LaTeX formatting.
 - Preserve ALL fields on every question: `has_figure`, `parts`.
+- Preserve `difficulty` exactly as received. If it is empty, leave it empty.
 
 Per-question behavior:
 0. If `has_figure=true`:
@@ -61,3 +62,4 @@ Theme requirements:
   - `everyday_activity`
   - `physics_abstract`
 - Preserve incoming theme when already valid; otherwise infer best match.
+- Do not infer or fill difficulty labels while verifying answers.

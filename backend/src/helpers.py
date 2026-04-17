@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any, Optional
 
 from openai import OpenAI
 
 try:
-    from .schemas import NewQuestionItem, SourceQuestionItem
+    from .schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
 except ImportError:
-    from schemas import NewQuestionItem, SourceQuestionItem
+    from schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
+
+
+VALID_THEMES = {
+    "life_science",
+    "engineering",
+    "everyday_activity",
+    "physics_abstract",
+}
 
 
 def load_agents_config(config_path: Path, logger: Any) -> dict[str, Any]:
@@ -52,6 +61,60 @@ def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:
         response = client.files.create(file=f, purpose="assistants")
     logger.info("Uploaded file %s -> %s", file_path.name, response.id)
     return response.id
+
+
+def _clean_metadata_value(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def dominant_question_theme(questions: list[SourceQuestionItem]) -> str:
+    """Return the most common valid theme in extracted source questions."""
+
+    ordered_themes = [
+        q.theme.strip()
+        for q in questions
+        if q.theme and q.theme.strip() in VALID_THEMES
+    ]
+    if not ordered_themes:
+        return ""
+    counts = Counter(ordered_themes)
+    return max(counts, key=lambda theme: (counts[theme], -ordered_themes.index(theme)))
+
+
+def apply_requested_difficulty(
+    questions: list[SourceQuestionItem] | list[NewQuestionItem],
+    difficulty: str,
+) -> None:
+    """Keep difficulty blank unless the user requested an explicit target."""
+
+    requested_difficulty = _clean_metadata_value(difficulty)
+    for question in questions:
+        question.difficulty = requested_difficulty
+
+
+def merge_extracted_metadata_into_config(
+    config: NormalizerOutput,
+    extraction: ExtracterOutput,
+) -> None:
+    """Promote extractor-discovered title/theme into config when the user left them blank."""
+
+    config.difficulty = _clean_metadata_value(config.difficulty)
+    config.title = _clean_metadata_value(config.title)
+    config.theme = _clean_metadata_value(config.theme)
+
+    extracted_title = _clean_metadata_value(extraction.title)
+    if not config.title and extracted_title:
+        config.title = extracted_title
+
+    extracted_theme = _clean_metadata_value(extraction.theme)
+    if extracted_theme not in VALID_THEMES:
+        extracted_theme = dominant_question_theme(extraction.questions)
+    if not config.theme and extracted_theme:
+        config.theme = extracted_theme
+
+    apply_requested_difficulty(extraction.questions, config.difficulty)
 
 
 def reconcile_verified_questions(

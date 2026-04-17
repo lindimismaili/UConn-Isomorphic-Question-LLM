@@ -2,7 +2,7 @@ import { IconComputer, IconLightbulb, IconPatchCheck, IconPatchExclamation } fro
 
 const STATUS_COLORS = {
   inactive: 'var(--color-text-muted)',
-  queued: '#ffffff',
+  queued: 'var(--color-text)',
   thinking: 'var(--color-warning)',
   completed: 'var(--color-success)',
   errored: 'var(--color-error)',

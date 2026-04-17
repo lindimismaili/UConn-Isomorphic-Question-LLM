@@ -35,7 +35,9 @@ Output mapping (must match schema exactly):
 
 Generation rules:
 1. Difficulty:
-   - Use `configuration.difficulty` when non-empty, else keep source difficulty.
+   - Use `configuration.difficulty` when non-empty.
+   - If `configuration.difficulty` is empty, set generated `difficulty` to "".
+   - Do not infer or invent difficulty labels from source questions.
 2. Theme:
    - Use `configuration.theme` when provided and valid.
    - Else preserve source theme.
@@ -58,6 +60,10 @@ Generation rules:
    - Distractor explanations: at least 1 sentence naming the specific misconception/error.
 8. Formatting:
    - Use LaTeX for math expressions.
+9. Verbosity:
+   - Keep each generated stem about as verbose as the corresponding source stem.
+   - Do not add long background stories, extra scaffolding, or unnecessary explanatory text when the source question is brief.
+   - For multi-part questions, match the source's level of detail in the parent stem and in each corresponding part.
 
 Open-ended question rules (source `question_type="open_ended"`):
 - Set `question_type="open_ended"` on the generated item.

@@ -223,4 +223,6 @@ Apply the following rules in order for each question:
 - After writing the full document, call the provided `compile_latex_pdf` tool with the same LaTeX source and basename `isomorphic_questions`.
 - Set `pdf_filename` to `"isomorphic_questions.pdf"` after the compile tool succeeds.
 - Ensure the document compiles without errors.
-- Replace `<TITLE>` and `<Subtitle>` with appropriate values from input (topic, course name, etc.).
+- Replace `<TITLE>` with `document.title` or the explicit `Title:` value when provided.
+- Replace `<Subtitle>` with the best available source context from `document.course`,
+  `document.source_title`, `document.theme`, or the explicit theme/course values in input.

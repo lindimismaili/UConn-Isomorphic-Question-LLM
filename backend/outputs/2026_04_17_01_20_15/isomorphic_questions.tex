@@ -1,0 +1,177 @@
+% ===== Document Preamble =====
+\documentclass[11pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{comment}
+
+% ===== Colors =====
+\definecolor{AnsRed}{RGB}{170,0,0}
+\definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
+
+% ===== Choice list styling (tight, consistent) =====
+\setlist[enumerate]{%
+  leftmargin=1.5em,
+  itemsep=0.25em,
+  topsep=0.25em,
+  label=\textbf{\Alph*.}
+}
+
+% ===== Style Wrappers =====
+\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
+\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
+
+% ===== Show / Hide Reasoning Toggle =====
+\newif\ifshowreason
+\showreasontrue      % Instructor version
+% \showreasonfalse   % Student version
+
+% ===== Choice Item Macros (Answer + Reasoning) =====
+% Usage:
+%   \Correct{Answer}{Reasoning}
+%   \Wrong{Answer}{Reasoning}
+
+\newcommand{\Correct}[2]{%
+  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{AnsRed}{#2}}%
+  \fi
+}
+
+\newcommand{\Wrong}[2]{%
+  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
+  \ifshowreason\\[-0.2em]
+    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
+  \fi
+}
+
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
+
+\newcommand{\QBlock}[4]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \begin{enumerate}
+      #3
+    \end{enumerate}
+
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}
+
+\newcommand{\OEBlock}[3]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
+}
+
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}
+
+\newcommand{\OEPart}[3]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textit{\textbf{Answer:}~#3}
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}
+
+% ===== Document Start =====
+
+\begin{document}
+
+\begin{center}
+{\huge \textbf{Physics Questions}}\\[0.25em]
+{\Large Kinematics and Vectors}\\[0.25em]
+{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+\end{center}
+
+\vspace{0.75em}
+
+\QBlock{Q1}{A survey drone is located at the origin of an $xy$-coordinate system. At a certain instant, a weather balloon is at position $\vec r = -8\hat{i}+15\hat{j}$, where distances are measured in kilometers. Which of the following statements is correct?}{
+\Wrong{The distance between the balloon and the drone is $23\text{ km}$.}{This comes from adding the component magnitudes, $8+15=23$, instead of finding the vector magnitude. Distance from the origin in two dimensions must be computed with the Pythagorean relation, not simple addition.}
+\Correct{The distance between the balloon and the drone is $17\text{ km}$.}{The distance from the origin is the magnitude of the position vector. Using $|\vec r|=\sqrt{(-8)^2+15^2}=\sqrt{64+225}=\sqrt{289}=17\text{ km}$, the correct statement is that the balloon is $17\text{ km}$ away. The negative sign on the $x$-component affects direction, not the final distance.}
+\Wrong{The distance between the balloon and the drone is $15\text{ km}$.}{This mistake uses only the $y$-component and ignores the horizontal displacement. In two-dimensional motion, both components contribute to the distance from the origin.}
+\Wrong{The distance between the balloon and the drone is $8\text{ km}$.}{This mistake uses only the magnitude of the $x$-component. The full distance must include both perpendicular components of the position vector.}
+}{B}
+
+\QBlock{Q2}{The position of a particle moving along the $x$-axis is given by $\vec s(t)=\left[(0.90\,\text{m/s}^3)t^3+(4.2\,\text{m/s}^2)t^2\right]\hat{i}$. Which of the following statements is correct?}{
+\Wrong{This motion has constant acceleration.}{This error comes from assuming any polynomial position function leads to constant acceleration. Because the position contains a $t^3$ term, the second derivative still depends on $t$, so the acceleration is not constant.}
+\Wrong{The magnitude of the acceleration at $t=0$ is $4.2\,\text{m/s}^2$.}{This mistake reads the coefficient of the $t^2$ term directly as the acceleration. The acceleration must be found by differentiating the position function twice.}
+\Correct{The magnitude of the acceleration at $t=0$ is $8.4\,\text{m/s}^2$.}{Differentiate the position to get velocity: $\vec v(t)=\dfrac{d\vec s}{dt}=\left[(2.7)t^2+8.4t\right]\hat{i}$. Differentiating again gives acceleration, $\vec a(t)=\dfrac{d\vec v}{dt}=\left[5.4t+8.4\right]\hat{i}$, so at $t=0$ the magnitude is $8.4\,\text{m/s}^2$. The motion therefore has time-dependent acceleration, but its initial acceleration is nonzero.}
+\Wrong{The magnitude of the acceleration is $5.4\,\text{m/s}^2$.}{This comes from confusing the coefficient of the linear term in $a(t)$ with the actual acceleration value. Since $a(t)=5.4t+8.4$, the acceleration depends on time and is not always $5.4\,\text{m/s}^2$.}
+}{C}
+
+\QBlock{Q3}{A robot moves for $4.0\,$s from position $\vec r_A = 1\hat{i}-7\hat{j}$ to position $\vec r_B = -5\hat{i}+1\hat{j}$, where positions are measured in meters. Which of the following statements is correct?}{
+\Wrong{The acceleration at $t=0$ must be $0.63\,\text{m/s}^2$.}{This is a misconception because acceleration cannot be uniquely determined from only initial position, final position, and elapsed time. Many different motions with different accelerations could connect the same two points in $4.0\,$s.}
+\Correct{None of the above is correct.}{From the given data, the displacement is $\Delta\vec r=\vec r_B-\vec r_A=(-6)\hat{i}+8\hat{j}$, whose magnitude is $|\Delta\vec r|=\sqrt{(-6)^2+8^2}=10\,\text{m}$. However, this $10\,\text{m}$ is the displacement magnitude, not necessarily the distance traveled, and the information provided is insufficient to determine the instantaneous speed or acceleration at $t=0$. Therefore none of the other statements must be true.}
+\Wrong{The distance traveled by the robot is $10\,$m.}{This confuses displacement magnitude with path length. The straight-line displacement is $10\,$m, but the actual distance traveled depends on the path and cannot be known from the endpoints alone.}
+\Wrong{The speed at $t=0$ must be $2.5\,\text{m/s}$.}{This comes from dividing the displacement magnitude by the total time, which gives only a rough average based on endpoint information. Instantaneous speed at the initial moment cannot be determined without more information about the motion.}
+}{B}
+
+\end{document}

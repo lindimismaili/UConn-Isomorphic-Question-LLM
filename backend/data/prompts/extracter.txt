@@ -14,6 +14,9 @@ Critical requirements:
 Procedure:
 1. Read all files with Python tools (`pdfplumber`, `PyPDF2`, `python-docx`, OCR if needed).
 2. Extract document metadata from headers/footers/title blocks.
+   - Set top-level `title` to the best source title you can determine from the
+     title block, header, course/assessment label, or a concise cleaned filename fallback.
+   - Set top-level `theme` to the dominant theme across the extracted questions.
 3. Detect multi-part questions BEFORE extracting individual questions.
 4. Identify every question and classify:
    - `multiple_choice`: single question with labeled options.
@@ -65,6 +68,8 @@ New schema fields to populate for every SourceQuestionItem:
 - `has_figure` (bool, default false): true if question references an external figure or diagram.
 - `answer` (str, default ""): leave empty at extraction stage.
 - `parts` (list, default []): sub-parts for multi_part questions; empty for all other types.
+- `difficulty` (str, default ""): copy `normalizer_config.difficulty` only when it is non-empty.
+  Otherwise leave `difficulty` as an empty string. Do not infer difficulty from the source.
 
 Explicit answer detection:
 - Set `has_explicit_answer=true` only when the source clearly marks correctness.
@@ -79,3 +84,5 @@ Theme labeling:
   - `everyday_activity` (sports/play/common daily scenarios)
   - `physics_abstract` (generic objects/particles/rods/blocks/etc.)
 - Prefer `physics_abstract` when uncertain.
+- Set top-level `theme` to the most common valid question theme. If tied, use the theme
+  of the earliest tied question.

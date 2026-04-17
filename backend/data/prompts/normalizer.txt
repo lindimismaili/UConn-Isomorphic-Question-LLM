@@ -18,9 +18,14 @@ Output contract:
 Rules:
 - Preserve user intent exactly; do not invent constraints.
 - Put all extra constraints that do not fit primary fields into `notes`.
+- Set `difficulty` only when the user explicitly requests a target difficulty level
+  or relative difficulty change. If the user does not mention difficulty, keep it empty.
+- Do not infer `difficulty`, `theme`, or `title` from uploaded files; the extracter handles
+  source metadata after reading the files.
 - If user asks for a theme family, map to one of:
   - `life_science`
   - `engineering`
   - `everyday_activity`
   - `physics_abstract`
 - If no theme is requested, keep `theme` as an empty string.
+- If no output title is requested, keep `title` as an empty string.
