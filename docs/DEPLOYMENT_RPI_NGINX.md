@@ -20,6 +20,18 @@ bash deploy/deploy.sh
 system packages, Python dependencies, frontend dependencies, nginx, and the
 backend systemd service.
 
+The frontend build uses Vite 7. Raspberry Pi images that still have Node 18
+will fail with `crypto.hash is not a function` or a Vite Node version error.
+The deploy scripts check Node before building and install Node.js 22 from
+NodeSource when the current version is missing or too old.
+Node 21 is not in Vite's allowed range; use Node 20.19+ within Node 20.x, or
+Node 22.12+.
+
+NodeSource DEB packages support `amd64`, `armhf` for ARMv7 and newer, and
+`arm64`. Very old ARMv6 Raspberry Pis cannot use this NodeSource path; use a
+supported Raspberry Pi OS architecture or build the frontend on another machine
+and deploy the resulting `dist/`.
+
 The deploy script prompts for the public site target:
 
 - full site name, for example `example.com`
@@ -113,9 +125,10 @@ select the domain, then return to the terminal.
    and rsyncs the repo to the configured deploy directory.
 
 2. `deploy/packages.sh`
-   Installs system packages, creates the deploy directory `.venv`, installs
-   backend dependencies from `backend/requirements.txt`, installs frontend
-   dependencies, builds `dist/`, and writes `dist/version.json`.
+   Installs system packages, ensures Node satisfies Vite's Node requirement,
+   creates the deploy directory `.venv`, installs backend dependencies from
+   `backend/requirements.txt`, installs frontend dependencies, builds `dist/`,
+   and writes `dist/version.json`.
 
 3. `deploy/live.sh`
    Writes `/etc/nginx/sites-available/uconn`, enables nginx, writes
@@ -154,6 +167,20 @@ bash deploy/sync.sh
 This reads `.deploy.env`, checks `origin/main`, pulls with `--ff-only`,
 rebuilds frontend assets, syncs to the configured `/var/www/<deploy-dir-name>`,
 restarts `uconn.service`, and reloads nginx.
+
+If the build failed because Node is `v18.x`, upgrade from the source clone:
+
+```bash
+cd ~/Scripts/UConn-IsomorphicQuestionLLM
+git pull --ff-only
+bash deploy/packages.sh
+node -v
+npm -v
+bash deploy/sync.sh
+```
+
+`node -v` should print `v22.12+` or another version that satisfies Vite's
+Node 20.19+ within 20.x or Node 22.12+ requirement.
 
 ## Automatic Git Pull Every Minute
 
@@ -204,3 +231,4 @@ creates the destination Python venv, writes nginx config, and installs
 - Cloudflare tunnel not reachable: `sudo journalctl -u cloudflared -n 100`.
 - Auto-sync not firing: `systemctl status uconn-sync.timer` and `sudo journalctl -u uconn-sync -n 100`.
 - Git pull fails: make sure the source clone is clean and has credentials that allow pulling from the repo.
+- Vite fails with `crypto.hash is not a function`: Node is too old. Run `git pull --ff-only`, then `bash deploy/packages.sh`, then confirm `node -v` is `v22.12+` or compatible.

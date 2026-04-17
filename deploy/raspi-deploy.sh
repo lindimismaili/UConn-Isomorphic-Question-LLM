@@ -12,6 +12,8 @@ UCONN_DST="/var/www/uconn"
 UCONN_NGINX_DST="/etc/nginx/sites-available/uconn"
 UCONN_SERVICE_DST="/etc/systemd/system/uconn.service"
 APT_UPDATED=0
+NODE_MIN_VERSION="20.19.0"
+NODE_LTS_VERSION="22.x"
 
 # =====================================================
 # HELPERS
@@ -46,6 +48,84 @@ apt_install_if_missing() {
   sudo apt-get install -y "$package_name"
 }
 
+node_version_is_supported() {
+  if ! command -v node >/dev/null 2>&1; then
+    return 1
+  fi
+
+  local version
+  local major
+  local minor
+  local patch
+
+  version="$(node --version 2>/dev/null || true)"
+  version="${version#v}"
+  IFS='.' read -r major minor patch <<< "$version"
+  patch="${patch%%[^0-9]*}"
+
+  [[ "$major" =~ ^[0-9]+$ ]] || return 1
+  [[ "$minor" =~ ^[0-9]+$ ]] || minor=0
+  [[ "$patch" =~ ^[0-9]+$ ]] || patch=0
+
+  if (( major > 22 )); then
+    return 0
+  fi
+
+  if (( major == 22 && minor >= 12 )); then
+    return 0
+  fi
+
+  if (( major == 20 && minor >= 19 )); then
+    return 0
+  fi
+
+  return 1
+}
+
+install_node_from_nodesource() {
+  local setup_script
+
+  apt_install_if_missing curl
+  apt_install_if_missing ca-certificates update-ca-certificates
+
+  setup_script="$(mktemp)"
+  echo "Installing Node.js ${NODE_LTS_VERSION} from NodeSource..."
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_LTS_VERSION}" -o "$setup_script"
+  sudo -E bash "$setup_script"
+  rm -f "$setup_script"
+
+  sudo apt-get install -y nodejs
+  hash -r
+}
+
+ensure_supported_node() {
+  if node_version_is_supported; then
+    echo "Node.js $(node --version 2>&1) satisfies Vite requirements."
+  else
+    if command -v node >/dev/null 2>&1; then
+      echo "Node.js $(node --version 2>&1) is too old for Vite. Installing Node.js ${NODE_LTS_VERSION}..."
+    else
+      echo "Node.js is not installed. Installing Node.js ${NODE_LTS_VERSION}..."
+    fi
+    install_node_from_nodesource
+  fi
+
+  if ! node_version_is_supported; then
+    echo "ERROR: Node.js $(node --version 2>&1 || echo 'missing') does not satisfy Vite. Need Node ${NODE_MIN_VERSION}+ within 20.x, or Node 22.12.0+." >&2
+    exit 1
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm was not found. Reinstalling Node.js ${NODE_LTS_VERSION} from NodeSource..."
+    install_node_from_nodesource
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "ERROR: npm was not found after installing Node.js. Re-run deploy/raspi-deploy.sh after checking the NodeSource install logs." >&2
+    exit 1
+  fi
+}
+
 ensure_system_packages() {
   echo "---- system packages ----"
 
@@ -55,8 +135,7 @@ ensure_system_packages() {
   apt_install_if_missing python3
   apt_install_if_missing python3-venv
   apt_install_if_missing python3-pip pip3
-  apt_install_if_missing nodejs node
-  apt_install_if_missing npm
+  ensure_supported_node
 }
 
 ensure_git_pull_deploy_hooks() {
