@@ -38,7 +38,7 @@ The backend creates a shared OpenAI container for each workflow run, uploads sou
 ## Prerequisites
 
 - Python 3.10+
-- Node.js 18+ and npm
+- Node.js 20.19+ within Node 20.x, or Node.js 22.12+ and npm. Node 22 LTS is recommended for Raspberry Pi deploys.
 - `OPENAI_API_KEY` in your environment or a `.env` file at the repo root
 
 Notes:
@@ -187,6 +187,7 @@ Those files are the primary record of how the generated questions were judged.
 
 - `OPENAI_API_KEY` missing: the backend API can start, but workflow execution will fail until the key is set.
 - `dist/index.html` missing: run `npm -C frontend run build`, then restart `python -m backend.src.run`.
+- `crypto.hash is not a function` or Vite says Node 20.19+/22.12+ is required: upgrade Node. Node 21 is not in Vite's allowed range. On Raspberry Pi, pull the latest repo and run `bash deploy/packages.sh`; the deploy script installs Node 22 from NodeSource when the current Node is missing or too old.
 - Upload rejected: check the file extension and `MAX_UPLOAD_BYTES`.
 - Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `backend/outputs/`.
 - Frontend cannot reach the backend in dev mode: confirm the backend is on `127.0.0.1:8000` or set `VITE_BACKEND_URL`.

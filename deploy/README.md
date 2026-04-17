@@ -7,7 +7,7 @@ The recommended fresh-install path is `deploy.sh`.
 
 - `deploy.sh` is the main orchestrator. Run it once from a cloned repo on the Pi.
 - `cloudflare.sh` installs/configures `cloudflared`, creates or reuses the tunnel, routes the hostname, and syncs the repo to the configured deploy directory.
-- `packages.sh` installs system packages, creates the deploy directory `.venv`, installs Python dependencies, installs frontend dependencies, and builds `dist/`.
+- `packages.sh` installs system packages, upgrades Node to a Vite-compatible version when needed, creates the deploy directory `.venv`, installs Python dependencies, installs frontend dependencies, and builds `dist/`.
 - `live.sh` writes the nginx config and `uconn.service`, then starts/restarts nginx and the FastAPI backend.
 - `sync.sh` is the update path. It fetches `origin/main`, pulls fast-forward updates, rebuilds, rsyncs to the configured deploy directory, and restarts services.
 - `sync.sh --install-timer` installs a systemd timer that runs `sync.sh` every 60 seconds.
@@ -59,6 +59,17 @@ Use `@` for the subdomain if you want the root domain, such as `example.com`.
 The answers are saved in `.deploy.env` so future syncs and timer runs use the
 same target.
 
+The frontend build uses Vite 7, so Node.js 18 is not enough. `deploy.sh`,
+`packages.sh`, and the direct `raspi-deploy.sh` path install Node.js 22 from
+NodeSource when `node` is missing or older than Vite's required range.
+Node 21 is not valid for Vite 7; use Node 20.19+ within Node 20.x, or
+Node 22.12+.
+
+NodeSource DEB packages cover `amd64`, `armhf` for ARMv7 and newer, and
+`arm64`. Very old ARMv6 Raspberry Pis cannot use this NodeSource path; use
+supported hardware/OS architecture or build the frontend elsewhere and deploy
+the resulting `dist/`.
+
 During first Cloudflare setup, `cloudflared tunnel login` opens a browser URL.
 Log in, choose the Cloudflare zone for the hostname, and return to the terminal.
 
@@ -100,6 +111,19 @@ That command reads `.deploy.env`, fetches `origin/main`, pulls with `--ff-only`,
 rebuilds the frontend, syncs the deployed copy, and restarts the backend service. It preserves
 deployment-local data such as `.env`, `.venv`, `backend/outputs/`, and
 `backend/uploads/`.
+
+If a manual build already failed with `crypto.hash is not a function` or a
+message that Vite requires Node 20.19+/22.12+, upgrade the Pi first:
+
+```bash
+git pull --ff-only
+bash deploy/packages.sh
+node -v
+npm -v
+```
+
+After `node -v` reports `v22.12+` or another compatible version, rerun
+`bash deploy/sync.sh` or `bash deploy/deploy.sh`.
 
 ## Automatic Updates Every Minute
 
