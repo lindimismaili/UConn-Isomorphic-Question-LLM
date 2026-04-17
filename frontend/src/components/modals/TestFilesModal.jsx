@@ -2,12 +2,23 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
 
+/** Mirrors the main upload limit for test-file selections. */
 const MAX_FILES = 5;
 
+/**
+ * Generates a local id for synthetic test-file entries.
+ *
+ * @returns {string}
+ */
 function generateId() {
   return Math.random().toString(36).slice(2, 11);
 }
 
+/**
+ * Lets the user pick evaluation fixtures from `/api/evaluation/files`.
+ *
+ * @param {object} props
+ */
 export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRunning }) {
   const [availableFiles, setAvailableFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -81,7 +92,7 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
       onClose={onClose}
       title="Test Files"
       footer={
-        <button className="btn btn-secondary" onClick={onClose}>Close</button>
+        <button className="btn btn-primary" onClick={onClose}>Close</button>
       }
     >
       <div className="modal-body-stack">

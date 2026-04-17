@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
 
+/**
+ * Loads prompt text from the API first, then the bundled data directory.
+ *
+ * Touches `/api/prompts/:promptName` and `/data/prompts/:promptName.txt`.
+ */
 async function fetchPromptContent(promptName) {
   try {
     const res = await fetch(`/api/prompts/${promptName}`);
@@ -18,6 +23,11 @@ async function fetchPromptContent(promptName) {
   }
 }
 
+/**
+ * Loads skill markdown from the API first, then the bundled skills asset.
+ *
+ * Touches `/api/skills/:skillName` and `/skills/:skillName/SKILL.md`.
+ */
 async function fetchSkillContent(skillName) {
   try {
     const res = await fetch(`/api/skills/${skillName}`);
@@ -35,7 +45,10 @@ async function fetchSkillContent(skillName) {
 }
 
 /**
- * Generic content viewer modal. Pass either promptName or skillName (not both).
+ * Generic content viewer for prompt and skill documents.
+ *
+ * Pass either `promptName` or `skillName` so the modal can fetch the
+ * corresponding backend or bundled file.
  */
 export default function PromptViewerModal({ isOpen, onClose, title, promptName, skillName }) {
   const [content, setContent] = useState('Loading...');
@@ -87,7 +100,7 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName, 
             </span>
           </div>
           <div className="modal-footer-actions">
-            <button className="btn btn-secondary" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={onClose}>Close</button>
           </div>
         </div>
       }

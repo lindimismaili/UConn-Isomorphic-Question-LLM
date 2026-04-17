@@ -2,10 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 
+/** Strips backend UUID suffixes that are attached to rubric keys. */
 const UUID_SUFFIX_RE = /-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Default pass threshold used when the report does not specify one. */
 const DEFAULT_PASSING_THRESHOLD = 70;
+/** Shared empty array to keep memoized fallbacks stable. */
 const EMPTY_ITEMS = [];
 
+/**
+ * Parses newline-delimited JSON records used by evaluation item exports.
+ *
+ * @param {string} text
+ * @returns {Array<object>}
+ */
 function parseJsonl(text) {
   return text
     .split(/\r?\n/)
@@ -14,10 +23,23 @@ function parseJsonl(text) {
     .map((line) => JSON.parse(line));
 }
 
+/**
+ * Strips UUID suffixes from evaluation criterion keys for display.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
 function normalizeCriterionName(key) {
   return String(key || '').replace(UUID_SUFFIX_RE, '');
 }
 
+/**
+ * Resolves a display label for one evaluation criterion.
+ *
+ * @param {string} key
+ * @param {Map<string, object>} rubricByName
+ * @returns {string}
+ */
 function formatCriterionLabel(key, rubricByName) {
   const name = normalizeCriterionName(key);
   const criterion = rubricByName.get(name);
@@ -27,15 +49,33 @@ function formatCriterionLabel(key, rubricByName) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+/**
+ * Formats numeric scores for the summary table and per-item chips.
+ *
+ * @param {number} value
+ * @returns {string}
+ */
 function formatScore(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'n/a';
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+/**
+ * Coerces a maybe-object field into a plain object.
+ *
+ * @param {unknown} value
+ * @returns {object}
+ */
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+/**
+ * Normalizes pass/fail fields to booleans when possible.
+ *
+ * @param {unknown} value
+ * @returns {boolean | null}
+ */
 function coercePassed(value) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') {
@@ -46,6 +86,12 @@ function coercePassed(value) {
   return null;
 }
 
+/**
+ * Pulls score and pass maps from a single eval record payload.
+ *
+ * @param {object} record
+ * @returns {{grades: object, passes: object}}
+ */
 function extractResultMaps(record) {
   const grades = { ...asObject(record.grades) };
   const passes = { ...asObject(record.passes) };
@@ -67,6 +113,12 @@ function extractResultMaps(record) {
   return { grades, passes };
 }
 
+/**
+ * Extracts a short grader note from a sampled evaluation payload.
+ *
+ * @param {object} sample
+ * @returns {string}
+ */
 function extractSampleNote(sample) {
   const outputs = Array.isArray(sample?.outputs) ? sample.outputs : [];
   const outputContent = outputs.find((output) => typeof output?.content === 'string')?.content;
@@ -88,6 +140,12 @@ function extractSampleNote(sample) {
   return outputContent;
 }
 
+/**
+ * Builds a lookup table for rubric entries keyed by criterion name.
+ *
+ * @param {object} report
+ * @returns {Map<string, object>}
+ */
 function buildRubricMap(report) {
   const map = new Map();
   for (const criterion of Array.isArray(report?.rubric) ? report.rubric : []) {
@@ -98,6 +156,15 @@ function buildRubricMap(report) {
   return map;
 }
 
+/**
+ * Converts one item from the evaluation export into table-ready data.
+ *
+ * @param {object} record
+ * @param {number} index
+ * @param {Map<string, object>} rubricByName
+ * @param {number} threshold
+ * @returns {object}
+ */
 function normalizeEvalRecord(record, index, rubricByName, threshold) {
   const item = asObject(record.item || record.input || record.sample?.input);
   const { grades, passes } = extractResultMaps(record);
@@ -142,6 +209,12 @@ function normalizeEvalRecord(record, index, rubricByName, threshold) {
   };
 }
 
+/**
+ * Builds the summary rows shown when only aggregate evaluation data exists.
+ *
+ * @param {object} report
+ * @returns {Array<object>}
+ */
 function buildAggregateRows(report) {
   const criterionScores = asObject(report?.criterion_scores);
   return Object.entries(criterionScores).map(([name, scoreData]) => ({
@@ -152,6 +225,11 @@ function buildAggregateRows(report) {
   }));
 }
 
+/**
+ * Displays detailed evaluation output and lets the user download source files.
+ *
+ * @param {object} props
+ */
 export default function EvalResultsModal({
   isOpen,
   onClose,

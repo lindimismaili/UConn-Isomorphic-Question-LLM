@@ -6,6 +6,9 @@ let openModalCount = 0;
 let previousBodyOverflow = '';
 let previousBodyPaddingRight = '';
 
+/**
+ * Prevents the background page from scrolling while a modal is open.
+ */
 function lockBodyScroll() {
   if (openModalCount === 0) {
     previousBodyOverflow = document.body.style.overflow;
@@ -26,6 +29,9 @@ function lockBodyScroll() {
   openModalCount += 1;
 }
 
+/**
+ * Restores page scrolling when the final modal closes.
+ */
 function unlockBodyScroll() {
   openModalCount = Math.max(0, openModalCount - 1);
   if (openModalCount > 0) return;
@@ -38,8 +44,13 @@ function unlockBodyScroll() {
 }
 
 /**
- * Base modal wrapper. Handles backdrop, animation, keyboard close (Escape),
- * and body scroll lock. Children render inside modal-content.
+ * Base modal wrapper for all in-app dialogs.
+ *
+ * Handles backdrop clicks, Escape-to-close, scroll locking, and portal
+ * rendering into `document.body`.
+ *
+ * @param {object} props
+ * @returns {JSX.Element}
  */
 export default function Modal({
   isOpen,

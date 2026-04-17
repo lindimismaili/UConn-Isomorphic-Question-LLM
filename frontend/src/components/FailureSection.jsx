@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { IconXCircle, IconFolder } from './Icons.jsx';
 
+/**
+ * Expands escaped whitespace and formats JSON-like error payloads for display.
+ *
+ * @param {string} text - Raw error text or serialized payload.
+ * @returns {string}
+ */
 function formatText(text) {
   if (!text) return '';
   let processed = text.replace(/\\n/g, '\n').replace(/\\t/g, '    ').replace(/\\r/g, '');
@@ -8,11 +14,22 @@ function formatText(text) {
   catch { return processed; }
 }
 
+/**
+ * Normalizes the output folder label shown in the failure panel.
+ *
+ * @param {string} folder
+ * @returns {string}
+ */
 function formatOutputFolderPath(folder) {
   if (!folder) return 'outputs/';
   return folder.startsWith('outputs/') ? folder : `outputs/${folder}`;
 }
 
+/**
+ * Renders the terminal failure summary and points users to the output folder.
+ *
+ * @param {{error: string, outputFolder: string}} props
+ */
 export default function FailureSection({ error, outputFolder }) {
   const sectionRef = useRef(null);
 

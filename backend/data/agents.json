@@ -41,7 +41,7 @@
     "model": "gpt-5.4",
     "reasoning": "medium",
     "inputFrom": "Generator",
-    "outputTo": "User",
+    "outputTo": "Evaluation",
     "useCodeInterpreter": false
   }
 }

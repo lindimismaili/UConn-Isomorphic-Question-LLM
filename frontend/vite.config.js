@@ -20,8 +20,11 @@ function embedAgentsConfigAsset() {
   }
 }
 
-// Avoid localhost IPv6/IPv4 resolution issues on Windows.
-// Uvicorn here binds to 0.0.0.0 (IPv4), so prefer 127.0.0.1.
+/**
+ * Frontend origin for proxied backend requests during local development.
+ *
+ * Vite forwards `/api`, `/data`, `/skills`, and `/version.json` to this URL.
+ */
 const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8000'
 
 export default defineConfig({

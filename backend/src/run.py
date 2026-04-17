@@ -27,6 +27,7 @@ def ensure_runtime_dirs() -> None:
 
 
 def _latest_mtime(path: Path) -> float:
+    """Return the newest modification time at or beneath a path."""
     if not path.exists():
         return 0.0
     if path.is_file():
@@ -40,6 +41,7 @@ def _latest_mtime(path: Path) -> float:
 
 
 def _resolve_npm_command() -> str:
+    """Resolve the npm executable for the current platform."""
     if os.name == "nt":
         return shutil.which("npm.cmd") or shutil.which("npm") or "npm.cmd"
     return shutil.which("npm") or "npm"
@@ -88,6 +90,7 @@ def ensure_import_path() -> None:
 
 
 def main():
+    """Parse CLI arguments, ensure assets are built, and launch Uvicorn."""
     parser = argparse.ArgumentParser(
         description="Run the Isomorphic Question Generator Server"
     )

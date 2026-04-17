@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+/** Baseline batch state before a Create Data run starts. */
 const INITIAL_STATE = {
   batchId: null,
   status: 'idle',
@@ -16,8 +17,18 @@ const INITIAL_STATE = {
   error: '',
 };
 
+/** Backend states that stop the polling loop. */
 const TERMINAL_STATUSES = new Set(['completed', 'errored', 'cancelled']);
 
+/**
+ * Fetches a JSON payload from the batch-evaluation API.
+ *
+ * @param {string} url - Endpoint path to request.
+ * @param {RequestInit} [options] - Fetch options.
+ * @param {AbortSignal} [signal] - Abort signal used to cancel polling.
+ * @returns {Promise<object>} Parsed response body.
+ * @throws {Error} When the response is not OK.
+ */
 async function fetchJson(url, options, signal) {
   const response = await fetch(url, { ...options, signal });
   if (!response.ok) {
@@ -27,6 +38,13 @@ async function fetchJson(url, options, signal) {
   return response.json();
 }
 
+/**
+ * Normalizes Create Data API payloads into stable hook state.
+ *
+ * @param {object} payload - Response from start/status/result/stop.
+ * @param {object} fallback - Previous state used to preserve batch metadata.
+ * @returns {object} UI state for the Create Data modal.
+ */
 function buildState(payload, fallback = {}) {
   const completedFiles = Number(payload?.completedFiles || 0);
   const failedFiles = Number(payload?.failedFiles || 0);
@@ -54,6 +72,14 @@ function buildState(payload, fallback = {}) {
   };
 }
 
+/**
+ * Runs the Create Data batch workflow from the frontend.
+ *
+ * Touches `/api/create-data/start`, `/api/create-data/:batchId/status`,
+ * `/api/create-data/:batchId/result`, and `/api/create-data/:batchId/stop`.
+ *
+ * @returns {{state: object, start: Function, stop: Function}}
+ */
 export function useCreateData() {
   const [state, setState] = useState(INITIAL_STATE);
   const abortRef = useRef(null);

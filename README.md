@@ -1,211 +1,198 @@
-# 🧠 UConn Isomorphic Question Generator
+# UConn Isomorphic Question Generator
 
-Generate original, isomorphic physics multiple-choice questions from source PDFs/DOCX/TXT using a 5-agent workflow:
+Generate original, isomorphic physics questions from source PDFs, DOCX files, or text files.
+The project uses a multi-agent workflow that normalizes the request, extracts source questions, verifies them, generates new questions, formats LaTeX, and runs evaluation.
 
-`Normalizer -> Extracter -> Verifier -> Generator -> LaTeX Formatter`
+## Purpose
 
-## ✨ Features
+The app takes question sources and produces a fresh set of physics questions that preserve the original reasoning pattern while changing the surface details.
 
-- 5-agent pipeline with structured outputs
-- Web UI + FastAPI backend
-- PDF/DOCX/TXT upload support
-- LaTeX + compiled PDF output (`isomorphic_questions.tex`, `isomorphic_questions.pdf`)
-- Single shared OpenAI container per workflow for all agent/tool runtime work
-- OpenAI Evals report per run
+The core workflow is:
 
-## 🗂️ Repository Layout
+`Normalizer -> Extracter -> Verifier -> Generator -> LaTeX Formatter -> Evaluation -> Output`
 
-- `backend/`
-  - `backend/src/server.py` FastAPI API server
-  - `backend/src/main.py` CLI workflow runner
-  - `backend/src/run.py` server startup wrapper
-  - `backend/src/evaluation.py` OpenAI Evals integration
-  - `backend/data/` prompts, skills, agents config, eval data
-  - `backend/uploads/` uploaded files by session
-  - `backend/outputs/` workflow outputs by timestamp
-- `frontend/`
-  - Vite + React web UI (dev server + build)
-- `dist/`
-  - Built frontend output served by FastAPI (created by `npm -C frontend run build`)
-- Historical artifacts
-  - `archive/`
+## Architecture
 
-## 📋 Prerequisites
+The repository is split into two runtime surfaces:
+
+- `backend/`: FastAPI API, workflow orchestration, evaluation, data files, and run outputs
+- `frontend/`: React + Vite UI that talks to the backend API
+- `dist/`: built frontend assets served by the backend when present
+
+The backend creates a shared OpenAI container for each workflow run, uploads source files, executes the agent chain, compiles LaTeX to PDF, and writes the final artifacts into a timestamped output folder.
+
+## Repository Layout
+
+- `backend/src/main.py` command-line workflow runner
+- `backend/src/run.py` backend server launcher
+- `backend/src/server.py` FastAPI app and API endpoints
+- `backend/src/evaluation.py` OpenAI evals integration
+- `backend/src/artifacts.py` workflow and agent artifact writers/readers
+- `backend/src/container.py` shared OpenAI container runtime helpers
+- `backend/data/` prompts, skills, rubric, agents config, and evaluation fixtures
+- `backend/uploads/` uploaded source files grouped by session
+- `backend/outputs/` timestamped workflow outputs
+- `frontend/src/` React UI, hooks, and components
+- `docs/` deployment and runbook documents
+
+## Prerequisites
 
 - Python 3.10+
-- `OPENAI_API_KEY` set in environment (or `.env`)
+- Node.js 18+ and npm
+- `OPENAI_API_KEY` in your environment or a `.env` file at the repo root
 
-## ⚙️ Install
+Notes:
+
+- The backend uses OpenAI containers and agents, so the key must be valid for those APIs.
+- Normal runs do not require a local LaTeX install. LaTeX compilation happens inside the shared OpenAI container.
+
+## Setup
+
+From the repository root:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
-npm install
+npm -C frontend install
 ```
 
-## ▶️ Run Server on Local Machine
+If you prefer to keep the backend and frontend dependencies separate, activate the virtual environment before running backend commands and keep the frontend install in `frontend/node_modules/`.
+
+## Environment Variables
+
+The backend loads `.env` from the repo root if present.
+
+Required:
+
+- `OPENAI_API_KEY` - required for workflow execution and uploads
+
+Backend runtime settings:
+
+- `HOST` - bind host for `python -m backend.src.run` and `python -m backend.src.server` defaults
+- `PORT` - bind port for the FastAPI app defaults
+- `MAX_UPLOAD_BYTES` - upload size limit in bytes, default `20971520`
+- `WORKFLOW_TTL_SECONDS` - how long workflow records stay in memory, default `86400`
+- `WORKFLOW_MAX_ENTRIES` - max workflow/batch records kept in memory, default `200`
+- `BATCH_WORKFLOW_CONCURRENCY` - concurrent create-data batch limit, default `2`
+- `OPENAI_STATUS_TIMEOUT_SECONDS` - timeout for the OpenAI status probe, default `5`
+- `OPENAI_CONTAINER_EXPIRES_MINUTES` - shared container lifetime, clamped to `1..20`, default `20`
+- `OPENAI_CONTAINER_BOOTSTRAP_MODEL` - model used to bootstrap the shared container, default `gpt-5.4`
+- `OPENAI_CONTAINER_ALLOWED_DOMAINS` - comma-separated allowlist for container bootstrap and tools
+
+Frontend dev proxy:
+
+- `VITE_BACKEND_URL` - backend URL used by the Vite dev server proxy, default `http://127.0.0.1:8000`
+
+## Local Server
+
+Run the full backend server, which also serves the built frontend when `dist/index.html` exists:
 
 ```bash
-npm start
+python -m backend.src.run --reload
 ```
 
-Open [http://localhost:8000](http://localhost:8000).
+Open:
 
-### Dev UI (hot reload)
+- `http://127.0.0.1:8000` for the UI
+- `http://127.0.0.1:8000/api/health` for a quick backend check
 
-- `npm run dev`
+If `dist/` is missing or stale, `backend/src/run.py` rebuilds the frontend before starting Uvicorn.
 
-## 🖥️ Run CLI
+## Dev UI
+
+Run the Vite dev server in a second terminal:
 
 ```bash
-python3 -m backend.src.main "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
+npm -C frontend run dev:ui
 ```
 
-## 📦 Output Files
+The Vite dev server proxies API requests to `http://127.0.0.1:8000` by default.
+If your backend is elsewhere, set `VITE_BACKEND_URL` before starting Vite.
 
-Each run writes to `backend/outputs/<timestamp>/`:
+Useful frontend commands:
+
+```bash
+npm -C frontend run build
+npm -C frontend run lint
+npm -C frontend run preview
+```
+
+## CLI Usage
+
+Run the workflow directly from the command line:
+
+```bash
+python -m backend.src.main "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
+```
+
+CLI flags:
+
+- positional files: one or more PDF, DOCX, DOC, or TXT inputs
+- `-n`, `--num-questions`: number of generated questions per source question
+- `-i`, `--instructions`: extra instructions for the workflow
+
+If no file is supplied, the CLI falls back to the default evaluation PDF when available.
+
+## Workflow Stages
+
+1. Upload source files to OpenAI
+2. Normalize the user request into workflow configuration
+3. Extract source questions from the uploaded material
+4. Verify the extracted questions and answers
+5. Generate isomorphic questions
+6. Format the result as LaTeX and compile a PDF
+7. Evaluate the generated output and write run metadata
+8. Finalize local output files
+
+The frontend mirrors these stages in the pipeline view, logs, and result panels.
+
+## Outputs
+
+Every workflow writes to `backend/outputs/<timestamp>/`.
+
+Common files:
 
 - `final_result.json`
 - `isomorphic_questions.tex`
 - `isomorphic_questions.pdf`
-- `1_normalizer.json` ... `5_latex.json`
-- `evaluation_report.json` (if eval ran)
-- `evaluation_dataset.jsonl` (if eval ran)
+- `agent_outputs/agent_metadata_output.json`
 
-## 📚 Deployment Docs
+Agent artifacts:
 
-- Local/dev runbook: `docs/RUN.md`
-- Live/cloud notes: `docs/LIVE.md`
-- Raspberry Pi + Nginx deployment: `docs/DEPLOYMENT_RPI_NGINX.md`
+- `agent_outputs/<agent>/agent_input.jsonl`
+- `agent_outputs/<agent>/agent_output.jsonl`
 
-## 🚀 Auto-Deploy Setup (Brand New Raspberry Pi)
+Evaluation artifacts:
 
-Use this once on a fresh Pi to make deploy run automatically after every `git pull`.
+- `evaluation_outputs/evaluation_report.json`
+- `evaluation_outputs/evaluation_dataset.jsonl`
+- `evaluation_outputs/evaluation_items.jsonl`
 
-### 1. 🧰 Install Git (if needed)
+Batch create-data runs also write batch summaries and per-file workflow folders under `backend/outputs/`.
 
-```bash
-sudo apt update
-sudo apt install -y git
-```
+## Evaluation Artifacts
 
-This updates package lists and installs Git on the Pi.
+The evaluation step uses the rubric in `backend/data/rubric.json` and writes scored results into the output folder for the run.
+Those files are the primary record of how the generated questions were judged.
 
-### 2. 👤 Set Git username and email
+## Deployment Docs
 
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "you@example.com"
-```
+- [Run guide](docs/RUN.md)
+- [Cloud and live hosting notes](docs/LIVE.md)
+- [Raspberry Pi and Nginx deployment](docs/DEPLOYMENT_RPI_NGINX.md)
 
-This sets your global Git identity for commits and GitHub operations.
+## Troubleshooting
 
-### 3. 🔐 Set up GitHub authentication (PAT or SSH)
+- `OPENAI_API_KEY` missing: the backend API can start, but workflow execution will fail until the key is set.
+- `dist/index.html` missing: run `npm -C frontend run build`, then restart `python -m backend.src.run`.
+- Upload rejected: check the file extension and `MAX_UPLOAD_BYTES`.
+- Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `backend/outputs/`.
+- Frontend cannot reach the backend in dev mode: confirm the backend is on `127.0.0.1:8000` or set `VITE_BACKEND_URL`.
 
-Choose one option:
+## Development Notes
 
-Option A (recommended): SSH key
-
-```bash
-ssh-keygen -t ed25519 -C "your_email@example.com"
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
-cat ~/.ssh/id_ed25519.pub
-```
-
-This creates an SSH keypair, loads it into the SSH agent, and prints the public key to add in GitHub.
-
-Then:
-
-1. Copy the printed public key.
-2. GitHub -> Settings -> SSH and GPG keys -> New SSH key.
-3. Paste key and save.
-4. Test:
-
-```bash
-ssh -T git@github.com
-```
-
-This verifies your Pi can authenticate to GitHub over SSH.
-
-Option B: HTTPS + Personal Access Token (PAT)
-
-1. On GitHub, create a PAT with at least `repo` access.
-2. Configure Git credential storage on Pi:
-
-```bash
-git config --global credential.helper store
-```
-
-This saves your HTTPS credentials locally so you do not need to enter the PAT every pull.
-
-3. On first `git clone`/`git pull`, use:
-
-- GitHub username as username
-- PAT as password
-
-### 4. 📁 Clone the repo
-
-SSH clone (recommended):
-
-```bash
-mkdir -p /home/triforcelindim/Scripts
-cd /home/triforcelindim/Scripts
-git clone git@github.com:<your-username>/UConn-IsomorphicQuestionLLM.git
-cd UConn-IsomorphicQuestionLLM
-```
-
-This creates your scripts folder, clones the repo via SSH, and enters the project directory.
-
-HTTPS clone:
-
-```bash
-mkdir -p /home/triforcelindim/Scripts
-cd /home/triforcelindim/Scripts
-git clone https://github.com/<your-username>/UConn-IsomorphicQuestionLLM.git
-cd UConn-IsomorphicQuestionLLM
-```
-
-This creates your scripts folder, clones the repo via HTTPS, and enters the project directory.
-
-### 5. 🔧 Enable repo hooks
-
-```bash
-git config core.hooksPath .githooks
-chmod +x .githooks/post-merge .githooks/post-rewrite raspi-deploy.sh
-```
-
-This enables the versioned hook folder and makes the hook/deploy scripts executable.
-
-### 6. ✅ Run first deploy manually
-
-```bash
-bash deploy/raspi-deploy.sh
-```
-
-This now installs required OS packages on the Pi if they are missing, builds the frontend, syncs the app into `/var/www/uconn`, copies `.env` when present, and configures nginx + systemd.
-
-### 7. 🔄 Normal update flow (from now on)
-
-```bash
-cd /home/triforcelindim/Scripts/UConn-IsomorphicQuestionLLM
-git pull
-```
-
-This pulls updates and automatically triggers deploy if new changes are fetched.
-
-If the pull brings changes, deploy runs automatically via `.githooks/post-merge` (or `.githooks/post-rewrite` for rebase pulls).
-
-### 8. 📜 Check deploy logs
-
-```bash
-tail -n 100 deploy-hook.log
-```
-
-This shows the latest deploy hook output so you can troubleshoot quickly.
-
-Notes:
-
-- `git push` to GitHub does not deploy by itself on the Pi.
-- Auto-deploy is triggered when you run `git pull` on the Pi.
+- Do not edit files under `backend/outputs/` or `backend/uploads/`; they are generated runtime data.
+- The backend serves the built frontend from `dist/` when available, otherwise it returns a fallback page that points to the dev commands.
+- The Vite build emits `agents.json` and `data/agents.json` so the UI can load the shared agent config without hard-coding it in the app bundle.
+- The UI talks to `/api/upload`, `/api/workflow/start`, `/api/workflow/{id}/status`, `/api/workflow/{id}/result`, and the related workflow endpoints exposed by FastAPI.

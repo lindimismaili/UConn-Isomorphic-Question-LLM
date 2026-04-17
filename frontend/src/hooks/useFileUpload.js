@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+/** Maximum number of source files the UI accepts at once. */
 const MAX_FILES = 5;
 
 function generateId() {
@@ -7,8 +8,15 @@ function generateId() {
 }
 
 /**
- * Returns handlers for file selection, removal, and upload button state.
- * All state mutations go through the dispatch from App.jsx.
+ * Returns file-selection helpers plus the current upload limit state.
+ *
+ * The hook deduplicates files by `name + size`, enforces the five-file cap,
+ * and dispatches the file actions handled by App.jsx.
+ *
+ * @param {Array<{id: string, name: string, size: number}>} files - Current
+ *   file list from app state.
+ * @param {Function} dispatch - App reducer dispatcher.
+ * @returns {{handleFileSelect: Function, removeFile: Function, limitReached: boolean}}
  */
 export function useFileUpload(files, dispatch) {
   const handleFileSelect = useCallback((event) => {

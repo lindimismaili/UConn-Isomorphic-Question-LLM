@@ -1,3 +1,5 @@
+"""Pydantic schemas shared by the workflow runner, API server, and agents."""
+
 from __future__ import annotations
 
 from typing import Any, Optional

@@ -1,3 +1,5 @@
+"""OpenAI container runtime helpers for shared workflow execution and LaTeX builds."""
+
 from __future__ import annotations
 
 import json
@@ -24,6 +26,7 @@ DEFAULT_ALLOWED_DOMAINS = [
 
 
 def allowed_domains_from_env() -> list[str]:
+    """Return the container network allowlist from environment configuration."""
     raw = os.getenv("OPENAI_CONTAINER_ALLOWED_DOMAINS", "")
     if not raw.strip():
         return DEFAULT_ALLOWED_DOMAINS
@@ -31,6 +34,7 @@ def allowed_domains_from_env() -> list[str]:
 
 
 def sanitize_basename(value: str) -> str:
+    """Sanitize a filename stem for safe use inside the container."""
     cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip().lower()).strip("-")
     return cleaned[:64] or "rendered-formula"
 
@@ -42,6 +46,7 @@ def _run_shell_task(
     container_id: str,
     prompt: str,
 ) -> Any:
+    """Execute a shell prompt against the shared container and return the response."""
     environment: dict[str, Any] = {
         "type": "container_reference",
         "container_id": container_id,
@@ -62,6 +67,7 @@ def _upload_text_file(
     content: str,
     suffix: str,
 ) -> str:
+    """Upload text content into the container file space and return its path."""
     with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False, encoding="utf-8") as handle:
         handle.write(content)
         temp_path = Path(handle.name)
@@ -79,6 +85,11 @@ def _upload_text_file(
 
 
 def _find_container_file(client: OpenAI, *, container_id: str, suffix: str, basename: str) -> Any:
+    """Locate a container file by basename and suffix.
+
+    Raises:
+        FileNotFoundError: If the expected file does not exist in the container.
+    """
     candidates = list(client.containers.files.list(container_id=container_id, limit=100))
     expected = f"{basename}{suffix}"
     for item in reversed(candidates):
@@ -94,12 +105,15 @@ def _download_container_file(
     file_id: str,
     destination: Path,
 ) -> None:
+    """Download a container file to a local path."""
     content = client.containers.files.content.retrieve(file_id, container_id=container_id)
     destination.write_bytes(content.read())
 
 
 @dataclass
 class LatexCompileResult:
+    """Details about a LaTeX compile operation performed in the container."""
+
     pdf_filename: str
     tex_filename: str
     pdf_path: Path
@@ -107,6 +121,7 @@ class LatexCompileResult:
     response_id: str
 
     def as_dict(self) -> dict[str, Any]:
+        """Return a JSON-friendly representation of the compile result."""
         return {
             "pdf_filename": self.pdf_filename,
             "tex_filename": self.tex_filename,
@@ -117,6 +132,8 @@ class LatexCompileResult:
 
 
 class SharedWorkflowRuntime:
+    """Shared container-backed runtime for workflow bootstrap and LaTeX compilation."""
+
     def __init__(
         self,
         *,
@@ -135,6 +152,11 @@ class SharedWorkflowRuntime:
         self.bootstrap_response_id: str | None = None
 
     def bootstrap(self) -> str:
+        """Install the runtime dependencies inside the shared container.
+
+        Returns:
+            The response ID for the bootstrap shell task.
+        """
         if self.bootstrapped:
             return self.bootstrap_response_id or ""
 
@@ -177,6 +199,7 @@ Network note:
         return response.id
 
     def compile_latex(self, latex_source: str, output_basename: str) -> LatexCompileResult:
+        """Compile a standalone LaTeX document and download the resulting artifacts."""
         self.bootstrap()
         basename = sanitize_basename(output_basename)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -244,6 +267,7 @@ Use the hosted shell container and run the following work exactly.
         )
 
     def build_compile_latex_tool(self):
+        """Expose LaTeX compilation as an OpenAI function tool."""
         @function_tool
         def compile_latex_pdf(latex_source: str, output_basename: str = "isomorphic_questions") -> dict[str, Any]:
             """
@@ -252,6 +276,9 @@ Use the hosted shell container and run the following work exactly.
             Args:
                 latex_source: Full LaTeX source, including documentclass, preamble, and document body.
                 output_basename: Basename for the generated .tex and .pdf files.
+
+            Returns:
+                JSON-serializable metadata describing the generated files.
             """
 
             result = self.compile_latex(latex_source, output_basename)

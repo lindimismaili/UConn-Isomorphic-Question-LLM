@@ -26,6 +26,7 @@ except ImportError:  # pragma: no cover
 
 
 def sha256_file(path: Path) -> str:
+    """Return the SHA-256 digest of a file."""
     digest = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
@@ -34,6 +35,7 @@ def sha256_file(path: Path) -> str:
 
 
 def normalize_datetime(value: Any) -> str | None:
+    """Normalize PDF metadata date values into ISO-8601 strings."""
     if value is None:
         return None
     if isinstance(value, datetime):
@@ -67,6 +69,7 @@ def normalize_datetime(value: Any) -> str | None:
 
 
 def read_pdf(path: Path) -> dict[str, Any]:
+    """Read a PDF file into the normalized extraction payload."""
     reader = PdfReader(str(path))
     raw_meta = reader.metadata or {}
     normalized_meta: dict[str, Any] = {}
@@ -138,6 +141,7 @@ def read_pdf(path: Path) -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse the command line arguments for the PDF extractor."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="Path to a PDF file")
     parser.add_argument(
@@ -151,6 +155,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Run the PDF extraction CLI and write the normalized JSON payload."""
     args = parse_args()
     input_path = args.input.expanduser().resolve()
 

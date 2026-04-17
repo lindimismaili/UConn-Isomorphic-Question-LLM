@@ -10,6 +10,12 @@ import {
   IconZap,
 } from './Icons.jsx';
 
+/**
+ * Normalizes the theme-prompt payload from `/api/dropdown`.
+ *
+ * @param {unknown} raw
+ * @returns {Array<{value: string, label: string, prompt: string}>}
+ */
 function normalizeDropdownItems(raw) {
   const source = Array.isArray(raw) ? raw : raw?.items;
   if (!Array.isArray(source)) return [];
@@ -23,6 +29,13 @@ function normalizeDropdownItems(raw) {
     .filter((item) => item.value && item.label && item.prompt);
 }
 
+/**
+ * Removes one previously inserted theme line from the prompt textarea.
+ *
+ * @param {string} text
+ * @param {string} lineToRemove
+ * @returns {string}
+ */
 function removePromptLine(text, lineToRemove) {
   if (!lineToRemove) return text;
   return text
@@ -33,6 +46,11 @@ function removePromptLine(text, lineToRemove) {
     .trim();
 }
 
+/**
+ * Main prompt, upload, and workflow-control surface.
+ *
+ * @param {object} props - State and callbacks supplied by App.jsx.
+ */
 export default function PromptInput({
   prompt,
   onPromptChange,
@@ -159,6 +177,29 @@ export default function PromptInput({
 
       <div className="card-body">
         <div className="prompt-layout">
+          <div className="prompt-dropdown-panel">
+            <label className="prompt-dropdown-label" htmlFor="theme-prompt-select">
+              Theme Prompt
+            </label>
+            <select
+              id="theme-prompt-select"
+              className="prompt-dropdown-select"
+              value={dropdownSelectValue}
+              onChange={handleDropdownChange}
+              disabled={isRunning || serviceInactive || dropdownItems.length === 0}
+            >
+              <option value="">Choose a theme...</option>
+              {dropdownItems.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <p className="prompt-dropdown-help">
+              Adds a theme instruction to the prompt.
+            </p>
+          </div>
+
           <textarea
             id="prompt-input"
             name="prompt"
@@ -210,7 +251,7 @@ export default function PromptInput({
               </div>
 
               <button
-                className="btn btn-primary"
+                className="btn btn-primary send-action"
                 onClick={handleSend}
                 disabled={isRunning || serviceInactive}
               >
@@ -227,29 +268,6 @@ export default function PromptInput({
                 </button>
               </div>
             )}
-          </div>
-
-          <div className="prompt-dropdown-panel">
-            <label className="prompt-dropdown-label" htmlFor="theme-prompt-select">
-              Theme Prompt
-            </label>
-            <select
-              id="theme-prompt-select"
-              className="prompt-dropdown-select"
-              value={dropdownSelectValue}
-              onChange={handleDropdownChange}
-              disabled={isRunning || serviceInactive || dropdownItems.length === 0}
-            >
-              <option value="">Choose a theme...</option>
-              {dropdownItems.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-            <p className="prompt-dropdown-help">
-              Adds a theme instruction to the prompt.
-            </p>
           </div>
 
           <div className="developer-tools-inline">

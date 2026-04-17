@@ -20,6 +20,7 @@ except ImportError as exc:  # pragma: no cover
 
 
 def sha256_file(path: Path) -> str:
+    """Return the SHA-256 digest of a file."""
     digest = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
@@ -28,6 +29,7 @@ def sha256_file(path: Path) -> str:
 
 
 def normalize_datetime(value: Any) -> str | None:
+    """Normalize DOCX metadata date values into ISO-8601 strings."""
     if value is None:
         return None
     if isinstance(value, datetime):
@@ -39,6 +41,7 @@ def normalize_datetime(value: Any) -> str | None:
 
 
 def append_block(blocks: list[dict[str, Any]], kind: str, text: str, block_idx: int) -> int:
+    """Append a non-empty content block and return the next block index."""
     clean = text.strip()
     if not clean:
         return block_idx
@@ -55,6 +58,7 @@ def append_block(blocks: list[dict[str, Any]], kind: str, text: str, block_idx: 
 
 
 def read_docx(path: Path) -> dict[str, Any]:
+    """Read a DOCX file into the normalized extraction payload."""
     doc = Document(str(path))
     blocks: list[dict[str, Any]] = []
     text_parts: list[str] = []
@@ -108,6 +112,7 @@ def read_docx(path: Path) -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse the command line arguments for the DOCX extractor."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="Path to a DOCX file")
     parser.add_argument(
@@ -121,6 +126,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Run the DOCX extraction CLI and write the normalized JSON payload."""
     args = parse_args()
     input_path = args.input.expanduser().resolve()
 

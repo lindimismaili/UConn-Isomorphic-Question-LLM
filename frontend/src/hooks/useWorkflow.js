@@ -1,5 +1,12 @@
 import { useRef, useCallback } from 'react';
 
+/**
+ * Sleeps for a polling interval and aborts cleanly when the workflow stops.
+ *
+ * @param {number} ms - Delay in milliseconds.
+ * @param {AbortSignal} [signal] - Optional abort signal.
+ * @returns {Promise<void>}
+ */
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(resolve, ms);
@@ -13,6 +20,14 @@ function sleep(ms, signal) {
   });
 }
 
+/**
+ * Fetch wrapper that preserves AbortError and wraps other network failures.
+ *
+ * @param {string} url - Endpoint path to request.
+ * @param {RequestInit} [options] - Fetch options.
+ * @param {AbortSignal} signal - Abort signal for the in-flight workflow.
+ * @returns {Promise<Response>}
+ */
 async function fetchWithAbort(url, options, signal) {
   try {
     return await fetch(url, { ...options, signal });
@@ -22,6 +37,7 @@ async function fetchWithAbort(url, options, signal) {
   }
 }
 
+/** Human-readable labels for workflow log messages. */
 const AGENT_LABELS = {
   normalizer: 'Normalizer',
   extracter: 'Extracter',
@@ -29,20 +45,36 @@ const AGENT_LABELS = {
   generator: 'Generator',
   latex: 'LaTeX',
   evaluation: 'Evaluation',
+  output: 'Output',
 };
 
+/** Stages that emit question-count logs when they complete. */
 const AGENT_COUNT_LOGS = {
   extracter: 'Extracted',
   verifier: 'Verified',
   generator: 'Generated',
 };
+/** Polling interval used while waiting for workflow status updates. */
 const STATUS_POLL_INTERVAL_MS = 150;
 
+/**
+ * Formats elapsed seconds for log messages.
+ *
+ * @param {number} seconds
+ * @returns {string}
+ */
 function formatSeconds(seconds) {
   if (typeof seconds !== 'number' || Number.isNaN(seconds)) return '';
   return `${seconds.toFixed(2)}s`;
 }
 
+/**
+ * Extracts question counts from agent outputs for selected stages.
+ *
+ * @param {string} agentKey - Workflow stage key.
+ * @param {object} output - Agent output payload.
+ * @returns {number | null}
+ */
 function getQuestionCount(agentKey, output) {
   if (!output || typeof output !== 'object') return null;
   if (agentKey === 'extracter' || agentKey === 'verifier') {
@@ -54,6 +86,12 @@ function getQuestionCount(agentKey, output) {
   return null;
 }
 
+/**
+ * Converts workflow status payloads into the reducer-friendly agent patch.
+ *
+ * @param {object} agentStatus - Agent status payload from `/api/workflow/:id/status`.
+ * @returns {object} Partial agent update with normalized dates and text.
+ */
 function buildAgentPatch(agentStatus) {
   const data = agentStatus?.data || {};
   const patch = {};
@@ -102,8 +140,13 @@ function buildAgentPatch(agentStatus) {
 }
 
 /**
- * Handles the full workflow lifecycle: upload → start → poll → complete/fail
- * All state updates go through dispatch.
+ * Drives the primary workflow lifecycle for the app.
+ *
+ * Touches `/api/upload`, `/api/workflow/start`, `/api/workflow/:id/status`,
+ * and `/api/workflow/:id/result`.
+ *
+ * @param {Function} dispatch - App reducer dispatcher.
+ * @returns {{run: Function, abort: Function}}
  */
 export function useWorkflow(dispatch) {
   const abortRef = useRef(null);
@@ -116,8 +159,14 @@ export function useWorkflow(dispatch) {
     }
   }, []);
 
+  /**
+   * Starts a workflow run, uploads files when needed, then polls status until
+   * completion, cancellation, or failure.
+   *
+   * @param {string} prompt - User prompt forwarded to the backend.
+   * @param {Array<object>} files - Selected files from the upload/test-file UI.
+   */
   const run = useCallback(async (prompt, files) => {
-    // Create abort controller for this run
     const controller = new AbortController();
     abortRef.current = controller;
     const { signal } = controller;
@@ -178,7 +227,7 @@ export function useWorkflow(dispatch) {
       dispatch({ type: 'LOG', message: `Workflow started (${workflowId})`, level: 'info' });
 
       // Step 3: Poll for status
-      const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation'];
+      const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation', 'output'];
 
       while (true) {
         if (signal.aborted) return;

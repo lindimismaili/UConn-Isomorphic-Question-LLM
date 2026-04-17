@@ -1,9 +1,14 @@
 import { useEffect, useRef } from 'react';
 
+/**
+ * Streams workflow events into the persistent log panel.
+ *
+ * @param {{logs: Array<{id: string, time: string, message: string, level: string}>}} props
+ */
 export default function LogPanel({ logs }) {
   const frameRef = useRef(null);
 
-  // Auto-scroll to bottom on new logs
+  // Keep the newest workflow event visible without user interaction.
   useEffect(() => {
     if (frameRef.current) {
       frameRef.current.scrollTop = frameRef.current.scrollHeight;

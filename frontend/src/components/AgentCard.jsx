@@ -11,11 +11,24 @@ const STATUS_COLORS = {
 
 const DEFAULT_TIME_ZONE = 'America/New_York';
 
+/**
+ * Coerces display fields into a stable, human-readable string.
+ *
+ * @param {unknown} value
+ * @param {string} fallback
+ * @returns {string}
+ */
 function displayValue(value, fallback = 'Unavailable') {
   if (value === null || value === undefined || value === '') return fallback;
   return String(value);
 }
 
+/**
+ * Formats timestamps for the agent card metadata row.
+ *
+ * @param {string | number | Date | null | undefined} value
+ * @returns {string}
+ */
 function formatClock(value) {
   if (!value) return 'Unavailable';
   const date = new Date(value);
@@ -31,25 +44,33 @@ function formatClock(value) {
   }
 }
 
+/**
+ * Displays one workflow node in the pipeline grid.
+ *
+ * @param {{agentKey: string, agent: object, onClick: Function}} props
+ */
 export default function AgentCard({ agentKey, agent, onClick }) {
+  const nodeKind = agent.kind || agent.nodeKind || (agentKey === 'setup' || agentKey === 'output' ? 'runtime' : 'agent');
+  const isRuntime = nodeKind === 'runtime';
   const statusColor = STATUS_COLORS[agent.status] || STATUS_COLORS.inactive;
   const statusLabel = agent.status.charAt(0).toUpperCase() + agent.status.slice(1);
   const executionText = typeof agent.executionTime === 'number' ? `${agent.executionTime.toFixed(2)}s` : '';
   const modelText = displayValue(agent.model);
   const reasoningText = displayValue(agent.reasoningLevel, 'none');
-  const startText = agent.startTime ? formatClock(agent.startTime) : 'Not started';
-  const endText = agent.endTime ? formatClock(agent.endTime) : 'Not ended';
+  const startText = agent.startTime ? formatClock(agent.startTime) : '';
+  const endText = agent.endTime ? formatClock(agent.endTime) : '';
 
   return (
     <div
       className="card agent-card clickable"
       data-agent={agentKey}
       data-status={agent.status}
+      data-node-kind={nodeKind}
       onClick={() => onClick(agentKey)}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick(agentKey)}
-      aria-label={`${agent.name} agent - ${statusLabel}`}
+      aria-label={`${agent.name} ${isRuntime ? 'runtime' : 'agent'} - ${statusLabel}`}
     >
       <div className="agent-header">
         <div className="agent-info">
@@ -73,11 +94,15 @@ export default function AgentCard({ agentKey, agent, onClick }) {
       <p className="agent-description">{agent.description}</p>
       <div className="agent-metadata" aria-label="Agent configuration">
         <span title={`Model: ${modelText}`}>{modelText}</span>
-        <span title={`Reasoning: ${reasoningText}`}>{reasoningText}</span>
+        {!isRuntime && <span title={`Reasoning: ${reasoningText}`}>{reasoningText}</span>}
       </div>
       <div className="agent-timing" aria-label="Agent timing">
-        <span title={`Start time: ${startText}`}>Start {startText}</span>
-        <span title={`End time: ${endText}`}>End {endText}</span>
+        <span title={startText ? `Start time: ${startText}` : 'Start'}>
+          {startText ? `Start ${startText}` : 'Start'}
+        </span>
+        <span title={endText ? `End time: ${endText}` : 'End'}>
+          {endText ? `End ${endText}` : 'End'}
+        </span>
       </div>
       <div className="agent-footer-row">
         <div className="agent-status-text" style={{ color: statusColor }}>

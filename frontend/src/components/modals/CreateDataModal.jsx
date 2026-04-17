@@ -1,11 +1,23 @@
 import Modal from "./Modal.jsx";
 import { IconFile, IconFolder, IconZap } from "../Icons.jsx";
 
+/**
+ * Normalizes the batch output folder label for display.
+ *
+ * @param {string} folder
+ * @returns {string}
+ */
 function formatOutputFolder(folder) {
   if (!folder) return "outputs/";
   return folder.startsWith("outputs/") ? folder : `outputs/${folder}`;
 }
 
+/**
+ * Converts backend batch states into short user-facing labels.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function getStatusLabel(status) {
   switch (status) {
     case "queued":
@@ -27,6 +39,11 @@ function getStatusLabel(status) {
   }
 }
 
+/**
+ * Displays the batch-evaluation run state and progress per file.
+ *
+ * @param {object} props
+ */
 export default function CreateDataModal({
   isOpen,
   onClose,
@@ -57,7 +74,7 @@ export default function CreateDataModal({
           >
             {isActive ? "Stop" : "Start"}
           </button>
-          <button className="btn btn-secondary" onClick={onClose}>
+          <button className="btn btn-primary" onClick={onClose}>
             Close
           </button>
         </div>

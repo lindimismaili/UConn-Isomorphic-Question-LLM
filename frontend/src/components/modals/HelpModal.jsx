@@ -1,6 +1,11 @@
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
 
+/**
+ * Explains the workflow at a high level for the current app session.
+ *
+ * @param {object} props
+ */
 export default function HelpModal({ isOpen, onClose }) {
   return (
     <Modal
@@ -14,30 +19,35 @@ export default function HelpModal({ isOpen, onClose }) {
       <div className="help-modal-body modal-body-stack">
         <p className="help-intro">
           This tool generates{' '}
-          <strong>isomorphic multiple-choice physics questions</strong> based on
-          your input questions.
+          <strong>isomorphic physics questions</strong> from your source
+          questions and instructions.
         </p>
         <h4>Key Features</h4>
         <ul className="help-list">
           <li>
-            <strong>Customizable Generation</strong> — Adjust difficulty, theme,
-            and the number of questions generated per source
+            <strong>Source Extraction</strong> — Extracts question text,
+            answers, type, title, and theme from uploaded materials
+          </li>
+          <li>
+            <strong>Optional Difficulty</strong> — Difficulty stays blank unless
+            you explicitly ask for one
+          </li>
+          <li>
+            <strong>Theme Guidance</strong> — Use the Theme Prompt selector or
+            write your own instructions to steer the generated questions
           </li>
           <li>
             <strong>Answer Verification</strong> — All generated questions are
             verified for correctness
           </li>
           <li>
-            <strong>Plausible Distractors</strong> — Wrong answers are based on
-            common student misconceptions
+            <strong>Question Type Support</strong> — Supports multiple-choice,
+            open-ended, and multi-part questions
           </li>
           <li>
             <strong>Education-Ready Output</strong> — Questions are formatted for
-            direct use in assessments
-          </li>
-          <li>
-            <strong>LaTeX Support</strong> — Mathematical expressions are
-            preserved with proper formatting
+            PDF and LaTeX output, with evaluation and agent artifacts available
+            for review
           </li>
         </ul>
         <div className="output-folder-note modal-file-location help-file-location">
@@ -48,12 +58,12 @@ export default function HelpModal({ isOpen, onClose }) {
         </div>
         <h4>How It Works</h4>
         <ol className="help-list numbered">
-          <li>Upload your source questions (PDF or DOCX)</li>
-          <li>Provide any additional instructions or preferences</li>
+          <li>Upload source questions or choose test files</li>
+          <li>Provide instructions, and optionally choose a Theme Prompt</li>
           <li>
             Click <strong>Send</strong> to start the generation pipeline
           </li>
-          <li>Download your new isomorphic questions when complete</li>
+          <li>View logs, inspect agent artifacts, and download results when complete</li>
         </ol>
       </div>
     </Modal>

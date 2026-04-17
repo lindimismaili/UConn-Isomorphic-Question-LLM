@@ -21,6 +21,12 @@ const AGENT_PROMPT_TITLES = {
 
 const DEFAULT_TIME_ZONE = 'America/New_York';
 
+/**
+ * Formats agent input/output payloads for the detail view.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
 function formatText(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') {
@@ -43,6 +49,12 @@ function formatText(value) {
   return String(value);
 }
 
+/**
+ * Formats agent timestamps in the configured display timezone.
+ *
+ * @param {string | number | Date | null | undefined} date
+ * @returns {string}
+ */
 function formatDateTime(date) {
   if (!date) return '-';
   const parsed = new Date(date);
@@ -57,16 +69,34 @@ function formatDateTime(date) {
   }
 }
 
+/**
+ * Formats execution time for the agent details sidebar.
+ *
+ * @param {number | null | undefined} seconds
+ * @returns {string}
+ */
 function formatExecutionTime(seconds) {
   if (seconds === null || seconds === undefined) return '-';
   return `${Number(seconds).toFixed(2)}s`;
 }
 
+/**
+ * Returns a display-safe value for optional agent metadata fields.
+ *
+ * @param {unknown} val
+ * @param {string} defaultVal
+ * @returns {unknown}
+ */
 function getValue(val, defaultVal = 'Unavailable') {
   if (val === null || val === undefined || val === '' || val === '-') return defaultVal;
   return val;
 }
 
+/**
+ * Shows agent configuration plus the captured input/output payloads.
+ *
+ * @param {object} props
+ */
 export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
   const [viewerOpen, setViewerOpen] = useState(false);
 
@@ -77,6 +107,22 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
   const statusLabel = agent?.status
     ? agent.status.charAt(0).toUpperCase() + agent.status.slice(1)
     : 'Unavailable';
+  const nodeKind = agent?.kind || agent?.nodeKind || (agentKey === 'setup' || agentKey === 'output' ? 'runtime' : 'agent');
+  const isRuntime = nodeKind === 'runtime';
+  const details = agent
+    ? [
+        { label: isRuntime ? 'Runtime Name' : 'Agent Name', value: getValue(agent.name) },
+        { label: 'Description', value: getValue(agent.description) },
+        { label: isRuntime ? 'Runtime' : 'Model', value: getValue(agent.model) },
+        ...(!isRuntime ? [{ label: 'Reasoning Level', value: getValue(agent.reasoningLevel, 'none') }] : []),
+        { label: 'Status', value: statusLabel },
+        { label: 'Start Time', value: agent.startTime ? formatDateTime(agent.startTime) : 'Unavailable' },
+        { label: 'End Time', value: agent.endTime ? formatDateTime(agent.endTime) : 'Unavailable' },
+        { label: 'Execution Time', value: agent.executionTime !== null && agent.executionTime !== undefined ? formatExecutionTime(agent.executionTime) : 'Unavailable' },
+        { label: 'Input From Agent', value: getValue(agent.inputFrom) },
+        { label: 'Output To Agent', value: getValue(agent.outputTo) },
+      ]
+    : [];
 
   return (
     <>
@@ -97,13 +143,14 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
             </div>
             <div className="modal-footer-actions">
               <button
-                className="btn btn-ghost"
+                className="btn btn-secondary"
                 disabled={!promptName}
                 onClick={() => promptName && setViewerOpen(true)}
               >
-                Prompt
+                <IconFile className="btn-icon" />
+                <span>Prompt</span>
               </button>
-              <button className="btn btn-secondary" onClick={onClose}>Close</button>
+              <button className="btn btn-primary" onClick={onClose}>Close</button>
             </div>
           </div>
         }
@@ -111,18 +158,7 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
         {agent && (
           <div className="agent-modal-body">
             <div className="agent-details-sidebar">
-              {[
-                { label: 'Agent Name', value: getValue(agent.name) },
-                { label: 'Description', value: getValue(agent.description) },
-                { label: 'Model', value: getValue(agent.model) },
-                { label: 'Reasoning Level', value: getValue(agent.reasoningLevel, 'none') },
-                { label: 'Status', value: statusLabel },
-                { label: 'Start Time', value: agent.startTime ? formatDateTime(agent.startTime) : 'Unavailable' },
-                { label: 'End Time', value: agent.endTime ? formatDateTime(agent.endTime) : 'Unavailable' },
-                { label: 'Execution Time', value: agent.executionTime !== null && agent.executionTime !== undefined ? formatExecutionTime(agent.executionTime) : 'Unavailable' },
-                { label: 'Input From Agent', value: getValue(agent.inputFrom) },
-                { label: 'Output To Agent', value: getValue(agent.outputTo) },
-              ].map(({ label, value }) => (
+              {details.map(({ label, value }) => (
                 <div key={label} className="detail-item">
                   <label>{label}</label>
                   <span>{value}</span>
