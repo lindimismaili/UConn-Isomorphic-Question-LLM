@@ -9,16 +9,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+DEPLOY_CONFIG_FILE="$REPO_DIR/.deploy.env"
 
-# Deploy target (where the app runs from)
-DEPLOY_DIR="/var/www/uconn"
+if [[ -f "$DEPLOY_CONFIG_FILE" ]]; then
+  # shellcheck source=/dev/null
+  source "$DEPLOY_CONFIG_FILE"
+fi
 
-# Tunnel name and hostname
-TUNNEL_NAME="pi-tunnel"
-HOSTNAME="uconn.lindimismaili.com"
-
-# Backend port
-BACKEND_PORT=3002
+# Defaults can be overridden by .deploy.env or exported environment variables.
+SITE_DOMAIN="${SITE_DOMAIN:-lindimismaili.com}"
+DEPLOY_NAME="${DEPLOY_NAME:-uconn}"
+SUBDOMAIN="${SUBDOMAIN:-uconn}"
+TUNNEL_NAME="${TUNNEL_NAME:-pi-tunnel}"
+BACKEND_PORT="${BACKEND_PORT:-3002}"
 
 # Colors
 RED='\033[0;31m'
@@ -32,16 +35,76 @@ info()   { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn()   { echo -e "${YELLOW}[WARN]${NC} $1"; }
 err()    { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
+prompt_with_default() {
+  local prompt="$1"
+  local default_value="$2"
+  local value=""
+
+  read -rp "$prompt [$default_value]: " value
+  printf '%s\n' "${value:-$default_value}"
+}
+
+normalize_domain() {
+  local value="$1"
+  value="${value#http://}"
+  value="${value#https://}"
+  value="${value%%/*}"
+  value="${value%.}"
+  printf '%s\n' "${value,,}"
+}
+
+validate_name_segment() {
+  local label="$1"
+  local value="$2"
+  if [[ ! "$value" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]; then
+    err "$label must start with a letter or number and contain only letters, numbers, underscores, or hyphens."
+    exit 1
+  fi
+}
+
+configure_deploy_target() {
+  banner "Deploy Target"
+
+  if [[ -t 0 ]]; then
+    SITE_DOMAIN="$(prompt_with_default "What is your full site name? Example: example.com" "$SITE_DOMAIN")"
+    DEPLOY_NAME="$(prompt_with_default "What is the deploy dir name? Example: uconn" "$DEPLOY_NAME")"
+    SUBDOMAIN="$(prompt_with_default "What is the subdomain name? Example: uconn, use @ for the root domain" "$SUBDOMAIN")"
+  fi
+
+  SITE_DOMAIN="$(normalize_domain "$SITE_DOMAIN")"
+  DEPLOY_NAME="${DEPLOY_NAME#/var/www/}"
+  DEPLOY_NAME="${DEPLOY_NAME%/}"
+  SUBDOMAIN="$(normalize_domain "$SUBDOMAIN")"
+
+  if [[ -z "$SITE_DOMAIN" ]]; then
+    err "Site name cannot be empty."
+    exit 1
+  fi
+  validate_name_segment "Deploy dir name" "$DEPLOY_NAME"
+
+  if [[ "$SUBDOMAIN" == "@" || "$SUBDOMAIN" == "$SITE_DOMAIN" ]]; then
+    HOSTNAME="$SITE_DOMAIN"
+  else
+    validate_name_segment "Subdomain name" "$SUBDOMAIN"
+    HOSTNAME="${SUBDOMAIN}.${SITE_DOMAIN}"
+  fi
+  DEPLOY_DIR="/var/www/${DEPLOY_NAME}"
+
+  cat > "$DEPLOY_CONFIG_FILE" <<EOF
+SITE_DOMAIN=${SITE_DOMAIN}
+DEPLOY_NAME=${DEPLOY_NAME}
+SUBDOMAIN=${SUBDOMAIN}
+DEPLOY_DIR=${DEPLOY_DIR}
+HOSTNAME=${HOSTNAME}
+TUNNEL_NAME=${TUNNEL_NAME}
+BACKEND_PORT=${BACKEND_PORT}
+EOF
+  chmod 600 "$DEPLOY_CONFIG_FILE"
+}
+
 # ---------------------------------------------------------------------------
 banner "UConn Isomorphic Question Generator — Deploy"
 # ---------------------------------------------------------------------------
-
-info "Repo directory:   $REPO_DIR"
-info "Deploy target:    $DEPLOY_DIR"
-info "Tunnel name:      $TUNNEL_NAME"
-info "Public hostname:  $HOSTNAME"
-info "Backend port:     $BACKEND_PORT"
-echo ""
 
 # Verify we're running on the Pi (or at least Linux)
 if [[ "$(uname -s)" != "Linux" ]]; then
@@ -54,6 +117,15 @@ if [[ ! -f "$REPO_DIR/backend/requirements.txt" ]] || [[ ! -f "$REPO_DIR/backend
   err "Cannot find expected repo files. Run this from the deploy/ folder inside the cloned repo."
   exit 1
 fi
+
+configure_deploy_target
+
+info "Repo directory:   $REPO_DIR"
+info "Deploy target:    $DEPLOY_DIR"
+info "Tunnel name:      $TUNNEL_NAME"
+info "Public hostname:  $HOSTNAME"
+info "Backend port:     $BACKEND_PORT"
+echo ""
 
 # Check for .env
 if [[ ! -f "$REPO_DIR/.env" ]]; then

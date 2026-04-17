@@ -6,10 +6,19 @@ set -euo pipefail
 #
 # Writes nginx config and systemd unit, then starts/restarts everything.
 # Expects env vars (set by deploy.sh, or uses defaults):
-#   DEPLOY_DIR    — /var/www/uconn
-#   HOSTNAME      — uconn.lindimismaili.com
+#   DEPLOY_DIR    — deploy target, e.g. /var/www/uconn
+#   HOSTNAME      — public hostname, e.g. uconn.example.com
 #   BACKEND_PORT  — 3002
 # =============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="${REPO_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
+DEPLOY_CONFIG_FILE="$REPO_DIR/.deploy.env"
+
+if [[ -f "$DEPLOY_CONFIG_FILE" ]]; then
+  # shellcheck source=/dev/null
+  source "$DEPLOY_CONFIG_FILE"
+fi
 
 DEPLOY_DIR="${DEPLOY_DIR:-/var/www/uconn}"
 HOSTNAME="${HOSTNAME:-uconn.lindimismaili.com}"

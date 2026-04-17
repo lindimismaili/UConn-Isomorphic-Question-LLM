@@ -46,6 +46,7 @@ Thumbs.db
 Desktop.ini
 
 # Local secrets / configs
+.deploy.env
 .env.local
 .env.*.local
 

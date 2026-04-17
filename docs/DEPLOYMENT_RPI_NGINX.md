@@ -20,22 +20,32 @@ bash deploy/deploy.sh
 system packages, Python dependencies, frontend dependencies, nginx, and the
 backend systemd service.
 
+The deploy script prompts for the public site target:
+
+- full site name, for example `example.com`
+- deploy dir name, for example `uconn`
+- subdomain name, for example `uconn`
+
+With those examples, the app is deployed to `/var/www/uconn` and served at
+`uconn.example.com`. Use `@` as the subdomain to serve the root domain,
+`example.com`.
+
 ## Deployment Shape
 
 The scripts deploy into this layout:
 
 - source clone: wherever you cloned the Git repo, commonly `~/Scripts/UConn-IsomorphicQuestionLLM`
-- runtime copy: `/var/www/uconn`
-- frontend root: `/var/www/uconn/dist`
+- runtime copy: `/var/www/<deploy-dir-name>`
+- frontend root: `/var/www/<deploy-dir-name>/dist`
 - backend service: `uconn.service`
 - backend bind: `127.0.0.1:3002`
 - nginx public port: `80`
 - Cloudflare tunnel service: `cloudflared.service`
-- default hostname: `uconn.lindimismaili.com`
+- hostname: `<subdomain>.<site-name>`
 - default tunnel name: `pi-tunnel`
 
-nginx serves the React build from `/var/www/uconn/dist` and reverse-proxies
-`/api/` to Uvicorn.
+nginx serves the React build from the configured deploy directory's `dist/`
+folder and reverse-proxies `/api/` to Uvicorn.
 
 ## Fresh Install Steps
 
@@ -78,6 +88,18 @@ EOF
 bash deploy/deploy.sh
 ```
 
+Answer the prompts. For `uconn.example.com`, use:
+
+```text
+What is your full site name? Example: example.com [lindimismaili.com]: example.com
+What is the deploy dir name? Example: uconn [uconn]: uconn
+What is the subdomain name? Example: uconn, use @ for the root domain [uconn]: uconn
+```
+
+The script writes those answers to `.deploy.env`, which is intentionally ignored
+by git. `deploy/sync.sh`, `deploy/cloudflare.sh`, `deploy/packages.sh`, and
+`deploy/live.sh` read that file on later runs.
+
 On first run, the script may print a Cloudflare login URL. Open it, log in,
 select the domain, then return to the terminal.
 
@@ -88,12 +110,12 @@ select the domain, then return to the terminal.
 1. `deploy/cloudflare.sh`
    Installs `cloudflared`, authenticates, creates or reuses the `pi-tunnel`
    tunnel, routes the hostname to the tunnel, installs `cloudflared.service`,
-   and rsyncs the repo to `/var/www/uconn`.
+   and rsyncs the repo to the configured deploy directory.
 
 2. `deploy/packages.sh`
-   Installs system packages, creates `/var/www/uconn/.venv`, installs backend
-   dependencies from `backend/requirements.txt`, installs frontend dependencies,
-   builds `dist/`, and writes `dist/version.json`.
+   Installs system packages, creates the deploy directory `.venv`, installs
+   backend dependencies from `backend/requirements.txt`, installs frontend
+   dependencies, builds `dist/`, and writes `dist/version.json`.
 
 3. `deploy/live.sh`
    Writes `/etc/nginx/sites-available/uconn`, enables nginx, writes
@@ -129,8 +151,9 @@ cd ~/Scripts/UConn-IsomorphicQuestionLLM
 bash deploy/sync.sh
 ```
 
-This checks `origin/main`, pulls with `--ff-only`, rebuilds frontend assets,
-syncs to `/var/www/uconn`, restarts `uconn.service`, and reloads nginx.
+This reads `.deploy.env`, checks `origin/main`, pulls with `--ff-only`,
+rebuilds frontend assets, syncs to the configured `/var/www/<deploy-dir-name>`,
+restarts `uconn.service`, and reloads nginx.
 
 ## Automatic Git Pull Every Minute
 
@@ -143,9 +166,9 @@ cd ~/Scripts/UConn-IsomorphicQuestionLLM
 bash deploy/sync.sh --install-timer
 ```
 
-The timer runs every 60 seconds. It fetches `origin/main`; if the remote commit
-differs from the local commit, it pulls, rebuilds, deploys, and restarts the
-backend.
+The timer runs every 60 seconds and uses the values saved in `.deploy.env`. It
+fetches `origin/main`; if the remote commit differs from the local commit, it
+pulls, rebuilds, deploys, and restarts the backend.
 
 Check status:
 
@@ -175,7 +198,7 @@ creates the destination Python venv, writes nginx config, and installs
 
 ## Troubleshooting
 
-- `OPENAI_API_KEY` missing: create `/var/www/uconn/.env` or repo `.env`, then run `bash deploy/sync.sh` and restart `sudo systemctl restart uconn`.
+- `OPENAI_API_KEY` missing: create `.env` in the source clone or in the configured deploy directory, then run `bash deploy/sync.sh` and restart `sudo systemctl restart uconn`.
 - Backend not running: `sudo journalctl -u uconn -n 100`.
 - nginx config failed: `sudo nginx -t`.
 - Cloudflare tunnel not reachable: `sudo journalctl -u cloudflared -n 100`.

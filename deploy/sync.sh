@@ -10,13 +10,23 @@ set -euo pipefail
 #   bash deploy/sync.sh --remove-timer  # Remove the auto-sync timer
 #
 # The sync does a git pull on the repo, rebuilds the frontend, rsyncs to
-# /var/www/uconn (preserving .env, outputs, uploads, .venv), and restarts
-# the backend service. It does NOT delete local-only data.
+# the configured deploy directory (preserving .env, outputs, uploads, .venv),
+# and restarts the backend service. It does NOT delete local-only data.
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+DEPLOY_CONFIG_FILE="$REPO_DIR/.deploy.env"
+
+if [[ -f "$DEPLOY_CONFIG_FILE" ]]; then
+  # shellcheck source=/dev/null
+  source "$DEPLOY_CONFIG_FILE"
+fi
+
 DEPLOY_DIR="${DEPLOY_DIR:-/var/www/uconn}"
+HOSTNAME="${HOSTNAME:-uconn.lindimismaili.com}"
+TUNNEL_NAME="${TUNNEL_NAME:-pi-tunnel}"
+BACKEND_PORT="${BACKEND_PORT:-3002}"
 BRANCH="${GIT_BRANCH:-main}"
 
 TIMER_SERVICE="uconn-sync"
@@ -57,6 +67,10 @@ User=$(stat -c '%U' "$REPO_DIR")
 Group=$(stat -c '%G' "$REPO_DIR")
 
 Environment=DEPLOY_DIR=${DEPLOY_DIR}
+Environment=HOSTNAME=${HOSTNAME}
+Environment=TUNNEL_NAME=${TUNNEL_NAME}
+Environment=BACKEND_PORT=${BACKEND_PORT}
+EnvironmentFile=-${DEPLOY_CONFIG_FILE}
 EOF
 
   # Timer that triggers the service
@@ -230,4 +244,4 @@ fi
 
 echo ""
 info "Sync complete! ($NEW_SHA)"
-info "Site: https://${HOSTNAME:-uconn.lindimismaili.com}"
+info "Site: https://${HOSTNAME}"

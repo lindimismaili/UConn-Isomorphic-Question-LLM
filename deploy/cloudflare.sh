@@ -6,19 +6,26 @@ set -euo pipefail
 #
 # Checks if cloudflared is installed and configured. If not, installs it,
 # prompts for login, creates the tunnel, sets up DNS routes, and copies
-# the repo to /var/www/uconn.
+# the repo to the configured deploy directory.
 #
 # Expects these env vars (set by deploy.sh):
-#   DEPLOY_DIR   — /var/www/uconn
-#   TUNNEL_NAME  — pi-tunnel
-#   HOSTNAME     — uconn.lindimismaili.com
+#   DEPLOY_DIR   — deploy target, e.g. /var/www/uconn
+#   TUNNEL_NAME  — tunnel name, e.g. pi-tunnel
+#   HOSTNAME     — public hostname, e.g. uconn.example.com
 #   REPO_DIR     — path to cloned repo
 # =============================================================================
+
+REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+DEPLOY_CONFIG_FILE="$REPO_DIR/.deploy.env"
+
+if [[ -f "$DEPLOY_CONFIG_FILE" ]]; then
+  # shellcheck source=/dev/null
+  source "$DEPLOY_CONFIG_FILE"
+fi
 
 DEPLOY_DIR="${DEPLOY_DIR:-/var/www/uconn}"
 TUNNEL_NAME="${TUNNEL_NAME:-pi-tunnel}"
 HOSTNAME="${HOSTNAME:-uconn.lindimismaili.com}"
-REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
 CLOUDFLARED_SYSTEM_DIR="/etc/cloudflared"
 CLOUDFLARED_USER_DIR="$HOME/.cloudflared"
