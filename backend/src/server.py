@@ -140,6 +140,16 @@ UPLOADS_DIR = BACKEND_ROOT / "uploads"
 EVALUATION_DIR = DATA_DIR / "evaluation"
 VERSION_PATHS = [REPO_ROOT / "version.json", DIST_DIR / "version.json"]
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt"}
+ALLOWED_AGENT_INPUT_EXTENSIONS = {".json", ".jsonl", ".txt"}
+SOURCE_FILE_INPUT_AGENTS = {"normalizer", "extracter"}
+INPUT_TO_AGENT_SEQUENCE = [
+    "normalizer",
+    "extracter",
+    "verifier",
+    "generator",
+    "latex",
+    "evaluation",
+]
 MAX_UPLOAD_FILES = 5
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
 WORKFLOW_TTL_SECONDS = int(os.getenv("WORKFLOW_TTL_SECONDS", str(24 * 60 * 60)))
@@ -543,6 +553,365 @@ def _load_resume_agent_output(resume_source_dir: Path, agent_key: str) -> Any:
     """Load and validate cached output for a resumed workflow step."""
     payload = load_agent_output_payload(resume_source_dir, agent_key)
     return _validate_resume_agent_output(agent_key, payload)
+
+
+def _parse_agent_input_upload(content: bytes, filename: str) -> Any:
+    """Parse an uploaded agent input file into a Runner-compatible payload."""
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Agent input file exceeds {MAX_UPLOAD_BYTES} bytes",
+        )
+
+    try:
+        text = content.decode("utf-8-sig").strip()
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Agent input file must be UTF-8 text") from exc
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Agent input file is empty")
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        records = []
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                records = []
+                break
+        if records:
+            return records[-1]
+
+    if Path(filename).suffix.lower() in {".json", ".jsonl"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent input JSON/JSONL could not be parsed",
+        )
+    return text
+
+
+def _save_input_to_agent_source_file(
+    *,
+    workflow_id: str,
+    filename: str,
+    content: bytes,
+) -> Path:
+    """Persist a source document uploaded through the Input To Agent modal."""
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Source file exceeds {MAX_UPLOAD_BYTES} bytes",
+        )
+
+    safe_filename = Path(filename or "source.txt").name
+    suffix = Path(safe_filename).suffix.lower()
+    if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Normalizer and Extracter starts need a source file with one of: "
+                + ", ".join(sorted(ALLOWED_UPLOAD_EXTENSIONS))
+            ),
+        )
+
+    session_dir = UPLOADS_DIR / f"input_to_agent_{workflow_id}"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    file_path = session_dir / safe_filename
+    file_path.write_bytes(content)
+    return file_path
+
+
+def _message_input_texts(value: Any) -> list[str]:
+    """Extract input_text strings from an Agents SDK message payload."""
+    texts: list[str] = []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        content = value.get("content")
+        if isinstance(content, str):
+            texts.append(content)
+        elif isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "input_text":
+                    raw_text = item.get("text")
+                    if isinstance(raw_text, str):
+                        texts.append(raw_text)
+        return texts
+    if isinstance(value, list):
+        for item in value:
+            texts.extend(_message_input_texts(item))
+    return texts
+
+
+def _extract_agent_input_payload(value: Any) -> dict[str, Any]:
+    """Extract the structured JSON payload embedded in an uploaded agent input."""
+    if isinstance(value, dict):
+        if "input" in value and isinstance(value["input"], (dict, list, str)):
+            return _extract_agent_input_payload(value["input"])
+        structured_keys = (
+            "task",
+            "configuration",
+            "normalizer_config",
+            "source_questions",
+            "verified_questions",
+            "generated_questions",
+            "isomorphic_questions",
+            "questions",
+            "document",
+            "final_result",
+            "result",
+            "latex_output",
+            "latex_content",
+            "latex_file",
+            "pdf_file",
+        )
+        if any(key in value for key in structured_keys):
+            return value
+
+    for text in _message_input_texts(value):
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
+
+
+def _runner_input_from_upload(value: Any) -> Any:
+    """Normalize uploaded JSON objects to the message format expected by agents."""
+    if isinstance(value, dict):
+        return build_json_message(value)
+    return value
+
+
+def _coerce_normalizer_from_agent_input(payload: dict[str, Any]) -> NormalizerOutput:
+    """Build NormalizerOutput context from a downstream agent input payload."""
+    result = payload.get("final_result") or payload.get("result") or {}
+    if isinstance(result, dict):
+        config = result.get("config")
+        if isinstance(config, dict):
+            return NormalizerOutput.model_validate(config)
+
+    for key in ("normalizer_config", "configuration", "config"):
+        candidate = payload.get(key)
+        if isinstance(candidate, dict):
+            return NormalizerOutput.model_validate(candidate)
+
+    document = payload.get("document")
+    if isinstance(document, dict):
+        return NormalizerOutput(
+            title=str(document.get("title") or ""),
+            theme=str(document.get("theme") or ""),
+        )
+
+    return NormalizerOutput()
+
+
+def _extract_question_container(candidate: Any) -> dict[str, Any]:
+    """Normalize a question list or question container into an Extracter-like dict."""
+    if isinstance(candidate, dict):
+        if isinstance(candidate.get("questions"), list):
+            return candidate
+        if isinstance(candidate.get("source_questions"), list):
+            return {"questions": candidate.get("source_questions", [])}
+    if isinstance(candidate, list):
+        return {"questions": candidate}
+    return {"questions": []}
+
+
+def _coerce_extracter_from_agent_input(payload: dict[str, Any]) -> ExtracterOutput:
+    """Build ExtracterOutput context from an uploaded downstream input."""
+    result = payload.get("final_result") or payload.get("result") or {}
+    candidate = result.get("source_questions") if isinstance(result, dict) else None
+    if candidate is None:
+        candidate = payload.get("source_questions")
+    if candidate is None:
+        candidate = payload
+    data = _extract_question_container(candidate)
+    if "filename" not in data:
+        data = {"filename": "", **data}
+    return ExtracterOutput.model_validate(data)
+
+
+def _coerce_verifier_from_agent_input(
+    payload: dict[str, Any],
+    extracter_output: ExtracterOutput,
+) -> VerifierOutput:
+    """Build VerifierOutput context from an uploaded generator or latex input."""
+    result = payload.get("final_result") or payload.get("result") or {}
+    candidate = result.get("verified_questions") if isinstance(result, dict) else None
+    if candidate is None:
+        candidate = payload.get("verified_questions")
+    if candidate is None:
+        candidate = payload.get("source_questions")
+    if candidate is not None:
+        data = _extract_question_container(candidate)
+        return VerifierOutput.model_validate({"questions": data.get("questions", [])})
+    return VerifierOutput(questions=extracter_output.questions)
+
+
+def _coerce_generator_from_agent_input(payload: dict[str, Any]) -> GeneratorOutput:
+    """Build GeneratorOutput context from uploaded downstream agent input."""
+    result = payload.get("final_result") or payload.get("result") or {}
+    raw_questions = result.get("generated_questions") if isinstance(result, dict) else None
+    if raw_questions is None:
+        raw_questions = payload.get("generated_questions")
+    if raw_questions is None:
+        raw_questions = payload.get("isomorphic_questions")
+    if raw_questions is not None:
+        return GeneratorOutput.model_validate({"isomorphic_questions": raw_questions})
+
+    raw_questions = payload.get("questions")
+    if not isinstance(raw_questions, list):
+        raw_questions = []
+
+    items: list[dict[str, Any]] = []
+    for index, raw_question in enumerate(raw_questions, start=1):
+        if not isinstance(raw_question, dict):
+            continue
+        item = dict(raw_question)
+        item.setdefault("id", index)
+        item.setdefault("source_id", str(item.get("source_id") or index))
+        item.setdefault("stem", "")
+        item.setdefault("options", [])
+        item.setdefault("difficulty", "")
+        item.setdefault("theme", "")
+        item.setdefault("topic_tags", [])
+        item.setdefault("generation_notes", "Provided via uploaded LaTeX agent input.")
+        item.setdefault("question_type", "multiple_choice" if item.get("options") else "open_ended")
+        item.setdefault("skipped", False)
+        item.setdefault("skip_reason", "")
+        item.setdefault("answer", "")
+        item.setdefault("parts", [])
+        items.append(item)
+
+    return GeneratorOutput.model_validate({"isomorphic_questions": items})
+
+
+def _coerce_latex_from_agent_input(payload: dict[str, Any]) -> LaTeXOutput:
+    """Build LaTeXOutput context from uploaded evaluation-stage input."""
+    for key in ("latex_output", "latex"):
+        candidate = payload.get(key)
+        if isinstance(candidate, dict) and "latex_content" in candidate:
+            return LaTeXOutput.model_validate(candidate)
+
+    result = payload.get("final_result") or payload.get("result") or {}
+    latex_content = payload.get("latex_content")
+    filename = payload.get("filename") or payload.get("latex_file")
+    pdf_filename = payload.get("pdf_filename") or payload.get("pdf_file")
+    if isinstance(result, dict):
+        latex_content = latex_content or result.get("latex_content")
+        filename = filename or result.get("latex_file")
+        pdf_filename = pdf_filename or result.get("pdf_file")
+
+    if not isinstance(latex_content, str) or not latex_content.strip():
+        raise ValueError(
+            "Evaluation input must include latex_content or latex_output.latex_content. "
+            "Use a current evaluation agent input artifact, or upload a LaTeX output "
+            "artifact and start from the LaTeX agent."
+        )
+
+    return LaTeXOutput(
+        latex_content=latex_content,
+        filename=str(filename or "isomorphic_questions.tex"),
+        pdf_filename=str(pdf_filename or ""),
+    )
+
+
+def _agent_input_has_generated_questions(payload: dict[str, Any]) -> bool:
+    """Return True when uploaded evaluation context includes generated questions."""
+    result = payload.get("final_result") or payload.get("result") or {}
+    raw_questions = result.get("generated_questions") if isinstance(result, dict) else None
+    if raw_questions is None:
+        raw_questions = payload.get("generated_questions")
+    if raw_questions is None:
+        raw_questions = payload.get("isomorphic_questions")
+    return isinstance(raw_questions, list) and len(raw_questions) > 0
+
+
+def _validate_input_to_agent_payload(start_agent: str, payload: Any) -> None:
+    """Validate uploaded agent input for stages that need reconstructed context."""
+    if start_agent != "evaluation":
+        return
+
+    structured_payload = _extract_agent_input_payload(payload)
+    try:
+        _coerce_latex_from_agent_input(structured_payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not _agent_input_has_generated_questions(structured_payload):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Evaluation input must include generated question context in "
+                "final_result.generated_questions or generated_questions."
+            ),
+        )
+
+
+def _mark_provided_agent_state(
+    workflow: dict[str, Any],
+    *,
+    agent_key: str,
+    agent_output: Any,
+    input_filename: str,
+    start_agent: str,
+) -> None:
+    """Record upstream context reconstructed from an uploaded agent input file."""
+    agent_state = workflow["agents"].get(agent_key)
+    if not agent_state:
+        return
+    now = datetime.now().isoformat()
+    agent_state["status"] = "completed"
+    data = agent_state.setdefault("data", {})
+    data["startTime"] = now
+    data["endTime"] = now
+    data["executionTime"] = 0.0
+    data["receivedFrom"] = "uploaded_input"
+    data["sentTo"] = start_agent
+    data["input"] = f"Derived from uploaded agent input file: {input_filename}"
+    data["output"] = to_jsonable(agent_output)
+
+
+def _record_provided_agent_artifact(
+    *,
+    outputs_dir: Path,
+    workflow_id: str,
+    agent_key: str,
+    agent_output: Any,
+    input_filename: str,
+    start_agent: str,
+) -> dict[str, Any]:
+    """Write an artifact for reconstructed upstream context."""
+    agent_name = AGENT_DISPLAY_NAMES.get(agent_key, agent_key.title())
+    return write_agent_artifacts(
+        outputs_dir=outputs_dir,
+        workflow_id=workflow_id,
+        agent_key=agent_key,
+        agent_name=agent_name,
+        input_payload={
+            "task": "derive_context_from_uploaded_agent_input",
+            "input_file": input_filename,
+            "start_agent": start_agent,
+        },
+        output_payload=agent_output,
+        metadata={
+            "agent_key": agent_key,
+            "agent_name": agent_name,
+            "execution_time_seconds": 0.0,
+            "received_from_node": "uploaded_input",
+            "sent_to_node": start_agent,
+            "input_summary": f"Context derived from {input_filename}",
+        },
+        status="provided",
+    )
 
 
 def _mark_reused_agent_state(
@@ -1263,6 +1632,87 @@ async def rerun_workflow_from_agent(
     }
 
 
+@app.post("/api/workflow/start-from-agent-input")
+async def start_workflow_from_agent_input(
+    startAgent: str = Form(...),
+    prompt: str = Form(""),
+    agentInput: UploadFile = File(...),
+):
+    """Start a workflow from one agent using an uploaded source or agent input file."""
+    try:
+        get_openai_client()
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    _prune_workflows()
+    _prune_batch_jobs()
+
+    start_agent = _normalize_agent_key(startAgent)
+    if start_agent not in INPUT_TO_AGENT_SEQUENCE:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "startAgent must be one of: "
+                + ", ".join(INPUT_TO_AGENT_SEQUENCE)
+            ),
+        )
+
+    filename = Path(agentInput.filename or "agent_input.txt").name
+    suffix = Path(filename).suffix.lower()
+    workflow_id = str(uuid.uuid4())[:8]
+    content = await agentInput.read()
+    await agentInput.close()
+
+    source_file_paths: list[str] = []
+    agent_input_payload: Any = None
+    input_kind = "agent_input"
+    if start_agent in SOURCE_FILE_INPUT_AGENTS:
+        source_path = _save_input_to_agent_source_file(
+            workflow_id=workflow_id,
+            filename=filename,
+            content=content,
+        )
+        source_file_paths.append(str(source_path))
+        input_kind = "source_file"
+    else:
+        if suffix not in ALLOWED_AGENT_INPUT_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Agent input file must use one of: "
+                    + ", ".join(sorted(ALLOWED_AGENT_INPUT_EXTENSIONS))
+                ),
+            )
+        agent_input_payload = _parse_agent_input_upload(content, filename)
+        _validate_input_to_agent_payload(start_agent, agent_input_payload)
+
+    workflows[workflow_id] = _new_workflow_record()
+    workflows[workflow_id]["inputToAgent"] = {
+        "startAgent": start_agent,
+        "inputFilename": filename,
+        "inputKind": input_kind,
+    }
+
+    asyncio.create_task(
+        run_workflow_from_agent_input_async(
+            workflow_id,
+            prompt,
+            file_paths=source_file_paths,
+            start_agent=start_agent,
+            agent_input_payload=agent_input_payload,
+            input_filename=filename,
+        )
+    )
+
+    return {
+        "success": True,
+        "workflowId": workflow_id,
+        "startAgent": start_agent,
+        "inputFilename": filename,
+        "inputKind": input_kind,
+    }
+
+
 @app.post("/api/create-data/start")
 async def start_create_data(prompt: str = Form("")):
     """Start a batch workflow run for every file in data/evaluation."""
@@ -1507,6 +1957,34 @@ async def run_workflow_from_agent_async(
     )
 
 
+async def run_workflow_from_agent_input_async(
+    workflow_id: str,
+    prompt: str,
+    *,
+    file_paths: list[str],
+    start_agent: str,
+    agent_input_payload: Any = None,
+    input_filename: str,
+):
+    """Run a workflow from start_agent using an uploaded source or agent input payload."""
+    workflow = workflows[workflow_id]
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    output_folder_label = f"{timestamp}_input_to_{start_agent}"
+    outputs_dir = OUTPUTS_DIR / output_folder_label
+    await _execute_workflow(
+        workflow_id,
+        workflow,
+        prompt,
+        file_paths,
+        outputs_dir=outputs_dir,
+        output_folder_label=output_folder_label,
+        resume_from_agent=start_agent,
+        agent_input_override=agent_input_payload,
+        agent_input_filename=input_filename,
+        input_to_agent_run=True,
+    )
+
+
 # =============================================================================
 # Batch Workflow Helpers
 # =============================================================================
@@ -1523,6 +2001,9 @@ async def _execute_workflow(
     resume_from_agent: str = "normalizer",
     resume_source_dir: Optional[Path] = None,
     resume_source_label: str = "",
+    agent_input_override: Any = None,
+    agent_input_filename: str = "",
+    input_to_agent_run: bool = False,
 ) -> None:
     """Run the workflow and write artifacts into a specific output directory."""
     client = get_openai_client()
@@ -1544,7 +2025,25 @@ async def _execute_workflow(
                 }
             )
             agent_metadata_records: list[dict[str, Any]] = []
-            workflow_type = "rerun" if resume_source_dir else "full"
+            has_uploaded_agent_input = agent_input_override is not None
+            is_input_to_agent_run = input_to_agent_run or has_uploaded_agent_input
+            uploaded_agent_input = (
+                _runner_input_from_upload(agent_input_override)
+                if has_uploaded_agent_input
+                else None
+            )
+            uploaded_agent_payload = (
+                _extract_agent_input_payload(agent_input_override)
+                if has_uploaded_agent_input
+                else {}
+            )
+            workflow_type = (
+                "input_to_agent"
+                if is_input_to_agent_run
+                else "rerun"
+                if resume_source_dir
+                else "full"
+            )
 
             file_ids = []
             file_names = []
@@ -1626,10 +2125,14 @@ async def _execute_workflow(
                     },
                 }
                 normalizer_input = build_json_message(normalizer_input_payload)
+                if has_uploaded_agent_input and resume_from_agent == "normalizer":
+                    normalizer_input = uploaded_agent_input
                 workflow["agents"]["normalizer"]["data"]["receivedFrom"] = "user"
                 workflow["agents"]["normalizer"]["data"]["sentTo"] = "extracter"
                 workflow["agents"]["normalizer"]["data"]["input"] = (
-                    {"prompt": prompt_text} if prompt_text else None
+                    uploaded_agent_payload
+                    if has_uploaded_agent_input and resume_from_agent == "normalizer" and uploaded_agent_payload
+                    else {"prompt": prompt_text} if prompt_text else None
                 )
                 _touch_workflow(workflow)
 
@@ -1664,29 +2167,50 @@ async def _execute_workflow(
                     )
                 )
             else:
-                if resume_source_dir is None:
-                    raise ValueError("resume_source_dir is required for cached normalizer output")
-                normalizer_output = _load_resume_agent_output(
-                    resume_source_dir,
-                    "normalizer",
-                )
-                _mark_reused_agent_state(
-                    workflow,
-                    agent_key="normalizer",
-                    agent_output=normalizer_output,
-                    source_folder=resume_source_label,
-                )
-                _touch_workflow(workflow)
-                agent_metadata_records.append(
-                    _copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
+                if is_input_to_agent_run:
+                    normalizer_output = _coerce_normalizer_from_agent_input(uploaded_agent_payload)
+                    _mark_provided_agent_state(
+                        workflow,
                         agent_key="normalizer",
                         agent_output=normalizer_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
+                        input_filename=agent_input_filename,
+                        start_agent=resume_from_agent,
                     )
-                )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _record_provided_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="normalizer",
+                            agent_output=normalizer_output,
+                            input_filename=agent_input_filename,
+                            start_agent=resume_from_agent,
+                        )
+                    )
+                elif resume_source_dir is None:
+                    raise ValueError("resume_source_dir is required for cached normalizer output")
+                else:
+                    normalizer_output = _load_resume_agent_output(
+                        resume_source_dir,
+                        "normalizer",
+                    )
+                    _mark_reused_agent_state(
+                        workflow,
+                        agent_key="normalizer",
+                        agent_output=normalizer_output,
+                        source_folder=resume_source_label,
+                    )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _copy_or_record_reused_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="normalizer",
+                            agent_output=normalizer_output,
+                            resume_source_dir=resume_source_dir,
+                            resume_source_label=resume_source_label,
+                        )
+                    )
 
             if _should_run_agent("extracter", resume_from_agent):
                 workflow["agents"]["extracter"]["status"] = "thinking"
@@ -1713,10 +2237,18 @@ async def _execute_workflow(
                         ),
                     },
                 }
-                extracter_input = build_json_message(extracter_input_payload, file_refs=file_refs)
+                extracter_input = (
+                    uploaded_agent_input
+                    if has_uploaded_agent_input and resume_from_agent == "extracter"
+                    else build_json_message(extracter_input_payload, file_refs=file_refs)
+                )
                 workflow["agents"]["extracter"]["data"]["receivedFrom"] = "normalizer"
                 workflow["agents"]["extracter"]["data"]["sentTo"] = "verifier"
-                workflow["agents"]["extracter"]["data"]["input"] = extracter_input_payload
+                workflow["agents"]["extracter"]["data"]["input"] = (
+                    uploaded_agent_payload
+                    if has_uploaded_agent_input and resume_from_agent == "extracter" and uploaded_agent_payload
+                    else extracter_input_payload
+                )
                 _touch_workflow(workflow)
 
                 start_time = time.time()
@@ -1790,34 +2322,60 @@ async def _execute_workflow(
                     )
                 )
             else:
-                if resume_source_dir is None:
-                    raise ValueError("resume_source_dir is required for cached extracter output")
-                extracter_output = _load_resume_agent_output(
-                    resume_source_dir,
-                    "extracter",
-                )
-                for q in extracter_output.questions:
-                    if q.options:
-                        q.question_type = "multiple_choice"
-                merge_extracted_metadata_into_config(normalizer_output, extracter_output)
-                workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
-                _mark_reused_agent_state(
-                    workflow,
-                    agent_key="extracter",
-                    agent_output=extracter_output,
-                    source_folder=resume_source_label,
-                )
-                _touch_workflow(workflow)
-                agent_metadata_records.append(
-                    _copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
+                if is_input_to_agent_run:
+                    extracter_output = _coerce_extracter_from_agent_input(uploaded_agent_payload)
+                    for q in extracter_output.questions:
+                        if q.options:
+                            q.question_type = "multiple_choice"
+                    merge_extracted_metadata_into_config(normalizer_output, extracter_output)
+                    workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
+                    _mark_provided_agent_state(
+                        workflow,
                         agent_key="extracter",
                         agent_output=extracter_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
+                        input_filename=agent_input_filename,
+                        start_agent=resume_from_agent,
                     )
-                )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _record_provided_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="extracter",
+                            agent_output=extracter_output,
+                            input_filename=agent_input_filename,
+                            start_agent=resume_from_agent,
+                        )
+                    )
+                elif resume_source_dir is None:
+                    raise ValueError("resume_source_dir is required for cached extracter output")
+                else:
+                    extracter_output = _load_resume_agent_output(
+                        resume_source_dir,
+                        "extracter",
+                    )
+                    for q in extracter_output.questions:
+                        if q.options:
+                            q.question_type = "multiple_choice"
+                    merge_extracted_metadata_into_config(normalizer_output, extracter_output)
+                    workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
+                    _mark_reused_agent_state(
+                        workflow,
+                        agent_key="extracter",
+                        agent_output=extracter_output,
+                        source_folder=resume_source_label,
+                    )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _copy_or_record_reused_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="extracter",
+                            agent_output=extracter_output,
+                            resume_source_dir=resume_source_dir,
+                            resume_source_label=resume_source_label,
+                        )
+                    )
 
             if _should_run_agent("verifier", resume_from_agent):
                 workflow["agents"]["verifier"]["status"] = "thinking"
@@ -1839,9 +2397,15 @@ async def _execute_workflow(
                     },
                 }
                 verifier_input = build_json_message(verifier_input_payload)
+                if has_uploaded_agent_input and resume_from_agent == "verifier":
+                    verifier_input = uploaded_agent_input
                 workflow["agents"]["verifier"]["data"]["receivedFrom"] = "extracter"
                 workflow["agents"]["verifier"]["data"]["sentTo"] = "generator"
-                workflow["agents"]["verifier"]["data"]["input"] = verifier_input_payload
+                workflow["agents"]["verifier"]["data"]["input"] = (
+                    uploaded_agent_payload
+                    if has_uploaded_agent_input and resume_from_agent == "verifier" and uploaded_agent_payload
+                    else verifier_input_payload
+                )
                 _touch_workflow(workflow)
 
                 start_time = time.time()
@@ -1881,34 +2445,63 @@ async def _execute_workflow(
                     )
                 )
             else:
-                if resume_source_dir is None:
-                    raise ValueError("resume_source_dir is required for cached verifier output")
-                verifier_output = _load_resume_agent_output(
-                    resume_source_dir,
-                    "verifier",
-                )
-                verifier_output.questions = reconcile_verified_questions(
-                    extracter_output.questions,
-                    verifier_output.questions,
-                )
-                apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
-                _mark_reused_agent_state(
-                    workflow,
-                    agent_key="verifier",
-                    agent_output=verifier_output,
-                    source_folder=resume_source_label,
-                )
-                _touch_workflow(workflow)
-                agent_metadata_records.append(
-                    _copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
+                if is_input_to_agent_run:
+                    verifier_output = _coerce_verifier_from_agent_input(
+                        uploaded_agent_payload,
+                        extracter_output,
+                    )
+                    verifier_output.questions = reconcile_verified_questions(
+                        extracter_output.questions,
+                        verifier_output.questions,
+                    )
+                    apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
+                    _mark_provided_agent_state(
+                        workflow,
                         agent_key="verifier",
                         agent_output=verifier_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
+                        input_filename=agent_input_filename,
+                        start_agent=resume_from_agent,
                     )
-                )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _record_provided_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="verifier",
+                            agent_output=verifier_output,
+                            input_filename=agent_input_filename,
+                            start_agent=resume_from_agent,
+                        )
+                    )
+                elif resume_source_dir is None:
+                    raise ValueError("resume_source_dir is required for cached verifier output")
+                else:
+                    verifier_output = _load_resume_agent_output(
+                        resume_source_dir,
+                        "verifier",
+                    )
+                    verifier_output.questions = reconcile_verified_questions(
+                        extracter_output.questions,
+                        verifier_output.questions,
+                    )
+                    apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
+                    _mark_reused_agent_state(
+                        workflow,
+                        agent_key="verifier",
+                        agent_output=verifier_output,
+                        source_folder=resume_source_label,
+                    )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _copy_or_record_reused_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="verifier",
+                            agent_output=verifier_output,
+                            resume_source_dir=resume_source_dir,
+                            resume_source_label=resume_source_label,
+                        )
+                    )
 
             if _should_run_agent("generator", resume_from_agent):
                 workflow["agents"]["generator"]["status"] = "thinking"
@@ -1939,9 +2532,15 @@ async def _execute_workflow(
                     },
                 }
                 generator_input = build_json_message(generator_input_payload)
+                if has_uploaded_agent_input and resume_from_agent == "generator":
+                    generator_input = uploaded_agent_input
                 workflow["agents"]["generator"]["data"]["receivedFrom"] = "verifier"
                 workflow["agents"]["generator"]["data"]["sentTo"] = "latex"
-                workflow["agents"]["generator"]["data"]["input"] = generator_input_payload
+                workflow["agents"]["generator"]["data"]["input"] = (
+                    uploaded_agent_payload
+                    if has_uploaded_agent_input and resume_from_agent == "generator" and uploaded_agent_payload
+                    else generator_input_payload
+                )
                 _touch_workflow(workflow)
 
                 start_time = time.time()
@@ -2018,33 +2617,58 @@ async def _execute_workflow(
                     )
                 )
             else:
-                if resume_source_dir is None:
-                    raise ValueError("resume_source_dir is required for cached generator output")
-                generator_output = _load_resume_agent_output(
-                    resume_source_dir,
-                    "generator",
-                )
-                apply_requested_difficulty(
-                    generator_output.isomorphic_questions,
-                    normalizer_output.difficulty,
-                )
-                _mark_reused_agent_state(
-                    workflow,
-                    agent_key="generator",
-                    agent_output=generator_output,
-                    source_folder=resume_source_label,
-                )
-                _touch_workflow(workflow)
-                agent_metadata_records.append(
-                    _copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
+                if is_input_to_agent_run:
+                    generator_output = _coerce_generator_from_agent_input(uploaded_agent_payload)
+                    apply_requested_difficulty(
+                        generator_output.isomorphic_questions,
+                        normalizer_output.difficulty,
+                    )
+                    _mark_provided_agent_state(
+                        workflow,
                         agent_key="generator",
                         agent_output=generator_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
+                        input_filename=agent_input_filename,
+                        start_agent=resume_from_agent,
                     )
-                )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _record_provided_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="generator",
+                            agent_output=generator_output,
+                            input_filename=agent_input_filename,
+                            start_agent=resume_from_agent,
+                        )
+                    )
+                elif resume_source_dir is None:
+                    raise ValueError("resume_source_dir is required for cached generator output")
+                else:
+                    generator_output = _load_resume_agent_output(
+                        resume_source_dir,
+                        "generator",
+                    )
+                    apply_requested_difficulty(
+                        generator_output.isomorphic_questions,
+                        normalizer_output.difficulty,
+                    )
+                    _mark_reused_agent_state(
+                        workflow,
+                        agent_key="generator",
+                        agent_output=generator_output,
+                        source_folder=resume_source_label,
+                    )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _copy_or_record_reused_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="generator",
+                            agent_output=generator_output,
+                            resume_source_dir=resume_source_dir,
+                            resume_source_label=resume_source_label,
+                        )
+                    )
 
             if _should_run_agent("latex", resume_from_agent):
                 workflow["agents"]["latex"]["status"] = "thinking"
@@ -2094,9 +2718,15 @@ async def _execute_workflow(
                     },
                 }
                 latex_input = build_json_message(latex_input_payload)
+                if has_uploaded_agent_input and resume_from_agent == "latex":
+                    latex_input = uploaded_agent_input
                 workflow["agents"]["latex"]["data"]["receivedFrom"] = "generator"
                 workflow["agents"]["latex"]["data"]["sentTo"] = "evaluation"
-                workflow["agents"]["latex"]["data"]["input"] = latex_input_payload
+                workflow["agents"]["latex"]["data"]["input"] = (
+                    uploaded_agent_payload
+                    if has_uploaded_agent_input and resume_from_agent == "latex" and uploaded_agent_payload
+                    else latex_input_payload
+                )
                 _touch_workflow(workflow)
 
                 start_time = time.time()
@@ -2142,37 +2772,80 @@ async def _execute_workflow(
                     )
                 )
             else:
-                if resume_source_dir is None:
-                    raise ValueError("resume_source_dir is required for cached latex output")
-                latex_output = _load_resume_agent_output(
-                    resume_source_dir,
-                    "latex",
-                )
-                _mark_reused_agent_state(
-                    workflow,
-                    agent_key="latex",
-                    agent_output=latex_output,
-                    source_folder=resume_source_label,
-                )
-                _touch_workflow(workflow)
-                agent_metadata_records.append(
-                    _copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
+                if is_input_to_agent_run:
+                    latex_output = _coerce_latex_from_agent_input(uploaded_agent_payload)
+                    latex_filename = Path(latex_output.filename or "isomorphic_questions.tex").name
+                    latex_path = outputs_dir / latex_filename
+                    latex_path.write_text(latex_output.latex_content, encoding="utf-8")
+                    pdf_filename = Path(
+                        latex_output.pdf_filename or f"{Path(latex_filename).stem}.pdf"
+                    ).name
+                    pdf_path = outputs_dir / pdf_filename
+                    if not pdf_path.exists():
+                        compile_result = shared_runtime.compile_latex(
+                            latex_output.latex_content,
+                            Path(latex_filename).stem or "isomorphic_questions",
+                        )
+                        latex_filename = compile_result.tex_filename
+                        latex_path = compile_result.tex_path
+                        pdf_filename = compile_result.pdf_filename
+                        pdf_path = compile_result.pdf_path
+                        latex_output = latex_output.model_copy(
+                            update={
+                                "filename": latex_filename,
+                                "pdf_filename": pdf_filename,
+                            }
+                        )
+                    _mark_provided_agent_state(
+                        workflow,
                         agent_key="latex",
                         agent_output=latex_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
+                        input_filename=agent_input_filename,
+                        start_agent=resume_from_agent,
                     )
-                )
-                latex_filename = latex_output.filename or "isomorphic_questions.tex"
-                latex_path = outputs_dir / latex_filename
-                latex_path.write_text(latex_output.latex_content, encoding="utf-8")
-                pdf_filename = latex_output.pdf_filename or "isomorphic_questions.pdf"
-                pdf_path = outputs_dir / pdf_filename
-                source_pdf_path = resume_source_dir / pdf_filename
-                if source_pdf_path.exists():
-                    shutil.copy2(source_pdf_path, pdf_path)
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _record_provided_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="latex",
+                            agent_output=latex_output,
+                            input_filename=agent_input_filename,
+                            start_agent=resume_from_agent,
+                        )
+                    )
+                elif resume_source_dir is None:
+                    raise ValueError("resume_source_dir is required for cached latex output")
+                else:
+                    latex_output = _load_resume_agent_output(
+                        resume_source_dir,
+                        "latex",
+                    )
+                    _mark_reused_agent_state(
+                        workflow,
+                        agent_key="latex",
+                        agent_output=latex_output,
+                        source_folder=resume_source_label,
+                    )
+                    _touch_workflow(workflow)
+                    agent_metadata_records.append(
+                        _copy_or_record_reused_agent_artifact(
+                            outputs_dir=outputs_dir,
+                            workflow_id=workflow_id,
+                            agent_key="latex",
+                            agent_output=latex_output,
+                            resume_source_dir=resume_source_dir,
+                            resume_source_label=resume_source_label,
+                        )
+                    )
+                    latex_filename = latex_output.filename or "isomorphic_questions.tex"
+                    latex_path = outputs_dir / latex_filename
+                    latex_path.write_text(latex_output.latex_content, encoding="utf-8")
+                    pdf_filename = latex_output.pdf_filename or "isomorphic_questions.pdf"
+                    pdf_path = outputs_dir / pdf_filename
+                    source_pdf_path = resume_source_dir / pdf_filename
+                    if source_pdf_path.exists():
+                        shutil.copy2(source_pdf_path, pdf_path)
 
             if _should_run_agent("evaluation", resume_from_agent):
                 workflow["agents"]["evaluation"]["status"] = "thinking"
@@ -2182,16 +2855,30 @@ async def _execute_workflow(
 
             if _should_run_agent("evaluation", resume_from_agent):
                 evaluation_stage_start = time.time()
+                evaluation_final_result = {
+                    "config": normalizer_output.model_dump(),
+                    "source_questions": [q.model_dump() for q in extracter_output.questions],
+                    "verified_questions": [q.model_dump() for q in verifier_output.questions],
+                    "generated_questions": [
+                        q.model_dump() for q in generator_output.isomorphic_questions
+                    ],
+                }
                 evaluation_input = {
                     "task": "evaluate_generated_output_artifacts",
                     "workflow_id": workflow_id,
                     "latex_file": latex_filename,
                     "pdf_file": pdf_filename,
+                    "latex_output": latex_output.model_dump(),
+                    "final_result": evaluation_final_result,
                 }
+                if has_uploaded_agent_input and resume_from_agent == "evaluation":
+                    evaluation_input = uploaded_agent_input
                 workflow["agents"]["evaluation"]["data"]["receivedFrom"] = "latex"
                 workflow["agents"]["evaluation"]["data"]["sentTo"] = "output"
                 workflow["agents"]["evaluation"]["data"]["input"] = (
-                    f"Evaluate generated questions for workflow {workflow_id}"
+                    uploaded_agent_payload
+                    if has_uploaded_agent_input and resume_from_agent == "evaluation" and uploaded_agent_payload
+                    else f"Evaluate generated questions for workflow {workflow_id}"
                 )
                 workflow["agents"]["evaluation"]["data"]["output"] = "Running evaluation..."
                 _touch_workflow(workflow)
@@ -2199,11 +2886,7 @@ async def _execute_workflow(
                 evaluation_report = await asyncio.to_thread(
                     run_openai_output_evaluation,
                     client=client,
-                    final_result={
-                        "source_questions": [q.model_dump() for q in extracter_output.questions],
-                        "verified_questions": [q.model_dump() for q in verifier_output.questions],
-                        "generated_questions": [q.model_dump() for q in generator_output.isomorphic_questions],
-                    },
+                    final_result=evaluation_final_result,
                     outputs_dir=outputs_dir,
                     latex_path=latex_path,
                 )
@@ -2377,6 +3060,12 @@ async def _execute_workflow(
                 workflow_type=workflow_type,
                 source_files=file_paths,
                 resumed_from=(
+                    {
+                        "input_file": agent_input_filename,
+                        "start_agent": resume_from_agent,
+                    }
+                    if is_input_to_agent_run
+                    else
                     {
                         "output_folder": resume_source_label,
                         "start_agent": resume_from_agent,

@@ -21,6 +21,28 @@ export function IconComputer({ className }) {
 }
 
 /**
+ * Brain icon used for the idle workflow placeholder.
+ *
+ * @param {{className?: string}} props
+ */
+export function IconBrain({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 4.5A3.5 3.5 0 0 0 5.5 8 3 3 0 0 0 3 11a3.2 3.2 0 0 0 2.1 3.02A3.5 3.5 0 0 0 9 18.5" />
+      <path d="M15 4.5A3.5 3.5 0 0 1 18.5 8 3 3 0 0 1 21 11a3.2 3.2 0 0 1-2.1 3.02A3.5 3.5 0 0 1 15 18.5" />
+      <path d="M9 4.5v14" />
+      <path d="M15 4.5v14" />
+      <path d="M9 8h2" />
+      <path d="M13 8h2" />
+      <path d="M8 12h3" />
+      <path d="M13 12h3" />
+      <path d="M9 16h2" />
+      <path d="M13 16h2" />
+    </svg>
+  );
+}
+
+/**
  * Lightbulb icon used while an agent is thinking.
  *
  * @param {{className?: string}} props

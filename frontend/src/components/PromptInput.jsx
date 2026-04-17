@@ -67,6 +67,7 @@ export default function PromptInput({
   onShowSkills,
   onShowTestFiles,
   onCreateData,
+  onInputToAgent,
 }) {
   const [resetFeedback, setResetFeedback] = useState(false);
   const [uploadWarning, setUploadWarning] = useState(false);
@@ -177,7 +178,18 @@ export default function PromptInput({
 
       <div className="card-body">
         <div className="prompt-layout">
-          <div className="prompt-dropdown-panel">
+          <textarea
+            id="prompt-input"
+            name="prompt"
+            className="prompt-input"
+            placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'"
+            value={prompt}
+            onChange={(e) => onPromptChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isRunning || serviceInactive}
+          />
+
+          <div className="prompt-dropdown-panel prompt-control-section">
             <label className="prompt-dropdown-label" htmlFor="theme-prompt-select">
               Theme Prompt
             </label>
@@ -200,74 +212,66 @@ export default function PromptInput({
             </p>
           </div>
 
-          <textarea
-            id="prompt-input"
-            name="prompt"
-            className="prompt-input"
-            placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'"
-            value={prompt}
-            onChange={(e) => onPromptChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isRunning || serviceInactive}
-          />
-
-          <div className="card-actions">
-            <div className="actions-row">
+          <div className="prompt-files-panel prompt-control-section">
+            <div className="upload-group">
               <button
-                className={`btn btn-secondary${resetFeedback ? ' btn-feedback' : ''}`}
-                onClick={handleReset}
-                disabled={isRunning || serviceInactive || resetFeedback}
-              >
-                <IconTrash className="btn-icon" />
-                <span className="btn-label">Reset</span>
-              </button>
-
-              <div className="upload-group">
-                <button
-                  className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
-                  onClick={() => {
-                    if (limitReached) {
-                      handleUploadWarning();
-                      return;
-                    }
-                    fileInputRef.current?.click();
-                  }}
-                  disabled={isRunning || serviceInactive}
-                >
-                  <IconUpload className="btn-icon" />
-                  <span className="btn-label">{uploadWarning ? 'Too many files!' : 'Upload Files'}</span>
-                </button>
-                <span className="file-limit-text">Limit: 5 Files</span>
-                <input
-                  ref={fileInputRef}
-                  id="source-files-input"
-                  name="source_files"
-                  type="file"
-                  multiple
-                  accept=".pdf,.docx,.doc,.txt"
-                  hidden
-                  onChange={handleFileSelect}
-                />
-              </div>
-
-              <button
-                className="btn btn-primary send-action"
-                onClick={handleSend}
+                className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
+                onClick={() => {
+                  if (limitReached) {
+                    handleUploadWarning();
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
                 disabled={isRunning || serviceInactive}
               >
-                <IconSend className="btn-icon" />
-                <span>Send</span>
+                <IconUpload className="btn-icon" />
+                <span className="btn-label">{uploadWarning ? 'Too many files!' : 'Upload Files'}</span>
               </button>
+              <span className="file-limit-text">Limit: 5 Files</span>
+              <input
+                ref={fileInputRef}
+                id="source-files-input"
+                name="source_files"
+                type="file"
+                multiple
+                accept=".pdf,.docx,.doc,.txt"
+                hidden
+                onChange={handleFileSelect}
+              />
             </div>
 
-            {files.length > 0 && (
-              <div className="file-count-row">
-                <button className="btn btn-secondary file-count-btn" onClick={onShowFiles}>
-                  <IconFile className="btn-icon" />
-                  <span>Current Files — <span>{files.length}</span></span>
-                </button>
-              </div>
-            )}
+            <button
+              className="btn btn-secondary file-count-btn"
+              onClick={onShowFiles}
+              type="button"
+              aria-label={`Files - ${files.length} selected files to upload`}
+            >
+              <IconFile className="btn-icon" />
+              <span className="file-count-copy">
+                <span>Files - {files.length}</span>
+                <span>selected files to upload</span>
+              </span>
+            </button>
+          </div>
+
+          <div className="prompt-workflow-actions prompt-control-section">
+            <button
+              className="btn btn-primary send-action"
+              onClick={handleSend}
+              disabled={isRunning || serviceInactive}
+            >
+              <IconSend className="btn-icon" />
+              <span>Send</span>
+            </button>
+            <button
+              className={`btn btn-secondary${resetFeedback ? ' btn-feedback' : ''}`}
+              onClick={handleReset}
+              disabled={isRunning || serviceInactive || resetFeedback}
+            >
+              <IconTrash className="btn-icon" />
+              <span className="btn-label">Reset</span>
+            </button>
           </div>
 
           <div className="developer-tools-inline">
@@ -290,6 +294,15 @@ export default function PromptInput({
               <span className="btn-label">
                 {isCreateDataRunning ? 'Test Data Running...' : 'Create Test Data'}
               </span>
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={onInputToAgent}
+              disabled={isRunning || serviceInactive}
+              type="button"
+            >
+              <IconUpload className="btn-icon" />
+              <span className="btn-label">Input To Agent</span>
             </button>
             <button
               className="btn btn-secondary"

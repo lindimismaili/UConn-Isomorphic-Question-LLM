@@ -15,6 +15,7 @@ import SetupModal from "./components/modals/SetupModal.jsx";
 import OutputModal from "./components/modals/OutputModal.jsx";
 import HelpModal from "./components/modals/HelpModal.jsx";
 import SkillsModal from "./components/modals/SkillsModal.jsx";
+import InputToAgentModal from "./components/modals/InputToAgentModal.jsx";
 
 import { useWorkflow } from "./hooks/useWorkflow.js";
 import { useAgents } from "./hooks/useAgents.js";
@@ -515,7 +516,11 @@ export default function App() {
     description: "",
   });
 
-  const { run: runWorkflow, abort: abortWorkflow } = useWorkflow(dispatch);
+  const {
+    run: runWorkflow,
+    runFromAgentInput,
+    abort: abortWorkflow,
+  } = useWorkflow(dispatch);
   const {
     state: createDataState,
     start: startCreateData,
@@ -584,7 +589,6 @@ export default function App() {
       return;
     }
     runWorkflow(prompt, files);
-    setPrompt("");
   };
 
   const handleClearInputs = () => {
@@ -608,6 +612,18 @@ export default function App() {
 
   const handleCreateData = () => {
     dispatch({ type: "OPEN_MODAL", modal: "create-data" });
+  };
+
+  const handleInputToAgentRun = (agentKey, inputFile, onStarted) => {
+    if (serviceInactive) {
+      dispatch({
+        type: "LOG",
+        message: "OpenAI servers are down; agent-input workflow start blocked.",
+        level: "error",
+      });
+      return;
+    }
+    runFromAgentInput(agentKey, inputFile, prompt, { onStarted });
   };
 
   return (
@@ -664,6 +680,9 @@ export default function App() {
                 dispatch({ type: "OPEN_MODAL", modal: "test-files" })
               }
               onCreateData={handleCreateData}
+              onInputToAgent={() =>
+                dispatch({ type: "OPEN_MODAL", modal: "input-to-agent" })
+              }
             />
           </div>
 
@@ -727,6 +746,14 @@ export default function App() {
         createData={createDataState}
         onRun={() => startCreateData(prompt)}
         onStop={stopCreateData}
+      />
+      <InputToAgentModal
+        isOpen={state.activeModal === "input-to-agent"}
+        onClose={closeModal}
+        agents={state.agents}
+        isRunning={state.isRunning}
+        serviceInactive={serviceInactive}
+        onRun={handleInputToAgentRun}
       />
       <AgentDetailModal
         isOpen={state.activeModal === "agent"}

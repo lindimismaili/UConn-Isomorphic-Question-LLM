@@ -160,6 +160,105 @@ export function useWorkflow(dispatch) {
   }, []);
 
   /**
+   * Polls a running workflow and mirrors backend state into the UI reducer.
+   *
+   * @param {string} workflowId - Backend workflow id.
+   * @param {number} setupElapsedSeconds - Local setup time before polling began.
+   * @param {AbortSignal} signal - Abort signal for this run.
+   */
+  const pollWorkflow = useCallback(async (workflowId, setupElapsedSeconds, signal) => {
+    const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation', 'output'];
+
+    while (true) {
+      if (signal.aborted) return;
+
+      const statusRes = await fetchWithAbort(`/api/workflow/${workflowId}/status`, {}, signal);
+      if (!statusRes.ok) throw new Error('Failed to get workflow status');
+      const status = await statusRes.json();
+
+      for (const key of agentKeys) {
+        const agentStatus = status.agents?.[key];
+        if (agentStatus) {
+          const data = agentStatus.data || {};
+          const prevStatus = statusRef.current[key];
+          const nextStatus = agentStatus.status;
+
+          if (prevStatus !== nextStatus) {
+            const label = AGENT_LABELS[key] || key;
+            if (nextStatus === 'thinking') {
+              dispatch({ type: 'LOG', message: `${label} started`, level: 'info' });
+            } else if (nextStatus === 'completed') {
+              const elapsed = formatSeconds(data.executionTime);
+              const timeSuffix = elapsed ? ` in ${elapsed}` : '';
+              dispatch({ type: 'LOG', message: `${label} completed${timeSuffix}`, level: 'success' });
+
+              const countLabel = AGENT_COUNT_LOGS[key];
+              const count = getQuestionCount(key, data.output);
+              if (countLabel && typeof count === 'number') {
+                dispatch({ type: 'LOG', message: `${countLabel}: ${count} questions`, level: 'info' });
+              }
+            } else if (nextStatus === 'errored') {
+              dispatch({ type: 'LOG', message: `${label} errored`, level: 'error' });
+            } else if (nextStatus === 'cancelled') {
+              dispatch({ type: 'LOG', message: `${label} stopped`, level: 'info' });
+            }
+            statusRef.current[key] = nextStatus;
+          }
+
+          dispatch({
+            type: 'AGENT_UPDATE',
+            agentKey: key,
+            status: agentStatus.status,
+            data: buildAgentPatch(agentStatus),
+          });
+        }
+      }
+
+      if (status.status === 'completed') {
+        const agentsElapsedSeconds = agentKeys.reduce((total, key) => {
+          const value = status.agents?.[key]?.data?.executionTime;
+          return total + (typeof value === 'number' ? value : 0);
+        }, 0);
+        const totalElapsedSeconds = setupElapsedSeconds + agentsElapsedSeconds;
+
+        const resultRes = await fetchWithAbort(`/api/workflow/${workflowId}/result`, {}, signal);
+        if (resultRes.ok) {
+          const result = await resultRes.json();
+          dispatch({
+            type: 'WORKFLOW_COMPLETE',
+            result: {
+              workflowId,
+              outputFolder: result.outputFolder,
+              files: result.files || [],
+              workflowResult: result.result || null,
+              elapsedTimeSeconds: totalElapsedSeconds,
+            },
+            elapsedTimeSeconds: totalElapsedSeconds,
+          });
+        } else {
+          const errText = await resultRes.text().catch(() => `Status ${resultRes.status}`);
+          dispatch({ type: 'WORKFLOW_ERROR', message: `Failed to fetch result: ${errText}`, outputFolder: status.outputFolder || '' });
+        }
+        return;
+      }
+
+      if (status.status === 'errored') {
+        const err = new Error('Workflow failed on the server');
+        err.outputFolder = status.outputFolder || '';
+        throw err;
+      }
+
+      if (status.status === 'cancelled') {
+        dispatch({ type: 'WORKFLOW_ABORTED' });
+        dispatch({ type: 'LOG', message: 'Workflow stopped', level: 'info' });
+        return;
+      }
+
+      await sleep(STATUS_POLL_INTERVAL_MS, signal);
+    }
+  }, [dispatch]);
+
+  /**
    * Starts a workflow run, uploads files when needed, then polls status until
    * completion, cancellation, or failure.
    *
@@ -225,98 +324,7 @@ export function useWorkflow(dispatch) {
 
       dispatch({ type: 'SETUP_COMPLETE', workflowId });
       dispatch({ type: 'LOG', message: `Workflow started (${workflowId})`, level: 'info' });
-
-      // Step 3: Poll for status
-      const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation', 'output'];
-
-      while (true) {
-        if (signal.aborted) return;
-
-        const statusRes = await fetchWithAbort(`/api/workflow/${workflowId}/status`, {}, signal);
-        if (!statusRes.ok) throw new Error('Failed to get workflow status');
-        const status = await statusRes.json();
-
-        // Update agent statuses
-        for (const key of agentKeys) {
-          const agentStatus = status.agents?.[key];
-          if (agentStatus) {
-            const data = agentStatus.data || {};
-            const prevStatus = statusRef.current[key];
-            const nextStatus = agentStatus.status;
-
-            if (prevStatus !== nextStatus) {
-              const label = AGENT_LABELS[key] || key;
-              if (nextStatus === 'thinking') {
-                dispatch({ type: 'LOG', message: `${label} started`, level: 'info' });
-              } else if (nextStatus === 'completed') {
-                const elapsed = formatSeconds(data.executionTime);
-                const timeSuffix = elapsed ? ` in ${elapsed}` : '';
-                dispatch({ type: 'LOG', message: `${label} completed${timeSuffix}`, level: 'success' });
-
-                const countLabel = AGENT_COUNT_LOGS[key];
-                const count = getQuestionCount(key, data.output);
-                if (countLabel && typeof count === 'number') {
-                  dispatch({ type: 'LOG', message: `${countLabel}: ${count} questions`, level: 'info' });
-                }
-              } else if (nextStatus === 'errored') {
-                dispatch({ type: 'LOG', message: `${label} errored`, level: 'error' });
-              } else if (nextStatus === 'cancelled') {
-                dispatch({ type: 'LOG', message: `${label} stopped`, level: 'info' });
-              }
-              statusRef.current[key] = nextStatus;
-            }
-
-            dispatch({
-              type: 'AGENT_UPDATE',
-              agentKey: key,
-              status: agentStatus.status,
-              data: buildAgentPatch(agentStatus),
-            });
-          }
-        }
-
-        if (status.status === 'completed') {
-          const agentsElapsedSeconds = agentKeys.reduce((total, key) => {
-            const value = status.agents?.[key]?.data?.executionTime;
-            return total + (typeof value === 'number' ? value : 0);
-          }, 0);
-          const totalElapsedSeconds = setupElapsedSeconds + agentsElapsedSeconds;
-
-          const resultRes = await fetchWithAbort(`/api/workflow/${workflowId}/result`, {}, signal);
-          if (resultRes.ok) {
-            const result = await resultRes.json();
-            dispatch({
-              type: 'WORKFLOW_COMPLETE',
-              result: {
-                workflowId,
-                outputFolder: result.outputFolder,
-                files: result.files || [],
-                workflowResult: result.result || null,
-                elapsedTimeSeconds: totalElapsedSeconds,
-              },
-              elapsedTimeSeconds: totalElapsedSeconds,
-            });
-          } else {
-            const errText = await resultRes.text().catch(() => `Status ${resultRes.status}`);
-            dispatch({ type: 'WORKFLOW_ERROR', message: `Failed to fetch result: ${errText}`, outputFolder: status.outputFolder || '' });
-          }
-          return;
-        }
-
-        if (status.status === 'errored') {
-          const err = new Error('Workflow failed on the server');
-          err.outputFolder = status.outputFolder || '';
-          throw err;
-        }
-
-        if (status.status === 'cancelled') {
-          dispatch({ type: 'WORKFLOW_ABORTED' });
-          dispatch({ type: 'LOG', message: 'Workflow stopped', level: 'info' });
-          return;
-        }
-
-        await sleep(STATUS_POLL_INTERVAL_MS, signal);
-      }
+      await pollWorkflow(workflowId, setupElapsedSeconds, signal);
     } catch (err) {
       if (err.name === 'AbortError') {
         dispatch({ type: 'WORKFLOW_ABORTED' });
@@ -328,7 +336,65 @@ export function useWorkflow(dispatch) {
         abortRef.current = null;
       }
     }
-  }, [dispatch]);
+  }, [dispatch, pollWorkflow]);
 
-  return { run, abort };
+  /**
+   * Starts a workflow by uploading a prepared agent input artifact.
+   *
+   * @param {string} startAgent - Agent key to receive the uploaded input.
+   * @param {File} inputFile - JSON, JSONL, or text file containing agent input.
+   * @param {string} prompt - Optional extra prompt context.
+   * @param {{onStarted?: Function}} [options] - Optional callback after the backend accepts the run.
+   */
+  const runFromAgentInput = useCallback(async (startAgent, inputFile, prompt = '', options = {}) => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
+    const setupStartMs = Date.now();
+    statusRef.current = {};
+
+    dispatch({ type: 'WORKFLOW_START' });
+
+    try {
+      dispatch({ type: 'LOG', message: `Uploading input for ${AGENT_LABELS[startAgent] || startAgent}...`, level: 'info' });
+      const startForm = new FormData();
+      startForm.append('startAgent', startAgent);
+      startForm.append('prompt', prompt);
+      startForm.append('agentInput', inputFile);
+
+      const startRes = await fetchWithAbort(
+        '/api/workflow/start-from-agent-input',
+        { method: 'POST', body: startForm },
+        signal,
+      );
+      if (!startRes.ok) {
+        const err = await startRes.text().catch(() => `Status ${startRes.status}`);
+        throw new Error(`Failed to start agent-input workflow: ${err}`);
+      }
+
+      const { workflowId } = await startRes.json();
+      const setupElapsedSeconds = (Date.now() - setupStartMs) / 1000;
+
+      dispatch({ type: 'SETUP_COMPLETE', workflowId });
+      dispatch({
+        type: 'LOG',
+        message: `Workflow started from ${AGENT_LABELS[startAgent] || startAgent} (${workflowId})`,
+        level: 'info',
+      });
+      options.onStarted?.(workflowId);
+      await pollWorkflow(workflowId, setupElapsedSeconds, signal);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        dispatch({ type: 'WORKFLOW_ABORTED' });
+        return;
+      }
+      dispatch({ type: 'WORKFLOW_ERROR', message: err.message, outputFolder: err.outputFolder || '' });
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
+    }
+  }, [dispatch, pollWorkflow]);
+
+  return { run, runFromAgentInput, abort };
 }
