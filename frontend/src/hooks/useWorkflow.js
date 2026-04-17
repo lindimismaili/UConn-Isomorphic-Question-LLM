@@ -37,6 +37,26 @@ async function fetchWithAbort(url, options, signal) {
   }
 }
 
+/**
+ * Reads a useful error detail from a failed API response.
+ *
+ * @param {Response} response - Failed fetch response.
+ * @param {string} fallback - Message to use when the response has no body.
+ * @returns {Promise<string>}
+ */
+async function readErrorDetail(response, fallback) {
+  const text = await response.text().catch(() => '');
+  if (!text) return fallback;
+  try {
+    const data = JSON.parse(text);
+    if (typeof data?.detail === 'string') return data.detail;
+    if (Array.isArray(data?.detail)) return data.detail.map((item) => item?.msg || String(item)).join('; ');
+  } catch {
+    // Fall through to raw text.
+  }
+  return text;
+}
+
 /** Human-readable labels for workflow log messages. */
 const AGENT_LABELS = {
   normalizer: 'Normalizer',
@@ -344,7 +364,7 @@ export function useWorkflow(dispatch) {
    * @param {string} startAgent - Agent key to receive the uploaded input.
    * @param {File} inputFile - JSON, JSONL, or text file containing agent input.
    * @param {string} prompt - Optional extra prompt context.
-   * @param {{onStarted?: Function}} [options] - Optional callback after the backend accepts the run.
+   * @param {{onStarted?: Function, onError?: Function}} [options] - Optional lifecycle callbacks.
    */
   const runFromAgentInput = useCallback(async (startAgent, inputFile, prompt = '', options = {}) => {
     const controller = new AbortController();
@@ -368,8 +388,10 @@ export function useWorkflow(dispatch) {
         signal,
       );
       if (!startRes.ok) {
-        const err = await startRes.text().catch(() => `Status ${startRes.status}`);
-        throw new Error(`Failed to start agent-input workflow: ${err}`);
+        const detail = await readErrorDetail(startRes, `Status ${startRes.status}`);
+        const err = new Error(`Failed to start agent-input workflow: ${detail}`);
+        err.userMessage = detail;
+        throw err;
       }
 
       const { workflowId } = await startRes.json();
@@ -388,6 +410,7 @@ export function useWorkflow(dispatch) {
         dispatch({ type: 'WORKFLOW_ABORTED' });
         return;
       }
+      options.onError?.(err.userMessage || err.message);
       dispatch({ type: 'WORKFLOW_ERROR', message: err.message, outputFolder: err.outputFolder || '' });
     } finally {
       if (abortRef.current === controller) {

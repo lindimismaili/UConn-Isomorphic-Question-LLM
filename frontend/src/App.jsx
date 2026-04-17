@@ -614,8 +614,9 @@ export default function App() {
     dispatch({ type: "OPEN_MODAL", modal: "create-data" });
   };
 
-  const handleInputToAgentRun = (agentKey, inputFile, onStarted) => {
+  const handleInputToAgentRun = (agentKey, inputFile, callbacks = {}) => {
     if (serviceInactive) {
+      callbacks.onError?.("OpenAI servers are down; agent-input workflow start blocked.");
       dispatch({
         type: "LOG",
         message: "OpenAI servers are down; agent-input workflow start blocked.",
@@ -623,7 +624,7 @@ export default function App() {
       });
       return;
     }
-    runFromAgentInput(agentKey, inputFile, prompt, { onStarted });
+    runFromAgentInput(agentKey, inputFile, prompt, callbacks);
   };
 
   return (

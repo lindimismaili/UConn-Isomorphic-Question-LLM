@@ -26,6 +26,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 
 from agents import (
     Agent,
@@ -79,6 +80,7 @@ except ImportError:
 try:
     from .container import SharedWorkflowRuntime, allowed_domains_from_env
     from .schemas import (
+        AGENT_INPUT_TYPES,
         AGENT_OUTPUT_TYPES,
         ExtracterOutput,
         GeneratorOutput,
@@ -100,6 +102,7 @@ try:
 except ImportError:
     from container import SharedWorkflowRuntime, allowed_domains_from_env
     from schemas import (
+        AGENT_INPUT_TYPES,
         AGENT_OUTPUT_TYPES,
         ExtracterOutput,
         GeneratorOutput,
@@ -590,7 +593,7 @@ def _parse_agent_input_upload(content: bytes, filename: str) -> Any:
     if Path(filename).suffix.lower() in {".json", ".jsonl"}:
         raise HTTPException(
             status_code=400,
-            detail="Agent input JSON/JSONL could not be parsed",
+            detail="Schema match invalid",
         )
     return text
 
@@ -657,14 +660,20 @@ def _extract_agent_input_payload(value: Any) -> dict[str, Any]:
             "task",
             "configuration",
             "normalizer_config",
+            "user_input",
+            "defaults",
+            "rules",
             "source_questions",
             "verified_questions",
             "generated_questions",
             "isomorphic_questions",
             "questions",
             "document",
+            "requirements",
             "final_result",
             "result",
+            "rubric",
+            "evaluation_items",
             "latex_output",
             "latex_content",
             "latex_file",
@@ -835,25 +844,42 @@ def _agent_input_has_generated_questions(payload: dict[str, Any]) -> bool:
     return isinstance(raw_questions, list) and len(raw_questions) > 0
 
 
+def _raise_schema_match_invalid(start_agent: str, exc: Exception | None = None) -> None:
+    """Raise the standard agent-input schema validation error."""
+    if exc is not None:
+        logger.warning("Schema match invalid for %s input: %s", start_agent, exc)
+    raise HTTPException(status_code=400, detail="Schema match invalid")
+
+
 def _validate_input_to_agent_payload(start_agent: str, payload: Any) -> None:
-    """Validate uploaded agent input for stages that need reconstructed context."""
-    if start_agent != "evaluation":
-        return
-
+    """Validate uploaded agent input against the selected agent's input schema."""
     structured_payload = _extract_agent_input_payload(payload)
-    try:
-        _coerce_latex_from_agent_input(structured_payload)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not structured_payload:
+        _raise_schema_match_invalid(start_agent)
 
-    if not _agent_input_has_generated_questions(structured_payload):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Evaluation input must include generated question context in "
-                "final_result.generated_questions or generated_questions."
-            ),
-        )
+    input_type = AGENT_INPUT_TYPES.get(start_agent)
+    if input_type is None:
+        _raise_schema_match_invalid(start_agent)
+
+    try:
+        input_type.model_validate(structured_payload)
+    except ValidationError as exc:
+        _raise_schema_match_invalid(start_agent, exc)
+
+    if start_agent == "evaluation" and not _agent_input_has_generated_questions(structured_payload):
+        _raise_schema_match_invalid(start_agent)
+
+
+def _load_rubric_payload() -> dict[str, Any]:
+    """Load the rubric payload included in persisted Evaluation agent inputs."""
+    rubric_path = DATA_DIR / "rubric.json"
+    if not rubric_path.exists():
+        return {"model": _load_rubric_model(), "criteria": []}
+    try:
+        rubric = json.loads(rubric_path.read_text(encoding="utf-8"))
+        return rubric if isinstance(rubric, dict) else {"model": _load_rubric_model(), "criteria": []}
+    except Exception:
+        return {"model": _load_rubric_model(), "criteria": []}
 
 
 def _mark_provided_agent_state(
@@ -2870,6 +2896,7 @@ async def _execute_workflow(
                     "pdf_file": pdf_filename,
                     "latex_output": latex_output.model_dump(),
                     "final_result": evaluation_final_result,
+                    "rubric": _load_rubric_payload(),
                 }
                 if has_uploaded_agent_input and resume_from_agent == "evaluation":
                     evaluation_input = uploaded_agent_input
