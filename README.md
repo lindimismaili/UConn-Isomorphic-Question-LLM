@@ -181,6 +181,7 @@ Those files are the primary record of how the generated questions were judged.
 - [Run guide](docs/RUN.md)
 - [Cloud and live hosting notes](docs/LIVE.md)
 - [Raspberry Pi and Nginx deployment](docs/DEPLOYMENT_RPI_NGINX.md)
+- [Deploy script reference](deploy/README.md)
 
 ## Troubleshooting
 
