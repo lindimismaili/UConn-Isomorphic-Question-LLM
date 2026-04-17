@@ -24,6 +24,7 @@ SUPPORTED_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
 
 
 def sha256_file(path: Path) -> str:
+    """Return the SHA-256 digest of a file."""
     digest = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
@@ -32,6 +33,7 @@ def sha256_file(path: Path) -> str:
 
 
 def exif_to_dict(image: Image.Image) -> dict[str, Any]:
+    """Convert an image's EXIF metadata into plain Python values."""
     exif = image.getexif()
     if not exif:
         return {}
@@ -43,6 +45,7 @@ def exif_to_dict(image: Image.Image) -> dict[str, Any]:
 
 
 def run_ocr(image: Image.Image) -> tuple[str, float | None, list[str]]:
+    """Run OCR on an image and return text, confidence, and warnings."""
     warnings: list[str] = []
     if pytesseract is None:
         warnings.append("pytesseract is not installed; OCR text is empty.")
@@ -72,6 +75,7 @@ def run_ocr(image: Image.Image) -> tuple[str, float | None, list[str]]:
 
 
 def read_image(path: Path) -> dict[str, Any]:
+    """Read an image file into the normalized extraction payload."""
     with Image.open(path) as image:
         image.load()
         width, height = image.size
@@ -124,6 +128,7 @@ def read_image(path: Path) -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse the command line arguments for the image extractor."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="Path to an image file")
     parser.add_argument(
@@ -137,6 +142,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Run the image extraction CLI and write the normalized JSON payload."""
     args = parse_args()
     input_path = args.input.expanduser().resolve()
 

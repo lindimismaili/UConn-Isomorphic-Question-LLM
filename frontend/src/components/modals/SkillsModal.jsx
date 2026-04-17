@@ -3,6 +3,7 @@ import Modal from './Modal.jsx';
 import PromptViewerModal from './PromptViewerModal.jsx';
 import { IconZap } from '../Icons.jsx';
 
+/** Fallback skill list used when `/api/skills` is unavailable. */
 const FALLBACK_SKILLS = [
   'check-for-answers', 'confirm-answer', 'convert-to-latex',
   'create-function-for-question', 'determine-question-concept',
@@ -14,6 +15,11 @@ const FALLBACK_SKILLS = [
   'identify-title', 'verify-answer', 'verify-latex',
 ];
 
+/**
+ * Loads the current skill catalog from the API, with a static fallback.
+ *
+ * Touches `/api/skills`.
+ */
 async function fetchSkillsList() {
   try {
     const res = await fetch('/api/skills');
@@ -26,6 +32,11 @@ async function fetchSkillsList() {
   }
 }
 
+/**
+ * Lists available skills and opens the markdown viewer for each skill.
+ *
+ * @param {object} props
+ */
 export default function SkillsModal({ isOpen, onClose }) {
   const [skills, setSkills] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -52,7 +63,7 @@ export default function SkillsModal({ isOpen, onClose }) {
         title="Skills"
         modalBodyClassName="modal-body-flush"
         footer={
-          <button className="btn btn-secondary" onClick={onClose}>Close</button>
+          <button className="btn btn-primary" onClick={onClose}>Close</button>
         }
       >
         <div className="skills-list-body">

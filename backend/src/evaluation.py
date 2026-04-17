@@ -139,6 +139,7 @@ choice roles and misconception patterns; option letters do not need to match.
 
 
 def _load_rubric_config() -> dict[str, Any]:
+    """Load rubric criteria and grading model configuration from disk."""
     if not RUBRIC_PATH.exists():
         raise FileNotFoundError(f"Rubric file not found: {RUBRIC_PATH}")
 
@@ -175,18 +176,22 @@ QUESTION_LEVEL_CRITERIA = [
 
 
 def _utc_timestamp() -> str:
+    """Return the current UTC timestamp in ISO-8601 format."""
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _to_jsonl(items: list[dict[str, Any]]) -> str:
+    """Serialize evaluation items to JSONL text."""
     return "\n".join(json.dumps({"item": item}, ensure_ascii=False) for item in items)
 
 
 def _evaluation_relative_path(path: Path) -> str:
+    """Return the report-relative path used in persisted evaluation metadata."""
     return f"{EVALUATION_OUTPUTS_DIRNAME}/{path.name}"
 
 
 def _build_item_schema() -> dict[str, Any]:
+    """Return the item schema used when creating the OpenAI eval dataset."""
     return {
         "type": "object",
         "properties": {
@@ -200,6 +205,7 @@ def _build_item_schema() -> dict[str, Any]:
 
 
 def _format_guidance_lines(value: Any) -> list[str]:
+    """Normalize guidance text into a list of non-empty lines."""
     if isinstance(value, str):
         stripped = value.strip()
         return [stripped] if stripped else []
@@ -215,6 +221,7 @@ def _format_guidance_lines(value: Any) -> list[str]:
 
 
 def _format_criterion_prompt(criterion: dict[str, Any]) -> str:
+    """Render a rubric criterion into a grader prompt fragment."""
     question = str(criterion.get("question", "")).strip()
     lines = [f"Criterion: {question}" if question else "Criterion:"]
 
@@ -238,10 +245,12 @@ def _format_criterion_prompt(criterion: dict[str, Any]) -> str:
 
 
 def _normalize_whitespace(value: str) -> str:
+    """Collapse trailing whitespace while preserving intentional line breaks."""
     return "\n".join(line.rstrip() for line in value.strip().splitlines()).strip()
 
 
 def _format_option_lines(options: list[dict[str, Any]]) -> list[str]:
+    """Render answer options into plain text lines."""
     lines: list[str] = []
     for option in options:
         key = str(option.get("key", "")).strip()
@@ -254,6 +263,7 @@ def _format_option_lines(options: list[dict[str, Any]]) -> list[str]:
 
 
 def _format_part_lines(parts: list[dict[str, Any]]) -> list[str]:
+    """Render multi-part question sections into plain text lines."""
     lines: list[str] = []
     for part in parts:
         label = str(part.get("part_label", "")).strip()
@@ -268,6 +278,7 @@ def _format_part_lines(parts: list[dict[str, Any]]) -> list[str]:
 
 
 def _render_question_text(question: dict[str, Any]) -> str:
+    """Render one question record into comparable plain text."""
     stem = str(question.get("stem", "")).strip()
     question_type = str(question.get("question_type", "")).strip()
     skipped = bool(question.get("skipped"))
@@ -291,6 +302,7 @@ def _render_question_text(question: dict[str, Any]) -> str:
 
 
 def _render_source_question_text(question: dict[str, Any]) -> str:
+    """Render the source question text for eval comparisons."""
     source_raw = str(question.get("source_raw", "")).strip()
     if source_raw:
         return _normalize_whitespace(source_raw)
@@ -298,10 +310,12 @@ def _render_source_question_text(question: dict[str, Any]) -> str:
 
 
 def _render_generated_question_text(question: dict[str, Any]) -> str:
+    """Render the generated question text for eval comparisons."""
     return _render_question_text(question)
 
 
 def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
+    """Build the criterion definitions used when creating an eval."""
     criteria: list[dict[str, Any]] = []
     for criterion in QUESTION_LEVEL_CRITERIA:
         criteria.append(
@@ -336,6 +350,7 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
 
 
 def _build_run_data_source(eval_data_file_id: str) -> dict[str, Any]:
+    """Build the data source descriptor for an eval run."""
     return {
         "type": "jsonl",
         "source": {"type": "file_id", "id": eval_data_file_id},
@@ -343,6 +358,7 @@ def _build_run_data_source(eval_data_file_id: str) -> dict[str, Any]:
 
 
 def _resolve_latex_check(latex_path: Optional[Path]) -> dict[str, Any]:
+    """Return a synthetic pass/fail record for the LaTeX artifact check."""
     criterion = RUBRIC_CRITERIA_BY_NAME.get(
         LATEX_CRITERION_NAME,
         {
@@ -378,6 +394,7 @@ def _resolve_latex_check(latex_path: Optional[Path]) -> dict[str, Any]:
 
 
 def _normalize_criterion_name(result_name: str) -> Optional[str]:
+    """Map an eval result name back to a rubric criterion name when possible."""
     if result_name in RUBRIC_CRITERIA_BY_NAME:
         return result_name
     for criterion_name in RUBRIC_CRITERIA_BY_NAME:
@@ -387,6 +404,7 @@ def _normalize_criterion_name(result_name: str) -> Optional[str]:
 
 
 def _collect_output_items(client: OpenAI, eval_id: str, run_id: str) -> list[Any]:
+    """Collect all output items from a completed eval run."""
     first_page = client.evals.runs.output_items.list(
         eval_id=eval_id,
         run_id=run_id,
@@ -400,6 +418,7 @@ def _collect_output_items(client: OpenAI, eval_id: str, run_id: str) -> list[Any
 
 
 def _to_jsonable(value: Any) -> Any:
+    """Convert OpenAI eval output objects into JSON-serializable values."""
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")
     if hasattr(value, "to_dict"):
@@ -412,6 +431,7 @@ def _to_jsonable(value: Any) -> Any:
 
 
 def _write_output_items_jsonl(path: Path, output_items: list[Any]) -> None:
+    """Write eval output items to a JSONL file."""
     lines = [
         json.dumps(_to_jsonable(output_item), ensure_ascii=False, default=str)
         for output_item in output_items
@@ -420,6 +440,7 @@ def _write_output_items_jsonl(path: Path, output_items: list[Any]) -> None:
 
 
 def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any], list[str]]:
+    """Aggregate per-criterion scores and return any unmatched result names."""
     criterion_scores: dict[str, list[float]] = {
         criterion["name"]: [] for criterion in QUESTION_LEVEL_CRITERIA
     }
@@ -460,6 +481,7 @@ def _compute_overall_score(
     question_level_scores: dict[str, Any],
     latex_document_check: dict[str, Any],
 ) -> Optional[float]:
+    """Compute a combined score across question-level and LaTeX checks."""
     numeric_scores = [
         entry["score"]
         for entry in question_level_scores.values()
@@ -474,6 +496,7 @@ def _compute_overall_score(
 
 
 def _resolve_score_status(overall_score: Optional[float]) -> str:
+    """Translate the overall score into a coarse status label."""
     if not isinstance(overall_score, (int, float)):
         return "incomplete"
     return "passed" if float(overall_score) >= PASSING_SCORE_THRESHOLD else "failed"
@@ -488,6 +511,7 @@ def _build_base_report(
     items_evaluated: int,
     latex_document_check: dict[str, Any],
 ) -> dict[str, Any]:
+    """Build the common evaluation report skeleton."""
     report: dict[str, Any] = {
         "status": status,
         "created_at": _utc_timestamp(),

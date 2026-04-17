@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AgentCard from './AgentCard.jsx';
 
 // Fixed pipeline layout: three rows
+/** Fixed pipeline rows used to lay out the workflow graph. */
 const ROW1 = ['setup', 'normalizer', 'extracter'];
 const ROW2 = ['verifier', 'generator', 'latex'];
-const ROW3 = ['evaluation'];
+const ROW3 = ['evaluation', 'output'];
+/** Static connector map used to draw the pipeline SVG paths. */
 const CONNECTIONS = [
   { id: 'setup-normalizer', from: 'setup', to: 'normalizer', type: 'horizontal' },
   { id: 'normalizer-extracter', from: 'normalizer', to: 'extracter', type: 'horizontal' },
@@ -12,8 +14,16 @@ const CONNECTIONS = [
   { id: 'verifier-generator', from: 'verifier', to: 'generator', type: 'horizontal' },
   { id: 'generator-latex', from: 'generator', to: 'latex', type: 'horizontal' },
   { id: 'latex-evaluation', from: 'latex', to: 'evaluation', type: 'turn' },
+  { id: 'evaluation-output', from: 'evaluation', to: 'output', type: 'horizontal' },
 ];
 
+/**
+ * Derives connector status from the source agent state.
+ *
+ * @param {string} sourceStatus
+ * @param {string} previousStatus
+ * @returns {string}
+ */
 function statusForLine(sourceStatus, previousStatus) {
   // Connector turns green only after the source agent completes.
   if (sourceStatus === 'completed') {
@@ -26,6 +36,11 @@ function statusForLine(sourceStatus, previousStatus) {
   return 'inactive';
 }
 
+/**
+ * Renders one horizontal row of pipeline nodes.
+ *
+ * @param {{keys: string[], agents: object, onCardClick: Function, onNodeRef: Function}} props
+ */
 function AgentRow({ keys, agents, onCardClick, onNodeRef }) {
   return (
     <div className="agents-row">
@@ -38,6 +53,11 @@ function AgentRow({ keys, agents, onCardClick, onNodeRef }) {
   );
 }
 
+/**
+ * Renders the workflow graph and SVG connectors between agents.
+ *
+ * @param {{agents: object, onCardClick: Function}} props
+ */
 export default function AgentPipeline({ agents, onCardClick }) {
   const gridRef = useRef(null);
   const nodeRefs = useRef({});

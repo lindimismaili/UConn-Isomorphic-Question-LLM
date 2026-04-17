@@ -208,6 +208,7 @@ async def run_agent(
 
 
 def _agent_key_from_display_name(agent_name: str) -> str:
+    """Map a human-readable agent name back to its configuration key."""
     normalized_name = agent_name.strip().lower()
     for agent_key, display_name in AGENT_DISPLAY_NAMES.items():
         if normalized_name == display_name.lower():
@@ -225,6 +226,7 @@ def _write_agent_artifact_layout(
     output_folder_label: str,
     source_files: list[str],
 ) -> Path:
+    """Persist agent logs and workflow metadata in the canonical artifact layout."""
     metadata_records: list[dict[str, Any]] = []
     for record in agent_outputs:
         agent_name = str(record.get("agent_name", "Agent"))
@@ -359,6 +361,7 @@ def create_agents(
 
 
 def _any_agent_uses_code_interpreter(agents_config: dict[str, Any]) -> bool:
+    """Return True when any configured agent requests the code interpreter."""
     for _agent_key, cfg in agents_config.items():
         try:
             if bool(cfg.get("useCodeInterpreter", False)):

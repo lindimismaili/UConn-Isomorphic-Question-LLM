@@ -1,3 +1,5 @@
+"""Shared backend helpers for loading agent data and reconciling workflow output."""
+
 from __future__ import annotations
 
 import json
@@ -22,7 +24,16 @@ VALID_THEMES = {
 
 
 def load_agents_config(config_path: Path, logger: Any) -> dict[str, Any]:
-    """Load agent configuration from agents.json."""
+    """Load the agent configuration JSON.
+
+    Args:
+        config_path: Path to the `agents.json` file.
+        logger: Logger used to report missing or malformed configuration.
+
+    Returns:
+        Parsed configuration mapping, or an empty dict when the file is missing
+        or cannot be decoded.
+    """
 
     if not config_path.exists():
         logger.warning("Agents config not found: %s", config_path)
@@ -35,7 +46,16 @@ def load_agents_config(config_path: Path, logger: Any) -> dict[str, Any]:
 
 
 def load_prompt(prompts_dir: Path, logger: Any, name: str) -> str:
-    """Load a prompt from the prompts directory."""
+    """Load a named prompt template from disk.
+
+    Args:
+        prompts_dir: Directory containing prompt text files.
+        logger: Logger used to report missing or unreadable prompt files.
+        name: Prompt base name, without the `.txt` suffix.
+
+    Returns:
+        Prompt text, or an empty string when no usable file is found.
+    """
 
     prompt_candidates = [prompts_dir / f"{name}.txt"]
     if name == "latex":
@@ -55,7 +75,16 @@ def load_prompt(prompts_dir: Path, logger: Any, name: str) -> str:
 
 
 def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:
-    """Upload a file to OpenAI and return the file ID."""
+    """Upload a local file for later attachment to OpenAI tool calls.
+
+    Args:
+        client: OpenAI client used to create the file record.
+        file_path: Path to the file that should be uploaded.
+        logger: Logger used to record the returned file ID.
+
+    Returns:
+        The OpenAI file identifier.
+    """
 
     with open(file_path, "rb") as f:
         response = client.files.create(file=f, purpose="assistants")
@@ -64,13 +93,14 @@ def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:
 
 
 def _clean_metadata_value(value: Any) -> str:
+    """Normalize optional metadata to a stripped string."""
     if value is None:
         return ""
     return str(value).strip()
 
 
 def dominant_question_theme(questions: list[SourceQuestionItem]) -> str:
-    """Return the most common valid theme in extracted source questions."""
+    """Return the most common valid theme across the extracted questions."""
 
     ordered_themes = [
         q.theme.strip()
@@ -87,7 +117,7 @@ def apply_requested_difficulty(
     questions: list[SourceQuestionItem] | list[NewQuestionItem],
     difficulty: str,
 ) -> None:
-    """Keep difficulty blank unless the user requested an explicit target."""
+    """Apply a requested difficulty value to every question in place."""
 
     requested_difficulty = _clean_metadata_value(difficulty)
     for question in questions:
@@ -98,7 +128,11 @@ def merge_extracted_metadata_into_config(
     config: NormalizerOutput,
     extraction: ExtracterOutput,
 ) -> None:
-    """Promote extractor-discovered title/theme into config when the user left them blank."""
+    """Merge extractor-discovered metadata into the workflow configuration.
+
+    The function only fills blank configuration values and keeps the user's
+    requested difficulty setting authoritative.
+    """
 
     config.difficulty = _clean_metadata_value(config.difficulty)
     config.title = _clean_metadata_value(config.title)
@@ -121,7 +155,7 @@ def reconcile_verified_questions(
     extracted_questions: list[SourceQuestionItem],
     verified_questions: list[SourceQuestionItem],
 ) -> list[SourceQuestionItem]:
-    """Ensure no extracted source question is dropped by verifier output."""
+    """Keep verified output aligned with the originally extracted questions."""
 
     extracted_by_id: dict[str, SourceQuestionItem] = {}
     for q in extracted_questions:
@@ -161,6 +195,7 @@ def missing_generation_source_ids(
     generated_questions: list[NewQuestionItem],
     per_source: int,
 ) -> list[str]:
+    """Return source IDs whose generated question count is below expectation."""
     generated_count_by_source: dict[str, int] = {}
     for q in generated_questions:
         generated_count_by_source[q.source_id] = generated_count_by_source.get(q.source_id, 0) + 1
@@ -181,6 +216,13 @@ def build_json_message(
     Build a single user message where the textual part is strict JSON.
 
     This keeps cross-agent handoff data structured and machine-readable.
+
+    Args:
+        payload: JSON-serializable payload to embed in the text portion.
+        file_refs: Optional file attachment descriptors to prepend to the message.
+
+    Returns:
+        A single user message in the OpenAI Agents message format.
     """
 
     content: list[dict[str, Any]] = []

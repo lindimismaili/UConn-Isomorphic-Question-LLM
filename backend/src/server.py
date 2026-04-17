@@ -298,6 +298,7 @@ async def get_version_json():
 
 
 def _is_under_directory(path: Path, root: Path) -> bool:
+    """Return True when `path` resolves inside `root`."""
     try:
         path.resolve().relative_to(root.resolve())
         return True
@@ -317,10 +318,12 @@ TERMINAL_STATUSES = {"completed", "errored", "cancelled"}
 
 
 def _workflow_now() -> str:
+    """Return the server's workflow timestamp string."""
     return datetime.utcnow().isoformat() + "Z"
 
 
 def _touch_workflow(workflow: dict[str, Any]) -> None:
+    """Update a workflow record's last-modified timestamp."""
     workflow["updated_at"] = _workflow_now()
 
 
@@ -398,10 +401,12 @@ def _prune_batch_jobs() -> None:
 
 
 def _touch_batch_job(batch: dict[str, Any]) -> None:
+    """Update a batch job record's last-modified timestamp."""
     batch["updated_at"] = _workflow_now()
 
 
 def _new_workflow_record() -> dict[str, Any]:
+    """Create the initial in-memory workflow record."""
     now = _workflow_now()
     return {
         "status": "starting",
@@ -427,6 +432,7 @@ def _new_workflow_record() -> dict[str, Any]:
 
 
 def _mark_workflow_cancelled(workflow: dict[str, Any], reason: str = "Stopped by user") -> None:
+    """Mark a workflow and any running agents as cancelled."""
     workflow["status"] = "cancelled"
     workflow["error"] = reason
     now = datetime.now().isoformat()
@@ -447,6 +453,7 @@ def _mark_workflow_cancelled(workflow: dict[str, Any], reason: str = "Stopped by
 
 
 def _relative_output_folder(output_dir: Path) -> str:
+    """Render an output directory relative to the backend outputs root."""
     try:
         return output_dir.resolve().relative_to(OUTPUTS_DIR.resolve()).as_posix()
     except Exception:
@@ -454,12 +461,14 @@ def _relative_output_folder(output_dir: Path) -> str:
 
 
 def _sanitize_output_folder_name(name: str) -> str:
+    """Sanitize a user-supplied folder name for filesystem use."""
     cleaned = re.sub(r'[<>:"/\\|?*]+', "_", (name or "").strip())
     cleaned = cleaned.rstrip(". ")
     return cleaned or "submission"
 
 
 def _make_unique_output_folder_name(base_name: str, used_names: set[str]) -> str:
+    """Return a unique output folder name within the current submission set."""
     candidate = base_name
     suffix = 2
     while candidate in used_names:
@@ -470,12 +479,14 @@ def _make_unique_output_folder_name(base_name: str, used_names: set[str]) -> str
 
 
 def _agent_sequence_index(agent_key: str) -> int:
+    """Return the workflow position for an agent key."""
     if agent_key not in WORKFLOW_AGENT_SEQUENCE:
         raise ValueError(f"Unknown agent key: {agent_key}")
     return WORKFLOW_AGENT_SEQUENCE.index(agent_key)
 
 
 def _normalize_agent_key(value: str) -> str:
+    """Normalize user input into a canonical agent key."""
     raw = (value or "").strip().lower()
     if raw.isdigit():
         index = int(raw) - 1
@@ -492,10 +503,17 @@ def _normalize_agent_key(value: str) -> str:
 
 
 def _should_run_agent(candidate_key: str, start_agent: str) -> bool:
+    """Return True when the candidate is at or after the requested start agent."""
     return _agent_sequence_index(candidate_key) >= _agent_sequence_index(start_agent)
 
 
 def _resolve_output_folder_label(label: str) -> Path:
+    """Resolve and validate a requested output-folder label.
+
+    Raises:
+        HTTPException: If the label is missing, malformed, or points outside the
+            outputs directory.
+    """
     rel_path = Path((label or "").strip())
     if not rel_path.parts:
         raise HTTPException(status_code=400, detail="sourceOutputFolder is required")
@@ -511,6 +529,7 @@ def _resolve_output_folder_label(label: str) -> Path:
 
 
 def _validate_resume_agent_output(agent_key: str, payload: Any) -> Any:
+    """Validate a cached agent payload against the agent's output schema."""
     if payload is None:
         raise ValueError(f"Missing cached output for {agent_key}")
 
@@ -521,6 +540,7 @@ def _validate_resume_agent_output(agent_key: str, payload: Any) -> Any:
 
 
 def _load_resume_agent_output(resume_source_dir: Path, agent_key: str) -> Any:
+    """Load and validate cached output for a resumed workflow step."""
     payload = load_agent_output_payload(resume_source_dir, agent_key)
     return _validate_resume_agent_output(agent_key, payload)
 
@@ -532,6 +552,7 @@ def _mark_reused_agent_state(
     agent_output: Any,
     source_folder: str,
 ) -> None:
+    """Record that a workflow agent reused cached output from a prior run."""
     agent_state = workflow["agents"].get(agent_key)
     if not agent_state:
         return
@@ -556,6 +577,7 @@ def _copy_or_record_reused_agent_artifact(
     resume_source_dir: Path,
     resume_source_label: str,
 ) -> dict[str, Any]:
+    """Persist artifacts for a resumed agent run using cached inputs when available."""
     agent_name = AGENT_DISPLAY_NAMES.get(agent_key, agent_key.title())
     cached_input = load_agent_input_payload(resume_source_dir, agent_key)
     if cached_input is None:
@@ -583,12 +605,14 @@ def _copy_or_record_reused_agent_artifact(
 
 
 def _agent_reasoning_level(agent: Agent) -> Optional[str]:
+    """Return the configured reasoning effort for an agent, if any."""
     if agent.model_settings and agent.model_settings.reasoning:
         return agent.model_settings.reasoning.effort
     return None
 
 
 def _list_evaluation_source_files() -> list[Path]:
+    """Return uploadable files from the evaluation data directory."""
     if not EVALUATION_DIR.exists():
         return []
 
@@ -600,6 +624,19 @@ def _list_evaluation_source_files() -> list[Path]:
             continue
         files.append(path)
     return files
+
+
+def _load_rubric_model() -> str:
+    """Load the rubric model from configuration, falling back to a default."""
+    rubric_model = "gpt-5.4-nano"
+    rubric_path = DATA_DIR / "rubric.json"
+    if not rubric_path.exists():
+        return rubric_model
+    try:
+        rubric = json.loads(rubric_path.read_text(encoding="utf-8"))
+        return str(rubric.get("model") or rubric_model)
+    except Exception:
+        return rubric_model
 
 
 CREATE_DATA_STEP_SEQUENCE: list[tuple[str, str]] = [
@@ -614,6 +651,7 @@ CREATE_DATA_STEP_SEQUENCE: list[tuple[str, str]] = [
 
 
 def _get_batch_entry_step(entry: dict[str, Any]) -> dict[str, Any]:
+    """Return the normalized step state for a batch entry."""
     total_steps = len(CREATE_DATA_STEP_SEQUENCE)
     step_index = 1
     step_key, step_name = CREATE_DATA_STEP_SEQUENCE[0]
@@ -650,6 +688,7 @@ def _get_batch_entry_step(entry: dict[str, Any]) -> dict[str, Any]:
 
 
 def _summarize_batch_entries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Summarize batch entries for the API response payload."""
     summary: list[dict[str, Any]] = []
     for entry in entries:
         step = _get_batch_entry_step(entry)
@@ -673,6 +712,7 @@ def _summarize_batch_entries(entries: list[dict[str, Any]]) -> list[dict[str, An
 
 
 def _refresh_batch_progress(batch: dict[str, Any]) -> None:
+    """Recompute aggregate batch counters from the entry list."""
     entries = batch.get("entries", [])
     completed = sum(1 for entry in entries if entry.get("status") == "completed")
     failed = sum(1 for entry in entries if entry.get("status") == "errored")
@@ -751,6 +791,7 @@ def create_agents(
 
 
 def _any_agent_uses_code_interpreter(agents_config: dict[str, Any]) -> bool:
+    """Return True when at least one agent is configured to use code interpreter."""
     for _agent_key, cfg in agents_config.items():
         try:
             if bool(cfg.get("useCodeInterpreter", False)):
@@ -883,21 +924,15 @@ async def get_agents():
     
     try:
         agents = json.loads(agents_path.read_text(encoding="utf-8"))
-        rubric_model = "gpt-5.4-nano"
-        rubric_path = DATA_DIR / "rubric.json"
-        if rubric_path.exists():
-            try:
-                rubric = json.loads(rubric_path.read_text(encoding="utf-8"))
-                rubric_model = str(rubric.get("model") or rubric_model)
-            except Exception:
-                pass
+        rubric_model = _load_rubric_model()
 
         return {
             "setup": {
                 "name": "Setup",
                 "description": "Prepares the shared workflow runtime",
-                "model": DEFAULT_BOOTSTRAP_MODEL,
+                "model": "OpenAI Runtime",
                 "reasoning": "none",
+                "kind": "runtime",
                 "inputFrom": "User",
                 "outputTo": "Normalizer",
             },
@@ -907,7 +942,17 @@ async def get_agents():
                 "description": "Scores generated outputs and writes evaluation artifacts",
                 "model": rubric_model,
                 "reasoning": "none",
+                "kind": "agent",
                 "inputFrom": "LaTeX Formatter",
+                "outputTo": "Output",
+            },
+            "output": {
+                "name": "Output",
+                "description": "Finalizes workflow files and result metadata",
+                "model": "Workflow Runtime",
+                "reasoning": "none",
+                "kind": "runtime",
+                "inputFrom": "Evaluation",
                 "outputTo": "User",
             },
         }
@@ -2132,6 +2177,7 @@ async def _execute_workflow(
             if _should_run_agent("evaluation", resume_from_agent):
                 workflow["agents"]["evaluation"]["status"] = "thinking"
                 workflow["agents"]["evaluation"]["data"]["startTime"] = datetime.now().isoformat()
+                workflow["agents"]["evaluation"]["data"]["model"] = _load_rubric_model()
                 _touch_workflow(workflow)
 
             if _should_run_agent("evaluation", resume_from_agent):
@@ -2214,6 +2260,7 @@ async def _execute_workflow(
             workflow["agents"]["output"]["data"]["startTime"] = datetime.now().isoformat()
             workflow["agents"]["output"]["data"]["receivedFrom"] = "evaluation"
             workflow["agents"]["output"]["data"]["sentTo"] = "user"
+            workflow["agents"]["output"]["data"]["model"] = "Workflow Runtime"
             workflow["agents"]["output"]["data"]["input"] = (
                 f"Finalize local output files in outputs/{output_folder_label}"
             )
@@ -2392,6 +2439,7 @@ async def run_create_data_batch_async(batch_id: str):
         _touch_batch_job(batch)
 
         async def run_entry(entry: dict[str, Any]) -> None:
+            """Run one evaluation-file workflow and record its batch status."""
             async with semaphore:
                 if batch.get("cancel_requested") or batch.get("status") == "cancelled":
                     entry["status"] = "cancelled"
@@ -2510,6 +2558,7 @@ if DIST_DIR.is_dir() and (DIST_DIR / "index.html").is_file():
 else:
     @app.get("/", include_in_schema=False)
     async def root():
+        """Return a diagnostic landing page when the frontend has not been built."""
         return HTMLResponse(
             """
 <!doctype html>
@@ -2522,7 +2571,7 @@ else:
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;">
     <h2>Frontend not built</h2>
     <p>This FastAPI server is running, but <code>dist/index.html</code> was not found.</p>
-    <p>Dev UI: run <code>npm -C frontend run dev</code> (then open the Vite URL).</p>
+    <p>Dev UI: run <code>npm -C frontend run dev:ui</code> (then open the Vite URL).</p>
     <p>Prod UI: run <code>npm -C frontend run build</code>, then refresh this page.</p>
     <p>API health: <a href="/api/health">/api/health</a></p>
   </body>

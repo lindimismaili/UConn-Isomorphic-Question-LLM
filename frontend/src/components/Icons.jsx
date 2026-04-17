@@ -1,5 +1,15 @@
-// Shared SVG icon components used throughout the app
+/**
+ * Shared SVG icon components used throughout the app.
+ *
+ * These components are intentionally tiny and stateless so the UI can reuse
+ * the same icon shapes across buttons, cards, and modal headers.
+ */
 
+/**
+ * Computer icon used for runtime and agent cards.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconComputer({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -10,6 +20,11 @@ export function IconComputer({ className }) {
   );
 }
 
+/**
+ * Lightbulb icon used while an agent is thinking.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconLightbulb({ className }) {
   return (
     <svg className={className} viewBox="0 0 16 16" fill="currentColor">
@@ -18,6 +33,11 @@ export function IconLightbulb({ className }) {
   );
 }
 
+/**
+ * Success badge icon for completed agents.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconPatchCheck({ className }) {
   return (
     <svg className={className} viewBox="0 0 16 16" fill="currentColor">
@@ -27,6 +47,11 @@ export function IconPatchCheck({ className }) {
   );
 }
 
+/**
+ * Error badge icon for failed agents.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconPatchExclamation({ className }) {
   return (
     <svg className={className} viewBox="0 0 16 16" fill="currentColor">
@@ -36,6 +61,11 @@ export function IconPatchExclamation({ className }) {
   );
 }
 
+/**
+ * Right-arrow icon used in navigation and action affordances.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconArrowRight({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -45,6 +75,11 @@ export function IconArrowRight({ className }) {
   );
 }
 
+/**
+ * Close icon used by modal chrome.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconClose({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -54,6 +89,11 @@ export function IconClose({ className }) {
   );
 }
 
+/**
+ * File icon used for uploads, prompts, and artifact rows.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconFile({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -63,6 +103,11 @@ export function IconFile({ className }) {
   );
 }
 
+/**
+ * Upload icon used for file selection.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconUpload({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -73,6 +118,11 @@ export function IconUpload({ className }) {
   );
 }
 
+/**
+ * Trash icon used for destructive file-removal actions.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconTrash({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,6 +132,11 @@ export function IconTrash({ className }) {
   );
 }
 
+/**
+ * Monitor icon used for preview actions.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconMonitor({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -91,6 +146,11 @@ export function IconMonitor({ className }) {
   );
 }
 
+/**
+ * Send icon used on the main workflow action button.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconSend({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -100,6 +160,11 @@ export function IconSend({ className }) {
   );
 }
 
+/**
+ * Success icon used in completion summaries.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconCheckCircle({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -109,6 +174,11 @@ export function IconCheckCircle({ className }) {
   );
 }
 
+/**
+ * Failure icon used in error summaries.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconXCircle({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -119,6 +189,11 @@ export function IconXCircle({ className }) {
   );
 }
 
+/**
+ * Folder icon used for output locations.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconFolder({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -127,6 +202,11 @@ export function IconFolder({ className }) {
   );
 }
 
+/**
+ * Download icon used on export actions.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconDownload({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -137,6 +217,11 @@ export function IconDownload({ className }) {
   );
 }
 
+/**
+ * Lightning icon used for batch and skill actions.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconZap({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -145,6 +230,11 @@ export function IconZap({ className }) {
   );
 }
 
+/**
+ * Bulleted list icon used for evaluation summaries.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconList({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -158,6 +248,11 @@ export function IconList({ className }) {
   );
 }
 
+/**
+ * Info icon used for summary/help entry points.
+ *
+ * @param {{className?: string}} props
+ */
 export function IconInfo({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

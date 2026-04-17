@@ -1,6 +1,11 @@
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
 
+/**
+ * Lists uploaded files and exposes per-file removal actions.
+ *
+ * @param {object} props
+ */
 export default function FilesModal({ isOpen, onClose, files, onRemove }) {
   return (
     <Modal
@@ -8,7 +13,7 @@ export default function FilesModal({ isOpen, onClose, files, onRemove }) {
       onClose={onClose}
       title="Uploaded Files"
       footer={
-        <button className="btn btn-secondary" onClick={onClose}>Close</button>
+        <button className="btn btn-primary" onClick={onClose}>Close</button>
       }
     >
       <div className="modal-body-stack">

@@ -1,0 +1,522 @@
+{
+  "generated_at": "2026-04-17T06:49:09.666479Z",
+  "workflow_id": "849936d8",
+  "workflow_type": "full",
+  "output_folder": "2026_04_17_02_45_31",
+  "resumed_from": null,
+  "source_files": [
+    {
+      "name": "short_set.pdf",
+      "path": "/Users/lindimismaili/GitHub/UConn-IsomorphicQuestionLLM/backend/data/evaluation/short_set.pdf",
+      "exists": true
+    }
+  ],
+  "agents": [
+    {
+      "model": "gpt-5.4-mini",
+      "execution_time_seconds": 1.4029269218444824,
+      "received_from_node": "user",
+      "sent_to_node": "extracter",
+      "input_summary": "1 message(s)",
+      "agent_key": "normalizer",
+      "agent_name": "Normalizer",
+      "workflow_id": "849936d8",
+      "status": "completed",
+      "input_metadata": {
+        "payload_type": "messages",
+        "message_count": 1,
+        "messages": [
+          {
+            "role": "user",
+            "keys": [
+              "role",
+              "content"
+            ],
+            "content": [
+              {
+                "type": "input_text",
+                "keys": [
+                  "type",
+                  "text"
+                ],
+                "text": {
+                  "type": "text",
+                  "length": 567,
+                  "format": "json",
+                  "json_type": "object",
+                  "keys": [
+                    "task",
+                    "user_input",
+                    "defaults",
+                    "rules"
+                  ],
+                  "field_types": {
+                    "task": "string",
+                    "user_input": "object",
+                    "defaults": "object",
+                    "rules": "object"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "output_metadata": {
+        "payload_type": "object",
+        "python_type": "NormalizerOutput",
+        "json_type": "object",
+        "keys": [
+          "new_questions_per_question",
+          "difficulty",
+          "theme",
+          "title",
+          "notes"
+        ],
+        "field_types": {
+          "new_questions_per_question": "integer",
+          "difficulty": "string",
+          "theme": "string",
+          "title": "string",
+          "notes": "string"
+        }
+      },
+      "recorded_at": "2026-04-17T06:45:51.421693Z",
+      "attempt": 1,
+      "input_artifact": "agent_outputs/normalizer/agent_input.jsonl",
+      "output_artifact": "agent_outputs/normalizer/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "execution_time_seconds": 15.90099811553955,
+      "received_from_node": "normalizer",
+      "sent_to_node": "verifier",
+      "input_summary": "1 message(s)",
+      "questions_count": 3,
+      "agent_key": "extracter",
+      "agent_name": "Extracter",
+      "workflow_id": "849936d8",
+      "status": "completed",
+      "input_metadata": {
+        "payload_type": "messages",
+        "message_count": 1,
+        "messages": [
+          {
+            "role": "user",
+            "keys": [
+              "role",
+              "content"
+            ],
+            "content": [
+              {
+                "type": "input_file",
+                "keys": [
+                  "type",
+                  "file_id"
+                ],
+                "file_id": "file-QrTNwJgzT4D2ujLc6eRC3H"
+              },
+              {
+                "type": "input_text",
+                "keys": [
+                  "type",
+                  "text"
+                ],
+                "text": {
+                  "type": "text",
+                  "length": 767,
+                  "format": "json",
+                  "json_type": "object",
+                  "keys": [
+                    "task",
+                    "files",
+                    "normalizer_config",
+                    "requirements"
+                  ],
+                  "field_types": {
+                    "task": "string",
+                    "files": "array",
+                    "normalizer_config": "object",
+                    "requirements": "object"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "output_metadata": {
+        "payload_type": "object",
+        "python_type": "ExtracterOutput",
+        "json_type": "object",
+        "keys": [
+          "filename",
+          "title",
+          "theme",
+          "author",
+          "date",
+          "course",
+          "questions"
+        ],
+        "field_types": {
+          "filename": "string",
+          "title": "string",
+          "theme": "string",
+          "author": "string",
+          "date": "string",
+          "course": "string",
+          "questions": "array"
+        }
+      },
+      "recorded_at": "2026-04-17T06:46:07.323873Z",
+      "attempt": 1,
+      "input_artifact": "agent_outputs/extracter/agent_input.jsonl",
+      "output_artifact": "agent_outputs/extracter/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4",
+      "reasoning_level": "medium",
+      "execution_time_seconds": 26.73318910598755,
+      "received_from_node": "extracter",
+      "sent_to_node": "generator",
+      "input_summary": "1 message(s)",
+      "questions_count": 3,
+      "agent_key": "verifier",
+      "agent_name": "Verifier",
+      "workflow_id": "849936d8",
+      "status": "completed",
+      "input_metadata": {
+        "payload_type": "messages",
+        "message_count": 1,
+        "messages": [
+          {
+            "role": "user",
+            "keys": [
+              "role",
+              "content"
+            ],
+            "content": [
+              {
+                "type": "input_text",
+                "keys": [
+                  "type",
+                  "text"
+                ],
+                "text": {
+                  "type": "text",
+                  "length": 5860,
+                  "format": "json",
+                  "json_type": "object",
+                  "keys": [
+                    "task",
+                    "source_questions",
+                    "requirements"
+                  ],
+                  "field_types": {
+                    "task": "string",
+                    "source_questions": "object",
+                    "requirements": "object"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "output_metadata": {
+        "payload_type": "object",
+        "python_type": "VerifierOutput",
+        "json_type": "object",
+        "keys": [
+          "questions"
+        ],
+        "field_types": {
+          "questions": "array"
+        }
+      },
+      "recorded_at": "2026-04-17T06:46:34.058453Z",
+      "attempt": 1,
+      "input_artifact": "agent_outputs/verifier/agent_input.jsonl",
+      "output_artifact": "agent_outputs/verifier/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4",
+      "reasoning_level": "medium",
+      "execution_time_seconds": 45.21768498420715,
+      "received_from_node": "verifier",
+      "sent_to_node": "latex",
+      "input_summary": "1 message(s)",
+      "questions_count": 3,
+      "agent_key": "generator",
+      "agent_name": "Generator",
+      "workflow_id": "849936d8",
+      "status": "completed",
+      "input_metadata": {
+        "payload_type": "messages",
+        "message_count": 1,
+        "messages": [
+          {
+            "role": "user",
+            "keys": [
+              "role",
+              "content"
+            ],
+            "content": [
+              {
+                "type": "input_text",
+                "keys": [
+                  "type",
+                  "text"
+                ],
+                "text": {
+                  "type": "text",
+                  "length": 8830,
+                  "format": "json",
+                  "json_type": "object",
+                  "keys": [
+                    "task",
+                    "configuration",
+                    "source_questions",
+                    "requirements"
+                  ],
+                  "field_types": {
+                    "task": "string",
+                    "configuration": "object",
+                    "source_questions": "object",
+                    "requirements": "object"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "output_metadata": {
+        "payload_type": "object",
+        "python_type": "GeneratorOutput",
+        "json_type": "object",
+        "keys": [
+          "isomorphic_questions"
+        ],
+        "field_types": {
+          "isomorphic_questions": "array"
+        }
+      },
+      "recorded_at": "2026-04-17T06:47:19.277063Z",
+      "attempt": 1,
+      "input_artifact": "agent_outputs/generator/agent_input.jsonl",
+      "output_artifact": "agent_outputs/generator/agent_output.jsonl"
+    },
+    {
+      "model": "gpt-5.4",
+      "reasoning_level": "medium",
+      "execution_time_seconds": 73.31848287582397,
+      "received_from_node": "generator",
+      "sent_to_node": "evaluation",
+      "input_summary": "1 message(s)",
+      "filename": "isomorphic_questions.tex",
+      "pdf_filename": "isomorphic_questions.pdf",
+      "agent_key": "latex",
+      "agent_name": "LaTeX Formatter",
+      "workflow_id": "849936d8",
+      "status": "completed",
+      "input_metadata": {
+        "payload_type": "messages",
+        "message_count": 1,
+        "messages": [
+          {
+            "role": "user",
+            "keys": [
+              "role",
+              "content"
+            ],
+            "content": [
+              {
+                "type": "input_text",
+                "keys": [
+                  "type",
+                  "text"
+                ],
+                "text": {
+                  "type": "text",
+                  "length": 5986,
+                  "format": "json",
+                  "json_type": "object",
+                  "keys": [
+                    "task",
+                    "document",
+                    "questions",
+                    "requirements"
+                  ],
+                  "field_types": {
+                    "task": "string",
+                    "document": "object",
+                    "questions": "array",
+                    "requirements": "object"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "output_metadata": {
+        "payload_type": "object",
+        "python_type": "LaTeXOutput",
+        "json_type": "object",
+        "keys": [
+          "latex_content",
+          "filename",
+          "pdf_filename"
+        ],
+        "field_types": {
+          "latex_content": "string",
+          "filename": "string",
+          "pdf_filename": "string"
+        }
+      },
+      "recorded_at": "2026-04-17T06:48:32.598536Z",
+      "attempt": 1,
+      "input_artifact": "agent_outputs/latex/agent_input.jsonl",
+      "output_artifact": "agent_outputs/latex/agent_output.jsonl"
+    },
+    {
+      "execution_time_seconds": 37.0628502368927,
+      "received_from_node": "latex",
+      "sent_to_node": "output",
+      "input_summary": "Evaluate generated output artifacts for workflow 849936d8",
+      "agent_key": "evaluation",
+      "agent_name": "Evaluation",
+      "workflow_id": "849936d8",
+      "status": "completed",
+      "input_metadata": {
+        "payload_type": "object",
+        "json_type": "object",
+        "keys": [
+          "task",
+          "workflow_id",
+          "latex_file",
+          "pdf_file"
+        ],
+        "field_types": {
+          "task": "string",
+          "workflow_id": "string",
+          "latex_file": "string",
+          "pdf_file": "string"
+        }
+      },
+      "output_metadata": {
+        "payload_type": "object",
+        "python_type": "dict",
+        "json_type": "object",
+        "keys": [
+          "status",
+          "created_at",
+          "rubric",
+          "items_evaluated",
+          "grader_model",
+          "dataset_file",
+          "criterion_scores",
+          "latex_document_check",
+          "overall_score",
+          "passing_score_threshold",
+          "eval_data_file_id",
+          "eval_id",
+          "run_id",
+          "run_status",
+          "output_items_count",
+          "output_items_file",
+          "report_url"
+        ],
+        "field_types": {
+          "status": "string",
+          "created_at": "string",
+          "rubric": "array",
+          "items_evaluated": "integer",
+          "grader_model": "string",
+          "dataset_file": "string",
+          "criterion_scores": "object",
+          "latex_document_check": "object",
+          "overall_score": "number",
+          "passing_score_threshold": "number",
+          "eval_data_file_id": "string",
+          "eval_id": "string",
+          "run_id": "string",
+          "run_status": "string",
+          "output_items_count": "integer",
+          "output_items_file": "string",
+          "report_url": "string"
+        }
+      },
+      "recorded_at": "2026-04-17T06:49:09.664185Z",
+      "attempt": 1,
+      "input_artifact": "agent_outputs/evaluation/agent_input.jsonl",
+      "output_artifact": "agent_outputs/evaluation/agent_output.jsonl"
+    },
+    {
+      "execution_time_seconds": 0.0005638599395751953,
+      "received_from_node": "evaluation",
+      "sent_to_node": "user",
+      "input_summary": "Finalize output files for workflow 849936d8",
+      "output_folder": "/Users/lindimismaili/GitHub/UConn-IsomorphicQuestionLLM/backend/outputs/2026_04_17_02_45_31",
+      "files": [
+        "final_result.json",
+        "isomorphic_questions.tex",
+        "isomorphic_questions.pdf",
+        "evaluation_outputs/evaluation_report.json",
+        "evaluation_outputs/evaluation_dataset.jsonl",
+        "evaluation_outputs/evaluation_items.jsonl",
+        "agent_outputs/normalizer/agent_input.jsonl",
+        "agent_outputs/normalizer/agent_output.jsonl",
+        "agent_outputs/extracter/agent_input.jsonl",
+        "agent_outputs/extracter/agent_output.jsonl",
+        "agent_outputs/verifier/agent_input.jsonl",
+        "agent_outputs/verifier/agent_output.jsonl",
+        "agent_outputs/generator/agent_input.jsonl",
+        "agent_outputs/generator/agent_output.jsonl",
+        "agent_outputs/latex/agent_input.jsonl",
+        "agent_outputs/latex/agent_output.jsonl",
+        "agent_outputs/evaluation/agent_input.jsonl",
+        "agent_outputs/evaluation/agent_output.jsonl",
+        "agent_outputs/output/agent_input.jsonl",
+        "agent_outputs/output/agent_output.jsonl",
+        "agent_outputs/agent_metadata_output.json"
+      ],
+      "agent_key": "output",
+      "agent_name": "Output",
+      "workflow_id": "849936d8",
+      "status": "completed",
+      "input_metadata": {
+        "payload_type": "object",
+        "json_type": "object",
+        "keys": [
+          "task",
+          "workflow_id",
+          "output_folder"
+        ],
+        "field_types": {
+          "task": "string",
+          "workflow_id": "string",
+          "output_folder": "string"
+        }
+      },
+      "output_metadata": {
+        "payload_type": "object",
+        "python_type": "dict",
+        "json_type": "object",
+        "keys": [
+          "output_folder",
+          "files"
+        ],
+        "field_types": {
+          "output_folder": "string",
+          "files": "array"
+        }
+      },
+      "recorded_at": "2026-04-17T06:49:09.665891Z",
+      "attempt": 1,
+      "input_artifact": "agent_outputs/output/agent_input.jsonl",
+      "output_artifact": "agent_outputs/output/agent_output.jsonl"
+    }
+  ]
+}

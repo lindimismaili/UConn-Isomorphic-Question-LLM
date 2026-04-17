@@ -9,6 +9,7 @@ import {
 import PdfPreviewModal from './modals/PdfPreviewModal.jsx';
 import EvalResultsModal from './modals/EvalResultsModal.jsx';
 
+/** Preferred ordering for artifact groups in the download list. */
 const AGENT_ORDER = [
   'normalizer',
   'extracter',
@@ -19,6 +20,7 @@ const AGENT_ORDER = [
   'output',
 ];
 
+/** Human-readable labels for artifact group headings. */
 const AGENT_LABELS = {
   normalizer: 'Normalizer',
   extracter: 'Extracter',
@@ -29,16 +31,34 @@ const AGENT_LABELS = {
   output: 'Output',
 };
 
+/**
+ * Normalizes the result output-folder label shown to the user.
+ *
+ * @param {string} folder
+ * @returns {string}
+ */
 function formatOutputFolderPath(folder) {
   if (!folder) return 'outputs/';
   return folder.startsWith('outputs/') ? folder : `outputs/${folder}`;
 }
 
+/**
+ * Formats the workflow elapsed time for the summary header.
+ *
+ * @param {number} seconds
+ * @returns {string}
+ */
 function formatElapsed(seconds) {
   if (typeof seconds !== 'number' || Number.isNaN(seconds)) return '';
   return `${seconds.toFixed(2)}s`;
 }
 
+/**
+ * Merges the workflow file list with evaluation and artifact files.
+ *
+ * @param {object} result - Final workflow result payload.
+ * @returns {Array<object>} Deduplicated download entries.
+ */
 function collectResultFiles(result) {
   const mergedFiles = [];
   const seen = new Set();
@@ -138,6 +158,12 @@ function buildAgentOutputSections(agentFiles) {
   return { metadataFiles, agentGroups };
 }
 
+/**
+ * Splits result files into main downloads, evaluation files, and agent logs.
+ *
+ * @param {Array<{name: string}>} files
+ * @returns {{mainFiles: Array<object>, evaluationFiles: Array<object>, agentFiles: Array<object>}}
+ */
 function splitDownloadFiles(files) {
   const mainFiles = files
     .filter(
@@ -161,6 +187,11 @@ function splitDownloadFiles(files) {
   return { mainFiles, evaluationFiles, agentFiles };
 }
 
+/**
+ * Renders the completed workflow summary and download surface.
+ *
+ * @param {{result: object}} props
+ */
 export default function ResultsSection({ result }) {
   const sectionRef = useRef(null);
   const previewCloseTimerRef = useRef(null);
@@ -241,12 +272,13 @@ export default function ResultsSection({ result }) {
 
   const renderFileRow = (file) => {
     const fileName = file.name;
+    const displayName = baseName(fileName);
     const pdfFile = isPdfFile(fileName);
     const evalReportFile = fileName === evalReportFileName;
     return (
       <div key={fileName} className="download-item">
         <span className="download-item-name" title={fileName}>
-          {fileName}
+          {displayName}
         </span>
         <div className="download-item-actions">
           {pdfFile && (
@@ -350,12 +382,12 @@ export default function ResultsSection({ result }) {
                       {agentGroups.map((agent) => (
                         <section className="agent-output-agent-section" key={agent.key}>
                           <h6 className="agent-output-agent-heading">{agent.label}</h6>
-                          <div className="agent-output-subcolumns">
-                            <div className="agent-output-subcolumn">
+                          <div className="agent-output-actions">
+                            <div className="agent-output-action-group">
                               <span className="agent-output-kind">Input</span>
                               {renderAgentArtifactButton(agent.inputFile, 'Download', 'Input')}
                             </div>
-                            <div className="agent-output-subcolumn">
+                            <div className="agent-output-action-group">
                               <span className="agent-output-kind">Output</span>
                               {renderAgentArtifactButton(agent.outputFile, 'Download', 'Output')}
                             </div>

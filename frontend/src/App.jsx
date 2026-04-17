@@ -12,6 +12,7 @@ import TestFilesModal from "./components/modals/TestFilesModal.jsx";
 import CreateDataModal from "./components/modals/CreateDataModal.jsx";
 import AgentDetailModal from "./components/modals/AgentDetailModal.jsx";
 import SetupModal from "./components/modals/SetupModal.jsx";
+import OutputModal from "./components/modals/OutputModal.jsx";
 import HelpModal from "./components/modals/HelpModal.jsx";
 import SkillsModal from "./components/modals/SkillsModal.jsx";
 
@@ -23,12 +24,16 @@ import { useCreateData } from "./hooks/useCreateData.js";
 // Initial State
 // =============================================================================
 
+/**
+ * Baseline agent/runtime metadata rendered before the backend loads config.
+ */
 const INITIAL_AGENTS = {
   setup: {
     name: "Setup",
-    description: "Setting up environment",
-    model: "Unavailable",
+    description: "Prepares the shared workflow runtime",
+    model: "OpenAI Runtime",
     reasoningLevel: "Unavailable",
+    kind: "runtime",
     status: "inactive",
     startTime: null,
     endTime: null,
@@ -43,6 +48,7 @@ const INITIAL_AGENTS = {
     description: "Unavailable",
     model: "Unavailable",
     reasoningLevel: "Unavailable",
+    kind: "agent",
     status: "inactive",
     startTime: null,
     endTime: null,
@@ -57,6 +63,7 @@ const INITIAL_AGENTS = {
     description: "Unavailable",
     model: "Unavailable",
     reasoningLevel: "Unavailable",
+    kind: "agent",
     status: "inactive",
     startTime: null,
     endTime: null,
@@ -71,6 +78,7 @@ const INITIAL_AGENTS = {
     description: "Unavailable",
     model: "Unavailable",
     reasoningLevel: "Unavailable",
+    kind: "agent",
     status: "inactive",
     startTime: null,
     endTime: null,
@@ -85,6 +93,7 @@ const INITIAL_AGENTS = {
     description: "Unavailable",
     model: "Unavailable",
     reasoningLevel: "Unavailable",
+    kind: "agent",
     status: "inactive",
     startTime: null,
     endTime: null,
@@ -99,6 +108,7 @@ const INITIAL_AGENTS = {
     description: "Unavailable",
     model: "Unavailable",
     reasoningLevel: "Unavailable",
+    kind: "agent",
     status: "inactive",
     startTime: null,
     endTime: null,
@@ -111,19 +121,36 @@ const INITIAL_AGENTS = {
   evaluation: {
     name: "Evaluation",
     description: "Scores generated outputs and writes evaluation artifacts",
-    model: "Workflow Runtime",
+    model: "Unavailable",
     reasoningLevel: "none",
+    kind: "agent",
     status: "inactive",
     startTime: null,
     endTime: null,
     executionTime: null,
     inputFrom: "LaTeX Formatter",
+    outputTo: "Output",
+    inputText: "",
+    outputText: "",
+  },
+  output: {
+    name: "Output",
+    description: "Finalizes workflow files and result metadata",
+    model: "Workflow Runtime",
+    reasoningLevel: "Unavailable",
+    kind: "runtime",
+    status: "inactive",
+    startTime: null,
+    endTime: null,
+    executionTime: null,
+    inputFrom: "Evaluation",
     outputTo: "User",
     inputText: "",
     outputText: "",
   },
 };
 
+/** Maximum number of log entries retained in memory and rendered. */
 const MAX_LOGS = 250;
 const NEXT_AGENT_BY_KEY = {
   setup: "normalizer",
@@ -132,14 +159,28 @@ const NEXT_AGENT_BY_KEY = {
   verifier: "generator",
   generator: "latex",
   latex: "evaluation",
+  evaluation: "output",
 };
 
+/**
+ * Returns the first value in the list that is neither empty nor nullish.
+ *
+ * @param {...unknown} values
+ * @returns {unknown}
+ */
 function firstDefined(...values) {
   return values.find(
     (value) => value !== undefined && value !== null && value !== "",
   );
 }
 
+/**
+ * Builds a UI log entry with a timestamp and stable client-side id.
+ *
+ * @param {string} message
+ * @param {string} level
+ * @returns {{id: string, time: string, message: string, level: string}}
+ */
 function makeLog(message, level) {
   return {
     id: Math.random().toString(36).slice(2),
@@ -154,7 +195,7 @@ const INITIAL_STATE = {
   agents: { ...INITIAL_AGENTS },
   isRunning: false,
   workflowId: null,
-  logs: [],
+  logs: [makeLog("User connection established.", "info")],
   result: null,
   error: null,
   errorFolder: "",
@@ -166,6 +207,12 @@ const INITIAL_STATE = {
 // Reducer
 // =============================================================================
 
+/**
+ * Resets every agent to the inactive UI state.
+ *
+ * @param {object} agents
+ * @returns {object}
+ */
 function resetAgents(agents) {
   return Object.fromEntries(
     Object.entries(agents).map(([key, agent]) => [
@@ -183,6 +230,13 @@ function resetAgents(agents) {
   );
 }
 
+/**
+ * Marks all agents as queued except the keys explicitly excluded.
+ *
+ * @param {object} agents
+ * @param {string[]} excludeKeys
+ * @returns {object}
+ */
 function queueAgents(agents, excludeKeys = []) {
   const exclude = new Set(excludeKeys);
   return Object.fromEntries(
@@ -193,6 +247,13 @@ function queueAgents(agents, excludeKeys = []) {
   );
 }
 
+/**
+ * Central UI reducer for workflow, file, log, and modal state.
+ *
+ * @param {object} state
+ * @param {{type: string}} action
+ * @returns {object}
+ */
 function reducer(state, action) {
   switch (action.type) {
     case "ADD_FILES":
@@ -237,6 +298,12 @@ function reducer(state, action) {
             ),
             inputFrom: firstDefined(config.inputFrom, updatedAgents[key].inputFrom),
             outputTo: firstDefined(config.outputTo, updatedAgents[key].outputTo),
+            kind: firstDefined(
+              config.kind,
+              config.type,
+              config.nodeKind,
+              updatedAgents[key].kind,
+            ),
           };
         }
       }
@@ -436,6 +503,9 @@ function reducer(state, action) {
 // App Component
 // =============================================================================
 
+/**
+ * Top-level application shell for the frontend workflow UI.
+ */
 export default function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [prompt, setPrompt] = useState("");
@@ -529,7 +599,8 @@ export default function App() {
   };
 
   const handleAgentCardClick = (agentKey) => {
-    const modal = agentKey === "setup" ? "setup" : "agent";
+    const modal =
+      agentKey === "setup" ? "setup" : agentKey === "output" ? "output" : "agent";
     dispatch({ type: "OPEN_MODAL", modal, agentKey });
   };
 
@@ -664,6 +735,7 @@ export default function App() {
         agent={state.activeAgentKey ? state.agents[state.activeAgentKey] : null}
       />
       <SetupModal isOpen={state.activeModal === "setup"} onClose={closeModal} />
+      <OutputModal isOpen={state.activeModal === "output"} onClose={closeModal} />
       <HelpModal isOpen={state.activeModal === "help"} onClose={closeModal} />
       <SkillsModal
         isOpen={state.activeModal === "skills"}

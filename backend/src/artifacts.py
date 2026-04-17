@@ -1,3 +1,5 @@
+"""Utilities for writing and reading workflow artifact records."""
+
 from __future__ import annotations
 
 import json
@@ -60,10 +62,12 @@ _WRAPPED_RECORD_MARKER_KEYS = {"recorded_at", "agent_key", "attempt"}
 
 
 def utc_timestamp() -> str:
+    """Return the current UTC timestamp in ISO-8601 format."""
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def to_jsonable(value: Any) -> Any:
+    """Convert nested values into JSON-serializable data."""
     if hasattr(value, "model_dump"):
         try:
             return value.model_dump(mode="json")
@@ -87,21 +91,25 @@ def to_jsonable(value: Any) -> Any:
 
 
 def agent_artifact_paths(outputs_dir: Path, agent_key: str) -> tuple[Path, Path]:
+    """Return the input and output JSONL paths for one agent."""
     agent_dir = outputs_dir / AGENT_ARTIFACTS_DIRNAME / agent_key
     return agent_dir / "agent_input.jsonl", agent_dir / "agent_output.jsonl"
 
 
 def workflow_metadata_path(outputs_dir: Path) -> Path:
+    """Return the canonical workflow metadata file path."""
     return outputs_dir / AGENT_ARTIFACTS_DIRNAME / AGENT_METADATA_FILENAME
 
 
 def append_jsonl(path: Path, payload: Any) -> None:
+    """Append one JSONL record to disk, creating parent directories as needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(to_jsonable(payload), ensure_ascii=False) + "\n")
 
 
 def read_jsonl(path: Path) -> list[Any]:
+    """Read a JSONL file and skip blank or malformed lines."""
     if not path.exists():
         return []
     records: list[Any] = []
@@ -118,11 +126,13 @@ def read_jsonl(path: Path) -> list[Any]:
 
 
 def read_last_jsonl(path: Path) -> Any | None:
+    """Return the final JSONL record from a file, if any."""
     records = read_jsonl(path)
     return records[-1] if records else None
 
 
 def _relative_artifact_path(outputs_dir: Path, path: Path) -> str:
+    """Render an artifact path relative to the output root when possible."""
     try:
         return path.relative_to(outputs_dir).as_posix()
     except ValueError:
@@ -130,6 +140,7 @@ def _relative_artifact_path(outputs_dir: Path, path: Path) -> str:
 
 
 def _metadata_subset(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Keep only metadata fields that are safe to persist in the workflow index."""
     return {
         key: to_jsonable(value)
         for key, value in metadata.items()
@@ -138,6 +149,7 @@ def _metadata_subset(metadata: dict[str, Any]) -> dict[str, Any]:
 
 
 def _json_type_name(value: Any) -> str:
+    """Return a human-readable JSON type label for an arbitrary value."""
     if isinstance(value, dict):
         return "object"
     if isinstance(value, list):
@@ -156,6 +168,7 @@ def _json_type_name(value: Any) -> str:
 
 
 def _json_shape_metadata(value: Any) -> dict[str, Any]:
+    """Summarize the JSON shape of a value for artifact metadata."""
     if isinstance(value, dict):
         return {
             "json_type": "object",
@@ -175,6 +188,7 @@ def _json_shape_metadata(value: Any) -> dict[str, Any]:
 
 
 def _text_metadata(value: Any) -> dict[str, Any]:
+    """Describe a string payload as plain text or nested JSON."""
     if not isinstance(value, str):
         return {"type": _json_type_name(value)}
 
@@ -194,6 +208,7 @@ def _text_metadata(value: Any) -> dict[str, Any]:
 
 
 def _resource_reference_metadata(value: Any) -> dict[str, Any]:
+    """Capture a compact description of a file or image reference payload."""
     if isinstance(value, dict):
         return {
             "type": "object",
@@ -208,6 +223,7 @@ def _resource_reference_metadata(value: Any) -> dict[str, Any]:
 
 
 def _content_item_metadata(item: Any) -> dict[str, Any]:
+    """Summarize a single content item from an OpenAI message payload."""
     if not isinstance(item, dict):
         metadata = {
             "type": _json_type_name(item),
@@ -230,6 +246,7 @@ def _content_item_metadata(item: Any) -> dict[str, Any]:
 
 
 def _message_metadata(message: Any) -> dict[str, Any]:
+    """Summarize a full message payload for workflow metadata."""
     if not isinstance(message, dict):
         metadata = {
             "type": _json_type_name(message),
@@ -250,6 +267,7 @@ def _message_metadata(message: Any) -> dict[str, Any]:
 
 
 def input_payload_metadata(input_payload: Any) -> dict[str, Any]:
+    """Build metadata for an agent input payload."""
     if isinstance(input_payload, list) and all(
         isinstance(item, dict) and "role" in item for item in input_payload
     ):
@@ -270,6 +288,7 @@ def input_payload_metadata(input_payload: Any) -> dict[str, Any]:
 
 
 def output_payload_metadata(output_payload: Any) -> dict[str, Any]:
+    """Build metadata for an agent output payload."""
     jsonable = to_jsonable(output_payload)
     metadata = {
         "payload_type": _json_type_name(jsonable),
@@ -282,6 +301,7 @@ def output_payload_metadata(output_payload: Any) -> dict[str, Any]:
 
 
 def _is_wrapped_agent_record(record: Any, payload_key: str) -> bool:
+    """Return True when a JSONL record uses the wrapper format."""
     return (
         isinstance(record, dict)
         and payload_key in record
@@ -300,6 +320,7 @@ def write_agent_artifacts(
     metadata: dict[str, Any] | None = None,
     status: str = "completed",
 ) -> dict[str, Any]:
+    """Persist one agent run's input, output, and metadata artifacts."""
     metadata = metadata or {}
     input_path, output_path = agent_artifact_paths(outputs_dir, agent_key)
     attempt = len(read_jsonl(output_path)) + 1
@@ -350,6 +371,7 @@ def write_workflow_metadata(
     source_files: list[str] | None = None,
     resumed_from: dict[str, Any] | None = None,
 ) -> Path:
+    """Write the workflow index describing all recorded agent artifacts."""
     source_file_metadata = []
     for raw_path in source_files or []:
         path = Path(raw_path)
@@ -380,6 +402,7 @@ def write_workflow_metadata(
 
 
 def load_workflow_metadata(outputs_dir: Path) -> dict[str, Any]:
+    """Load the workflow index from the current or legacy metadata location."""
     metadata_path = workflow_metadata_path(outputs_dir)
     if not metadata_path.exists():
         metadata_path = outputs_dir / AGENT_METADATA_FILENAME
@@ -393,6 +416,7 @@ def load_workflow_metadata(outputs_dir: Path) -> dict[str, Any]:
 
 
 def load_source_file_paths(outputs_dir: Path) -> list[str]:
+    """Return existing source file paths recorded in workflow metadata."""
     metadata = load_workflow_metadata(outputs_dir)
     source_files = metadata.get("source_files", [])
     paths: list[str] = []
@@ -407,6 +431,7 @@ def load_source_file_paths(outputs_dir: Path) -> list[str]:
 
 
 def load_agent_input_payload(outputs_dir: Path, agent_key: str) -> Any:
+    """Load the most recent input payload for an agent from artifacts."""
     input_path, _ = agent_artifact_paths(outputs_dir, agent_key)
     record = read_last_jsonl(input_path)
     if _is_wrapped_agent_record(record, "input"):
@@ -421,6 +446,7 @@ def load_agent_input_payload(outputs_dir: Path, agent_key: str) -> Any:
 
 
 def load_agent_output_payload(outputs_dir: Path, agent_key: str) -> Any:
+    """Load the most recent output payload for an agent from artifacts."""
     _, output_path = agent_artifact_paths(outputs_dir, agent_key)
     record = read_last_jsonl(output_path)
     if _is_wrapped_agent_record(record, "output"):
@@ -438,6 +464,7 @@ def load_agent_output_payload(outputs_dir: Path, agent_key: str) -> Any:
 
 
 def _load_legacy_agent_record(outputs_dir: Path, agent_key: str) -> dict[str, Any] | None:
+    """Load a matching record from the legacy flat agent output file."""
     legacy_path = outputs_dir / LEGACY_AGENT_OUTPUTS_FILENAME
     if not legacy_path.exists():
         return None
@@ -465,6 +492,7 @@ def _load_legacy_agent_record(outputs_dir: Path, agent_key: str) -> dict[str, An
 
 
 def _load_final_result_agent_output(outputs_dir: Path, agent_key: str) -> Any:
+    """Recover a best-effort agent output from final_result.json."""
     result_path = outputs_dir / "final_result.json"
     if not result_path.exists():
         return None

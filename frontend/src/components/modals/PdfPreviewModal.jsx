@@ -1,6 +1,12 @@
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 
+/**
+ * Builds an iframe URL that prefers browser-native PDF controls.
+ *
+ * @param {string} pdfUrl
+ * @returns {string}
+ */
 function buildBrowserPdfViewerUrl(pdfUrl) {
   if (!pdfUrl) return 'about:blank';
   const inlineUrl = pdfUrl.includes('inline=1')
@@ -9,6 +15,11 @@ function buildBrowserPdfViewerUrl(pdfUrl) {
   return `${inlineUrl}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`;
 }
 
+/**
+ * Shows an inline preview for generated PDFs and links back to download.
+ *
+ * @param {object} props
+ */
 export default function PdfPreviewModal({
   isOpen,
   onClose,
@@ -29,14 +40,14 @@ export default function PdfPreviewModal({
       footer={(
         <div className="modal-footer-actions pdf-preview-footer-actions">
           <button
-            className="btn btn-secondary"
+            className="btn btn-primary pdf-preview-action"
             onClick={onClose}
             type="button"
           >
             Close
           </button>
           <button
-            className="btn btn-primary pdf-preview-download"
+            className="btn btn-secondary pdf-preview-action pdf-preview-download"
             onClick={() => onDownload(fileName)}
             disabled={!fileName}
             type="button"
