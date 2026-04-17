@@ -71,9 +71,15 @@ export default function InputToAgentModal({
       setError('Choose an agent input file first.');
       return;
     }
-    onRun(selectedAgent, inputFile, () => {
-      resetLocalState();
-      onClose();
+    setError('');
+    onRun(selectedAgent, inputFile, {
+      onStarted: () => {
+        resetLocalState();
+        onClose();
+      },
+      onError: (message) => {
+        setError(message || 'Schema match invalid');
+      },
     });
   };
 
@@ -102,7 +108,8 @@ export default function InputToAgentModal({
         <p className="modal-supporting-text">
           Setup and Output always run. Choose any agent between them, upload a
           source document for Normalizer or Extracter, or a saved agent input
-          file for later stages.
+          file for later stages. Saved agent inputs must match that agent's
+          input schema.
         </p>
 
         <label className="input-to-agent-field" htmlFor="input-to-agent-select">

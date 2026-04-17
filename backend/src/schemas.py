@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class OptionItem(BaseModel):
@@ -114,6 +114,121 @@ class LaTeXOutput(BaseModel):
     pdf_filename: str = ""
 
 
+class NormalizerUserInput(BaseModel):
+    """User-facing request payload passed into the Normalizer agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = ""
+    files: list[str] = []
+
+
+class NormalizerInput(BaseModel):
+    """Input expected by the Normalizer agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task: Literal["normalize_user_request"]
+    user_input: NormalizerUserInput
+    defaults: NormalizerOutput
+    rules: dict[str, str]
+
+
+class ExtracterInput(BaseModel):
+    """Input expected by the Extracter agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task: str
+    files: list[str]
+    normalizer_config: NormalizerOutput
+    requirements: dict[str, Any]
+
+
+class VerifierInput(BaseModel):
+    """Input expected by the Verifier agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task: Literal["verify_source_questions"]
+    source_questions: ExtracterOutput
+    requirements: dict[str, Any]
+
+
+class GeneratorInput(BaseModel):
+    """Input expected by the Generator agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task: str
+    configuration: NormalizerOutput
+    source_questions: VerifierOutput
+    requirements: dict[str, Any]
+
+
+class LaTeXDocumentInput(BaseModel):
+    """Document metadata passed into the LaTeX Formatter agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = ""
+    theme: str = ""
+    source_title: str = ""
+    course: str = ""
+
+
+class LaTeXQuestionInput(BaseModel):
+    """Generated question shape consumed by the LaTeX Formatter agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str
+    stem: str
+    options: list[OptionItem] = []
+    question_type: str = "multiple_choice"
+    skipped: bool = False
+    skip_reason: str = ""
+    answer: str = ""
+    parts: list[NewQuestionPart] = []
+
+
+class LaTeXInput(BaseModel):
+    """Input expected by the LaTeX Formatter agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task: Literal["format_questions_to_latex"]
+    document: LaTeXDocumentInput
+    questions: list[LaTeXQuestionInput]
+    requirements: dict[str, Any]
+
+
+class EvaluationFinalResultInput(BaseModel):
+    """Question context consumed by the Evaluation agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    config: NormalizerOutput
+    source_questions: list[SourceQuestionItem]
+    verified_questions: list[SourceQuestionItem]
+    generated_questions: list[NewQuestionItem]
+
+
+class EvaluationInput(BaseModel):
+    """Input expected by the Evaluation agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task: Literal["evaluate_generated_output_artifacts"]
+    workflow_id: str
+    latex_file: str
+    pdf_file: str
+    latex_output: LaTeXOutput
+    final_result: EvaluationFinalResultInput
+    rubric: Optional[dict[str, Any]] = None
+    evaluation_items: list[dict[str, Any]] = []
+
+
 class WorkflowInput(BaseModel):
     """Input for the workflow."""
 
@@ -139,4 +254,14 @@ AGENT_OUTPUT_TYPES = {
     "verifier": VerifierOutput,
     "generator": GeneratorOutput,
     "latex": LaTeXOutput,
+}
+
+
+AGENT_INPUT_TYPES = {
+    "normalizer": NormalizerInput,
+    "extracter": ExtracterInput,
+    "verifier": VerifierInput,
+    "generator": GeneratorInput,
+    "latex": LaTeXInput,
+    "evaluation": EvaluationInput,
 }
