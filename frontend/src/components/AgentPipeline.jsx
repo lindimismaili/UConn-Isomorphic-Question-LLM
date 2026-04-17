@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AgentCard from './AgentCard.jsx';
+import { IconBrain } from './Icons.jsx';
 
 // Fixed pipeline layout: three rows
 /** Fixed pipeline rows used to lay out the workflow graph. */
 const ROW1 = ['setup', 'normalizer', 'extracter'];
 const ROW2 = ['verifier', 'generator', 'latex'];
 const ROW3 = ['evaluation', 'output'];
+const PIPELINE_KEYS = [...ROW1, ...ROW2, ...ROW3];
+const PLACEHOLDER_BRAINS = [0, 1, 2, 3, 4, 5];
 /** Static connector map used to draw the pipeline SVG paths. */
 const CONNECTIONS = [
   { id: 'setup-normalizer', from: 'setup', to: 'normalizer', type: 'horizontal' },
@@ -25,30 +28,67 @@ const CONNECTIONS = [
  * @returns {string}
  */
 function statusForLine(sourceStatus, previousStatus) {
-  // Connector turns green only after the source agent completes.
   if (sourceStatus === 'completed') {
     return 'completed';
   }
-  // If an agent fails after completion, keep the connector green.
+  if (sourceStatus === 'thinking') {
+    return 'thinking';
+  }
   if (sourceStatus === 'errored') {
-    return previousStatus === 'completed' ? 'completed' : 'inactive';
+    return previousStatus === 'completed' ? 'completed' : 'errored';
   }
   return 'inactive';
 }
 
 /**
+ * Returns true once a node should be visible in the progressive reveal.
+ *
+ * @param {string} status
+ * @returns {boolean}
+ */
+function isRevealedStatus(status) {
+  return !['inactive', 'queued'].includes(status || 'inactive');
+}
+
+/**
  * Renders one horizontal row of pipeline nodes.
  *
- * @param {{keys: string[], agents: object, onCardClick: Function, onNodeRef: Function}} props
+ * @param {{keys: string[], agents: object, revealedNodes: Set<string>, onCardClick: Function, onNodeRef: Function}} props
  */
-function AgentRow({ keys, agents, onCardClick, onNodeRef }) {
+function AgentRow({ keys, agents, revealedNodes, onCardClick, onNodeRef }) {
   return (
     <div className="agents-row">
-      {keys.map((key) => (
-        <div key={key} className="agent-node" ref={(node) => onNodeRef(key, node)}>
-          <AgentCard agentKey={key} agent={agents[key]} onClick={onCardClick} />
-        </div>
-      ))}
+      {keys.map((key) => {
+        const isRevealed = revealedNodes.has(key);
+        return (
+          <div
+            key={key}
+            className={`agent-node${isRevealed ? ' is-revealed' : ''}`}
+            ref={(node) => onNodeRef(key, node)}
+            aria-hidden={!isRevealed}
+          >
+            <AgentCard agentKey={key} agent={agents[key]} onClick={onCardClick} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Placeholder shown before the first workflow node starts.
+ *
+ * @param {{isHidden: boolean}} props
+ */
+function BrainPlaceholder({ isHidden }) {
+  return (
+    <div className={`agent-placeholder${isHidden ? ' is-hidden' : ''}`} aria-hidden={isHidden}>
+      <div className="agent-placeholder-brains">
+        {PLACEHOLDER_BRAINS.map((item) => (
+          <IconBrain key={item} className="agent-placeholder-brain" />
+        ))}
+      </div>
+      <p>Start a workflow to reveal the agent chain.</p>
     </div>
   );
 }
@@ -62,6 +102,10 @@ export default function AgentPipeline({ agents, onCardClick }) {
   const gridRef = useRef(null);
   const nodeRefs = useRef({});
   const [connector, setConnector] = useState({ width: 1, height: 1, paths: {} });
+  const revealedNodes = useMemo(() => new Set(
+    PIPELINE_KEYS.filter((key) => isRevealedStatus(agents?.[key]?.status))
+  ), [agents]);
+  const isWorkflowVisible = revealedNodes.size > 0;
   const lineStatuses = useMemo(() => (
     Object.fromEntries(
       CONNECTIONS.map((connection) => {
@@ -137,7 +181,8 @@ export default function AgentPipeline({ agents, onCardClick }) {
   }, [updateConnector, agents]);
 
   return (
-    <div className="agents-grid" ref={gridRef}>
+    <div className={`agents-grid${isWorkflowVisible ? ' is-active' : ''}`} ref={gridRef}>
+      <BrainPlaceholder isHidden={isWorkflowVisible} />
       <svg
         className="agent-turn-connector"
         aria-hidden="true"
@@ -151,15 +196,16 @@ export default function AgentPipeline({ agents, onCardClick }) {
                 key={id}
                 className="agent-connector-path"
                 data-status={lineStatuses[id] || 'inactive'}
+                data-visible={lineStatuses[id] !== 'inactive' ? 'true' : 'false'}
                 d={connector.paths[id]}
               />
             )
             : null
         ))}
       </svg>
-      <AgentRow keys={ROW1} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
-      <AgentRow keys={ROW2} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
-      <AgentRow keys={ROW3} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
+      <AgentRow keys={ROW1} agents={agents} revealedNodes={revealedNodes} onCardClick={onCardClick} onNodeRef={setNodeRef} />
+      <AgentRow keys={ROW2} agents={agents} revealedNodes={revealedNodes} onCardClick={onCardClick} onNodeRef={setNodeRef} />
+      <AgentRow keys={ROW3} agents={agents} revealedNodes={revealedNodes} onCardClick={onCardClick} onNodeRef={setNodeRef} />
     </div>
   );
 }
