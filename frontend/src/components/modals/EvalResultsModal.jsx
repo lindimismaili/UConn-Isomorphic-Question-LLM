@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
-import { IconDownload } from '../Icons.jsx';
+import { IconDownload, IconFile } from '../Icons.jsx';
 
 /** Strips backend UUID suffixes that are attached to rubric keys. */
 const UUID_SUFFIX_RE = /-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -61,6 +61,17 @@ function formatScore(value) {
 }
 
 /**
+ * Returns the last path segment for a file-like string.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function baseName(value) {
+  if (typeof value !== 'string' || !value) return '';
+  return value.split('/').pop() || value;
+}
+
+/**
  * Coerces a maybe-object field into a plain object.
  *
  * @param {unknown} value
@@ -68,6 +79,52 @@ function formatScore(value) {
  */
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+/**
+ * Normalizes a backend file reference for the modal side panels.
+ *
+ * @param {unknown} value
+ * @param {string} [fallbackLabel]
+ * @returns {object | null}
+ */
+function normalizeFileReference(value, fallbackLabel = '') {
+  if (typeof value === 'string' && value) {
+    return {
+      name: value,
+      label: fallbackLabel || baseName(value),
+      kind: '',
+      displayPath: value,
+    };
+  }
+
+  const file = asObject(value);
+  const name = typeof file.name === 'string' ? file.name : '';
+  const displayPath = typeof file.display_path === 'string' ? file.display_path : name;
+  if (!name && !displayPath) return null;
+
+  return {
+    name,
+    label:
+      (typeof file.label === 'string' && file.label) ||
+      fallbackLabel ||
+      baseName(name) ||
+      displayPath ||
+      'File',
+    kind: typeof file.kind === 'string' ? file.kind : '',
+    displayPath,
+  };
+}
+
+/**
+ * Formats a short chip label for file kind metadata.
+ *
+ * @param {string} kind
+ * @returns {string}
+ */
+function formatFileKind(kind) {
+  if (!kind) return '';
+  return kind.replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 /**
@@ -280,6 +337,44 @@ export default function EvalResultsModal({
     ? report.passing_score_threshold
     : DEFAULT_PASSING_THRESHOLD;
   const rubricByName = useMemo(() => buildRubricMap(report), [report]);
+  const runInputFiles = useMemo(
+    () =>
+      (Array.isArray(report?.run_inputs) ? report.run_inputs : [])
+        .map((file) => normalizeFileReference(file))
+        .filter(Boolean),
+    [report],
+  );
+  const testingFiles = useMemo(
+    () =>
+      (Array.isArray(report?.testing_files) ? report.testing_files : [])
+        .map((file) => normalizeFileReference(file))
+        .filter(Boolean),
+    [report],
+  );
+  const rubricFile = useMemo(() => {
+    const sourcePath =
+      typeof report?.rubric_source_path === 'string' && report.rubric_source_path
+        ? report.rubric_source_path
+        : 'data/rubric.json';
+    if (typeof report?.rubric_file === 'string' && report.rubric_file) {
+      return normalizeFileReference({
+        name: report.rubric_file,
+        label: 'Rubric snapshot',
+        kind: 'rubric',
+        display_path: sourcePath,
+      });
+    }
+    if (Array.isArray(report?.rubric) && report.rubric.length > 0) {
+      return normalizeFileReference({
+        label: 'Rubric config',
+        kind: 'rubric',
+        display_path: sourcePath,
+      });
+    }
+    return null;
+  }, [report]);
+  const spreadsheetFileName =
+    typeof report?.spreadsheet_file === 'string' ? report.spreadsheet_file : '';
   const items = itemsResult.url === itemsUrl ? itemsResult.items : EMPTY_ITEMS;
   const error = itemsResult.url === itemsUrl ? itemsResult.error : '';
   const loadState = !itemsUrl
@@ -309,6 +404,16 @@ export default function EvalResultsModal({
       contentClassName="eval-results-modal"
       footer={(
         <div className="modal-footer-actions eval-modal-footer-actions">
+          {spreadsheetFileName && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => onDownload(spreadsheetFileName)}
+              type="button"
+            >
+              <IconDownload className="btn-icon" />
+              Spreadsheet CSV
+            </button>
+          )}
           {itemsFileName && (
             <button
               className="btn btn-secondary"
@@ -354,6 +459,106 @@ export default function EvalResultsModal({
           <span className="eval-summary-label">Question Results</span>
           <strong>{totalPassed} pass / {totalFailed} fail</strong>
         </div>
+      </div>
+
+      <div className="eval-reference-grid">
+        <section className="eval-reference-panel">
+          <div className="eval-reference-header">
+            <h4>Run Inputs</h4>
+            <span>{runInputFiles.length}</span>
+          </div>
+          {runInputFiles.length === 0 ? (
+            <div className="eval-reference-empty">No input files recorded for this run.</div>
+          ) : (
+            <div className="eval-reference-list">
+              {runInputFiles.map((file, index) => (
+                <div
+                  className="eval-reference-row"
+                  key={`${file.displayPath || file.label || 'input'}-${index}`}
+                >
+                  <div className="eval-reference-meta">
+                    <div className="eval-reference-title">
+                      <IconFile className="eval-reference-icon" />
+                      <span>{file.label}</span>
+                    </div>
+                    <div className="eval-reference-path">{file.displayPath || file.name}</div>
+                  </div>
+                  {file.kind && (
+                    <span className={`eval-reference-kind is-${file.kind}`}>
+                      {formatFileKind(file.kind)}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="eval-reference-panel">
+          <div className="eval-reference-header">
+            <h4>Testing Files</h4>
+            <span>{testingFiles.length}</span>
+          </div>
+          {testingFiles.length === 0 ? (
+            <div className="eval-reference-empty">No testing artifacts were recorded.</div>
+          ) : (
+            <div className="eval-reference-list">
+              {testingFiles.map((file, index) => (
+                <div className="eval-reference-row" key={`${file.name || file.label}-${index}`}>
+                  <div className="eval-reference-meta">
+                    <div className="eval-reference-title">
+                      <IconFile className="eval-reference-icon" />
+                      <span>{file.label}</span>
+                    </div>
+                    <div className="eval-reference-path">{file.displayPath || file.name}</div>
+                  </div>
+                  <button
+                    className="btn btn-secondary eval-reference-download"
+                    disabled={!file.name}
+                    onClick={() => onDownload(file.name)}
+                    type="button"
+                  >
+                    <IconDownload className="btn-icon" />
+                    Download
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="eval-reference-panel">
+          <div className="eval-reference-header">
+            <h4>Rubric</h4>
+            <span>{rubricFile ? 1 : 0}</span>
+          </div>
+          {!rubricFile ? (
+            <div className="eval-reference-empty">No rubric file metadata is available.</div>
+          ) : (
+            <div className="eval-reference-list">
+              <div className="eval-reference-row">
+                <div className="eval-reference-meta">
+                  <div className="eval-reference-title">
+                    <IconFile className="eval-reference-icon" />
+                    <span>{rubricFile.label}</span>
+                  </div>
+                  <div className="eval-reference-path">
+                    {rubricFile.displayPath || rubricFile.name || 'data/rubric.json'}
+                  </div>
+                </div>
+                <button
+                  className="btn btn-secondary eval-reference-download"
+                  disabled={!rubricFile.name}
+                  onClick={() => rubricFile.name && onDownload(rubricFile.name)}
+                  type="button"
+                >
+                  <IconDownload className="btn-icon" />
+                  Download
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
 
       {loadState === 'loading' && (

@@ -1,0 +1,310 @@
+{
+  "task": "evaluate_generated_output_artifacts",
+  "workflow_id": "fixture-evaluation",
+  "latex_file": "isomorphic_questions.tex",
+  "pdf_file": "isomorphic_questions.pdf",
+  "latex_output": {
+    "latex_content": "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n\\section*{Agent Testing - Mixed Question Types}\n\\textbf{Question 1.} During an overnight validation run for a pharmacy robot, the cart enters the final corridor at $5.2\\,\\text{m/s}$ while its automatic braking system can provide a constant deceleration of only $1.4\\,\\text{m/s}^2$. The robot is $8.0\\,\\text{m}$ from a locked medication cabinet, and the supervising engineer wants a short written explanation instead of a bare number. Explain whether the robot stops before the cabinet and show how the relevant constant-acceleration relationship supports your conclusion.\n\nAnswer: Using $v_f^2 = v_i^2 + 2a\\Delta x$ with $v_f=0$, $v_i=5.2\\,\\text{m/s}$, and $a=-1.4\\,\\text{m/s}^2$, the stopping distance is $\\Delta x \\approx 9.66\\,\\text{m}$. Because $9.66\\,\\text{m} > 8.0\\,\\text{m}$, the robot would still be moving at the cabinet.\n\n\\textbf{Question 2.} A compact research capsule is launched straight upward from the roof of a medical imaging center with an initial speed of $20\\,\\text{m/s}$. Neglect air resistance unless a part states otherwise.\n\n(a) Determine the time required for the capsule to reach its maximum height.\n\n(b) Which statement best describes the capsule's acceleration while it is in flight?\n\nA. The acceleration is zero at the top because the velocity is zero there.\n\nB. The acceleration is upward while the capsule rises and downward while it falls.\n\nC. The acceleration is downward and approximately $9.8\\,\\text{m/s}^2$ throughout the flight.\n\nD. The acceleration steadily decreases to zero as the capsule approaches the top.\n\n\\textbf{Question 3.} Skipped because the source question references a figure.\n\\end{document}\n",
+    "filename": "isomorphic_questions.tex",
+    "pdf_filename": "isomorphic_questions.pdf"
+  },
+  "final_result": {
+    "config": {
+      "new_questions_per_question": 1,
+      "difficulty": "",
+      "theme": "",
+      "title": "Agent Testing - Generator Verbosity",
+      "notes": "Use this fixture to verify that verbose open-ended questions stay verbose and explanation-oriented after generation."
+    },
+    "source_questions": [
+      {
+        "source_id": "1",
+        "source_raw": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "stem": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "open_ended",
+        "theme": "engineering",
+        "topic_tags": [
+          "kinematics",
+          "stopping_distance",
+          "constant_acceleration"
+        ],
+        "has_figure": false,
+        "answer": "",
+        "parts": []
+      },
+      {
+        "source_id": "2",
+        "source_raw": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise. (a) Determine the time it takes the package to reach its maximum height. (b) Which statement best describes the package's acceleration while it is in flight?",
+        "stem": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multi_part",
+        "theme": "life_science",
+        "topic_tags": [
+          "projectile_motion",
+          "kinematics"
+        ],
+        "has_figure": false,
+        "answer": "",
+        "parts": [
+          {
+            "part_label": "a",
+            "stem": "Determine the time it takes the package to reach its maximum height.",
+            "question_type": "open_ended",
+            "options": [],
+            "answer": "",
+            "has_explicit_answer": false
+          },
+          {
+            "part_label": "b",
+            "stem": "Which statement best describes the package's acceleration while it is in flight?",
+            "question_type": "multiple_choice",
+            "options": [
+              {
+                "key": "A",
+                "text": "The acceleration is zero at the top of the path.",
+                "is_correct": false,
+                "explanation": ""
+              },
+              {
+                "key": "B",
+                "text": "The acceleration is downward and approximately \\(9.8\\,\\text{m/s}^2\\) throughout the flight.",
+                "is_correct": false,
+                "explanation": ""
+              },
+              {
+                "key": "C",
+                "text": "The acceleration points upward while the package rises and downward while it falls.",
+                "is_correct": false,
+                "explanation": ""
+              },
+              {
+                "key": "D",
+                "text": "The acceleration decreases linearly to zero as the package approaches the top.",
+                "is_correct": false,
+                "explanation": ""
+              }
+            ],
+            "answer": "",
+            "has_explicit_answer": false
+          }
+        ]
+      },
+      {
+        "source_id": "3",
+        "source_raw": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "stem": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multiple_choice",
+        "theme": "engineering",
+        "topic_tags": [
+          "graphs",
+          "kinematics"
+        ],
+        "has_figure": true,
+        "answer": "",
+        "parts": []
+      }
+    ],
+    "verified_questions": [
+      {
+        "source_id": "1",
+        "source_raw": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "stem": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "open_ended",
+        "theme": "engineering",
+        "topic_tags": [
+          "kinematics",
+          "stopping_distance",
+          "constant_acceleration"
+        ],
+        "has_figure": false,
+        "answer": "Using \\(v_f^2 = v_i^2 + 2a\\Delta x\\) with \\(v_f=0\\), \\(v_i=4.8\\,\\text{m/s}\\), and \\(a=-1.6\\,\\text{m/s}^2\\), the stopping distance is \\(\\Delta x = 7.2\\,\\text{m}\\). Because \\(7.2\\,\\text{m} > 6.5\\,\\text{m}\\), the cart would still be moving when it reaches the door. The braking system alone is therefore insufficient to stop the cart in time.",
+        "parts": []
+      },
+      {
+        "source_id": "2",
+        "source_raw": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise. (a) Determine the time it takes the package to reach its maximum height. (b) Which statement best describes the package's acceleration while it is in flight?",
+        "stem": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multi_part",
+        "theme": "life_science",
+        "topic_tags": [
+          "projectile_motion",
+          "kinematics"
+        ],
+        "has_figure": false,
+        "answer": "",
+        "parts": [
+          {
+            "part_label": "a",
+            "stem": "Determine the time it takes the package to reach its maximum height.",
+            "question_type": "open_ended",
+            "options": [],
+            "answer": "At the highest point the vertical velocity is zero, so \\(0 = v_0 - gt\\). Using \\(v_0 = 18\\,\\text{m/s}\\) and \\(g = 9.8\\,\\text{m/s}^2\\), the time is \\(t = 18/9.8 \\approx 1.84\\,\\text{s}\\).",
+            "has_explicit_answer": false
+          },
+          {
+            "part_label": "b",
+            "stem": "Which statement best describes the package's acceleration while it is in flight?",
+            "question_type": "multiple_choice",
+            "options": [
+              {
+                "key": "A",
+                "text": "The acceleration is zero at the top of the path.",
+                "is_correct": false,
+                "explanation": "The velocity becomes zero at the top, but gravity still acts there. Zero velocity does not imply zero acceleration."
+              },
+              {
+                "key": "B",
+                "text": "The acceleration is downward and approximately \\(9.8\\,\\text{m/s}^2\\) throughout the flight.",
+                "is_correct": true,
+                "explanation": "With air resistance neglected, gravity is the only significant force on the package after launch. That means the acceleration remains essentially constant at \\(-g\\), or downward with magnitude \\(9.8\\,\\text{m/s}^2\\), during the entire motion."
+              },
+              {
+                "key": "C",
+                "text": "The acceleration points upward while the package rises and downward while it falls.",
+                "is_correct": false,
+                "explanation": "This confuses the direction of velocity with the direction of acceleration. The package can move upward while its acceleration still points downward."
+              },
+              {
+                "key": "D",
+                "text": "The acceleration decreases linearly to zero as the package approaches the top.",
+                "is_correct": false,
+                "explanation": "Nothing in the idealized model makes gravity weaken near the top of the path. The acceleration does not taper to zero in standard projectile motion."
+              }
+            ],
+            "answer": "",
+            "has_explicit_answer": false
+          }
+        ]
+      },
+      {
+        "source_id": "3",
+        "source_raw": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "stem": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multiple_choice",
+        "theme": "engineering",
+        "topic_tags": [
+          "graphs",
+          "kinematics"
+        ],
+        "has_figure": true,
+        "answer": "",
+        "parts": []
+      }
+    ],
+    "generated_questions": [
+      {
+        "id": 1,
+        "source_id": "1",
+        "stem": "During an overnight validation run for a pharmacy robot, the cart enters the final corridor at \\(5.2\\,\\text{m/s}\\) while its automatic braking system can provide a constant deceleration of only \\(1.4\\,\\text{m/s}^2\\). The robot is \\(8.0\\,\\text{m}\\) from a locked medication cabinet, and the supervising engineer wants a short written explanation instead of a bare number. Explain whether the robot stops before the cabinet and show how the relevant constant-acceleration relationship supports your conclusion.",
+        "options": [],
+        "difficulty": "",
+        "theme": "engineering",
+        "topic_tags": [
+          "kinematics",
+          "stopping_distance",
+          "constant_acceleration"
+        ],
+        "generation_notes": "Preserved the source's verbose open-ended style while changing the setting, numbers, and surface details.",
+        "question_type": "open_ended",
+        "skipped": false,
+        "skip_reason": "",
+        "answer": "Using \\(v_f^2 = v_i^2 + 2a\\Delta x\\) with \\(v_f=0\\), \\(v_i=5.2\\,\\text{m/s}\\), and \\(a=-1.4\\,\\text{m/s}^2\\), the stopping distance is \\(\\Delta x \\approx 9.66\\,\\text{m}\\). Because \\(9.66\\,\\text{m} > 8.0\\,\\text{m}\\), the robot would still be moving at the cabinet. The braking system alone is therefore not enough to stop it in time.",
+        "parts": []
+      },
+      {
+        "id": 2,
+        "source_id": "2",
+        "stem": "A compact research capsule is launched straight upward from the roof of a medical imaging center with an initial speed of \\(20\\,\\text{m/s}\\). Neglect air resistance unless a part states otherwise.",
+        "options": [],
+        "difficulty": "",
+        "theme": "life_science",
+        "topic_tags": [
+          "projectile_motion",
+          "kinematics"
+        ],
+        "generation_notes": "Preserved the multi-part structure while changing the surface context and numerical values.",
+        "question_type": "multi_part",
+        "skipped": false,
+        "skip_reason": "",
+        "answer": "",
+        "parts": [
+          {
+            "part_label": "a",
+            "stem": "Determine the time required for the capsule to reach its maximum height.",
+            "question_type": "open_ended",
+            "options": [],
+            "answer": "At maximum height the vertical velocity is zero, so \\(0 = v_0 - gt\\). With \\(v_0 = 20\\,\\text{m/s}\\) and \\(g = 9.8\\,\\text{m/s}^2\\), the time is \\(t = 20/9.8 \\approx 2.04\\,\\text{s}\\)."
+          },
+          {
+            "part_label": "b",
+            "stem": "Which statement best describes the capsule's acceleration while it is in flight?",
+            "question_type": "multiple_choice",
+            "options": [
+              {
+                "key": "A",
+                "text": "The acceleration is zero at the top because the velocity is zero there.",
+                "is_correct": false,
+                "explanation": "This confuses velocity with acceleration. Gravity still provides a downward acceleration even when the velocity momentarily becomes zero."
+              },
+              {
+                "key": "B",
+                "text": "The acceleration is upward while the capsule rises and downward while it falls.",
+                "is_correct": false,
+                "explanation": "This incorrectly ties acceleration direction to motion direction. In ideal projectile motion the acceleration stays downward the whole time."
+              },
+              {
+                "key": "C",
+                "text": "The acceleration is downward and approximately \\(9.8\\,\\text{m/s}^2\\) throughout the flight.",
+                "is_correct": true,
+                "explanation": "With air resistance neglected, gravity is the only significant force after launch. That keeps the acceleration essentially constant at \\(-g\\), or downward with magnitude \\(9.8\\,\\text{m/s}^2\\), throughout the motion."
+              },
+              {
+                "key": "D",
+                "text": "The acceleration steadily decreases to zero as the capsule approaches the top.",
+                "is_correct": false,
+                "explanation": "Nothing in the idealized model causes the gravitational acceleration to fade near the top of the trajectory. The acceleration does not taper to zero."
+              }
+            ],
+            "answer": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "source_id": "3",
+        "stem": "",
+        "options": [],
+        "difficulty": "",
+        "theme": "engineering",
+        "topic_tags": [
+          "graphs",
+          "kinematics"
+        ],
+        "generation_notes": "Skipped because the source question depends on a figure.",
+        "question_type": "multiple_choice",
+        "skipped": true,
+        "skip_reason": "Question references a figure",
+        "answer": "",
+        "parts": []
+      }
+    ]
+  },
+  "evaluation_items": []
+}

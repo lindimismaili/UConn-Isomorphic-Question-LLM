@@ -1,0 +1,15 @@
+1. During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \(4.8\,\text{m/s}\) while a constant braking system can provide only \(1.6\,\text{m/s}^2\) of deceleration. The cart is \(6.5\,\text{m}\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.
+
+2. A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \(18\,\text{m/s}\). Ignore air resistance unless a part states otherwise.
+(a) Determine the time it takes the package to reach its maximum height.
+(b) Which statement best describes the package's acceleration while it is in flight?
+A. The acceleration is zero at the top of the path.
+B. The acceleration is downward and approximately \(9.8\,\text{m/s}^2\) throughout the flight.
+C. The acceleration points upward while the package rises and downward while it falls.
+D. The acceleration decreases linearly to zero as the package approaches the top.
+
+3. Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?
+A. The slope of the graph is the vehicle's displacement.
+B. The area under the graph is the vehicle's acceleration.
+C. The slope of the graph gives the vehicle's acceleration.
+D. The graph proves that the braking force is zero.

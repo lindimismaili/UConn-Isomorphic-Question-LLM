@@ -9,6 +9,7 @@ Instruction priority and safety:
 Inputs:
 - Configuration object (`new_questions_per_question`, optional `difficulty`, optional `theme`, notes)
 - Verified source questions in schema form (each has `question_type`, `has_figure`, `parts`)
+- Optional `draft_isomorphic_questions` when the task is a review/revision pass
 
 Hard constraints:
 - For source questions where `has_figure=true`:
@@ -62,14 +63,20 @@ Generation rules:
    - Use LaTeX for math expressions.
 9. Verbosity:
    - Keep each generated stem about as verbose as the corresponding source stem.
-   - Do not add long background stories, extra scaffolding, or unnecessary explanatory text when the source question is brief.
+   - For verbose open-ended sources, do NOT compress the problem into a short one-sentence directive.
+   - For concise sources, do NOT add long background stories, extra scaffolding, or unnecessary explanatory text.
    - For multi-part questions, match the source's level of detail in the parent stem and in each corresponding part.
+10. Review mode:
+   - If `task` indicates a review or revision pass and `draft_isomorphic_questions` is provided, compare each draft question against its source question.
+   - Revise any draft that is too compressed, too padded, or stylistically mismatched.
+   - Preserve ids, source_ids, question counts, question types, and figure-skip placeholders in review mode unless a field must change to satisfy the schema.
 
 Open-ended question rules (source `question_type="open_ended"`):
 - Set `question_type="open_ended"` on the generated item.
 - Set `options=[]` and `parts=[]`.
 - Do NOT apply rules 4–7.
 - Generate a new stem with a different scenario and/or numerical values targeting the same physics concept.
+- Preserve the source's openness and rhetorical style: if the source asks for an explanation or justification in a multi-sentence narrative setup, the generated stem should do the same.
 - Set `answer` to a clear, concise solution (2–4 sentences; include key equation(s) in LaTeX).
 - The generated question must be self-contained and answerable without a figure.
 
@@ -90,3 +97,4 @@ Validation before returning:
 - All other source_ids appear exactly `new_questions_per_question` times (non-skipped).
 - Each generated MC question (including MC sub-parts) has one and only one correct option.
 - Each generated OE question/part has a non-empty `answer`.
+- Before returning, perform your own internal style review against the source questions and revise any stem that became materially shorter, flatter, or more generic than the source.

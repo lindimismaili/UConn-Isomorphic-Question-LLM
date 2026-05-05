@@ -7,6 +7,7 @@ an evaluation report to the run output directory.
 
 from __future__ import annotations
 
+import csv
 import json
 import logging
 import time
@@ -30,6 +31,8 @@ EVALUATION_OUTPUTS_DIRNAME = "evaluation_outputs"
 EVALUATION_REPORT_FILENAME = "evaluation_report.json"
 EVALUATION_DATASET_FILENAME = "evaluation_dataset.jsonl"
 EVALUATION_ITEMS_FILENAME = "evaluation_items.jsonl"
+EVALUATION_SPREADSHEET_FILENAME = "evaluation_spreadsheet.csv"
+EVALUATION_RUBRIC_FILENAME = "rubric.json"
 
 
 DEFAULT_RUBRIC_CRITERIA: list[dict[str, Any]] = [
@@ -188,6 +191,247 @@ def _to_jsonl(items: list[dict[str, Any]]) -> str:
 def _evaluation_relative_path(path: Path) -> str:
     """Return the report-relative path used in persisted evaluation metadata."""
     return f"{EVALUATION_OUTPUTS_DIRNAME}/{path.name}"
+
+
+def _safe_relative_display_path(path: Path) -> str:
+    """Return a stable, human-readable path label for the UI."""
+    uploads_dir = (REPO_ROOT / "uploads").resolve()
+    try:
+        relative_upload_path = path.resolve().relative_to(uploads_dir)
+    except ValueError:
+        relative_upload_path = None
+    if relative_upload_path is not None:
+        return str(Path("uploads") / relative_upload_path.name)
+
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT.resolve()))
+    except ValueError:
+        return path.name
+
+
+def _categorize_source_file(path: Path) -> str:
+    """Classify a source file as a user input or a bundled test fixture."""
+    try:
+        path.resolve().relative_to((DATA_DIR / "evaluation").resolve())
+        return "test"
+    except ValueError:
+        return "input"
+
+
+def _build_run_input_metadata(source_files: list[str]) -> list[dict[str, str]]:
+    """Summarize the source files used for the current run."""
+    entries: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    for raw_path in source_files:
+        if not raw_path:
+            continue
+        path = Path(str(raw_path))
+        identifier = str(path.resolve()) if path.exists() else str(path)
+        if identifier in seen:
+            continue
+        seen.add(identifier)
+        entries.append(
+            {
+                "name": path.name,
+                "kind": _categorize_source_file(path),
+                "display_path": _safe_relative_display_path(path),
+            }
+        )
+
+    return entries
+
+
+def _coerce_eval_passed(value: Any) -> Optional[bool]:
+    """Normalize eval pass/fail values to booleans when possible."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"pass", "passed", "true"}:
+            return True
+        if normalized in {"fail", "failed", "false"}:
+            return False
+    return None
+
+
+def _extract_eval_result_maps(record: dict[str, Any]) -> tuple[dict[str, float], dict[str, bool]]:
+    """Extract criterion score and pass maps from one eval output record."""
+    grades: dict[str, float] = {}
+    passes: dict[str, bool] = {}
+
+    for result in record.get("results", []) or []:
+        if not isinstance(result, dict):
+            continue
+        raw_name = str(result.get("name") or result.get("criterion") or "")
+        criterion_name = _normalize_criterion_name(raw_name) or raw_name
+        if not criterion_name:
+            continue
+
+        score = result.get("score")
+        if isinstance(score, (int, float)):
+            grades[criterion_name] = float(score)
+
+        passed = _coerce_eval_passed(
+            result.get("passed")
+            if "passed" in result
+            else result.get("pass")
+            if "pass" in result
+            else result.get("status")
+        )
+        if passed is not None:
+            passes[criterion_name] = passed
+
+    return grades, passes
+
+
+def _build_spreadsheet_rows(
+    dataset_items: list[dict[str, Any]],
+    output_items: list[dict[str, Any]],
+    threshold: float,
+) -> list[dict[str, Any]]:
+    """Build flat rows for spreadsheet export."""
+    rows: list[dict[str, Any]] = []
+    criteria = [criterion["name"] for criterion in QUESTION_LEVEL_CRITERIA]
+
+    if output_items:
+        records: list[dict[str, Any]] = output_items
+    else:
+        records = [{"datasource_item": item, "results": []} for item in dataset_items]
+
+    for index, record in enumerate(records, start=1):
+        item = record.get("datasource_item") or record.get("item") or {}
+        if not isinstance(item, dict):
+            item = {}
+        grades, passes = _extract_eval_result_maps(record)
+        known_results = [name for name in criteria if name in grades or name in passes]
+        failed_names = [
+            name
+            for name in criteria
+            if passes.get(name) is False
+            or (
+                name not in passes
+                and isinstance(grades.get(name), (int, float))
+                and float(grades[name]) < threshold
+            )
+        ]
+        passed_names = [
+            name
+            for name in criteria
+            if name in known_results and name not in failed_names
+        ]
+
+        row: dict[str, Any] = {
+            "row": index,
+            "source_id": item.get("source_id", ""),
+            "status": (
+                "failed"
+                if failed_names
+                else "passed"
+                if known_results
+                else "unknown"
+            ),
+            "passed_criteria_count": len(passed_names),
+            "failed_criteria_count": len(failed_names),
+            "failed_criteria": " | ".join(failed_names),
+            "source_question_text": item.get("source_question_text", ""),
+            "generated_question_text": item.get("generated_question_text", ""),
+        }
+
+        for criterion_name in criteria:
+            score = grades.get(criterion_name)
+            row[f"{criterion_name}_score"] = (
+                round(score, 2) if isinstance(score, (int, float)) else ""
+            )
+            if criterion_name in passes:
+                row[f"{criterion_name}_passed"] = "TRUE" if passes[criterion_name] else "FALSE"
+            else:
+                row[f"{criterion_name}_passed"] = ""
+
+        rows.append(row)
+
+    return rows
+
+
+def _write_evaluation_spreadsheet(
+    path: Path,
+    dataset_items: list[dict[str, Any]],
+    output_items: list[dict[str, Any]],
+    threshold: float,
+) -> bool:
+    """Write a spreadsheet-friendly CSV export for the eval modal."""
+    rows = _build_spreadsheet_rows(dataset_items, output_items, threshold)
+    if not rows:
+        return False
+
+    fieldnames = list(rows[0].keys())
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    return True
+
+
+def _write_rubric_snapshot(path: Path) -> Optional[str]:
+    """Copy the rubric file used for the run into the evaluation output folder."""
+    try:
+        path.write_text(RUBRIC_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+    except OSError:
+        logger.exception("Failed to write rubric snapshot to %s", path)
+        return None
+    return _evaluation_relative_path(path)
+
+
+def _attach_report_file_metadata(
+    report: dict[str, Any],
+    *,
+    report_path: Path,
+    dataset_path: Optional[Path],
+    output_items_path: Optional[Path],
+    spreadsheet_path: Optional[Path],
+    rubric_file: str,
+    source_files: list[str],
+) -> dict[str, Any]:
+    """Attach UI-facing file references to an evaluation report."""
+    testing_files = [
+        {
+            "name": _evaluation_relative_path(report_path),
+            "label": "Evaluation report",
+            "kind": "report",
+        }
+    ]
+    if dataset_path and dataset_path.exists():
+        testing_files.append(
+            {
+                "name": _evaluation_relative_path(dataset_path),
+                "label": "Evaluation dataset",
+                "kind": "dataset",
+            }
+        )
+    if output_items_path and output_items_path.exists():
+        testing_files.append(
+            {
+                "name": _evaluation_relative_path(output_items_path),
+                "label": "Evaluation item outputs",
+                "kind": "items",
+            }
+        )
+    if spreadsheet_path and spreadsheet_path.exists():
+        testing_files.append(
+            {
+                "name": _evaluation_relative_path(spreadsheet_path),
+                "label": "Spreadsheet export",
+                "kind": "spreadsheet",
+            }
+        )
+
+    report["run_inputs"] = _build_run_input_metadata(source_files)
+    report["testing_files"] = testing_files
+    report["rubric_file"] = rubric_file or ""
+    report["rubric_source_path"] = "data/rubric.json"
+    if spreadsheet_path and spreadsheet_path.exists():
+        report["spreadsheet_file"] = _evaluation_relative_path(spreadsheet_path)
+    return report
 
 
 def _build_item_schema() -> dict[str, Any]:
@@ -534,6 +778,7 @@ def run_openai_output_evaluation(
     final_result: dict[str, Any],
     outputs_dir: Path,
     latex_path: Optional[Path] = None,
+    source_files: Optional[list[str]] = None,
     grader_model: Optional[str] = None,
     poll_interval_seconds: float = 3.0,
     max_wait_seconds: int = 900,
@@ -545,8 +790,13 @@ def run_openai_output_evaluation(
     evaluation_outputs_dir.mkdir(parents=True, exist_ok=True)
     report_path = evaluation_outputs_dir / EVALUATION_REPORT_FILENAME
     dataset_path = evaluation_outputs_dir / EVALUATION_DATASET_FILENAME
+    output_items_path = evaluation_outputs_dir / EVALUATION_ITEMS_FILENAME
+    spreadsheet_path = evaluation_outputs_dir / EVALUATION_SPREADSHEET_FILENAME
+    rubric_snapshot_path = evaluation_outputs_dir / EVALUATION_RUBRIC_FILENAME
     grader_model = grader_model or RUBRIC_MODEL
     latex_document_check = _resolve_latex_check(latex_path)
+    rubric_file = _write_rubric_snapshot(rubric_snapshot_path) or ""
+    source_files = source_files or []
 
     generated_questions = final_result.get("generated_questions", [])
     if not generated_questions:
@@ -557,6 +807,15 @@ def run_openai_output_evaluation(
             dataset_path=None,
             items_evaluated=0,
             latex_document_check=latex_document_check,
+        )
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=None,
+            output_items_path=None,
+            spreadsheet_path=None,
+            rubric_file=rubric_file,
+            source_files=source_files,
         )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
@@ -569,6 +828,15 @@ def run_openai_output_evaluation(
             dataset_path=None,
             items_evaluated=0,
             latex_document_check=latex_document_check,
+        )
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=None,
+            output_items_path=None,
+            spreadsheet_path=None,
+            rubric_file=rubric_file,
+            source_files=source_files,
         )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
@@ -601,6 +869,15 @@ def run_openai_output_evaluation(
             dataset_path=None,
             items_evaluated=0,
             latex_document_check=latex_document_check,
+        )
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=None,
+            output_items_path=None,
+            spreadsheet_path=None,
+            rubric_file=rubric_file,
+            source_files=source_files,
         )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
@@ -651,20 +928,30 @@ def run_openai_output_evaluation(
         criterion_scores: dict[str, Any] = {}
         aggregation_notes: list[str] = []
         output_items: list[Any] = []
+        output_item_records: list[dict[str, Any]] = []
 
         if run_status == "completed":
             output_items = _collect_output_items(client, eval_obj.id, current.id)
             if output_items:
                 _write_output_items_jsonl(
-                    evaluation_outputs_dir / EVALUATION_ITEMS_FILENAME,
+                    output_items_path,
                     output_items,
                 )
+                output_item_records = [
+                    _to_jsonable(output_item) for output_item in output_items
+                ]
             criterion_scores, aggregation_notes = _aggregate_question_scores(output_items)
+
+        _write_evaluation_spreadsheet(
+            spreadsheet_path,
+            dataset_items=items,
+            output_items=output_item_records,
+            threshold=PASSING_SCORE_THRESHOLD,
+        )
 
         overall_score = _compute_overall_score(criterion_scores, latex_document_check)
         if report_status == "completed":
             report_status = _resolve_score_status(overall_score)
-        output_items_path = evaluation_outputs_dir / EVALUATION_ITEMS_FILENAME
         report = {
             "status": report_status,
             "created_at": _utc_timestamp(),
@@ -698,6 +985,15 @@ def run_openai_output_evaluation(
         if aggregation_notes:
             report["aggregation_notes"] = aggregation_notes
 
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=dataset_path,
+            output_items_path=output_items_path,
+            spreadsheet_path=spreadsheet_path,
+            rubric_file=rubric_file,
+            source_files=source_files,
+        )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
     except Exception as exc:
@@ -715,5 +1011,21 @@ def run_openai_output_evaluation(
             "error": str(exc),
             "traceback": traceback.format_exc(),
         }
+        if dataset_path.exists():
+            _write_evaluation_spreadsheet(
+                spreadsheet_path,
+                dataset_items=items,
+                output_items=[],
+                threshold=PASSING_SCORE_THRESHOLD,
+            )
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=dataset_path if dataset_path.exists() else None,
+            output_items_path=output_items_path if output_items_path.exists() else None,
+            spreadsheet_path=spreadsheet_path if spreadsheet_path.exists() else None,
+            rubric_file=rubric_file,
+            source_files=source_files,
+        )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
