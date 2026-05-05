@@ -11,7 +11,7 @@ The recommended fresh-install path is `deploy.sh`.
 - `live.sh` writes the nginx config and `uconn.service`, then starts/restarts nginx and the FastAPI backend.
 - `sync.sh` is the update path. It fetches `origin/main`, pulls fast-forward updates, rebuilds, rsyncs to the configured deploy directory, and restarts services.
 - `sync.sh --install-timer` installs a systemd timer that runs `sync.sh` every 60 seconds.
-- `raspi-deploy.sh` is the older direct deploy path. Use it only if you do not want the Cloudflare tunnel setup from `deploy.sh`.
+- `test.sh` starts the local FastAPI backend and Vite development UI from the repo root or the `deploy/` directory.
 
 ## Fresh Raspberry Pi Install
 
@@ -59,8 +59,8 @@ Use `@` for the subdomain if you want the root domain, such as `example.com`.
 The answers are saved in `.deploy.env` so future syncs and timer runs use the
 same target.
 
-The frontend build uses Vite 7, so Node.js 18 is not enough. `deploy.sh`,
-`packages.sh`, and the direct `raspi-deploy.sh` path install Node.js 22 from
+The frontend build uses Vite 7, so Node.js 18 is not enough. `deploy.sh` and
+`packages.sh` install Node.js 22 from
 NodeSource when `node` is missing or older than Vite's required range.
 Node 21 is not valid for Vite 7; use Node 20.19+ within Node 20.x, or
 Node 22.12+.
@@ -80,6 +80,39 @@ By default the scripts deploy:
 - backend: `uconn.service` running Uvicorn on `127.0.0.1:3002`
 - public hostname: `<subdomain>.<site-name>`
 - Cloudflare tunnel: `pi-tunnel`
+
+## Deployment Shape
+
+- source clone: wherever you cloned this Git repo, commonly `~/Scripts/UConn-IsomorphicQuestionLLM`
+- runtime copy: `/var/www/<deploy-dir-name>`
+- frontend root: `/var/www/<deploy-dir-name>/dist`
+- backend service: `uconn.service`
+- backend bind: `127.0.0.1:3002`
+- nginx public port: `80`
+- Cloudflare tunnel service: `cloudflared.service`
+
+nginx serves the React build from `dist/` and reverse-proxies `/api/` to the
+backend service.
+
+## What `deploy.sh` Runs
+
+1. `deploy/cloudflare.sh`
+   Installs `cloudflared`, authenticates, creates or reuses the tunnel, routes
+   the hostname, installs `cloudflared.service`, and rsyncs the repo to the
+   configured deploy directory.
+
+2. `deploy/packages.sh`
+   Installs system packages, ensures Node satisfies Vite's version requirement,
+   creates the deploy directory `.venv`, installs backend dependencies from
+   `backend/requirements.txt`, installs frontend dependencies, builds `dist/`,
+   and writes `dist/version.json`.
+
+3. `deploy/live.sh`
+   Writes the nginx site config, enables nginx, writes `uconn.service`, and
+   starts or restarts the backend.
+
+4. `deploy/sync.sh --install-timer`, if enabled.
+   Installs automatic one-minute update checks.
 
 ## Verify The Install
 
@@ -152,14 +185,25 @@ Remove the timer:
 bash deploy/sync.sh --remove-timer
 ```
 
-## Non-Cloudflare Local Deploy
+## Local Test Server
 
-If you only need nginx plus the backend service and do not want the Cloudflare
-tunnel setup, run:
+To launch the backend plus Vite development UI:
 
 ```bash
-bash deploy/raspi-deploy.sh
+bash deploy/test.sh
 ```
 
-That path still builds the app, syncs `/var/www/uconn`, writes nginx config, and
-installs `uconn.service`, but it does not create or run a Cloudflare tunnel.
+The script installs missing frontend dependencies, uses an active venv or the
+newest `~/venvs/main_py*` Python for the backend, starts FastAPI on
+`127.0.0.1:8000`, then runs `npm -C frontend run dev:ui` with `HOST=0.0.0.0`
+and `PORT=5173` by default.
+
+## Troubleshooting
+
+- `OPENAI_API_KEY` missing: create `.env` in the source clone or in the configured deploy directory, then run `bash deploy/sync.sh` and restart `sudo systemctl restart uconn`.
+- Backend not running: check `sudo journalctl -u uconn -n 100`.
+- nginx config failed: run `sudo nginx -t`.
+- Cloudflare tunnel not reachable: check `sudo journalctl -u cloudflared -n 100`.
+- Auto-sync not firing: check `systemctl status uconn-sync.timer` and `sudo journalctl -u uconn-sync -n 100`.
+- Git pull fails: make sure the source clone is clean and has credentials that allow pulling from the repo.
+- Vite fails with `crypto.hash is not a function`: Node is too old. Run `git pull --ff-only`, then `bash deploy/packages.sh`, then confirm `node -v` is `v22.12+` or compatible.
