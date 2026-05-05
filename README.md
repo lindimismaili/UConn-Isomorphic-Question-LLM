@@ -24,7 +24,6 @@ The backend creates a shared OpenAI container for each workflow run, uploads sou
 ## Repository Layout
 
 - `backend/src/main.py` command-line workflow runner
-- `backend/src/run.py` backend server launcher
 - `backend/src/server.py` FastAPI app and API endpoints
 - `backend/src/evaluation.py` OpenAI evals integration
 - `backend/src/artifacts.py` workflow and agent artifact writers/readers
@@ -33,7 +32,7 @@ The backend creates a shared OpenAI container for each workflow run, uploads sou
 - `backend/uploads/` uploaded source files grouped by session
 - `backend/outputs/` timestamped workflow outputs
 - `frontend/src/` React UI, hooks, and components
-- `docs/` deployment and runbook documents
+- `backend/BACKEND.md`, `frontend/FRONTEND.md`, `deploy/DEPLOY.md` detailed subsystem docs
 
 ## Prerequisites
 
@@ -69,7 +68,7 @@ Required:
 
 Backend runtime settings:
 
-- `HOST` - bind host for `python -m backend.src.run` and `python -m backend.src.server` defaults
+- `HOST` - bind host for `python -m backend.src.server` defaults
 - `PORT` - bind port for the FastAPI app defaults
 - `MAX_UPLOAD_BYTES` - upload size limit in bytes, default `20971520`
 - `WORKFLOW_TTL_SECONDS` - how long workflow records stay in memory, default `86400`
@@ -86,18 +85,29 @@ Frontend dev proxy:
 
 ## Local Server
 
-Run the full backend server, which also serves the built frontend when `dist/index.html` exists:
+Run the local backend plus Vite dev UI:
 
 ```bash
-python -m backend.src.run --reload
+bash deploy/test.sh
 ```
 
 Open:
 
-- `http://127.0.0.1:8000` for the UI
+- `http://127.0.0.1:5173` for the Vite UI
 - `http://127.0.0.1:8000/api/health` for a quick backend check
 
-If `dist/` is missing or stale, `backend/src/run.py` rebuilds the frontend before starting Uvicorn.
+To run only the backend API:
+
+```bash
+python -m uvicorn backend.src.server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+To serve the built frontend from the backend, build `dist/` first:
+
+```bash
+npm -C frontend run build
+python -m backend.src.server
+```
 
 ## Dev UI
 
@@ -176,23 +186,16 @@ Batch create-data runs also write batch summaries and per-file workflow folders 
 The evaluation step uses the rubric in `backend/data/rubric.json` and writes scored results into the output folder for the run.
 Those files are the primary record of how the generated questions were judged.
 
-## Agent Testing
+## Project Docs
 
-Agent-specific testing fixtures live under `backend/data/testing/`.
-The protocol for running Normalizer, Extracter, Verifier, Generator, LaTeX, and Evaluation tests without restarting from the beginning is documented in [docs/AGENT_TESTING.md](docs/AGENT_TESTING.md).
-Developer-only local test commands are available for fixture validation, style-check unit tests, and post-run generator-style reports. They are not part of the runtime workflow.
-
-## Deployment Docs
-
-- [Run guide](docs/RUN.md)
-- [Cloud and live hosting notes](docs/LIVE.md)
-- [Raspberry Pi and Nginx deployment](docs/DEPLOYMENT_RPI_NGINX.md)
-- [Deploy script reference](deploy/README.md)
+- [backend/BACKEND.md](backend/BACKEND.md) backend API, CLI, data folders, and maintenance notes
+- [frontend/FRONTEND.md](frontend/FRONTEND.md) Vite UI commands, proxy behavior, and build notes
+- [deploy/DEPLOY.md](deploy/DEPLOY.md) Raspberry Pi, nginx, Cloudflare Tunnel, and sync scripts
 
 ## Troubleshooting
 
 - `OPENAI_API_KEY` missing: the backend API can start, but workflow execution will fail until the key is set.
-- `dist/index.html` missing: run `npm -C frontend run build`, then restart `python -m backend.src.run`.
+- `dist/index.html` missing: run `npm -C frontend run build`, then restart `python -m backend.src.server`.
 - `crypto.hash is not a function` or Vite says Node 20.19+/22.12+ is required: upgrade Node. Node 21 is not in Vite's allowed range. On Raspberry Pi, pull the latest repo and run `bash deploy/packages.sh`; the deploy script installs Node 22 from NodeSource when the current Node is missing or too old.
 - Upload rejected: check the file extension and `MAX_UPLOAD_BYTES`.
 - Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `backend/outputs/`.

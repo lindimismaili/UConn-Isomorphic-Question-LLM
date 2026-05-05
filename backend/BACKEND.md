@@ -18,7 +18,6 @@ Key modules:
 
 - `backend/src/server.py` FastAPI routes and browser-facing workflow orchestration
 - `backend/src/main.py` CLI workflow runner
-- `backend/src/run.py` server startup wrapper that builds the frontend when needed
 - `backend/src/container.py` shared OpenAI container and LaTeX helper runtime
 - `backend/src/artifacts.py` agent artifact readers and writers
 - `backend/src/evaluation.py` rubric loading and OpenAI eval execution
@@ -44,10 +43,10 @@ The workflow uses one shared OpenAI container per run so the agents and the LaTe
 API server:
 
 ```bash
-python -m backend.src.run --reload
+python -m uvicorn backend.src.server:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Direct Uvicorn entry point:
+Direct module entry point:
 
 ```bash
 python -m backend.src.server
