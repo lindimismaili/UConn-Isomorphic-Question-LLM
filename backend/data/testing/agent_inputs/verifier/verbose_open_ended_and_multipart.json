@@ -1,0 +1,116 @@
+{
+  "task": "verify_source_questions",
+  "source_questions": {
+    "filename": "mixed_question_types_source.txt",
+    "title": "Agent Testing - Mixed Question Types",
+    "theme": "engineering",
+    "author": "Protocol Fixture",
+    "date": "2026-04-22",
+    "course": "PHYS 1401",
+    "questions": [
+      {
+        "source_id": "1",
+        "source_raw": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "stem": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "open_ended",
+        "theme": "engineering",
+        "topic_tags": [
+          "kinematics",
+          "stopping_distance",
+          "constant_acceleration"
+        ],
+        "has_figure": false,
+        "answer": "",
+        "parts": []
+      },
+      {
+        "source_id": "2",
+        "source_raw": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise. (a) Determine the time it takes the package to reach its maximum height. (b) Which statement best describes the package's acceleration while it is in flight?",
+        "stem": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multi_part",
+        "theme": "life_science",
+        "topic_tags": [
+          "projectile_motion",
+          "kinematics"
+        ],
+        "has_figure": false,
+        "answer": "",
+        "parts": [
+          {
+            "part_label": "a",
+            "stem": "Determine the time it takes the package to reach its maximum height.",
+            "question_type": "open_ended",
+            "options": [],
+            "answer": "",
+            "has_explicit_answer": false
+          },
+          {
+            "part_label": "b",
+            "stem": "Which statement best describes the package's acceleration while it is in flight?",
+            "question_type": "multiple_choice",
+            "options": [
+              {
+                "key": "A",
+                "text": "The acceleration is zero at the top of the path.",
+                "is_correct": false,
+                "explanation": ""
+              },
+              {
+                "key": "B",
+                "text": "The acceleration is downward and approximately \\(9.8\\,\\text{m/s}^2\\) throughout the flight.",
+                "is_correct": false,
+                "explanation": ""
+              },
+              {
+                "key": "C",
+                "text": "The acceleration points upward while the package rises and downward while it falls.",
+                "is_correct": false,
+                "explanation": ""
+              },
+              {
+                "key": "D",
+                "text": "The acceleration decreases linearly to zero as the package approaches the top.",
+                "is_correct": false,
+                "explanation": ""
+              }
+            ],
+            "answer": "",
+            "has_explicit_answer": false
+          }
+        ]
+      },
+      {
+        "source_id": "3",
+        "source_raw": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "stem": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multiple_choice",
+        "theme": "engineering",
+        "topic_tags": [
+          "graphs",
+          "kinematics"
+        ],
+        "has_figure": true,
+        "answer": "",
+        "parts": []
+      }
+    ]
+  },
+  "requirements": {
+    "preserve_all_questions": true,
+    "if_answer_marked_keep_it": true,
+    "if_unmarked_solve_and_mark_correct_option": true,
+    "add_option_explanations": true,
+    "use_code_interpreter_for_calculations": true,
+    "solve_open_ended_and_provide_answer": true,
+    "solve_multi_part_questions_per_part": true
+  }
+}

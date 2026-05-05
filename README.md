@@ -176,6 +176,12 @@ Batch create-data runs also write batch summaries and per-file workflow folders 
 The evaluation step uses the rubric in `backend/data/rubric.json` and writes scored results into the output folder for the run.
 Those files are the primary record of how the generated questions were judged.
 
+## Agent Testing
+
+Agent-specific testing fixtures live under `backend/data/testing/`.
+The protocol for running Normalizer, Extracter, Verifier, Generator, LaTeX, and Evaluation tests without restarting from the beginning is documented in [docs/AGENT_TESTING.md](docs/AGENT_TESTING.md).
+Developer-only local test commands are available for fixture validation, style-check unit tests, and post-run generator-style reports. They are not part of the runtime workflow.
+
 ## Deployment Docs
 
 - [Run guide](docs/RUN.md)

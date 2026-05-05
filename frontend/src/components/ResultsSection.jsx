@@ -80,6 +80,8 @@ function collectResultFiles(result) {
     workflowResult.pdf_file,
     evaluation.output_items_file,
     evaluation.dataset_file,
+    evaluation.spreadsheet_file,
+    evaluation.rubric_file,
     hasEvaluationReport ? 'evaluation_outputs/evaluation_report.json' : '',
   ].forEach(addFile);
 

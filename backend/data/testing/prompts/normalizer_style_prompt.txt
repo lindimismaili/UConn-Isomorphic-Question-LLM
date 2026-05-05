@@ -1,0 +1,1 @@
+Generate 2 isomorphic questions per source question. Preserve the original question type. When a source question is open-ended and uses a longer narrative setup, keep the generated version similarly verbose and explanation-oriented instead of compressing it into a short directive.

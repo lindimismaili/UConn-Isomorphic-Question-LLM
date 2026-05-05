@@ -1,0 +1,125 @@
+{
+  "task": "generate_isomorphic_questions",
+  "configuration": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "Agent Testing - Generator Verbosity",
+    "notes": "Use this fixture to verify that verbose open-ended questions stay verbose and explanation-oriented after generation."
+  },
+  "source_questions": {
+    "questions": [
+      {
+        "source_id": "1",
+        "source_raw": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "stem": "During a week-long field test for an autonomous hospital delivery cart, engineers notice that the cart enters the final straight section of the corridor at \\(4.8\\,\\text{m/s}\\) while a constant braking system can provide only \\(1.6\\,\\text{m/s}^2\\) of deceleration. The cart is \\(6.5\\,\\text{m}\\) from a sealed lab door, and the faculty supervisor wants a written justification rather than a single numerical answer. Explain whether the cart stops before it reaches the door, and show how the relevant kinematics relationship supports your conclusion.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "open_ended",
+        "theme": "engineering",
+        "topic_tags": [
+          "kinematics",
+          "stopping_distance",
+          "constant_acceleration"
+        ],
+        "has_figure": false,
+        "answer": "Using \\(v_f^2 = v_i^2 + 2a\\Delta x\\) with \\(v_f=0\\), \\(v_i=4.8\\,\\text{m/s}\\), and \\(a=-1.6\\,\\text{m/s}^2\\), the stopping distance is \\(\\Delta x = 7.2\\,\\text{m}\\). Because \\(7.2\\,\\text{m} > 6.5\\,\\text{m}\\), the cart would still be moving when it reaches the door. The braking system alone is therefore insufficient to stop the cart in time.",
+        "parts": []
+      },
+      {
+        "source_id": "2",
+        "source_raw": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise. (a) Determine the time it takes the package to reach its maximum height. (b) Which statement best describes the package's acceleration while it is in flight?",
+        "stem": "A biomedical sensor package is launched straight upward from the roof of a clinic with an initial speed of \\(18\\,\\text{m/s}\\). Ignore air resistance unless a part states otherwise.",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multi_part",
+        "theme": "life_science",
+        "topic_tags": [
+          "projectile_motion",
+          "kinematics"
+        ],
+        "has_figure": false,
+        "answer": "",
+        "parts": [
+          {
+            "part_label": "a",
+            "stem": "Determine the time it takes the package to reach its maximum height.",
+            "question_type": "open_ended",
+            "options": [],
+            "answer": "At the highest point the vertical velocity is zero, so \\(0 = v_0 - gt\\). Using \\(v_0 = 18\\,\\text{m/s}\\) and \\(g = 9.8\\,\\text{m/s}^2\\), the time is \\(t = 18/9.8 \\approx 1.84\\,\\text{s}\\).",
+            "has_explicit_answer": false
+          },
+          {
+            "part_label": "b",
+            "stem": "Which statement best describes the package's acceleration while it is in flight?",
+            "question_type": "multiple_choice",
+            "options": [
+              {
+                "key": "A",
+                "text": "The acceleration is zero at the top of the path.",
+                "is_correct": false,
+                "explanation": "The velocity becomes zero at the top, but gravity still acts there. Zero velocity does not imply zero acceleration."
+              },
+              {
+                "key": "B",
+                "text": "The acceleration is downward and approximately \\(9.8\\,\\text{m/s}^2\\) throughout the flight.",
+                "is_correct": true,
+                "explanation": "With air resistance neglected, gravity is the only significant force on the package after launch. That means the acceleration remains essentially constant at \\(-g\\), or downward with magnitude \\(9.8\\,\\text{m/s}^2\\), during the entire motion."
+              },
+              {
+                "key": "C",
+                "text": "The acceleration points upward while the package rises and downward while it falls.",
+                "is_correct": false,
+                "explanation": "This confuses the direction of velocity with the direction of acceleration. The package can move upward while its acceleration still points downward."
+              },
+              {
+                "key": "D",
+                "text": "The acceleration decreases linearly to zero as the package approaches the top.",
+                "is_correct": false,
+                "explanation": "Nothing in the idealized model makes gravity weaken near the top of the path. The acceleration does not taper to zero in standard projectile motion."
+              }
+            ],
+            "answer": "",
+            "has_explicit_answer": false
+          }
+        ]
+      },
+      {
+        "source_id": "3",
+        "source_raw": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "stem": "Figure 1 shows the velocity-time graph of a prototype ambulance during a braking test. Which statement is correct?",
+        "options": [],
+        "has_explicit_answer": false,
+        "difficulty": "",
+        "question_type": "multiple_choice",
+        "theme": "engineering",
+        "topic_tags": [
+          "graphs",
+          "kinematics"
+        ],
+        "has_figure": true,
+        "answer": "",
+        "parts": []
+      }
+    ]
+  },
+  "requirements": {
+    "new_questions_per_source": 1,
+    "fully_original_questions": true,
+    "same_underlying_concept": true,
+    "vary_numerical_values_significantly": true,
+    "physically_reasonable_values": true,
+    "plausible_misconception_distractors": true,
+    "detailed_correct_answer_explanations": true,
+    "explain_each_distractor": true,
+    "latex_math": true,
+    "use_code_interpreter_for_verification": true,
+    "skip_questions_with_figures": true,
+    "generate_open_ended_for_open_ended_sources": true,
+    "open_ended_questions_have_no_options": true,
+    "generate_answers_for_all_open_ended": true,
+    "generate_multi_part_for_multi_part_sources": true
+  }
+}

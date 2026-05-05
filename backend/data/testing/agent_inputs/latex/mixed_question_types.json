@@ -1,0 +1,97 @@
+{
+  "task": "format_questions_to_latex",
+  "document": {
+    "title": "Agent Testing - Mixed Question Types",
+    "theme": "engineering",
+    "source_title": "Agent Testing Fixtures",
+    "course": "PHYS 1401"
+  },
+  "questions": [
+    {
+      "source_id": "1",
+      "stem": "During an overnight validation run for a pharmacy robot, the cart enters the final corridor at \\(5.2\\,\\text{m/s}\\) while its automatic braking system can provide a constant deceleration of only \\(1.4\\,\\text{m/s}^2\\). The robot is \\(8.0\\,\\text{m}\\) from a locked medication cabinet, and the supervising engineer wants a short written explanation instead of a bare number. Explain whether the robot stops before the cabinet and show how the relevant constant-acceleration relationship supports your conclusion.",
+      "options": [],
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "Using \\(v_f^2 = v_i^2 + 2a\\Delta x\\) with \\(v_f=0\\), \\(v_i=5.2\\,\\text{m/s}\\), and \\(a=-1.4\\,\\text{m/s}^2\\), the stopping distance is \\(\\Delta x \\approx 9.66\\,\\text{m}\\). Because \\(9.66\\,\\text{m} > 8.0\\,\\text{m}\\), the robot would still be moving at the cabinet. The braking system alone is therefore not enough to stop it in time.",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "stem": "A compact research capsule is launched straight upward from the roof of a medical imaging center with an initial speed of \\(20\\,\\text{m/s}\\). Neglect air resistance unless a part states otherwise.",
+      "options": [],
+      "question_type": "multi_part",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": [
+        {
+          "part_label": "a",
+          "stem": "Determine the time required for the capsule to reach its maximum height.",
+          "question_type": "open_ended",
+          "options": [],
+          "answer": "At maximum height the vertical velocity is zero, so \\(0 = v_0 - gt\\). With \\(v_0 = 20\\,\\text{m/s}\\) and \\(g = 9.8\\,\\text{m/s}^2\\), the time is \\(t = 20/9.8 \\approx 2.04\\,\\text{s}\\)."
+        },
+        {
+          "part_label": "b",
+          "stem": "Which statement best describes the capsule's acceleration while it is in flight?",
+          "question_type": "multiple_choice",
+          "options": [
+            {
+              "key": "A",
+              "text": "The acceleration is zero at the top because the velocity is zero there.",
+              "is_correct": false,
+              "explanation": "This confuses velocity with acceleration. Gravity still provides a downward acceleration even when the velocity momentarily becomes zero."
+            },
+            {
+              "key": "B",
+              "text": "The acceleration is upward while the capsule rises and downward while it falls.",
+              "is_correct": false,
+              "explanation": "This incorrectly ties acceleration direction to motion direction. In ideal projectile motion the acceleration stays downward the whole time."
+            },
+            {
+              "key": "C",
+              "text": "The acceleration is downward and approximately \\(9.8\\,\\text{m/s}^2\\) throughout the flight.",
+              "is_correct": true,
+              "explanation": "With air resistance neglected, gravity is the only significant force after launch. That keeps the acceleration essentially constant at \\(-g\\), or downward with magnitude \\(9.8\\,\\text{m/s}^2\\), throughout the motion."
+            },
+            {
+              "key": "D",
+              "text": "The acceleration steadily decreases to zero as the capsule approaches the top.",
+              "is_correct": false,
+              "explanation": "Nothing in the idealized model causes the gravitational acceleration to fade near the top of the trajectory. The acceleration does not taper to zero."
+            }
+          ],
+          "answer": ""
+        }
+      ]
+    },
+    {
+      "source_id": "3",
+      "stem": "",
+      "options": [],
+      "question_type": "multiple_choice",
+      "skipped": true,
+      "skip_reason": "Question references a figure",
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "requirements": {
+    "include_document_preamble": true,
+    "include_macros": [
+      "\\QBlock",
+      "\\Correct",
+      "\\Wrong",
+      "\\OEBlock",
+      "\\MPBlock",
+      "\\MCPart",
+      "\\OEPart",
+      "\\SkipBlock"
+    ],
+    "format_all_questions_with_macros": true,
+    "proper_math_formatting": true,
+    "filename": "isomorphic_questions.tex"
+  }
+}

@@ -35,6 +35,8 @@ try:
     )
     from .evaluation import (
         EVALUATION_OUTPUTS_DIRNAME,
+        EVALUATION_RUBRIC_FILENAME,
+        EVALUATION_SPREADSHEET_FILENAME,
         run_openai_output_evaluation,
     )
 except ImportError:
@@ -47,6 +49,8 @@ except ImportError:
     )
     from evaluation import (
         EVALUATION_OUTPUTS_DIRNAME,
+        EVALUATION_RUBRIC_FILENAME,
+        EVALUATION_SPREADSHEET_FILENAME,
         run_openai_output_evaluation,
     )
 try:
@@ -64,6 +68,7 @@ try:
     )
     from .helpers import (
         apply_requested_difficulty,
+        build_json_message,
         load_agents_config,
         load_prompt,
         merge_extracted_metadata_into_config,
@@ -86,6 +91,7 @@ except ImportError:
     )
     from helpers import (
         apply_requested_difficulty,
+        build_json_message,
         load_agents_config,
         load_prompt,
         merge_extracted_metadata_into_config,
@@ -655,39 +661,35 @@ For each question:
         # Step 4: Generate Isomorphic Questions
         # =================================================================
         logger.info("STEP 4: Generating isomorphic questions")
-        
-        generator_input = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": f"""Generate isomorphic questions based on this configuration and source questions.
-
-Configuration:
-{normalizer_output.model_dump_json(indent=2)}
-
-Source Questions:
-{verifier_output.model_dump_json(indent=2)}
-
-Requirements:
-- Create {normalizer_output.new_questions_per_question} new question(s) per source question
-- Each new question must be fully original but test the same concept
-- Preserve the source question_type exactly (multiple_choice, open_ended, or multi_part)
-- Vary numerical values significantly but keep them physically reasonable
-- Create plausible distractors based on common misconceptions
-- Include detailed explanations for the correct answer
-- Include misconception-based explanations for each distractor
-- Use LaTeX for all mathematical expressions
-- Use code interpreter to verify your calculations
-- For open-ended questions, return no options and provide a non-empty answer
-- For multi-part questions, preserve the part structure and solve each part
-- For figure-based source questions, return the required skipped placeholder item
-""",
-                    }
-                ],
-            }
-        ]
+        generator_requirements = {
+            "new_questions_per_source": normalizer_output.new_questions_per_question,
+            "fully_original_questions": True,
+            "same_underlying_concept": True,
+            "vary_numerical_values_significantly": True,
+            "physically_reasonable_values": True,
+            "plausible_misconception_distractors": True,
+            "detailed_correct_answer_explanations": True,
+            "explain_each_distractor": True,
+            "latex_math": True,
+            "use_code_interpreter_for_verification": True,
+            "skip_questions_with_figures": True,
+            "generate_open_ended_for_open_ended_sources": True,
+            "open_ended_questions_have_no_options": True,
+            "generate_answers_for_all_open_ended": True,
+            "generate_multi_part_for_multi_part_sources": True,
+            "preserve_source_style_and_verbosity": True,
+            "keep_verbose_open_ended_sources_verbose": True,
+            "do_not_compress_narrative_stems_into_short_directives": True,
+            "do_not_add_padding_to_concise_sources": True,
+            "self_review_style_before_return": True,
+        }
+        generator_input_payload = {
+            "task": "generate_isomorphic_questions",
+            "configuration": normalizer_output.model_dump(),
+            "source_questions": verifier_output.model_dump(),
+            "requirements": generator_requirements,
+        }
+        generator_input = build_json_message(generator_input_payload)
         
         generator_result = await run_agent(
             agents["generator"],
@@ -708,27 +710,18 @@ Requirements:
             retry_questions = [
                 q for q in verifier_output.questions if q.source_id in missing_source_ids
             ]
-            retry_input = [
+            retry_input = build_json_message(
                 {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": f"""You omitted required source questions in the prior pass.
-
-Generate only for these missing source IDs: {', '.join(missing_source_ids)}.
-Return exactly {normalizer_output.new_questions_per_question} generated question(s) per source_id.
-
-Configuration:
-{normalizer_output.model_dump_json(indent=2)}
-
-Source Questions:
-{json.dumps({'questions': [q.model_dump() for q in retry_questions]}, indent=2)}
-""",
-                        }
-                    ],
+                    "task": "generate_isomorphic_questions_retry",
+                    "reason": "missing_required_source_ids",
+                    "missing_source_ids": missing_source_ids,
+                    "configuration": normalizer_output.model_dump(),
+                    "source_questions": {
+                        "questions": [q.model_dump() for q in retry_questions]
+                    },
+                    "requirements": generator_requirements,
                 }
-            ]
+            )
             retry_result = await run_agent(
                 agents["generator"],
                 retry_input,
@@ -752,6 +745,37 @@ Source Questions:
                 raise ValueError(
                     f"Generator failed to produce required outputs for source_id(s): {', '.join(missing_source_ids)}"
                 )
+
+        style_review_input = build_json_message(
+            {
+                "task": "review_and_revise_isomorphic_questions_for_style",
+                "configuration": normalizer_output.model_dump(),
+                "source_questions": verifier_output.model_dump(),
+                "draft_isomorphic_questions": generator_output.model_dump(),
+                "requirements": {
+                    **generator_requirements,
+                    "preserve_ids_and_source_ids": True,
+                    "return_complete_final_set": True,
+                    "revise_only_when_needed": True,
+                    "review_focus": [
+                        "Preserve the source question's verbosity and rhetorical style.",
+                        "Keep verbose open-ended questions verbose and explanation-oriented.",
+                        "Do not compress narrative or multi-sentence source stems into short directives.",
+                        "Do not add narrative padding to concise sources.",
+                        "Preserve part structure and skip placeholders exactly.",
+                    ],
+                },
+            }
+        )
+        style_review_result = await run_agent(
+            agents["generator"],
+            style_review_input,
+            run_config,
+            agent_outputs,
+            "generator",
+            "generator",
+        )
+        generator_output = style_review_result.final_output
         apply_requested_difficulty(
             generator_output.isomorphic_questions,
             normalizer_output.difficulty,
@@ -846,6 +870,7 @@ Set filename to "isomorphic_questions.tex"
             },
             outputs_dir=outputs_dir,
             latex_path=latex_path,
+            source_files=workflow_input.file_paths,
         )
         evaluation_elapsed = time.time() - evaluation_stage_start
         agent_outputs.append(
@@ -888,6 +913,18 @@ Set filename to "isomorphic_questions.tex"
                     if file_path.is_file()
                 )
             )
+        if f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_SPREADSHEET_FILENAME}" not in output_files:
+            spreadsheet_path = evaluation_outputs_dir / EVALUATION_SPREADSHEET_FILENAME
+            if spreadsheet_path.exists():
+                output_files.append(
+                    f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_SPREADSHEET_FILENAME}"
+                )
+        if f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_RUBRIC_FILENAME}" not in output_files:
+            rubric_path = evaluation_outputs_dir / EVALUATION_RUBRIC_FILENAME
+            if rubric_path.exists():
+                output_files.append(
+                    f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_RUBRIC_FILENAME}"
+                )
         for record in agent_outputs:
             agent_name = str(record.get("agent_name", "Agent"))
             agent_key = _agent_key_from_display_name(agent_name)

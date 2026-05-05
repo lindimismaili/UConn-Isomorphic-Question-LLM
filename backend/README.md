@@ -85,6 +85,12 @@ Typical contents:
 
 The API also supports download and status endpoints for these artifacts.
 
+## Agent Testing Fixtures
+
+Saved source files and stage-specific agent inputs for regression testing live in `backend/data/testing/`.
+Use them with the UI's `Input To Agent` workflow.
+Additional local developer checks live in `backend/src/style_testing.py`, `backend/src/check_generator_style.py`, and `backend/tests/test_style_testing.py`. They are for manual regression testing only and are not used by runtime workflow execution.
+
 ## Maintenance Notes
 
 - Keep `backend/data/agents.json`, `backend/data/prompts/`, and `backend/data/rubric.json` aligned with the workflow stages.
