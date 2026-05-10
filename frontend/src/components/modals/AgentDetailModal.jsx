@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from './Modal.jsx';
 import PromptViewerModal from './PromptViewerModal.jsx';
+import RubricViewerModal from './RubricViewerModal.jsx';
 import { IconFile } from '../Icons.jsx';
 
 const AGENT_PROMPT_MAP = {
@@ -103,6 +104,8 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
   // Do NOT early-return null here. The Modal must always be mounted so the
   // CSS opacity/transform transitions can fire when isOpen flips to true.
   const promptName = agentKey ? (AGENT_PROMPT_MAP[agentKey] || '') : '';
+  const isEvaluation = agentKey === 'evaluation';
+  const canOpenReference = Boolean(promptName || isEvaluation);
   const promptTitle = agentKey ? (AGENT_PROMPT_TITLES[agentKey] || agentKey) : '';
   const statusLabel = agent?.status
     ? agent.status.charAt(0).toUpperCase() + agent.status.slice(1)
@@ -144,8 +147,8 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
             <div className="modal-footer-actions">
               <button
                 className="btn btn-secondary"
-                disabled={!promptName}
-                onClick={() => promptName && setViewerOpen(true)}
+                disabled={!canOpenReference}
+                onClick={() => canOpenReference && setViewerOpen(true)}
               >
                 <IconFile className="btn-icon" />
                 <span>Prompt</span>
@@ -182,10 +185,14 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
       </Modal>
 
       <PromptViewerModal
-        isOpen={viewerOpen}
+        isOpen={viewerOpen && !isEvaluation}
         onClose={() => setViewerOpen(false)}
         promptName={promptName}
         title={`${promptTitle} Prompt`}
+      />
+      <RubricViewerModal
+        isOpen={viewerOpen && isEvaluation}
+        onClose={() => setViewerOpen(false)}
       />
     </>
   );

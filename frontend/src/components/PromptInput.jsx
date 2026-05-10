@@ -66,6 +66,8 @@ export default function PromptInput({
   onShowTestFiles,
   onCreateData,
   onInputToAgent,
+  runEvaluations,
+  onRunEvaluationsChange,
 }) {
   const [resetFeedback, setResetFeedback] = useState(false);
   const [uploadWarning, setUploadWarning] = useState(false);
@@ -274,6 +276,18 @@ export default function PromptInput({
 
           <div className="developer-tools-inline">
             <div className="developer-tools-inline-header">Developer Tools</div>
+            <label className="developer-toggle">
+              <input
+                type="checkbox"
+                checked={runEvaluations}
+                onChange={(event) => onRunEvaluationsChange(event.target.checked)}
+                disabled={isRunning}
+              />
+              <span className="developer-toggle-track" aria-hidden="true">
+                <span className="developer-toggle-thumb" />
+              </span>
+              <span className="developer-toggle-label">Run Evaluations</span>
+            </label>
             <button
               className="btn btn-secondary"
               onClick={onCreateData}

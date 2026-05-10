@@ -1445,7 +1445,7 @@ def _list_evaluation_source_files() -> list[Path]:
 
 def _load_rubric_model() -> str:
     """Load the rubric model from configuration, falling back to a default."""
-    rubric_model = "gpt-5.4-nano"
+    rubric_model = "gpt-5.5-nano"
     rubric_path = DATA_DIR / "rubric.json"
     if not rubric_path.exists():
         return rubric_model
@@ -1454,6 +1454,18 @@ def _load_rubric_model() -> str:
         return str(rubric.get("model") or rubric_model)
     except Exception:
         return rubric_model
+
+
+def _parse_form_bool(value: str, *, default: bool = False) -> bool:
+    """Parse a boolean value submitted by browser FormData."""
+    if value is None:
+        return default
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
 
 
 CREATE_DATA_STEP_SEQUENCE: list[tuple[str, str]] = [
@@ -1746,6 +1758,22 @@ async def get_dropdown():
         raise HTTPException(status_code=500, detail=f"Failed to load dropdown: {str(e)}")
 
 
+@app.get("/api/rubric")
+async def get_rubric():
+    """Get the evaluation rubric configuration for the frontend."""
+    rubric_path = DATA_DIR / "rubric.json"
+    if not rubric_path.exists():
+        raise HTTPException(status_code=404, detail="Rubric configuration not found")
+
+    try:
+        rubric = json.loads(rubric_path.read_text(encoding="utf-8"))
+        if not isinstance(rubric, dict):
+            raise ValueError("Rubric root must be a JSON object")
+        return rubric
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load rubric: {str(e)}")
+
+
 @app.get("/api/agents")
 async def get_agents():
     """Get the agents configuration for the frontend."""
@@ -1912,6 +1940,7 @@ async def start_workflow(
     fileIds: str = Form("[]"),
     filePaths: str = Form("[]"),
     testFiles: str = Form("[]"),
+    runEvaluation: str = Form("false"),
 ):
     """Start a new workflow and return a stream of status updates."""
     try:
@@ -1979,7 +2008,15 @@ async def start_workflow(
     _persist_workflow(workflow_id, workflows[workflow_id])
     
     # Start workflow in background
-    _register_workflow_task(workflow_id, run_workflow_async(workflow_id, prompt, file_paths))
+    _register_workflow_task(
+        workflow_id,
+        run_workflow_async(
+            workflow_id,
+            prompt,
+            file_paths,
+            run_evaluation=_parse_form_bool(runEvaluation, default=False),
+        ),
+    )
     
     return {"success": True, "workflowId": workflow_id}
 
@@ -2328,7 +2365,13 @@ async def stream_workflow(workflow_id: str):
     )
 
 
-async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str]):
+async def run_workflow_async(
+    workflow_id: str,
+    prompt: str,
+    file_paths: list[str],
+    *,
+    run_evaluation: bool = True,
+):
     """Run the workflow asynchronously."""
     workflow = workflows[workflow_id]
     outputs_dir, output_folder_label = create_unique_run_dir(OUTPUTS_DIR, workflow_id)
@@ -2339,6 +2382,7 @@ async def run_workflow_async(workflow_id: str, prompt: str, file_paths: list[str
         file_paths,
         outputs_dir=outputs_dir,
         output_folder_label=output_folder_label,
+        run_evaluation=run_evaluation,
     )
 
 
@@ -2420,6 +2464,7 @@ async def _execute_workflow(
     agent_input_override: Any = None,
     agent_input_filename: str = "",
     input_to_agent_run: bool = False,
+    run_evaluation: bool = True,
 ) -> None:
     """Run the workflow and write artifacts into a specific output directory."""
     client = get_openai_client()
@@ -2459,6 +2504,13 @@ async def _execute_workflow(
                 else "rerun"
                 if resume_source_dir
                 else "full"
+            )
+            should_run_evaluation = (
+                run_evaluation and _should_run_agent("evaluation", resume_from_agent)
+            )
+            evaluation_was_skipped = (
+                not should_run_evaluation
+                and _should_run_agent("evaluation", resume_from_agent)
             )
 
             file_ids = []
@@ -3275,7 +3327,9 @@ async def _execute_workflow(
                 if has_uploaded_agent_input and resume_from_agent == "latex":
                     latex_input = uploaded_agent_input
                 workflow["agents"]["latex"]["data"]["receivedFrom"] = "generator"
-                workflow["agents"]["latex"]["data"]["sentTo"] = "evaluation"
+                workflow["agents"]["latex"]["data"]["sentTo"] = (
+                    "evaluation" if should_run_evaluation else "output"
+                )
                 workflow["agents"]["latex"]["data"]["input"] = (
                     uploaded_agent_payload
                     if has_uploaded_agent_input and resume_from_agent == "latex" and uploaded_agent_payload
@@ -3390,14 +3444,14 @@ async def _execute_workflow(
                     if source_pdf_path.exists():
                         shutil.copy2(source_pdf_path, pdf_path)
 
-            if _should_run_agent("evaluation", resume_from_agent):
+            if should_run_evaluation:
                 workflow["agents"]["evaluation"]["status"] = "thinking"
                 workflow["agents"]["evaluation"]["data"]["startTime"] = datetime.now().isoformat()
                 workflow["agents"]["evaluation"]["data"]["model"] = _load_rubric_model()
                 workflow["agents"]["evaluation"]["data"]["reasoningLevel"] = "low"
                 _touch_workflow(workflow)
 
-            if _should_run_agent("evaluation", resume_from_agent):
+            if should_run_evaluation:
                 evaluation_stage_start = time.time()
                 contract_report = validate_generator_output(
                     verifier_output.questions,
@@ -3467,6 +3521,16 @@ async def _execute_workflow(
                         },
                     )
                 )
+            elif _should_run_agent("evaluation", resume_from_agent):
+                evaluation_report = None
+                workflow["agents"]["evaluation"]["status"] = "inactive"
+                workflow["agents"]["evaluation"]["data"]["receivedFrom"] = "latex"
+                workflow["agents"]["evaluation"]["data"]["sentTo"] = "output"
+                workflow["agents"]["evaluation"]["data"]["model"] = _load_rubric_model()
+                workflow["agents"]["evaluation"]["data"]["reasoningLevel"] = "low"
+                workflow["agents"]["evaluation"]["data"]["input"] = "Evaluation disabled for this workflow"
+                workflow["agents"]["evaluation"]["data"]["output"] = "Skipped because Run Evaluations is off."
+                _touch_workflow(workflow)
             else:
                 if resume_source_dir is None:
                     raise ValueError("resume_source_dir is required for cached evaluation output")
@@ -3493,7 +3557,8 @@ async def _execute_workflow(
 
             workflow["agents"]["output"]["status"] = "thinking"
             workflow["agents"]["output"]["data"]["startTime"] = datetime.now().isoformat()
-            workflow["agents"]["output"]["data"]["receivedFrom"] = "evaluation"
+            output_received_from = "latex" if evaluation_was_skipped else "evaluation"
+            workflow["agents"]["output"]["data"]["receivedFrom"] = output_received_from
             workflow["agents"]["output"]["data"]["sentTo"] = "user"
             workflow["agents"]["output"]["data"]["model"] = "Workflow Runtime"
             workflow["agents"]["output"]["data"]["input"] = (
@@ -3562,7 +3627,7 @@ async def _execute_workflow(
             output_payload = {
                 "agent_name": "Output",
                 "execution_time_seconds": None,
-                "received_from_node": "evaluation",
+                "received_from_node": output_received_from,
                 "sent_to_node": "user",
                 "input_summary": f"Finalize output files for workflow {workflow_id}",
                 "output": {
@@ -3586,7 +3651,7 @@ async def _execute_workflow(
                 output_payload=output_payload["output"],
                 metadata={
                     "execution_time_seconds": output_elapsed,
-                    "received_from_node": "evaluation",
+                    "received_from_node": output_received_from,
                     "sent_to_node": "user",
                     "input_summary": f"Finalize output files for workflow {workflow_id}",
                     "output_folder": output_folder_label,
