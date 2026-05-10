@@ -2,7 +2,7 @@
   "normalizer": {
     "name": "Normalizer",
     "description": "Parses user request into configuration",
-    "model": "gpt-5.4-mini",
+    "model": "gpt-5.5-mini",
     "reasoning": "none",
     "inputFrom": "User",
     "outputTo": "Extracter",
@@ -11,7 +11,7 @@
   "extracter": {
     "name": "Extracter",
     "description": "Reads files and extracts questions",
-    "model": "gpt-5.4-mini",
+    "model": "gpt-5.5-mini",
     "reasoning": "none",
     "inputFrom": "Normalizer",
     "outputTo": "Verifier",
@@ -20,7 +20,7 @@
   "verifier": {
     "name": "Verifier",
     "description": "Validates answers and adds explanations",
-    "model": "gpt-5.4",
+    "model": "gpt-5.5",
     "reasoning": "medium",
     "inputFrom": "Extracter",
     "outputTo": "Generator",
@@ -29,7 +29,7 @@
   "generator": {
     "name": "Generator",
     "description": "Creates isomorphic questions",
-    "model": "gpt-5.4",
+    "model": "gpt-5.5",
     "reasoning": "medium",
     "inputFrom": "Verifier",
     "outputTo": "Latexifier",
@@ -38,7 +38,7 @@
   "latex": {
     "name": "Latexifier",
     "description": "Converts questions to LaTeX format",
-    "model": "gpt-5.4",
+    "model": "gpt-5.5",
     "reasoning": "medium",
     "inputFrom": "Generator",
     "outputTo": "Evaluation",

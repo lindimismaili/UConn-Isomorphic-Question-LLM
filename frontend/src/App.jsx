@@ -509,6 +509,7 @@ function reducer(state, action) {
 export default function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [prompt, setPrompt] = useState("");
+  const [runEvaluations, setRunEvaluations] = useState(false);
   const [footerVersion, setFooterVersion] = useState("Version -");
   const [openaiStatus, setOpenaiStatus] = useState({
     isDown: false,
@@ -587,7 +588,7 @@ export default function App() {
       });
       return;
     }
-    runWorkflow(prompt, files);
+    runWorkflow(prompt, files, { runEvaluations });
   };
 
   const handleClearInputs = () => {
@@ -680,6 +681,8 @@ export default function App() {
               onInputToAgent={() =>
                 dispatch({ type: "OPEN_MODAL", modal: "input-to-agent" })
               }
+              runEvaluations={runEvaluations}
+              onRunEvaluationsChange={setRunEvaluations}
             />
           </div>
 

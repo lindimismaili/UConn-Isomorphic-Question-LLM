@@ -1,0 +1,523 @@
+{
+  "filename": "file-URpEa2vtYCtJcCf2ki2mjd-1219-2.pdf",
+  "title": "Physics Phase 1 Evaluation",
+  "theme": "physics_abstract",
+  "author": "",
+  "date": "",
+  "course": "",
+  "questions": [
+    {
+      "source_id": "1",
+      "source_raw": "Q1. Which of the following statements about using simplified models is correct?\nA. It is always reasonable to treat a bicycle wheel as a perfect sphere when\nanalyzing the wobble of one spoke.\nThis is incorrect because details like shape asymmetry and spoke structure can matter for a\nlocal motion question.\nB. It is reasonable to model a parade float as a point mass when estimating how\nfar it travels across a city in an hour.\nOver a large travel distance, the object’s size is negligible compared with the displacement, so\na point-mass model is appropriate.\nC. You cannot ever assume a vacuum in a calculation, even if you are intentionally\nneglecting drag.\nThis is incorrect because assuming a vacuum is a standard idealization used specifically to ignore\nair resistance.\nD. None of the above is correct.\nThis is incorrect because option B describes a valid approximation in the stated scale.",
+      "stem": "Which of the following statements about using simplified models is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It is always reasonable to treat a bicycle wheel as a perfect sphere when analyzing the wobble of one spoke. This is incorrect because details like shape asymmetry and spoke structure can matter for a local motion question.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "It is reasonable to model a parade float as a point mass when estimating how far it travels across a city in an hour. Over a large travel distance, the object’s size is negligible compared with the displacement, so a point-mass model is appropriate.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "You cannot ever assume a vacuum in a calculation, even if you are intentionally neglecting drag. This is incorrect because assuming a vacuum is a standard idealization used specifically to ignore air resistance.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct. This is incorrect because option B describes a valid approximation in the stated scale.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "Q2. Which of the following equations is correct?\nA. 1 p = 1 £.\nThis is incorrect because a penny is much smaller than a pound.\nB. 1 = 0.01.\nThis is incorrect because it equates a dimensionless 1 with a different number for no unit￾conversion reason.\nC. 1 p = 0.01 £.\nThis is correct because 1 penny is one-hundredth of a pound.\nD. 100 p = 0.01 £.\nThis is incorrect because 100 p = 1 £, not 0.01 £.",
+      "stem": "Which of the following equations is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1 p = 1 £. This is incorrect because a penny is much smaller than a pound.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "1 = 0.01. This is incorrect because it equates a dimensionless 1 with a different number for no unit￾conversion reason.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "1 p = 0.01 £. This is correct because 1 penny is one-hundredth of a pound.",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "100 p = 0.01 £. This is incorrect because 100 p = 1 £, not 0.01 £.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "Q3. Which option has the incorrect unit?\nA. Pressure: pascal\nThis is correct because the pascal (Pa) is the SI unit of pressure.\nB. Momentum: kilogram·meter/second\nThis is correct because momentum has units of kg·m/s.\nC. Frequency: second\nThis is incorrect because frequency is measured in hertz (1/s), not seconds (s).\nD. Force: kilogram·meter/second2\nThis is correct because force has SI units kg·m/s2\n(newtons).",
+      "stem": "Which option has the incorrect unit?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Pressure: pascal This is correct because the pascal (Pa) is the SI unit of pressure.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Momentum: kilogram·meter/second This is correct because momentum has units of kg·m/s.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Frequency: second This is incorrect because frequency is measured in hertz (1/s), not seconds (s).",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Force: kilogram·meter/second2 This is correct because force has SI units kg·m/s2 (newtons).",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "Q4. A scout drone is launched from the base camp located at the origin and\nspots a target at the coordinates ⃗r = 4ˆı+ 7ˆȷ, where distances are in megameters.\nWhich of the following statements is correct?\nA. The distance between the target and the base camp is 11 megameters.\nThis is incorrect because it adds components instead of using the Pythagorean distance.\nB. The distance between the target and the base camp is 7 megameters.\nThis is incorrect because it uses only the y-component magnitude and ignores the x-component.\nC. The distance between the target and the base camp is 4 megameters.\nThis is incorrect because it uses only the x-component magnitude and ignores the y-component.\nD. None of the above is correct.\nThis is correct because the distance is √\n4\n2 + 72 =\n√\n65 ≈ 8.06 megameters, which is not 11, 7,\nor 4.",
+      "stem": "A scout drone is launched from the base camp located at the origin and spots a target at the coordinates ⃗r = 4ˆı+ 7ˆȷ, where distances are in megameters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the target and the base camp is 11 megameters. This is incorrect because it adds components instead of using the Pythagorean distance.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The distance between the target and the base camp is 7 megameters. This is incorrect because it uses only the y-component magnitude and ignores the x-component.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The distance between the target and the base camp is 4 megameters. This is incorrect because it uses only the x-component magnitude and ignores the y-component.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct. This is correct because the distance is √ 4 2 + 72 = √ 65 ≈ 8.06 megameters, which is not 11, 7, or 4.",
+          "is_correct": true,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "5",
+      "source_raw": "Q5. If the displacement of an object is given by the function ⃗s =\n\n(0.80 m/s\n3\n)t\n3 +\n(1.90 m/s\n2\n)t\n2\n)ˆı, which of the following statement is correct?\nA. This is a constant-acceleration motion.\nThis is incorrect because the acceleration depends on t due to the t\n3\nterm in position.\nB. The magnitude of the acceleration is 1.90 m/s\n2\nfor all times.\nThis is incorrect because 1.90 m/s\n2\nis a position coefficient, not the constant acceleration.\nC. The magnitude of the acceleration at t = 0 is 0 m/s\n2\n.\nThis is incorrect because the t\n2\nterm contributes a nonzero constant term to acceleration at\nt = 0.\nD. The magnitude of the acceleration at t = 0 is 3.8 m/s\n2\n.\nThis is correct because a(t) = d\n2\ns/dt2 = (4.8t + 3.8)ˆı, so |a(0)| = 3.8 m/s\n2\n.",
+      "stem": "If the displacement of an object is given by the function ⃗s = (0.80 m/s 3)t 3 + (1.90 m/s 2)t 2 )ˆı, which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant-acceleration motion. This is incorrect because the acceleration depends on t due to the t 3 term in position.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 1.90 m/s 2 for all times. This is incorrect because 1.90 m/s 2 is a position coefficient, not the constant acceleration.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s 2. This is incorrect because the t 2 term contributes a nonzero constant term to acceleration at t = 0.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0 is 3.8 m/s 2. This is correct because a(t) = d 2 s/dt2 = (4.8t + 3.8)ˆı, so |a(0)| = 3.8 m/s 2.",
+          "is_correct": true,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "6",
+      "source_raw": "Q6. An object takes 5 s to move from position A (⃗rA = 1.0ˆı − 2.0ˆȷ) to position\nB (⃗rB = −5.0ˆı + 4.0ˆȷ) along a straight path, where length units are in meters.\nWhich of the following statements is correct?\nA. The moving distance is 8.5 m.\nThis is correct because the straight-line distance is |∆⃗r| =\np\n(−6)2 + (6)2 =\n√\n72 ≈ 8.5 m.\nB. The speed at t = 0 must be 1.7 m/s.\nThis is incorrect because knowing only endpoints and travel time does not uniquely determine\nthe initial speed without a motion model.\nC. The acceleration at t = 0 must be 0.34 m/s\n2\n.\nThis is incorrect because no information about how velocity changes with time is given, so\nacceleration is not determined.\nD. None of the above is correct.\nThis is incorrect because option A is a correct computation of the path length for straight-line\nmotion.",
+      "stem": "An object takes 5 s to move from position A (⃗rA = 1.0ˆı − 2.0ˆȷ) to position B (⃗rB = −5.0ˆı + 4.0ˆȷ) along a straight path, where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 8.5 m. This is correct because the straight-line distance is |∆⃗r| = p (−6)2 + (6)2 = √ 72 ≈ 8.5 m.",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 1.7 m/s. This is incorrect because knowing only endpoints and travel time does not uniquely determine the initial speed without a motion model.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.34 m/s 2. This is incorrect because no information about how velocity changes with time is given, so acceleration is not determined.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct. This is incorrect because option A is a correct computation of the path length for straight-line motion.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "7",
+      "source_raw": "Q7. A tennis ball is launched with speed v0 at an angle θ above the horizontal\n(ignore air resistance). What is the ball’s speed at its maximum height?\nA. v0.\nThis is incorrect because the vertical component decreases to zero at the top, so the speed is\nreduced from v0.\nB. v0 cos θ.\nThis is correct because at maximum height the vertical velocity is zero and the horizontal\ncomponent remains v0 cos θ.\nC. v0 sin θ.\nThis is incorrect because v0 sin θ is the initial vertical component, which becomes zero at the\ntop.\nD. 0.\nThis is incorrect because the horizontal component of velocity is generally nonzero at the max￾imum height.",
+      "stem": "A tennis ball is launched with speed v0 at an angle θ above the horizontal (ignore air resistance). What is the ball’s speed at its maximum height?",
+      "options": [
+        {
+          "key": "A",
+          "text": "v0. This is incorrect because the vertical component decreases to zero at the top, so the speed is reduced from v0.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "v0 cos θ. This is correct because at maximum height the vertical velocity is zero and the horizontal component remains v0 cos θ.",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "v0 sin θ. This is incorrect because v0 sin θ is the initial vertical component, which becomes zero at the top.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "0. This is incorrect because the horizontal component of velocity is generally nonzero at the max￾imum height.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "8",
+      "source_raw": "Q8. A probe has an initial velocity of ⃗v0 = (12.0 m/s)ˆı when its thrusters engage,\nproducing an acceleration of ⃗a = (−1.50 m/s\n2\n)ˆı + (3.20 m/s\n2\n)ˆȷ. Based on this\nscenario, which of the following statements is correct?\nA. The x-component of the probe’s velocity remains constant.\nThis is incorrect because ax ̸= 0 implies the x-component of velocity changes with time.\nB. The y-component of the probe’s velocity remains constant.\nThis is incorrect because ay ̸= 0 means the y-component of velocity cannot stay constant.\nC. Both the direction of motion and speed change.\nThis is correct because the nonzero ay changes the direction and the nonzero ax changes the\nspeed (and magnitude of velocity).\nD. None of the above is correct.\nThis is incorrect because option C correctly describes the effect of a 2D acceleration on velocity.",
+      "stem": "A probe has an initial velocity of ⃗v0 = (12.0 m/s)ˆı when its thrusters engage, producing an acceleration of ⃗a = (−1.50 m/s 2)ˆı + (3.20 m/s 2)ˆȷ. Based on this scenario, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The x-component of the probe’s velocity remains constant. This is incorrect because ax ̸= 0 implies the x-component of velocity changes with time.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The y-component of the probe’s velocity remains constant. This is incorrect because ay ̸= 0 means the y-component of velocity cannot stay constant.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Both the direction of motion and speed change. This is correct because the nonzero ay changes the direction and the nonzero ax changes the speed (and magnitude of velocity).",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct. This is incorrect because option C correctly describes the effect of a 2D acceleration on velocity.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "9",
+      "source_raw": "Q9. If the magnitudes of both charges are doubled and their separation is also\ndoubled, what happens to the magnitude of the electrostatic force that each\ncharge exerts on the other?\nA. It stays the same.\nThis is correct because F ∝ q1q2/r2\n, so doubling both charges multiplies F by 4 while doubling\nr divides F by 4.\nB. It decreases by a factor of 2.\nThis is incorrect because the net scaling is 1, not a decrease, when both charges and distance are\ndoubled.\nC. It increases by a factor of 2.\nThis is incorrect because it accounts for only part of the scaling and ignores the r\n2 dependence.\nD. It increases by a factor of 4.\nThis is incorrect because it considers the charge doubling but forgets that doubling distance\nreduces the force by a factor of 4.\nE. It decreases by a factor of 4.\nThis is incorrect because it considers the distance effect but neglects that doubling each charge\nincreases the force by a factor of 4.",
+      "stem": "If the magnitudes of both charges are doubled and their separation is also doubled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It stays the same. This is correct because F ∝ q1q2/r2 , so doubling both charges multiplies F by 4 while doubling r divides F by 4.",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "It decreases by a factor of 2. This is incorrect because the net scaling is 1, not a decrease, when both charges and distance are doubled.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "It increases by a factor of 2. This is incorrect because it accounts for only part of the scaling and ignores the r 2 dependence.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "It increases by a factor of 4. This is incorrect because it considers the charge doubling but forgets that doubling distance reduces the force by a factor of 4.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "E",
+          "text": "It decreases by a factor of 4. This is incorrect because it considers the distance effect but neglects that doubling each charge increases the force by a factor of 4.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "10",
+      "source_raw": "Q10. An object can escape a planet with radius R and mass M at an escape\nspeed given by v =\nr\n2GM\nR\n, where G is the universal gravitational constant.\nBased on this expression, which of the following statements is correct?\nA. A spacecraft with greater mass needs a greater escape speed from the same\nplanet.\nThis is incorrect because the escape-speed formula depends on the planet’s M and R, not on\nthe escaping object’s mass.\nB. Escape speed is higher on a planet with smaller mass and larger radius.\nThis is incorrect because decreasing M and increasing R both reduce GM/R, lowering escape\nspeed.\nC. If a planet’s mass and radius are both cut in half, the escape speed must be\nsmaller.\nThis is incorrect because M/R stays the same when both are scaled by the same factor, so the\nescape speed is unchanged.\nD. Escape speed is higher on a planet with greater mass and smaller radius.\nThis is correct because increasing M and decreasing R increases GM/R, which increases v.",
+      "stem": "An object can escape a planet with radius R and mass M at an escape speed given by v = r 2GM R , where G is the universal gravitational constant. Based on this expression, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "A spacecraft with greater mass needs a greater escape speed from the same planet. This is incorrect because the escape-speed formula depends on the planet’s M and R, not on the escaping object’s mass.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Escape speed is higher on a planet with smaller mass and larger radius. This is incorrect because decreasing M and increasing R both reduce GM/R, lowering escape speed.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "If a planet’s mass and radius are both cut in half, the escape speed must be smaller. This is incorrect because M/R stays the same when both are scaled by the same factor, so the escape speed is unchanged.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Escape speed is higher on a planet with greater mass and smaller radius. This is correct because increasing M and decreasing R increases GM/R, which increases v.",
+          "is_correct": true,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "11",
+      "source_raw": "Q11. The force F⃗ = (−2.50 N)ˆı + (6.00 N)ˆȷ acts on a particle as it moves along\nthe x axis from x = −1.2 m to x = 3.8 m. What is the work, in joules, done by\nthe force on the particle?\nA. −12.5 J\nThis is correct because ∆⃗r = (5.0 m)ˆı and W = F⃗ · ∆⃗r = Fx∆x = (−2.50)(5.0) = −12.5 J.\nB. 30.0 J\nThis is incorrect because it (mis)uses the y-component even though the displacement has no\ny-component.\nC. 12.5 J\nThis is incorrect because it ignores the negative sign from the force opposing the displacement.\nD. 32.5 J\nThis is incorrect because it multiplies by the force magnitude instead of taking the dot product\nwith the displacement direction.",
+      "stem": "The force F⃗ = (−2.50 N)ˆı + (6.00 N)ˆȷ acts on a particle as it moves along the x axis from x = −1.2 m to x = 3.8 m. What is the work, in joules, done by the force on the particle?",
+      "options": [
+        {
+          "key": "A",
+          "text": "−12.5 J This is correct because ∆⃗r = (5.0 m)ˆı and W = F⃗ · ∆⃗r = Fx∆x = (−2.50)(5.0) = −12.5 J.",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "30.0 J This is incorrect because it (mis)uses the y-component even though the displacement has no y-component.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "12.5 J This is incorrect because it ignores the negative sign from the force opposing the displacement.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "32.5 J This is incorrect because it multiplies by the force magnitude instead of taking the dot product with the displacement direction.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "12",
+      "source_raw": "Q12. A 3.2 kg cart initially moving at 1.8 m/s collides with a bumper and re￾bounds at a speed of 0.6 m/s moving backward. The collision lasts for 0.15 s.\nWhat is the average force exerted on the cart during the collision?\nA. 17.1 N\nThis is incorrect because it uses only the rebound speed rather than the full change in velocity\n(including the reversal of direction).\nB. 38.4 N\nThis is incorrect because it effectively uses an incorrect ∆v that does not account for the sign\nchange properly.\nC. 51.2 N\nThis is correct because ∆p = m(vf − vi) = 3.2(−0.6 − 1.8) = −7.68 kg m/s and |Favg| =\n|∆p|/∆t = 7.68/0.15 = 51.2 N.\nD. None of the above is correct\nThis is incorrect because option C correctly computes the average force magnitude from impulse.",
+      "stem": "A 3.2 kg cart initially moving at 1.8 m/s collides with a bumper and rebounds at a speed of 0.6 m/s moving backward. The collision lasts for 0.15 s. What is the average force exerted on the cart during the collision?",
+      "options": [
+        {
+          "key": "A",
+          "text": "17.1 N This is incorrect because it uses only the rebound speed rather than the full change in velocity (including the reversal of direction).",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "38.4 N This is incorrect because it effectively uses an incorrect ∆v that does not account for the sign change properly.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "51.2 N This is correct because ∆p = m(vf − vi) = 3.2(−0.6 − 1.8) = −7.68 kg m/s and |Favg| = |∆p|/∆t = 7.68/0.15 = 51.2 N.",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct This is incorrect because option C correctly computes the average force magnitude from impulse.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "13",
+      "source_raw": "Q13. A 65 kg catcher is initially at rest. A 145 g baseball traveling at 90 mph is\ncaught and sticks in the catcher’s mitt. What is the catcher’s speed immediately\nafter the catch?\nA. 0.090 m/s\nThis is correct because momentum conservation gives vf =\nmbvb\nmc + mb\n=\n0.145 × (90 × 0.447)\n65.145\n≈\n0.0895 m/s ≈ 0.090 m/s.\nB. 0.41 m/s\nThis is incorrect because it comes from mishandling the mph-to-m/s conversion or not dividing\nby the combined mass correctly.\nC. 40 m/s\nThis is incorrect because it assumes the catcher ends up moving nearly as fast as the ball despite\nthe catcher’s much larger mass.\nD. 2.0 × 10−4 m/s\nThis is incorrect because it over-divides by mass (typically from using grams as kilograms or\nadding an extra factor of 1000).",
+      "stem": "A 65 kg catcher is initially at rest. A 145 g baseball traveling at 90 mph is caught and sticks in the catcher’s mitt. What is the catcher’s speed immediately after the catch?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.090 m/s This is correct because momentum conservation gives vf = mbvb mc + mb = 0.145 × (90 × 0.447) 65.145 ≈ 0.0895 m/s ≈ 0.090 m/s.",
+          "is_correct": true,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "0.41 m/s This is incorrect because it comes from mishandling the mph-to-m/s conversion or not dividing by the combined mass correctly.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "40 m/s This is incorrect because it assumes the catcher ends up moving nearly as fast as the ball despite the catcher’s much larger mass.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "2.0 × 10−4 m/s This is incorrect because it over-divides by mass (typically from using grams as kilograms or adding an extra factor of 1000).",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ]
+}

@@ -76,7 +76,7 @@ Backend runtime settings:
 - `BATCH_WORKFLOW_CONCURRENCY` - concurrent create-data batch limit, default `2`
 - `OPENAI_STATUS_TIMEOUT_SECONDS` - timeout for the OpenAI status probe, default `5`
 - `OPENAI_CONTAINER_EXPIRES_MINUTES` - shared container lifetime, clamped to `1..20`, default `20`
-- `OPENAI_CONTAINER_BOOTSTRAP_MODEL` - model used to bootstrap the shared container, default `gpt-5.4`
+- `OPENAI_CONTAINER_BOOTSTRAP_MODEL` - model used to bootstrap the shared container, default `gpt-5.5`
 - `OPENAI_CONTAINER_ALLOWED_DOMAINS` - comma-separated allowlist for container bootstrap and tools
 
 Frontend dev proxy:

@@ -14,7 +14,7 @@ from agents import function_tool
 from openai import OpenAI
 
 
-DEFAULT_BOOTSTRAP_MODEL = os.getenv("OPENAI_CONTAINER_BOOTSTRAP_MODEL", "gpt-5.4")
+DEFAULT_BOOTSTRAP_MODEL = os.getenv("OPENAI_CONTAINER_BOOTSTRAP_MODEL", "gpt-5.5")
 DEFAULT_ALLOWED_DOMAINS = [
     "archive.ubuntu.com",
     "security.ubuntu.com",
