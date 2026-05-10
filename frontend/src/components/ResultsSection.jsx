@@ -26,7 +26,7 @@ const AGENT_LABELS = {
   extracter: 'Extracter',
   verifier: 'Verifier',
   generator: 'Generator',
-  latex: 'LaTeX Formatter',
+  latex: 'Latexifier',
   evaluation: 'Evaluation',
   output: 'Output',
 };
@@ -222,7 +222,7 @@ export default function ResultsSection({ result }) {
   const evaluationReport = result.workflowResult?.evaluation || null;
   const evalItemsFileName = findFileName(
     files,
-    evaluationReport?.output_items_file || 'evaluation_outputs/evaluation_items.jsonl',
+    evaluationReport?.output_items_file || 'evaluation_outputs/evaluation_agents.jsonl',
   );
   const evalReportFileName = findFileName(files, 'evaluation_outputs/evaluation_report.json');
   const hasEvaluation = Boolean(evaluationReport || evalItemsFileName || evalReportFileName);

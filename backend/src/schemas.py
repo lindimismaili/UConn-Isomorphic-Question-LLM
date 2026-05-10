@@ -107,7 +107,7 @@ class GeneratorOutput(BaseModel):
 
 
 class LaTeXOutput(BaseModel):
-    """Output from the LaTeX Formatter agent."""
+    """Output from the Latexifier agent."""
 
     latex_content: str
     filename: str
@@ -167,7 +167,7 @@ class GeneratorInput(BaseModel):
 
 
 class LaTeXDocumentInput(BaseModel):
-    """Document metadata passed into the LaTeX Formatter agent."""
+    """Document metadata passed into the Latexifier agent."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -178,7 +178,7 @@ class LaTeXDocumentInput(BaseModel):
 
 
 class LaTeXQuestionInput(BaseModel):
-    """Generated question shape consumed by the LaTeX Formatter agent."""
+    """Generated question shape consumed by the Latexifier agent."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -193,7 +193,7 @@ class LaTeXQuestionInput(BaseModel):
 
 
 class LaTeXInput(BaseModel):
-    """Input expected by the LaTeX Formatter agent."""
+    """Input expected by the Latexifier agent."""
 
     model_config = ConfigDict(extra="forbid")
 

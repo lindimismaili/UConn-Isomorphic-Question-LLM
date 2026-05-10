@@ -24,45 +24,19 @@ async function fetchPromptContent(promptName) {
 }
 
 /**
- * Loads skill markdown from the API first, then the bundled skills asset.
+ * Generic content viewer for prompt documents.
  *
- * Touches `/api/skills/:skillName` and `/skills/:skillName/SKILL.md`.
+ * Pass `promptName` so the modal can fetch the corresponding backend or
+ * bundled file.
  */
-async function fetchSkillContent(skillName) {
-  try {
-    const res = await fetch(`/api/skills/${skillName}`);
-    if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-    return await res.text();
-  } catch (apiError) {
-    try {
-      const res = await fetch(`/skills/${skillName}/SKILL.md`);
-      if (!res.ok) throw new Error(`Local fallback unavailable (${res.status})`);
-      return await res.text();
-    } catch (localError) {
-      throw new Error(`API: ${apiError.message}; Local: ${localError.message}`);
-    }
-  }
-}
-
-/**
- * Generic content viewer for prompt and skill documents.
- *
- * Pass either `promptName` or `skillName` so the modal can fetch the
- * corresponding backend or bundled file.
- */
-export default function PromptViewerModal({ isOpen, onClose, title, promptName, skillName }) {
+export default function PromptViewerModal({ isOpen, onClose, title, promptName }) {
   const [content, setContent] = useState('Loading...');
   const fileLocation = promptName
     ? {
         label: `data/prompts/${promptName}.txt`,
         href: `/api/prompts/${promptName}`,
       }
-    : skillName
-      ? {
-          label: `data/skills/${skillName}/SKILL.md`,
-          href: `/api/skills/${skillName}`,
-        }
-      : null;
+    : null;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -72,8 +46,6 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName, 
       try {
         if (promptName) {
           setContent(await fetchPromptContent(promptName));
-        } else if (skillName) {
-          setContent(await fetchSkillContent(skillName));
         }
       } catch (err) {
         setContent(`Error loading content: ${err.message}`);
@@ -81,7 +53,7 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName, 
     };
 
     load();
-  }, [isOpen, promptName, skillName]);
+  }, [isOpen, promptName]);
 
   return (
     <Modal

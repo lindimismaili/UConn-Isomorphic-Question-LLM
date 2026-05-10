@@ -223,7 +223,13 @@ function buildRubricMap(report) {
  * @returns {object}
  */
 function normalizeEvalRecord(record, index, rubricByName, threshold) {
-  const item = asObject(record.item || record.input || record.sample?.input);
+  const item = asObject(
+    record.datasource_item ||
+    record.data_source_item ||
+    record.item ||
+    record.input ||
+    record.sample?.input,
+  );
   const { grades, passes } = extractResultMaps(record);
   const samples = asObject(record.grader_samples);
   const keys = [
@@ -602,10 +608,10 @@ export default function EvalResultsModal({
                     </div>
                   </td>
                   <td>
-                    <div className="eval-question-text">{row.input || 'No input text'}</div>
+                    <div className="eval-question-text">{row.input || 'Input unavailable'}</div>
                   </td>
                   <td>
-                    <div className="eval-question-text">{row.output || 'No output text'}</div>
+                    <div className="eval-question-text">{row.output || 'Output unavailable'}</div>
                   </td>
                   <td>
                     <div className="eval-chip-grid">

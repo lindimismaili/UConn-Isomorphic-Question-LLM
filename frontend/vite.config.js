@@ -23,7 +23,7 @@ function embedAgentsConfigAsset() {
 /**
  * Frontend origin for proxied backend requests during local development.
  *
- * Vite forwards `/api`, `/data`, `/skills`, and `/version.json` to this URL.
+ * Vite forwards `/api`, `/data`, and `/version.json` to this URL.
  */
 const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8000'
 
@@ -34,7 +34,6 @@ export default defineConfig({
       '/api': backendTarget,
       '/version.json': backendTarget,
       '/data': backendTarget,
-      '/skills': backendTarget,
     },
   },
   build: {

@@ -9,12 +9,29 @@ import { useRef, useCallback } from 'react';
  */
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(resolve, ms);
+    let settled = false;
+    const cleanup = () => {
+      if (signal) signal.removeEventListener('abort', onAbort);
+    };
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      cleanup();
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    const timeout = setTimeout(finish, ms);
     if (signal) {
-      const onAbort = () => {
-        clearTimeout(timeout);
-        reject(new DOMException('Aborted', 'AbortError'));
-      };
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
       signal.addEventListener('abort', onAbort, { once: true });
     }
   });
@@ -63,7 +80,7 @@ const AGENT_LABELS = {
   extracter: 'Extracter',
   verifier: 'Verifier',
   generator: 'Generator',
-  latex: 'LaTeX',
+  latex: 'Latexifier',
   evaluation: 'Evaluation',
   output: 'Output',
 };
@@ -170,13 +187,15 @@ function buildAgentPatch(agentStatus) {
  */
 export function useWorkflow(dispatch) {
   const abortRef = useRef(null);
-  const statusRef = useRef({});
+  const inFlightRef = useRef(null);
+  const runIdRef = useRef(0);
 
   const abort = useCallback(() => {
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
     }
+    inFlightRef.current = null;
   }, []);
 
   /**
@@ -186,21 +205,24 @@ export function useWorkflow(dispatch) {
    * @param {number} setupElapsedSeconds - Local setup time before polling began.
    * @param {AbortSignal} signal - Abort signal for this run.
    */
-  const pollWorkflow = useCallback(async (workflowId, setupElapsedSeconds, signal) => {
+  const pollWorkflow = useCallback(async (workflowId, setupElapsedSeconds, signal, runId) => {
     const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation', 'output'];
+    const statusByAgent = {};
 
     while (true) {
-      if (signal.aborted) return;
+      if (signal.aborted || inFlightRef.current !== runId) return;
 
       const statusRes = await fetchWithAbort(`/api/workflow/${workflowId}/status`, {}, signal);
-      if (!statusRes.ok) throw new Error('Failed to get workflow status');
+      if (!statusRes.ok) {
+        throw new Error(await readErrorDetail(statusRes, 'Failed to get workflow status'));
+      }
       const status = await statusRes.json();
 
       for (const key of agentKeys) {
         const agentStatus = status.agents?.[key];
         if (agentStatus) {
           const data = agentStatus.data || {};
-          const prevStatus = statusRef.current[key];
+          const prevStatus = statusByAgent[key];
           const nextStatus = agentStatus.status;
 
           if (prevStatus !== nextStatus) {
@@ -222,7 +244,7 @@ export function useWorkflow(dispatch) {
             } else if (nextStatus === 'cancelled') {
               dispatch({ type: 'LOG', message: `${label} stopped`, level: 'info' });
             }
-            statusRef.current[key] = nextStatus;
+            statusByAgent[key] = nextStatus;
           }
 
           dispatch({
@@ -263,7 +285,14 @@ export function useWorkflow(dispatch) {
       }
 
       if (status.status === 'errored') {
-        const err = new Error('Workflow failed on the server');
+        const erroredAgent = agentKeys
+          .map((key) => status.agents?.[key])
+          .find((agentStatus) => agentStatus?.status === 'errored');
+        const message =
+          status.error ||
+          erroredAgent?.data?.error ||
+          'Workflow failed on the server';
+        const err = new Error(message);
         err.outputFolder = status.outputFolder || '';
         throw err;
       }
@@ -286,11 +315,14 @@ export function useWorkflow(dispatch) {
    * @param {Array<object>} files - Selected files from the upload/test-file UI.
    */
   const run = useCallback(async (prompt, files) => {
+    if (inFlightRef.current) return;
     const controller = new AbortController();
+    const runId = runIdRef.current + 1;
+    runIdRef.current = runId;
+    inFlightRef.current = runId;
     abortRef.current = controller;
     const { signal } = controller;
     const setupStartMs = Date.now();
-    statusRef.current = {};
 
     dispatch({ type: 'WORKFLOW_START' });
 
@@ -312,7 +344,7 @@ export function useWorkflow(dispatch) {
 
         const uploadRes = await fetchWithAbort('/api/upload', { method: 'POST', body: formData }, signal);
         if (!uploadRes.ok) {
-          const err = await uploadRes.text().catch(() => `Status ${uploadRes.status}`);
+          const err = await readErrorDetail(uploadRes, `Status ${uploadRes.status}`);
           throw new Error(`Upload failed: ${err}`);
         }
         const uploadResult = await uploadRes.json();
@@ -336,7 +368,7 @@ export function useWorkflow(dispatch) {
 
       const startRes = await fetchWithAbort('/api/workflow/start', { method: 'POST', body: startForm }, signal);
       if (!startRes.ok) {
-        const err = await startRes.text().catch(() => `Status ${startRes.status}`);
+        const err = await readErrorDetail(startRes, `Status ${startRes.status}`);
         throw new Error(`Failed to start workflow: ${err}`);
       }
       const { workflowId } = await startRes.json();
@@ -344,7 +376,7 @@ export function useWorkflow(dispatch) {
 
       dispatch({ type: 'SETUP_COMPLETE', workflowId });
       dispatch({ type: 'LOG', message: `Workflow started (${workflowId})`, level: 'info' });
-      await pollWorkflow(workflowId, setupElapsedSeconds, signal);
+      await pollWorkflow(workflowId, setupElapsedSeconds, signal, runId);
     } catch (err) {
       if (err.name === 'AbortError') {
         dispatch({ type: 'WORKFLOW_ABORTED' });
@@ -354,6 +386,9 @@ export function useWorkflow(dispatch) {
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
+      }
+      if (inFlightRef.current === runId) {
+        inFlightRef.current = null;
       }
     }
   }, [dispatch, pollWorkflow]);
@@ -367,11 +402,14 @@ export function useWorkflow(dispatch) {
    * @param {{onStarted?: Function, onError?: Function}} [options] - Optional lifecycle callbacks.
    */
   const runFromAgentInput = useCallback(async (startAgent, inputFile, prompt = '', options = {}) => {
+    if (inFlightRef.current) return;
     const controller = new AbortController();
+    const runId = runIdRef.current + 1;
+    runIdRef.current = runId;
+    inFlightRef.current = runId;
     abortRef.current = controller;
     const { signal } = controller;
     const setupStartMs = Date.now();
-    statusRef.current = {};
 
     dispatch({ type: 'WORKFLOW_START' });
 
@@ -404,7 +442,7 @@ export function useWorkflow(dispatch) {
         level: 'info',
       });
       options.onStarted?.(workflowId);
-      await pollWorkflow(workflowId, setupElapsedSeconds, signal);
+      await pollWorkflow(workflowId, setupElapsedSeconds, signal, runId);
     } catch (err) {
       if (err.name === 'AbortError') {
         dispatch({ type: 'WORKFLOW_ABORTED' });
@@ -415,6 +453,9 @@ export function useWorkflow(dispatch) {
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
+      }
+      if (inFlightRef.current === runId) {
+        inFlightRef.current = null;
       }
     }
   }, [dispatch, pollWorkflow]);

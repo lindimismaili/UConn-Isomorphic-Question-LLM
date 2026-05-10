@@ -30,7 +30,6 @@ The workflow uses one shared OpenAI container per run so the agents and the LaTe
 
 - `backend/data/agents.json` agent configuration loaded by the frontend and backend
 - `backend/data/prompts/` prompt text for each agent stage
-- `backend/data/skills/` agent skill definitions and helper scripts
 - `backend/data/rubric.json` evaluation rubric configuration
 - `backend/data/template.tex` LaTeX template material
 - `backend/data/dropdown.json` UI dropdown data
@@ -80,7 +79,7 @@ Typical contents:
 - `agent_outputs/<agent>/agent_output.jsonl`
 - `evaluation_outputs/evaluation_report.json`
 - `evaluation_outputs/evaluation_dataset.jsonl`
-- `evaluation_outputs/evaluation_items.jsonl`
+- `evaluation_outputs/evaluation_agents.jsonl`
 
 The API also supports download and status endpoints for these artifacts.
 

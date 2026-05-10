@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm --prefix .. run dev",
+    "dev": "vite",
     "dev:ui": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "npm --prefix .. start"
+    "start": "vite --host 127.0.0.1",
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -24,6 +25,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^27.2.0",
+    "vitest": "^4.0.15",
     "vite": "^7.3.1"
   }
 }

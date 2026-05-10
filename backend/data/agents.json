@@ -32,11 +32,11 @@
     "model": "gpt-5.4",
     "reasoning": "medium",
     "inputFrom": "Verifier",
-    "outputTo": "LaTeX Formatter",
+    "outputTo": "Latexifier",
     "useCodeInterpreter": true
   },
   "latex": {
-    "name": "LaTeX Formatter",
+    "name": "Latexifier",
     "description": "Converts questions to LaTeX format",
     "model": "gpt-5.4",
     "reasoning": "medium",
