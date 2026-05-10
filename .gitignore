@@ -58,3 +58,9 @@ uploads/*
 !uploads/.gitkeep
 outputs/*
 !outputs/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/outputs/*
+!backend/outputs/.gitkeep
+backend/runtime/*
+!backend/runtime/.gitkeep

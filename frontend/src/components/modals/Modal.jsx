@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from '../Icons.jsx';
 
@@ -65,10 +65,15 @@ export default function Modal({
   children,
   footer,
 }) {
+  const titleId = useId();
+  const contentRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
   // Lock body scroll and add modal-open class when open
   useEffect(() => {
     if (!isOpen) return undefined;
 
+    previousFocusRef.current = document.activeElement;
     lockBodyScroll();
     if (bodyClassName) {
       document.body.classList.add(bodyClassName);
@@ -79,16 +84,54 @@ export default function Modal({
         document.body.classList.remove(bodyClassName);
       }
       unlockBodyScroll();
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
+      }
     };
   }, [bodyClassName, isOpen]);
 
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !contentRef.current) return;
+      const focusable = Array.from(
+        contentRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute('hidden'));
+      if (focusable.length === 0) {
+        e.preventDefault();
+        contentRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const target = contentRef.current?.querySelector(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    window.requestAnimationFrame(() => {
+      (target || contentRef.current)?.focus();
+    });
+  }, [isOpen]);
 
   const modalSizeClass = size
     ? ` modal-${size}`
@@ -96,15 +139,21 @@ export default function Modal({
 
   const modal = (
     <div
-      className={`modal${isOpen ? ' is-visible' : ''}${modalClassName ? ` ${modalClassName}` : ''}`}
-      role="dialog"
-      aria-modal="true"
+      className={`modal${isOpen ? ' is-visible' : ' is-closing'}${modalClassName ? ` ${modalClassName}` : ''}`}
+      role={isOpen ? 'dialog' : undefined}
+      aria-modal={isOpen ? 'true' : undefined}
+      aria-hidden={isOpen ? undefined : 'true'}
+      aria-labelledby={titleId}
     >
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className={`modal-content${modalSizeClass}${contentClassName ? ` ${contentClassName}` : ''}`}>
+      <div className="modal-backdrop" onClick={isOpen ? onClose : undefined} />
+      <div
+        className={`modal-content${modalSizeClass}${contentClassName ? ` ${contentClassName}` : ''}`}
+        ref={contentRef}
+        tabIndex={-1}
+      >
         <div className="modal-header">
-          <h3>{title}</h3>
-          <button className="btn-icon-only" onClick={onClose} aria-label="Close">
+          <h3 id={titleId}>{title}</h3>
+          <button className="btn-icon-only" onClick={onClose} aria-label="Close" type="button">
             <IconClose />
           </button>
         </div>

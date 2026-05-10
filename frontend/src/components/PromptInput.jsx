@@ -6,7 +6,6 @@ import {
   IconTrash,
   IconSend,
   IconInfo,
-  IconList,
   IconZap,
 } from './Icons.jsx';
 
@@ -64,7 +63,6 @@ export default function PromptInput({
   onShowFiles,
   onShowHelp,
   isCreateDataRunning,
-  onShowSkills,
   onShowTestFiles,
   onCreateData,
   onInputToAgent,
@@ -276,14 +274,6 @@ export default function PromptInput({
 
           <div className="developer-tools-inline">
             <div className="developer-tools-inline-header">Developer Tools</div>
-            <button
-              className="btn btn-secondary"
-              onClick={onShowSkills}
-              type="button"
-            >
-              <IconList className="btn-icon" />
-              <span className="btn-label">View Skills</span>
-            </button>
             <button
               className="btn btn-secondary"
               onClick={onCreateData}

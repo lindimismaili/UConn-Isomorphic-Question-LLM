@@ -14,7 +14,6 @@ import AgentDetailModal from "./components/modals/AgentDetailModal.jsx";
 import SetupModal from "./components/modals/SetupModal.jsx";
 import OutputModal from "./components/modals/OutputModal.jsx";
 import HelpModal from "./components/modals/HelpModal.jsx";
-import SkillsModal from "./components/modals/SkillsModal.jsx";
 import InputToAgentModal from "./components/modals/InputToAgentModal.jsx";
 
 import { useWorkflow } from "./hooks/useWorkflow.js";
@@ -30,7 +29,7 @@ import { useCreateData } from "./hooks/useCreateData.js";
  */
 const INITIAL_AGENTS = {
   setup: {
-    name: "Setup",
+    name: "Starter",
     description: "Prepares the shared workflow runtime",
     model: "OpenAI Runtime",
     reasoningLevel: "Unavailable",
@@ -100,7 +99,7 @@ const INITIAL_AGENTS = {
     endTime: null,
     executionTime: null,
     inputFrom: "Verifier",
-    outputTo: "LaTeX Formatter",
+    outputTo: "Latexifier",
     inputText: "",
     outputText: "",
   },
@@ -123,13 +122,13 @@ const INITIAL_AGENTS = {
     name: "Evaluation",
     description: "Scores generated outputs and writes evaluation artifacts",
     model: "Unavailable",
-    reasoningLevel: "none",
+    reasoningLevel: "low",
     kind: "agent",
     status: "inactive",
     startTime: null,
     endTime: null,
     executionTime: null,
-    inputFrom: "LaTeX Formatter",
+    inputFrom: "Latexifier",
     outputTo: "Output",
     inputText: "",
     outputText: "",
@@ -331,7 +330,7 @@ function reducer(state, action) {
           ...state.logs,
           makeLog("------------------------------", "info"),
           makeLog("Process starting...", "info"),
-          makeLog("Setup started", "info"),
+          makeLog("Starter started", "info"),
         ].slice(-MAX_LOGS),
       };
     }
@@ -346,8 +345,8 @@ function reducer(state, action) {
         setupStart !== null ? (setupEnd - setupStart) / 1000 : null;
       const setupMessage =
         setupSeconds !== null
-          ? `Setup completed in ${setupSeconds.toFixed(2)}s`
-          : "Setup completed";
+          ? `Starter completed in ${setupSeconds.toFixed(2)}s`
+          : "Starter completed";
       const normalizer = state.agents.normalizer;
       const shouldStartNormalizerNow =
         normalizer &&
@@ -674,9 +673,6 @@ export default function App() {
               isCreateDataRunning={
                 createDataState.isRunning || createDataState.isStarting
               }
-              onShowSkills={() =>
-                dispatch({ type: "OPEN_MODAL", modal: "skills" })
-              }
               onShowTestFiles={() =>
                 dispatch({ type: "OPEN_MODAL", modal: "test-files" })
               }
@@ -765,10 +761,6 @@ export default function App() {
       <SetupModal isOpen={state.activeModal === "setup"} onClose={closeModal} />
       <OutputModal isOpen={state.activeModal === "output"} onClose={closeModal} />
       <HelpModal isOpen={state.activeModal === "help"} onClose={closeModal} />
-      <SkillsModal
-        isOpen={state.activeModal === "skills"}
-        onClose={closeModal}
-      />
     </>
   );
 }

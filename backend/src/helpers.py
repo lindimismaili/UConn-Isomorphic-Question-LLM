@@ -74,6 +74,17 @@ def load_prompt(prompts_dir: Path, logger: Any, name: str) -> str:
     return ""
 
 
+def resolve_prompt_path(prompts_dir: Path, name: str) -> Path | None:
+    """Return the existing prompt file path for a prompt name."""
+    prompt_candidates = [prompts_dir / f"{name}.txt"]
+    if name == "latex":
+        prompt_candidates.insert(0, prompts_dir / "latex_1.txt")
+    for prompt_path in prompt_candidates:
+        if prompt_path.exists():
+            return prompt_path
+    return None
+
+
 def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:
     """Upload a local file for later attachment to OpenAI tool calls.
 

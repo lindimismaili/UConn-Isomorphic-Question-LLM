@@ -8,7 +8,7 @@ The frontend provides:
 - workflow progress and agent pipeline status
 - logs for workflow activity
 - result panels for generated content, LaTeX, PDF, and evaluation data
-- modal views for agents, skills, setup, files, and outputs
+- modal views for agents, setup, files, and outputs
 
 ## Run
 
@@ -47,7 +47,6 @@ Proxy paths include:
 - `/api`
 - `/version.json`
 - `/data`
-- `/skills`
 
 ## Build Notes
 

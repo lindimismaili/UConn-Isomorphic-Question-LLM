@@ -106,7 +106,7 @@ export default function InputToAgentModal({
     >
       <div className="modal-body-stack input-to-agent-modal">
         <p className="modal-supporting-text">
-          Setup and Output always run. Choose any agent between them, upload a
+          Starter and Output always run. Choose any agent between them, upload a
           source document for Normalizer or Extracter, or a saved agent input
           file for later stages. Saved agent inputs must match that agent's
           input schema.

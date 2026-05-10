@@ -76,6 +76,7 @@ try:
         reconcile_verified_questions,
         upload_file_to_openai,
     )
+    from .safety import create_unique_run_dir, ensure_child_path, safe_filename
 except ImportError:
     from container import SharedWorkflowRuntime, allowed_domains_from_env
     from schemas import (
@@ -99,6 +100,7 @@ except ImportError:
         reconcile_verified_questions,
         upload_file_to_openai,
     )
+    from safety import create_unique_run_dir, ensure_child_path, safe_filename
 
 # =============================================================================
 # Configuration
@@ -137,8 +139,18 @@ def _load_dotenv(path: Path) -> None:
 
 _load_dotenv(ENV_PATH)
 
-# Initialize OpenAI client for file uploads
-client = OpenAI()
+_cli_openai_client: OpenAI | None = None
+
+
+def get_cli_openai_client() -> OpenAI:
+    """Create the OpenAI client lazily so imports/help do not need credentials."""
+    global _cli_openai_client
+    if _cli_openai_client is None:
+        api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is required to run the workflow.")
+        _cli_openai_client = OpenAI(api_key=api_key)
+    return _cli_openai_client
 
 
 
@@ -416,11 +428,14 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
     Returns:
         WorkflowResult with all stages' outputs
     """
+    client = get_cli_openai_client()
     with trace("Isomorphic Question Generation Workflow"):
         # Setup output directory
         timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        outputs_dir = PROJECT_ROOT / "outputs" / timestamp
-        outputs_dir.mkdir(parents=True, exist_ok=True)
+        outputs_dir, output_folder_label = create_unique_run_dir(
+            PROJECT_ROOT / "outputs",
+            f"cli-{timestamp}",
+        )
         
         run_config = RunConfig(
             trace_metadata={
@@ -841,14 +856,22 @@ Set filename to "isomorphic_questions.tex"
         latex_output: LaTeXOutput = latex_result.final_output
         
         # Save LaTeX file
-        latex_filename = latex_output.filename or "isomorphic_questions.tex"
-        latex_path = outputs_dir / latex_filename
+        latex_filename = safe_filename(
+            latex_output.filename or "isomorphic_questions.tex",
+            fallback="isomorphic_questions.tex",
+            allowed_suffixes={".tex"},
+        )
+        latex_path = ensure_child_path(outputs_dir, latex_filename)
         latex_path.write_text(latex_output.latex_content, encoding="utf-8")
-        pdf_filename = latex_output.pdf_filename or "isomorphic_questions.pdf"
-        pdf_path = outputs_dir / pdf_filename
+        pdf_filename = safe_filename(
+            latex_output.pdf_filename or "isomorphic_questions.pdf",
+            fallback="isomorphic_questions.pdf",
+            allowed_suffixes={".pdf"},
+        )
+        pdf_path = ensure_child_path(outputs_dir, pdf_filename)
         if not pdf_path.exists():
             raise RuntimeError(
-                "LaTeX agent did not produce the compiled PDF artifact in the shared container."
+                "Latexifier did not produce the compiled PDF artifact in the shared container."
             )
         logger.info("Created LaTeX file: %s", latex_filename)
         logger.info("Compiled PDF file: %s", pdf_filename)
@@ -962,7 +985,7 @@ Set filename to "isomorphic_questions.tex"
             outputs_dir=outputs_dir,
             workflow_id=f"cli-{timestamp}",
             agent_outputs=agent_outputs,
-            output_folder_label=timestamp,
+            output_folder_label=output_folder_label,
             source_files=workflow_input.file_paths,
         )
 

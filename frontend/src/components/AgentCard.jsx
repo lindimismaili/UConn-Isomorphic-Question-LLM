@@ -35,8 +35,9 @@ function formatClock(value) {
   if (Number.isNaN(date.getTime())) return String(value);
   try {
     return date.toLocaleTimeString(undefined, {
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
       timeZone: DEFAULT_TIME_ZONE,
     });
   } catch {
@@ -59,17 +60,23 @@ export default function AgentCard({ agentKey, agent, onClick }) {
   const reasoningText = displayValue(agent.reasoningLevel, 'none');
   const startText = agent.startTime ? formatClock(agent.startTime) : '';
   const endText = agent.endTime ? formatClock(agent.endTime) : '';
+  const timingText = startText
+    ? `(${startText} - ${endText || '...'})`
+    : '';
+  const timingTitle = startText
+    ? endText
+      ? `Agent ran from ${startText} to ${endText}`
+      : `Agent started at ${startText}`
+    : 'Agent timing unavailable';
 
   return (
-    <div
+    <button
+      type="button"
       className="card agent-card clickable"
       data-agent={agentKey}
       data-status={agent.status}
       data-node-kind={nodeKind}
       onClick={() => onClick(agentKey)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onClick(agentKey)}
       aria-label={`${agent.name} ${isRuntime ? 'runtime' : 'agent'} - ${statusLabel}`}
     >
       <div className="agent-header">
@@ -97,11 +104,8 @@ export default function AgentCard({ agentKey, agent, onClick }) {
         {!isRuntime && <span title={`Reasoning: ${reasoningText}`}>{reasoningText}</span>}
       </div>
       <div className="agent-timing" aria-label="Agent timing">
-        <span title={startText ? `Start time: ${startText}` : 'Start'}>
-          {startText ? `Start ${startText}` : 'Start'}
-        </span>
-        <span title={endText ? `End time: ${endText}` : 'End'}>
-          {endText ? `End ${endText}` : 'End'}
+        <span title={timingTitle} data-visible={timingText ? 'true' : 'false'}>
+          {timingText}
         </span>
       </div>
       <div className="agent-footer-row">
@@ -112,6 +116,6 @@ export default function AgentCard({ agentKey, agent, onClick }) {
           {executionText}
         </div>
       </div>
-    </div>
+    </button>
   );
 }

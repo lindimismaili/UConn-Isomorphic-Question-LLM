@@ -1,7 +1,7 @@
 import Modal from './Modal.jsx';
 
 /**
- * Explains the runtime setup phase shown in the pipeline.
+ * Explains the runtime starter phase shown in the pipeline.
  *
  * @param {object} props
  */
@@ -10,14 +10,14 @@ export default function SetupModal({ isOpen, onClose }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="OpenAI Runtime"
+      title="Starter"
       footer={
         <button className="btn btn-primary" onClick={onClose}>Close</button>
       }
     >
       <div className="setup-modal-body modal-body-stack">
         <p>
-          <strong>OpenAI Runtime</strong> is not an agent. It represents the time
+          <strong>Starter</strong> is not an agent. It represents the time
           immediately after you click <strong>Send</strong> while the system
           prepares to run the pipeline.
         </p>

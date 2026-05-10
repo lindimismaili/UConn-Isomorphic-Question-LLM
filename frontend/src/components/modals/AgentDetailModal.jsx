@@ -16,7 +16,7 @@ const AGENT_PROMPT_TITLES = {
   extracter: 'Extracter',
   verifier: 'Verifier',
   generator: 'Generator',
-  latex: 'LaTeX',
+  latex: 'Latexifier',
 };
 
 const DEFAULT_TIME_ZONE = 'America/New_York';

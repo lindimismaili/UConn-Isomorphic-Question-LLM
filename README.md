@@ -9,7 +9,7 @@ The app takes question sources and produces a fresh set of physics questions tha
 
 The core workflow is:
 
-`Normalizer -> Extracter -> Verifier -> Generator -> LaTeX Formatter -> Evaluation -> Output`
+`Normalizer -> Extracter -> Verifier -> Generator -> Latexifier -> Evaluation -> Output`
 
 ## Architecture
 
@@ -28,7 +28,7 @@ The backend creates a shared OpenAI container for each workflow run, uploads sou
 - `backend/src/evaluation.py` OpenAI evals integration
 - `backend/src/artifacts.py` workflow and agent artifact writers/readers
 - `backend/src/container.py` shared OpenAI container runtime helpers
-- `backend/data/` prompts, skills, rubric, agents config, and evaluation fixtures
+- `backend/data/` prompts, rubric, agents config, and evaluation fixtures
 - `backend/uploads/` uploaded source files grouped by session
 - `backend/outputs/` timestamped workflow outputs
 - `frontend/src/` React UI, hooks, and components
@@ -177,7 +177,7 @@ Evaluation artifacts:
 
 - `evaluation_outputs/evaluation_report.json`
 - `evaluation_outputs/evaluation_dataset.jsonl`
-- `evaluation_outputs/evaluation_items.jsonl`
+- `evaluation_outputs/evaluation_agents.jsonl`
 
 Batch create-data runs also write batch summaries and per-file workflow folders under `backend/outputs/`.
 

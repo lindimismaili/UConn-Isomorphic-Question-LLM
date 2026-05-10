@@ -30,7 +30,7 @@ PASSING_SCORE_THRESHOLD = 70.0
 EVALUATION_OUTPUTS_DIRNAME = "evaluation_outputs"
 EVALUATION_REPORT_FILENAME = "evaluation_report.json"
 EVALUATION_DATASET_FILENAME = "evaluation_dataset.jsonl"
-EVALUATION_ITEMS_FILENAME = "evaluation_items.jsonl"
+EVALUATION_ITEMS_FILENAME = "evaluation_agents.jsonl"
 EVALUATION_SPREADSHEET_FILENAME = "evaluation_spreadsheet.csv"
 EVALUATION_RUBRIC_FILENAME = "rubric.json"
 
@@ -168,6 +168,7 @@ def _load_rubric_config() -> dict[str, Any]:
 RUBRIC_CONFIG = _load_rubric_config()
 RUBRIC_CRITERIA = RUBRIC_CONFIG["criteria"]
 RUBRIC_MODEL = RUBRIC_CONFIG["model"]
+RUBRIC_REASONING_EFFORT = "low"
 RUBRIC_CRITERIA_BY_NAME = {
     criterion["name"]: criterion for criterion in RUBRIC_CRITERIA if criterion.get("name")
 }
@@ -412,7 +413,7 @@ def _attach_report_file_metadata(
         testing_files.append(
             {
                 "name": _evaluation_relative_path(output_items_path),
-                "label": "Evaluation item outputs",
+                "label": "Evaluation agent outputs",
                 "kind": "items",
             }
         )
@@ -499,10 +500,15 @@ def _format_option_lines(options: list[dict[str, Any]]) -> list[str]:
     for option in options:
         key = str(option.get("key", "")).strip()
         text = str(option.get("text", "")).strip()
+        correctness = "correct" if bool(option.get("is_correct")) else "incorrect"
+        explanation = str(option.get("explanation", "")).strip()
         if not key and not text:
             continue
         prefix = f"{key}. " if key else "- "
-        lines.append(f"{prefix}{text}")
+        line = f"{prefix}{text} [{correctness}]"
+        if explanation:
+            line = f"{line} Explanation: {explanation}"
+        lines.append(line)
     return lines
 
 
@@ -518,6 +524,13 @@ def _format_part_lines(parts: list[dict[str, Any]]) -> list[str]:
             lines.append(header)
         if question_type == "multiple_choice":
             lines.extend(_format_option_lines(part.get("options", [])))
+            answer = str(part.get("answer", "")).strip()
+            if answer:
+                lines.append(f"Part answer: {answer}")
+        else:
+            answer = str(part.get("answer", "")).strip()
+            if answer:
+                lines.append(f"Part answer: {answer}")
     return lines
 
 
@@ -539,8 +552,15 @@ def _render_question_text(question: dict[str, Any]) -> str:
 
     if question_type == "multiple_choice" or question.get("options"):
         lines.extend(_format_option_lines(question.get("options", [])))
+        answer = str(question.get("answer", "")).strip()
+        if answer:
+            lines.append(f"Answer: {answer}")
     elif question_type == "multi_part" or question.get("parts"):
         lines.extend(_format_part_lines(question.get("parts", [])))
+    else:
+        answer = str(question.get("answer", "")).strip()
+        if answer:
+            lines.append(f"Answer: {answer}")
 
     return _normalize_whitespace("\n".join(lines))
 
@@ -567,6 +587,9 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
                 "name": criterion["name"],
                 "type": "score_model",
                 "model": model,
+                "sampling_params": {
+                    "reasoning_effort": RUBRIC_REASONING_EFFORT,
+                },
                 "pass_threshold": PASSING_SCORE_THRESHOLD,
                 "range": [0, 100],
                 "input": [
@@ -601,7 +624,7 @@ def _build_run_data_source(eval_data_file_id: str) -> dict[str, Any]:
     }
 
 
-def _resolve_latex_check(latex_path: Optional[Path]) -> dict[str, Any]:
+def _resolve_latex_check(latex_path: Optional[Path], pdf_path: Optional[Path] = None) -> dict[str, Any]:
     """Return a synthetic pass/fail record for the LaTeX artifact check."""
     criterion = RUBRIC_CRITERIA_BY_NAME.get(
         LATEX_CRITERION_NAME,
@@ -612,7 +635,7 @@ def _resolve_latex_check(latex_path: Optional[Path]) -> dict[str, Any]:
         },
     )
 
-    pdf_path = latex_path.with_suffix(".pdf") if latex_path else None
+    pdf_path = pdf_path or (latex_path.with_suffix(".pdf") if latex_path else None)
     latex_exists = bool(latex_path and latex_path.exists())
     pdf_exists = bool(pdf_path and pdf_path.exists())
     passed = latex_exists and pdf_exists
@@ -778,8 +801,10 @@ def run_openai_output_evaluation(
     final_result: dict[str, Any],
     outputs_dir: Path,
     latex_path: Optional[Path] = None,
+    pdf_path: Optional[Path] = None,
     source_files: Optional[list[str]] = None,
     grader_model: Optional[str] = None,
+    contract_report: Optional[dict[str, Any]] = None,
     poll_interval_seconds: float = 3.0,
     max_wait_seconds: int = 900,
 ) -> dict[str, Any]:
@@ -794,11 +819,19 @@ def run_openai_output_evaluation(
     spreadsheet_path = evaluation_outputs_dir / EVALUATION_SPREADSHEET_FILENAME
     rubric_snapshot_path = evaluation_outputs_dir / EVALUATION_RUBRIC_FILENAME
     grader_model = grader_model or RUBRIC_MODEL
-    latex_document_check = _resolve_latex_check(latex_path)
+    latex_document_check = _resolve_latex_check(latex_path, pdf_path)
     rubric_file = _write_rubric_snapshot(rubric_snapshot_path) or ""
     source_files = source_files or []
 
     generated_questions = final_result.get("generated_questions", [])
+    deterministic_checks = {
+        "generation_contract": contract_report or {},
+        "figure_skips": {
+            "status": "passed",
+            "checked_source_ids": [],
+            "errors": [],
+        },
+    }
     if not generated_questions:
         report = _build_base_report(
             status="skipped",
@@ -808,27 +841,7 @@ def run_openai_output_evaluation(
             items_evaluated=0,
             latex_document_check=latex_document_check,
         )
-        report = _attach_report_file_metadata(
-            report,
-            report_path=report_path,
-            dataset_path=None,
-            output_items_path=None,
-            spreadsheet_path=None,
-            rubric_file=rubric_file,
-            source_files=source_files,
-        )
-        report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-        return report
-
-    if not hasattr(client, "evals"):
-        report = _build_base_report(
-            status="skipped",
-            reason="OpenAI client has no evals API surface",
-            grader_model=grader_model,
-            dataset_path=None,
-            items_evaluated=0,
-            latex_document_check=latex_document_check,
-        )
+        report["deterministic_checks"] = deterministic_checks
         report = _attach_report_file_metadata(
             report,
             report_path=report_path,
@@ -847,11 +860,66 @@ def run_openai_output_evaluation(
         or []
     )
     source_by_id = {q.get("source_id"): q for q in source_candidates if q.get("source_id")}
+    generated_by_source: dict[str, list[dict[str, Any]]] = {}
+    for generated in generated_questions:
+        source_id = str(generated.get("source_id") or "")
+        if source_id:
+            generated_by_source.setdefault(source_id, []).append(generated)
+
+    figure_skip_errors: list[str] = []
+    checked_figure_ids: list[str] = []
+    for source in source_candidates:
+        if not isinstance(source, dict) or not source.get("has_figure"):
+            continue
+        source_id = str(source.get("source_id") or "")
+        checked_figure_ids.append(source_id)
+        items_for_source = generated_by_source.get(source_id, [])
+        if len(items_for_source) != 1:
+            figure_skip_errors.append(f"{source_id}: expected one skipped placeholder")
+            continue
+        generated = items_for_source[0]
+        if (
+            not generated.get("skipped")
+            or generated.get("stem")
+            or generated.get("options")
+            or generated.get("parts")
+            or not str(generated.get("skip_reason") or "").strip()
+        ):
+            figure_skip_errors.append(f"{source_id}: invalid skipped placeholder")
+    deterministic_checks["figure_skips"] = {
+        "status": "failed" if figure_skip_errors else "passed",
+        "checked_source_ids": checked_figure_ids,
+        "errors": figure_skip_errors,
+    }
+
+    if not hasattr(client, "evals"):
+        report = _build_base_report(
+            status="skipped",
+            reason="OpenAI client has no evals API surface",
+            grader_model=grader_model,
+            dataset_path=None,
+            items_evaluated=0,
+            latex_document_check=latex_document_check,
+        )
+        report["deterministic_checks"] = deterministic_checks
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=None,
+            output_items_path=None,
+            spreadsheet_path=None,
+            rubric_file=rubric_file,
+            source_files=source_files,
+        )
+        report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        return report
 
     items: list[dict[str, Any]] = []
     for generated in generated_questions:
         source = source_by_id.get(generated.get("source_id"))
         if source is None:
+            continue
+        if source.get("has_figure") and generated.get("skipped"):
             continue
         items.append(
             {
@@ -870,6 +938,7 @@ def run_openai_output_evaluation(
             items_evaluated=0,
             latex_document_check=latex_document_check,
         )
+        report["deterministic_checks"] = deterministic_checks
         report = _attach_report_file_metadata(
             report,
             report_path=report_path,
@@ -952,6 +1021,8 @@ def run_openai_output_evaluation(
         overall_score = _compute_overall_score(criterion_scores, latex_document_check)
         if report_status == "completed":
             report_status = _resolve_score_status(overall_score)
+        if deterministic_checks.get("figure_skips", {}).get("status") == "failed":
+            report_status = "failed"
         report = {
             "status": report_status,
             "created_at": _utc_timestamp(),
@@ -968,6 +1039,7 @@ def run_openai_output_evaluation(
             "run_id": current.id,
             "run_status": run_status,
             "output_items_count": len(output_items),
+            "deterministic_checks": deterministic_checks,
         }
         if output_items_path.exists():
             report["output_items_file"] = _evaluation_relative_path(output_items_path)
@@ -1010,6 +1082,7 @@ def run_openai_output_evaluation(
             "passing_score_threshold": PASSING_SCORE_THRESHOLD,
             "error": str(exc),
             "traceback": traceback.format_exc(),
+            "deterministic_checks": deterministic_checks,
         }
         if dataset_path.exists():
             _write_evaluation_spreadsheet(

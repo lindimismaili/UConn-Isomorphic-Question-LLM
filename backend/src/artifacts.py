@@ -28,7 +28,7 @@ AGENT_DISPLAY_NAMES = {
     "extracter": "Extracter",
     "verifier": "Verifier",
     "generator": "Generator",
-    "latex": "LaTeX Formatter",
+    "latex": "Latexifier",
     "evaluation": "Evaluation",
     "output": "Output",
 }
@@ -481,7 +481,7 @@ def _load_legacy_agent_record(outputs_dir: Path, agent_key: str) -> dict[str, An
         agent_key.lower(),
     }
     if agent_key == "latex":
-        expected_names.update({"latex formatter", "latex"})
+        expected_names.update({"latexifier", "latex formatter", "latex"})
     for record in reversed(agents):
         if not isinstance(record, dict):
             continue

@@ -23,6 +23,13 @@ DEFAULT_ALLOWED_DOMAINS = [
     "pypi.org",
     "files.pythonhosted.org",
 ]
+CONTAINER_PYTHON_PACKAGES = [
+    "pymupdf",
+    "pdf2image",
+    "pdfplumber",
+    "PyPDF2",
+    "python-docx",
+]
 
 
 def allowed_domains_from_env() -> list[str]:
@@ -179,14 +186,19 @@ Network note:
    poppler-utils
    python3-pip
 4. Run `python3 -m pip install --upgrade pip`.
-5. Install these Python PDF helpers:
-   pymupdf
-   pdf2image
-6. Verify with:
-   `pdflatex --version`
-   `python3 -c "import fitz, pdf2image; print('pdf-python-deps-ok')"`
+    5. Install these Python document helpers:
+       {" ".join(CONTAINER_PYTHON_PACKAGES)}
+    6. Verify with:
+       `pdflatex --version`
+       `python3 -c "import fitz, pdf2image, pdfplumber, PyPDF2, docx; print('document-python-deps-ok')"`
 7. Finish with a short summary.
 """.strip()
+
+        bootstrap_prompt = bootstrap_prompt.replace(
+            "python3 -m pip install --upgrade pip",
+            "python3 -m pip install --upgrade pip && python3 -m pip install "
+            + " ".join(CONTAINER_PYTHON_PACKAGES),
+        )
 
         response = _run_shell_task(
             self.client,

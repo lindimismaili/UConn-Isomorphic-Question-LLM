@@ -922,12 +922,13 @@ h4 {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  min-height: 360px;
+  min-height: 292px;
   width: 100%;
   padding: var(--spacing-sm) var(--spacing-xs);
-  gap: calc(var(--spacing-xl) + 8px);
+  gap: var(--spacing-md);
+  overflow: visible;
 }
 
 .agent-placeholder {
@@ -1060,20 +1061,32 @@ h4 {
   opacity: 0.95;
 }
 
+.agents-scroll {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 34px 44px 40px;
+  scroll-padding-inline: 44px;
+  scrollbar-gutter: stable;
+}
+
+.agents-track {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  min-width: max-content;
+}
+
 .agents-row {
   display: flex;
   align-items: stretch;
-  justify-content: center;
-  gap: var(--spacing-md);
+  justify-content: flex-start;
+  gap: 72px;
   flex-wrap: nowrap;
   position: relative;
   z-index: 2;
-}
-
-.agent-row-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
 }
 
 .agent-node {
@@ -1095,36 +1108,6 @@ h4 {
   visibility: visible;
   transform: translateY(0) scale(1);
   pointer-events: auto;
-}
-
-/* Agent Arrow */
-.agent-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-  opacity: 0.6;
-}
-
-.agent-arrow svg {
-  width: 28px;
-  height: 28px;
-}
-
-/* Between-row divider */
-.agent-arrow.agent-row-divider {
-  width: 100%;
-  flex-wrap: wrap;
-  justify-content: space-evenly;
-  gap: 0;
-  padding: 2px 0;
-  opacity: 0.45;
-}
-
-.agent-arrow.agent-row-divider svg {
-  width: 22px;
-  height: 22px;
-  transform: rotate(90deg);
 }
 
 .setup-modal-body ul {
@@ -1149,6 +1132,10 @@ h4 {
 
 /* Agent Card */
 .agent-card {
+  border: 1px solid var(--color-border);
+  color: inherit;
+  font: inherit;
+  text-align: left;
   padding: var(--panel-padding);
   flex: 0 0 auto;
   width: 220px;
@@ -1339,18 +1326,23 @@ h4 {
 
 .agent-timing {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.22rem;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 22px;
   margin-bottom: var(--spacing-sm);
 }
 
 .agent-timing span {
   min-height: 22px;
+  width: 100%;
+  justify-content: center;
   padding: 0.08rem 0.42rem;
   border-radius: var(--radius-sm);
   font-size: 0.62rem;
   font-family: "Consolas", "Monaco", monospace;
+}
+
+.agent-timing span[data-visible="false"] {
+  opacity: 0;
 }
 
 .agent-status-text {
@@ -3087,64 +3079,6 @@ body.modal-open .footer {
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-}
-
-/* =============================================================================
-   Skills Modal
-   ============================================================================= */
-
-.skills-list-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--panel-gap);
-  padding: var(--panel-padding);
-}
-
-.skills-list-intro {
-  color: var(--color-text-secondary);
-}
-
-.skills-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-sm);
-  max-height: 50vh;
-  overflow-y: auto;
-  padding-right: var(--spacing-xs);
-  padding-bottom: 10px;
-}
-
-.skill-list-item {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-sm)
-    var(--spacing-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-align: left;
-}
-
-.skill-list-item:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  transform: none;
-}
-
-.skill-icon {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-  opacity: 0.65;
-  color: var(--color-accent);
 }
 
 /* =============================================================================
