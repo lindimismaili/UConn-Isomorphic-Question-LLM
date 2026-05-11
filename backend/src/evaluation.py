@@ -94,6 +94,7 @@ DEFAULT_RUBRIC_CRITERIA: list[dict[str, Any]] = [
             "Compare the role of each answer choice, not the option letter. The generated question may reorder choices and move the correct answer.",
             "Reward preservation of the same misconception types, such as adding vector components instead of using magnitude, confusing coefficients with derivatives, or overgeneralizing an idealization.",
             "Pay attention to structural roles such as 'none of the above', single-correct vs multi-correct, and whether the same kind of correct statement remains present.",
+            "Do not penalize the generated item merely because each option includes an answer explanation or correctness rationale; explanations are expected metadata and should not be treated as changing the distractor role.",
         ],
     },
     {
@@ -102,6 +103,7 @@ DEFAULT_RUBRIC_CRITERIA: list[dict[str, Any]] = [
         "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
         "guidance": [
             "Judge spelling, notation, missing symbols, grammar that affects meaning, and formatting ambiguity.",
+            "Do not penalize the presence of explanations, rationales, or answer-key notes attached to answer choices. The generator normally includes explanations for correct and incorrect options, and their presence alone is not a clerical error.",
             "Do not penalize harmless wording changes or valid notation differences.",
         ],
     },
@@ -120,6 +122,7 @@ DEFAULT_RUBRIC_CRITERIA: list[dict[str, Any]] = [
         "guidance": [
             "Check whether the generated stem gives enough information for a unique intended answer.",
             "For multiple-choice questions, verify that the answer choices do not create multiple correct answers unless the stem asks for them.",
+            "Do not score lower solely because option choices include explanations or rationales after the answer text; treat those explanations as normal generated answer metadata, not as extra answer choices or ambiguity.",
             "Do not require extra source details if the generated question is independently solvable.",
         ],
     },
@@ -138,6 +141,13 @@ affects the current criterion.
 Before scoring, identify the source's intended answer logic and the generated
 question's intended answer logic. For multiple-choice questions, compare answer
 choice roles and misconception patterns; option letters do not need to match.
+
+Generated multiple-choice items may include correctness labels, answer-key notes,
+or explanations/rationales after each option because the generator produces
+answers and explanations for both right and wrong answers. Treat those
+explanations as normal evaluation context, not as student-facing option clutter,
+extra answer choices, ambiguity, or a clerical defect. Do not lower a score
+solely because explanations appear with the options.
 """
 
 

@@ -179,6 +179,19 @@ class EvaluationContractTests(unittest.TestCase):
                 "low",
             )
 
+    def test_workflow_and_grading_models_use_gpt_5_5(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        agents = json.loads((repo_root / "backend/data/agents.json").read_text(encoding="utf-8"))
+        rubric = json.loads((repo_root / "backend/data/rubric.json").read_text(encoding="utf-8"))
+
+        self.assertGreater(len(agents), 0)
+        for config in agents.values():
+            self.assertEqual(config.get("model"), "gpt-5.5")
+
+        self.assertEqual(rubric.get("model"), "gpt-5.5")
+        for criterion in _build_testing_criteria():
+            self.assertEqual(criterion.get("model"), "gpt-5.5")
+
 
 if __name__ == "__main__":
     unittest.main()

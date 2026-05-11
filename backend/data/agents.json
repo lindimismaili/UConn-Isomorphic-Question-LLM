@@ -2,7 +2,7 @@
   "normalizer": {
     "name": "Normalizer",
     "description": "Parses user request into configuration",
-    "model": "gpt-5.5-mini",
+    "model": "gpt-5.5",
     "reasoning": "none",
     "inputFrom": "User",
     "outputTo": "Extracter",
@@ -11,7 +11,7 @@
   "extracter": {
     "name": "Extracter",
     "description": "Reads files and extracts questions",
-    "model": "gpt-5.5-mini",
+    "model": "gpt-5.5",
     "reasoning": "none",
     "inputFrom": "Normalizer",
     "outputTo": "Verifier",
