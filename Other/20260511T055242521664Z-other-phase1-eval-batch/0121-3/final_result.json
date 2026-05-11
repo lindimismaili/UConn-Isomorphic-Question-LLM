@@ -1,0 +1,1387 @@
+{
+  "config": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "physics_abstract",
+    "title": "Physics 1 Set",
+    "notes": "Evaluation-only run over existing PDFs; no generation or LaTeX regeneration performed."
+  },
+  "source_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. Which of the following statements is correct?\nA. We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.\nB. We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.\nC. We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.\nD. None of the above is correct.",
+      "stem": "Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": [
+        "modeling",
+        "point mass",
+        "air resistance"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2. Which of the following equations is correct?\nA. 1 ¢ = 1 $\nB. 1 = 0.01\nC. 1 ¢ = 0.01 $\nD. 100 ¢ = 0.01 $",
+      "stem": "Which of the following equations is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1 ¢ = 1 $",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "1 = 0.01",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "1 ¢ = 0.01 $",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "100 ¢ = 0.01 $",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "unit conversion",
+        "dimensional analysis"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. Which option has the incorrect unit?\nA. Energy: joule\nB. Velocity: meter/second\nC. Acceleration: meter2/second2\nD. Force: kilogram ∙ meter/second2",
+      "stem": "Which option has the incorrect unit?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Energy: joule",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Velocity: meter/second",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Acceleration: meter2/second2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Force: kilogram ∙ meter/second2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "units",
+        "SI units"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "4. The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec{r}_4 = 3\\hat{i} + 6\\hat{j}\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kilofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec{r}_4 = 3\\hat{i} + 6\\hat{j}\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "vectors",
+        "distance",
+        "position"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "5",
+      "source_raw": "5. If the displacement of an object is given by the function \\(\\vec{s} = ((1.3\\,m/s^3)t^3 + (2.7\\,m/s^2)t^2)\\hat{i}\\), which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0 is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\(\\vec{s} = ((1.3\\,m/s^3)t^3 + (2.7\\,m/s^2)t^2)\\hat{i}\\), which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0 is 5.4 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "displacement",
+        "acceleration"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "6",
+      "source_raw": "6. An object takes 3 second to move from position A (\\(\\vec{r}_A = -4.0\\hat{i} + 10\\hat{j}\\)) to position B (\\(\\vec{r}_B = 2.0\\hat{i} + 5.0\\hat{j}\\)) along a straight path, where length units are in meters. Which of the following statements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\(\\vec{r}_A = -4.0\\hat{i} + 10\\hat{j}\\)) to position B (\\(\\vec{r}_B = 2.0\\hat{i} + 5.0\\hat{j}\\)) along a straight path, where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "vectors",
+        "distance"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "7",
+      "source_raw": "7. A Chinook salmon can jump out of water with a speed v0 and an angle \\(\\theta\\) above the horizontal. What is the speed of the fish when it is at the maximum height?\nA. \\(v_0\\).\nB. \\(v_0 \\cos \\theta\\).\nC. \\(v_0 \\sin \\theta\\).\nD. 0.",
+      "stem": "A Chinook salmon can jump out of water with a speed v0 and an angle \\(\\theta\\) above the horizontal. What is the speed of the fish when it is at the maximum height?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(v_0\\).",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "\\(v_0 \\cos \\theta\\).",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "\\(v_0 \\sin \\theta\\).",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "0.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": [
+        "projectile motion",
+        "velocity",
+        "maximum height"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "8",
+      "source_raw": "8. A spaceship is traveling with an initial velocity of \\(\\vec{v}_0 = (20.1\\,m/s)\\hat{i}\\) when its rockets fire, imparting an acceleration of \\(\\vec{a} = (2.02\\,m/s^2)\\hat{i} + (4.03\\,m/s^2)\\hat{j}\\). Based on this scenario, which of the following statements is correct?\nA. The x-component of the spaceship’s velocity remains constant.\nB. The y-component of the spaceship’s velocity remains constant.\nC. Both the direction of motion and speed change.\nD. None of the above is correct.",
+      "stem": "A spaceship is traveling with an initial velocity of \\(\\vec{v}_0 = (20.1\\,m/s)\\hat{i}\\) when its rockets fire, imparting an acceleration of \\(\\vec{a} = (2.02\\,m/s^2)\\hat{i} + (4.03\\,m/s^2)\\hat{j}\\). Based on this scenario, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The x-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The y-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Both the direction of motion and speed change.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [
+        "kinematics",
+        "acceleration",
+        "velocity components"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "9",
+      "source_raw": "9. If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?\nA. It stays the same.\nB. It decreases by a factor of 31/2.\nC. It increases by a factor of 3.\nD. It increases by a factor of 9.\nE. It increases by a factor of 31/2.",
+      "stem": "If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It stays the same.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "It decreases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "It increases by a factor of 3.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "It increases by a factor of 9.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "E",
+          "text": "It increases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electrostatics",
+        "Coulomb's law",
+        "scaling"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "10",
+      "source_raw": "10. An object can escape a planet with radius R and mass M at an escape speed given by \\(v = \\sqrt{2GM/R}\\), where \\(G\\) is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?\nA. A heavier object requires a higher speed to escape from the planet.\nB. A lighter object requires a lower speed to escape from the planet.\nC. An object requires a higher speed to escape from a planet with smaller mass and a larger radius.\nD. An object requires a higher speed to escape from a planet with greater mass and a smaller radius.",
+      "stem": "An object can escape a planet with radius R and mass M at an escape speed given by \\(v = \\sqrt{2GM/R}\\), where \\(G\\) is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "A heavier object requires a higher speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "A lighter object requires a lower speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "An object requires a higher speed to escape from a planet with smaller mass and a larger radius.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "An object requires a higher speed to escape from a planet with greater mass and a smaller radius.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "gravitation",
+        "escape speed",
+        "scaling"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "11",
+      "source_raw": "11. The force \\(\\vec{F} = (3.04N)\\hat{i} + (4.01N)\\hat{j}\\). acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?\nA. 20.5 J\nB. 14.3 J\nC. 5.00 J\nD. 35.7 J",
+      "stem": "The force \\(\\vec{F} = (3.04N)\\hat{i} + (4.01N)\\hat{j}\\). acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?",
+      "options": [
+        {
+          "key": "A",
+          "text": "20.5 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "14.3 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "5.00 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "35.7 J",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "work",
+        "force",
+        "vectors"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "12",
+      "source_raw": "12. A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?\nA. 47.3 N.\nB. 18 N.\nC. 76.5 N.\nD. None of the above is correct.",
+      "stem": "A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?",
+      "options": [
+        {
+          "key": "A",
+          "text": "47.3 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "18 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "76.5 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [
+        "impulse",
+        "momentum",
+        "average force"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "13",
+      "source_raw": "13. A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?\nA. 0.077 m/s\nB. 0.091 m/s\nC. 102 m/s\nD. 28.6 m/s",
+      "stem": "A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.077 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "0.091 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "102 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "28.6 m/s",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "everyday_activity",
+      "topic_tags": [
+        "momentum",
+        "collision",
+        "conservation of momentum"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "verified_questions": [
+    {
+      "source_id": "1",
+      "source_raw": "1. Which of the following statements is correct?\nA. We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.\nB. We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.\nC. We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.\nD. None of the above is correct.",
+      "stem": "Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "We can assume a \"spherical cow\" when analyzing the motion of a cow's leg.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": [
+        "modeling",
+        "point mass",
+        "air resistance"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "2",
+      "source_raw": "2. Which of the following equations is correct?\nA. 1 ¢ = 1 $\nB. 1 = 0.01\nC. 1 ¢ = 0.01 $\nD. 100 ¢ = 0.01 $",
+      "stem": "Which of the following equations is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1 ¢ = 1 $",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "1 = 0.01",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "1 ¢ = 0.01 $",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "100 ¢ = 0.01 $",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "unit conversion",
+        "dimensional analysis"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "3",
+      "source_raw": "3. Which option has the incorrect unit?\nA. Energy: joule\nB. Velocity: meter/second\nC. Acceleration: meter2/second2\nD. Force: kilogram ∙ meter/second2",
+      "stem": "Which option has the incorrect unit?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Energy: joule",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "Velocity: meter/second",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Acceleration: meter2/second2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "Force: kilogram ∙ meter/second2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "units",
+        "SI units"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "4",
+      "source_raw": "4. The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec{r}_4 = 3\\hat{i} + 6\\hat{j}\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?\nA. The distance between the white walkers and the Castle Black is 9 kilofurlongs.\nB. The distance between the white walkers and the Castle Black is 6 kilofurlongs.\nC. The distance between the white walkers and the Castle Black is 3 kilofurlongs.\nD. None of the above is correct.",
+      "stem": "The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \\(\\vec{r}_4 = 3\\hat{i} + 6\\hat{j}\\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the white walkers and the Castle Black is 9 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The distance between the white walkers and the Castle Black is 6 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The distance between the white walkers and the Castle Black is 3 kilofurlongs.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "vectors",
+        "distance",
+        "position"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "5",
+      "source_raw": "5. If the displacement of an object is given by the function \\(\\vec{s} = ((1.3\\,m/s^3)t^3 + (2.7\\,m/s^2)t^2)\\hat{i}\\), which of the following statement is correct?\nA. This is a constant acceleration motion.\nB. The magnitude of the acceleration is 2.7 m/s2\nC. The magnitude of the acceleration at t = 0 is 0 m/s2\nD. The magnitude of the acceleration at t = 0 is 5.4 m/s2",
+      "stem": "If the displacement of an object is given by the function \\(\\vec{s} = ((1.3\\,m/s^3)t^3 + (2.7\\,m/s^2)t^2)\\hat{i}\\), which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 2.7 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0 is 5.4 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "displacement",
+        "acceleration"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "6",
+      "source_raw": "6. An object takes 3 second to move from position A (\\(\\vec{r}_A = -4.0\\hat{i} + 10\\hat{j}\\)) to position B (\\(\\vec{r}_B = 2.0\\hat{i} + 5.0\\hat{j}\\)) along a straight path, where length units are in meters. Which of the following statements is correct?\nA. The moving distance is 7.8 m.\nB. The speed at t = 0 must be 2.6 m/s.\nC. The acceleration at t = 0 must be 0.87 m/s2\nD. None of the above is correct.",
+      "stem": "An object takes 3 second to move from position A (\\(\\vec{r}_A = -4.0\\hat{i} + 10\\hat{j}\\)) to position B (\\(\\vec{r}_B = 2.0\\hat{i} + 5.0\\hat{j}\\)) along a straight path, where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 7.8 m.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 2.6 m/s.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.87 m/s2",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "vectors",
+        "distance"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "7",
+      "source_raw": "7. A Chinook salmon can jump out of water with a speed v0 and an angle \\(\\theta\\) above the horizontal. What is the speed of the fish when it is at the maximum height?\nA. \\(v_0\\).\nB. \\(v_0 \\cos \\theta\\).\nC. \\(v_0 \\sin \\theta\\).\nD. 0.",
+      "stem": "A Chinook salmon can jump out of water with a speed v0 and an angle \\(\\theta\\) above the horizontal. What is the speed of the fish when it is at the maximum height?",
+      "options": [
+        {
+          "key": "A",
+          "text": "\\(v_0\\).",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "\\(v_0 \\cos \\theta\\).",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "\\(v_0 \\sin \\theta\\).",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "0.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "life_science",
+      "topic_tags": [
+        "projectile motion",
+        "velocity",
+        "maximum height"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "8",
+      "source_raw": "8. A spaceship is traveling with an initial velocity of \\(\\vec{v}_0 = (20.1\\,m/s)\\hat{i}\\) when its rockets fire, imparting an acceleration of \\(\\vec{a} = (2.02\\,m/s^2)\\hat{i} + (4.03\\,m/s^2)\\hat{j}\\). Based on this scenario, which of the following statements is correct?\nA. The x-component of the spaceship’s velocity remains constant.\nB. The y-component of the spaceship’s velocity remains constant.\nC. Both the direction of motion and speed change.\nD. None of the above is correct.",
+      "stem": "A spaceship is traveling with an initial velocity of \\(\\vec{v}_0 = (20.1\\,m/s)\\hat{i}\\) when its rockets fire, imparting an acceleration of \\(\\vec{a} = (2.02\\,m/s^2)\\hat{i} + (4.03\\,m/s^2)\\hat{j}\\). Based on this scenario, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The x-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "The y-component of the spaceship’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "Both the direction of motion and speed change.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [
+        "kinematics",
+        "acceleration",
+        "velocity components"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "9",
+      "source_raw": "9. If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?\nA. It stays the same.\nB. It decreases by a factor of 31/2.\nC. It increases by a factor of 3.\nD. It increases by a factor of 9.\nE. It increases by a factor of 31/2.",
+      "stem": "If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It stays the same.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "It decreases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "It increases by a factor of 3.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "It increases by a factor of 9.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "E",
+          "text": "It increases by a factor of 31/2.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electrostatics",
+        "Coulomb's law",
+        "scaling"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "10",
+      "source_raw": "10. An object can escape a planet with radius R and mass M at an escape speed given by \\(v = \\sqrt{2GM/R}\\), where \\(G\\) is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?\nA. A heavier object requires a higher speed to escape from the planet.\nB. A lighter object requires a lower speed to escape from the planet.\nC. An object requires a higher speed to escape from a planet with smaller mass and a larger radius.\nD. An object requires a higher speed to escape from a planet with greater mass and a smaller radius.",
+      "stem": "An object can escape a planet with radius R and mass M at an escape speed given by \\(v = \\sqrt{2GM/R}\\), where \\(G\\) is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "A heavier object requires a higher speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "A lighter object requires a lower speed to escape from the planet.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "An object requires a higher speed to escape from a planet with smaller mass and a larger radius.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "An object requires a higher speed to escape from a planet with greater mass and a smaller radius.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "gravitation",
+        "escape speed",
+        "scaling"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "11",
+      "source_raw": "11. The force \\(\\vec{F} = (3.04N)\\hat{i} + (4.01N)\\hat{j}\\). acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?\nA. 20.5 J\nB. 14.3 J\nC. 5.00 J\nD. 35.7 J",
+      "stem": "The force \\(\\vec{F} = (3.04N)\\hat{i} + (4.01N)\\hat{j}\\). acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?",
+      "options": [
+        {
+          "key": "A",
+          "text": "20.5 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "14.3 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "5.00 J",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "35.7 J",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "work",
+        "force",
+        "vectors"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "12",
+      "source_raw": "12. A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?\nA. 47.3 N.\nB. 18 N.\nC. 76.5 N.\nD. None of the above is correct.",
+      "stem": "A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?",
+      "options": [
+        {
+          "key": "A",
+          "text": "47.3 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "18 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "76.5 N.",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [
+        "impulse",
+        "momentum",
+        "average force"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "13",
+      "source_raw": "13. A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?\nA. 0.077 m/s\nB. 0.091 m/s\nC. 102 m/s\nD. 28.6 m/s",
+      "stem": "A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.077 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "B",
+          "text": "0.091 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "C",
+          "text": "102 m/s",
+          "is_correct": false,
+          "explanation": ""
+        },
+        {
+          "key": "D",
+          "text": "28.6 m/s",
+          "is_correct": false,
+          "explanation": ""
+        }
+      ],
+      "has_explicit_answer": false,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "everyday_activity",
+      "topic_tags": [
+        "momentum",
+        "collision",
+        "conservation of momentum"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ],
+  "generated_questions": [
+    {
+      "id": 1,
+      "source_id": "1",
+      "stem": "Which of the following statements about simplifying assumptions in mechanics is most reasonable?\nA. We can model a hummingbird’s wing as a point mass when predicting the detailed bending motion during a wingbeat.\nThis confuses whole-body motion modeling with the need for an extended-body model to capture wing deformation.\nB. We can model a city bus as a point mass when tracking its position change over several kilometers on a map.\nOver kilometer-scale travel the bus’s size is negligible compared with the distance, so a point-mass model is appropriate.\nC. We are never allowed to treat the surroundings as a vacuum, even if we intend to neglect air drag in a calculation.\nThis is incorrect because “vacuum” is often used as an idealization to ignore air resistance when it is negligible.\nD. None of the above statements is correct.\nOption B is a valid modeling approximation, so “none” is not correct.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "modeling assumptions",
+        "point mass",
+        "idealization"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 2,
+      "source_id": "2",
+      "stem": "Which of the following equations is correct?\nA. 1 mm = 1 m\nThis ignores the metric prefix and incorrectly treats a millimeter as a meter.\nB. 1 = 0.001\nThis incorrectly equates two pure numbers with different values without units.\nC. 1 mm = 0.001 m\nSince 1 m = 1000 mm, one millimeter equals 10−3 meters.\nD. 1000 mm = 0.001 m\nThis inverts the conversion factor because 1000 mm = 1 m, not 0.001 m.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "unit conversion",
+        "metric prefixes"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 3,
+      "source_id": "3",
+      "stem": "Which option has the incorrect unit?\nA. Power: watt\nA watt is correctly the SI unit of power (J/s).\nB. Momentum: kilogram· meter/second\nMomentum correctly has units of kg m/s.\nC. Pressure: newton/meter\nPressure should be force per area (N/m²), so N/m is dimensionally wrong.\nD. Electric potential: joule/coulomb\nA volt is correctly J/C, so this unit matches electric potential.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "SI units",
+        "dimensional analysis",
+        "pressure"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 4,
+      "source_id": "4",
+      "stem": "A rescue drone is launched from a base at the origin and is located at r⃗ = 5î − 2ĵ (units: kilometers). Which of the following statements is correct?\nA. The distance between the drone and the base is 7 km.\nThis adds component magnitudes instead of using the Pythagorean distance in 2D.\nB. The distance between the drone and the base is 5 km.\nThis uses only the x-component and ignores the y-component contribution to distance.\nC. The distance between the drone and the base is 2 km.\nThis uses only the y-component magnitude and ignores the x-component contribution to distance.\nD. None of the above is correct.\nThe distance is √(5² + (−2)²) = √29 ≈ 5.4 km, which is not 7, 5, or 2 km.",
+      "options": [],
+      "difficulty": "",
+      "theme": "engineering",
+      "topic_tags": [
+        "vectors",
+        "displacement",
+        "distance"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 5,
+      "source_id": "5",
+      "stem": "If the displacement of an object is given by the function s⃗ = ((0.90 m/s³)t³ + (1.60 m/s²)t²) î, which of the following statements is correct?\nA. This is a constant-acceleration motion.\nBecause s(t) contains a t³ term, the second derivative (acceleration) depends on t and is not constant.\nB. The magnitude of the acceleration is 1.60 m/s².\nThis incorrectly reads off a coefficient from s(t) instead of differentiating twice to get a(t).\nC. The magnitude of the acceleration at t = 0 is 0 m/s².\nDifferentiation gives a nonzero constant term in a(t) at t = 0.\nD. The magnitude of the acceleration at t = 0 is 3.2 m/s².\nWith a(t) = d²s/dt² = 6(0.90)t + 2(1.60), we get a(0) = 3.2 m/s².",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "acceleration",
+        "calculus"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 6,
+      "source_id": "6",
+      "stem": "An object takes 4 seconds to move from position A (r⃗_A = 1.0î − 3.0ĵ) to position B (r⃗_B = −5.0î + 4.0ĵ) along a straight path, where length units are in meters. Which of the following statements is correct?\nA. The moving distance is 9.2 m.\nFor straight-line travel the distance equals |∆r⃗| = √((−6)² + 7²) = √85 ≈ 9.2 m.\nB. The speed at t = 0 must be 2.3 m/s.\nKnowing only endpoints and total time does not uniquely determine the initial speed without a motion model.\nC. The acceleration at t = 0 must be 0.58 m/s².\nAcceleration cannot be inferred from just the endpoints and elapsed time without additional information about the trajectory in time.\nD. None of the above is correct.\nOption A is correct because the straight-line distance is determined solely by the endpoints.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "vectors",
+        "distance",
+        "kinematics"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 7,
+      "source_id": "7",
+      "stem": "A soccer ball is kicked with a launch speed v₀ at an angle θ above the horizontal (neglect air resistance). What is the speed of the ball at its maximum height?\nA. v₀\nThis ignores that the vertical component of velocity decreases to zero at the top.\nB. v₀ cos θ\nAt maximum height the vertical velocity is zero, so the speed equals the unchanged horizontal component v₀ cos θ.\nC. v₀ sin θ\nThis confuses the initial vertical component with the speed at the peak, where the vertical component is actually zero.\nD. 0\nOnly the vertical component becomes zero at the top; the horizontal component remains nonzero.",
+      "options": [],
+      "difficulty": "",
+      "theme": "everyday_activity",
+      "topic_tags": [
+        "projectile motion",
+        "velocity components",
+        "maximum height"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 8,
+      "source_id": "8",
+      "stem": "A probe is traveling with an initial velocity of v⃗₀ = (15.0 m/s)î when its thrusters fire, imparting an acceleration of a⃗ = (−1.2 m/s²)î + (3.4 m/s²)ĵ. Based on this scenario, which of the following statements is correct?\nA. The x-component of the probe’s velocity remains constant.\nBecause aₓ ≠ 0, the x-component of velocity must change with time.\nB. The y-component of the probe’s velocity remains constant.\nBecause aᵧ ≠ 0, the y-component of velocity must change with time.\nC. Both the direction of motion and speed change.\nNonzero acceleration components in both x and y alter the velocity vector’s magnitude and its direction over time.\nD. None of the above is correct.\nOption C correctly describes the consequence of having both aₓ and aᵧ nonzero.",
+      "options": [],
+      "difficulty": "",
+      "theme": "engineering",
+      "topic_tags": [
+        "kinematics",
+        "acceleration components",
+        "velocity"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 9,
+      "source_id": "9",
+      "stem": "If the magnitudes of both charges are multiplied by 4 and their separation is doubled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?\nA. It stays the same.\nThis would require the numerator and denominator scaling to cancel, which they do not here.\nB. It decreases by a factor of 4.\nThis incorrectly treats increasing charges as reducing the force or overemphasizes the distance change.\nC. It increases by a factor of 2.\nThis results from applying a linear (not squared) dependence on separation or mishandling the scaling factors.\nD. It increases by a factor of 16.\nThis ignores the r² in Coulomb’s law and accounts only for the charge scaling.\nE. It increases by a factor of 4.\nBy Coulomb’s law F ∝ q₁q₂/r², so the factor is (4 · 4)/(2²) = 16/4 = 4.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "Coulomb's law",
+        "electrostatic force",
+        "scaling"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 10,
+      "source_id": "10",
+      "stem": "An object can escape a planet with radius R and mass M at an escape speed given by v = √(2GM/R), where G is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?\nA. A more massive spacecraft needs a larger escape speed from the same planet.\nThe spacecraft’s mass does not appear in v = √(2GM/R), so escape speed is independent of the object’s mass.\nB. If a planet’s radius increases while its mass stays the same, the escape speed increases.\nSince v ∝ 1/√R, increasing R actually decreases the escape speed when M is fixed.\nC. A planet with smaller mass and larger radius requires a higher escape speed.\nBoth smaller M and larger R reduce M/R, so they lower the escape speed rather than raise it.\nD. A planet with greater mass and smaller radius requires a higher escape speed.\nBecause v ∝ √(M/R), increasing M and decreasing R both increase M/R and thus increase v.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "escape speed",
+        "gravitation",
+        "scaling"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 11,
+      "source_id": "11",
+      "stem": "The force F⃗ = (2.50 N)î + (6.00 N)ĵ acts on a particle as it moves along the x axis from x = −1.2 m to x = 3.8 m. What is the work, in joules, done by the force on the particle?\nA. 12.5 J\nBecause the displacement is along x, W = F⃗ · ∆r⃗ = Fₓ∆x = 2.50 × (3.8 − (−1.2)) = 12.5 J.\nB. 30.0 J\nThis incorrectly uses only the y-component of force even though there is no y-displacement.\nC. 42.5 J\nThis mistakenly adds components (or magnitudes) instead of taking the dot product with the displacement direction.\nD. 7.5 J\nThis comes from using an incorrect displacement (e.g., forgetting that ∆x spans from -1.2 m to 3.8 m).",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "work",
+        "dot product",
+        "force"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 12,
+      "source_id": "12",
+      "stem": "A 3.0 kg cart initially moving at 4.0 m/s collides with a bumper and rebounds at a speed of 1.5 m/s in the opposite direction. The collision lasts for 0.10 seconds. What is the average force exerted on the cart during the collision (magnitude)?\nA. 75 N\nThis corresponds to using only mvᵢ/∆t and ignores the rebound (the final velocity).\nB. 135 N\nThis results from using ∆v = 4.5 m/s (adding speeds but not accounting correctly for opposite directions).\nC. 165 N\nUsing impulse, |F_avg| = m|∆v|/∆t = 3.0 |(−1.5 − 4.0)|/0.10 = 165 N.\nD. None of the above is correct.\nOption C matches the impulse/average-force calculation, so “none” is not correct.",
+      "options": [],
+      "difficulty": "",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "impulse",
+        "average force",
+        "momentum"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    },
+    {
+      "id": 13,
+      "source_id": "13",
+      "stem": "A 70 kg player is initially at rest on ice. A 0.20 kg ball moving at 120 km/hr is caught and held by the player (they move together afterward). What is the player’s speed immediately after the catch?\nA. 0.067 m/s\nThis typically comes from dividing by 70 kg instead of the combined mass (70.20 kg) or using an incomplete conversion.\nB. 0.095 m/s\nConservation of momentum gives v = m_b v_b/(m_p + m_b) = 0.20 (120 km/hr=33.3 m/s)/70.2 ≈ 0.095 m/s.\nC. 33.3 m/s\nThis ignores the large mass of the player and incorrectly assumes the final speed equals the ball’s speed.\nD. 9.5 m/s\nThis usually results from a major unit-conversion mistake (e.g., treating km/hr as m/s or missing a factor of 3.6).",
+      "options": [],
+      "difficulty": "",
+      "theme": "everyday_activity",
+      "topic_tags": [
+        "conservation of momentum",
+        "inelastic collision",
+        "unit conversion"
+      ],
+      "generation_notes": "Extracted from existing Phase_1 PDF: 0121-3.pdf. Eval text uses source_raw to avoid PDF line-wrap truncation in structured stem/option fields.",
+      "question_type": "open_ended",
+      "skipped": false,
+      "skip_reason": "",
+      "answer": "",
+      "parts": []
+    }
+  ]
+}

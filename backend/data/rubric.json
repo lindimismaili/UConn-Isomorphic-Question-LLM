@@ -1,5 +1,5 @@
 {
-  "model": "gpt-5.5-mini",
+  "model": "gpt-5.5",
   "criteria": [
     {
       "name": "preserve_physical_content",
@@ -94,6 +94,7 @@
         "Compare answer-choice roles and misconception patterns, not option letters. The generated question may reorder choices and move the correct answer.",
         "Reward one-to-one preservation of distractor logic, such as component-vs-magnitude errors, coefficient-vs-derivative errors, sign errors, unit-dimension errors, or overgeneralized modeling assumptions.",
         "If the source uses 'none of the above' as the correct answer because no listed numeric value is correct, the generated question should usually preserve that structural role to score very high.",
+        "Do not penalize the generated item merely because each option includes an answer explanation or correctness rationale; explanations are expected metadata and should not be treated as changing the distractor role.",
         "If the generated question changes which misconception is tested, creates multiple correct answers, or removes the source's key distractor type, score lower even if the format still looks similar."
       ],
       "scoring_guide": [
@@ -109,6 +110,7 @@
       "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
       "guidance": [
         "Check spelling, grammar, missing symbols, broken math notation, duplicated or missing options, and wording that creates ambiguity.",
+        "Do not penalize the presence of explanations, rationales, or answer-key notes attached to answer choices. The generator normally includes explanations for correct and incorrect options, and their presence alone is not a clerical error.",
         "Do not penalize harmless notation differences, rephrasing, or improved grammar relative to the source."
       ],
       "scoring_guide": [
@@ -133,6 +135,7 @@
       "guidance": [
         "The generated question should provide enough information for a unique intended answer.",
         "For multiple-choice items, check that exactly one answer is correct unless the stem explicitly asks for multiple answers.",
+        "Do not score lower solely because option choices include explanations or rationales after the answer text; treat those explanations as normal generated answer metadata, not as extra answer choices or ambiguity.",
         "Statements using words like 'must' need enough assumptions to be logically forced.",
         "Do not require the generated question to include every source detail if it is independently solvable."
       ],

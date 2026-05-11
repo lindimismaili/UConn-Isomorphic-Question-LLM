@@ -363,7 +363,7 @@ def create_agents(
         agent = Agent(
             name=config.get("name", agent_key.title()),
             instructions=load_prompt(PROMPTS_DIR, logger, agent_key),
-            model=config.get("model", "gpt-4o"),
+            model=config.get("model", "gpt-5.5"),
             tools=tools if tools else None,
             output_type=output_type,
             model_settings=ModelSettings(

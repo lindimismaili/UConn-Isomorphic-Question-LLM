@@ -1445,7 +1445,7 @@ def _list_evaluation_source_files() -> list[Path]:
 
 def _load_rubric_model() -> str:
     """Load the rubric model from configuration, falling back to a default."""
-    rubric_model = "gpt-5.5-nano"
+    rubric_model = "gpt-5.5"
     rubric_path = DATA_DIR / "rubric.json"
     if not rubric_path.exists():
         return rubric_model
@@ -1605,7 +1605,7 @@ def create_agents(
         agents[agent_key] = Agent(
             name=config.get("name", agent_key.title()),
             instructions=load_prompt(PROMPTS_DIR, logger, agent_key),
-            model=config.get("model", "gpt-4o"),
+            model=config.get("model", "gpt-5.5"),
             tools=tools,
             output_type=output_type,
             model_settings=ModelSettings(
