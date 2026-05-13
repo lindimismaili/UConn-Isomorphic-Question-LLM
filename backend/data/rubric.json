@@ -9,6 +9,8 @@
         "Reward preservation of the underlying physics concept, law, model, and reasoning path.",
         "Do not require the same story, object names, answer letters, numerical values, or final numeric answer.",
         "For an isomorphic variation, changed numbers and changed surface context are expected. Penalize them only when they change the physics task or invalidate the answer logic.",
+        "Preserve required unit-conversion structure when it is part of the original task, such as kg to g, km/h to m/s, cm to m, or any other conversion needed to reach the answer choices.",
+        "If the source question requires converting from one unit system in the stem to another unit system in the answer choices, the generated question should preserve that conversion burden. Skipping the conversion, giving the stem directly in the answer-choice units, or removing the mismatch between stem units and answer units is a preservation error.",
         "Examples: a cow point-mass idealization can become a runner point-mass idealization; a raven/coordinate-distance problem can become a drone/beacon coordinate-distance problem."
       ],
       "scoring_guide": [
@@ -43,6 +45,7 @@
         "For numerical questions, values should usually be changed and all dependent values should be recalculated consistently.",
         "The generated final answer, answer letter, or scale factor may differ from the source if the new numbers support it.",
         "Check that units stay dimensionally consistent and that distractors remain plausible for the new values.",
+        "When the original numerical task tests a specific unit conversion, the generated question should keep an equivalent conversion step rather than simplifying the stem into the final answer units.",
         "For mostly conceptual questions with no meaningful numbers, score high if there was no numerical work to vary; do not punish the absence of numerical variation."
       ],
       "scoring_guide": [
@@ -91,8 +94,9 @@
       "category": "Preservation",
       "question": "Does the generated question preserve the logical structure of the distractors?",
       "guidance": [
+        " STICK TO ORIGINAL DISTRACTORS"
         "Compare answer-choice roles and misconception patterns, not option letters. The generated question may reorder choices and move the correct answer.",
-        "Reward one-to-one preservation of distractor logic, such as component-vs-magnitude errors, coefficient-vs-derivative errors, sign errors, unit-dimension errors, or overgeneralized modeling assumptions.",
+        "Reward one-to-one preservation of distractor logic, such as component-vs-magnitude errors, coefficient-vs-derivative errors, sign errors, unit-conversion errors, unit-dimension errors, or overgeneralized modeling assumptions.",
         "If the source uses 'none of the above' as the correct answer because no listed numeric value is correct, the generated question should usually preserve that structural role to score very high.",
         "Do not penalize the generated item merely because each option includes an answer explanation or correctness rationale; explanations are expected metadata and should not be treated as changing the distractor role.",
         "If the generated question changes which misconception is tested, creates multiple correct answers, or removes the source's key distractor type, score lower even if the format still looks similar."
@@ -134,6 +138,7 @@
       "question": "Is the generated question fully specified and solvable as written?",
       "guidance": [
         "The generated question should provide enough information for a unique intended answer.",
+        "If the original item is solvable only after applying a unit conversion implied by the stem and answer choices, the generated item should remain solvable through the same kind of conversion rather than bypassing it.",
         "For multiple-choice items, check that exactly one answer is correct unless the stem explicitly asks for multiple answers.",
         "Do not score lower solely because option choices include explanations or rationales after the answer text; treat those explanations as normal generated answer metadata, not as extra answer choices or ambiguity.",
         "Statements using words like 'must' need enough assumptions to be logically forced.",
