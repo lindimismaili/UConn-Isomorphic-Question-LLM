@@ -26,7 +26,7 @@ Output mapping (must match schema exactly):
   - `id` (incrementing integer)
   - `source_id` (exact source question id from input)
   - `stem`
-  - `options[]` with fields: `key`, `text`, `is_correct`, `explanation`
+  - `options[]` with fields: `key`, `text`, `is_correct`, `explanation`, `distractor_logic`
   - `difficulty`, `theme`, `topic_tags`, `generation_notes`
   - `question_type` ("multiple_choice", "open_ended", or "multi_part")
   - `skipped` (bool): true only for figure-based source questions; false otherwise
@@ -53,12 +53,17 @@ Generation rules:
    - Exactly one option must have `is_correct=true`.
    - Randomize which key is correct across generated items.
 6. Distractor quality (multiple-choice only, critical):
-   - Each distractor must arise from a plausible student mistake.
-   - Typical errors: sign mistake, algebraic rearrangement error, wrong trig component, unit-conversion miss, missed square/root, wrong conservation law, force-balance error.
-   - Distractors should be close enough to be believable, not random.
+   - Read each source option's `distractor_logic` field. It encodes the SPECIFIC solver error (or structural role) that option was designed to capture.
+   - For each generated option, you MUST reproduce the SAME error pattern from the corresponding source role, but applied to the NEW numbers/scenario. Example: if source distractor B has distractor_logic "uses mass instead of weight", then in the generated question one distractor must be the value you get by using mass instead of weight under the new setup.
+   - Preserve the full set of source roles one-to-one: every misconception present in the source must appear in the generated set, and no extra misconceptions should be invented. The correct-answer role (including structural roles like "none of the above") must also be preserved.
+   - You may reorder which key (A/B/C/...) carries which role — option letters do not need to match the source.
+   - If a source option's `distractor_logic` is `"generic_plausible_value"`, generate a generic plausible wrong number; do not fabricate a specific misconception.
+   - Populate the generated option's `distractor_logic` field with the SAME error label/description as the source role it mirrors (rewritten to reference the new quantities where helpful). This makes the lineage auditable.
+   - Do not substitute a generic "plausible wrong number" for a role that originally encoded a specific misconception. That is a failure mode.
+   - If the source's `distractor_logic` is missing/empty (older items), fall back to inferring the misconception from the source option's text and explanation, and record your inferred label in the generated `distractor_logic`.
 7. Explanations (multiple-choice only):
    - Correct option: at least 2 sentences with principle + key equation(s) in LaTeX and reasoning path.
-   - Distractor explanations: at least 1 sentence naming the specific misconception/error.
+   - Distractor explanations: at least 1 sentence naming the specific misconception/error (the student-facing version of `distractor_logic`).
 8. Formatting:
    - Use LaTeX for math expressions.
 9. Verbosity:

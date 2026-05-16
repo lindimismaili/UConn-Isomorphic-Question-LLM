@@ -6,8 +6,21 @@ from backend.src.pipeline_validation import validate_generator_output, validate_
 from backend.src.schemas import GeneratorOutput, NewQuestionItem, OptionItem, SourceQuestionItem, VerifierOutput
 
 
-def option(key: str, text: str, *, correct: bool = False, explanation: str = "because") -> OptionItem:
-    return OptionItem(key=key, text=text, is_correct=correct, explanation=explanation)
+def option(
+    key: str,
+    text: str,
+    *,
+    correct: bool = False,
+    explanation: str = "because",
+    distractor_logic: str = "sign error",
+) -> OptionItem:
+    return OptionItem(
+        key=key,
+        text=text,
+        is_correct=correct,
+        explanation=explanation,
+        distractor_logic=distractor_logic,
+    )
 
 
 def source_question(source_id: str = "q1", *, has_figure: bool = False) -> SourceQuestionItem:

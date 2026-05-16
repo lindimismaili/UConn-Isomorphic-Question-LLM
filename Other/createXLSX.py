@@ -1,63 +1,60 @@
 #!/usr/bin/env python3
-"""Create Cleaned-XLSX-style workbooks for an eval batch.
+"""Build a single Evaluation-style workbook for an eval batch.
 
-The script reads a batch folder created by Other/runEvals.py and writes:
+The output matches the professor's `Other/Evaluation.xlsx` layout:
 
-    <batch>/XLSX/<phase-file>.xlsx
     <batch>/XLSX/compiled.xlsx
+        Sheet 1: "Summary"  — criteria as rows, source_ids 1..N as columns,
+                              cells = SUM of passes across all PDFs ('na' if all PDFs N/A),
+                              plus Overall / Conceptual / Abstract / Numerical averages.
+        Sheets 2..K: one per Phase_1 PDF ("1219-1", "1220-2", ...) — criteria as
+                     rows, source_ids 1..N as columns, cells = 0/1/'na' for that PDF.
 
 Run from the repo root:
 
-    python Other/createXLSX.py Other/<timestamp>-other-phase1-eval-batch
-
-If no batch folder is provided, the newest matching batch under Other is used.
+    python Other/createXLSX.py [path/to/batch]
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import sys
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 
 SCRIPT_PATH = Path(__file__).resolve()
 OTHER_DIR = SCRIPT_PATH.parent
+REPO_ROOT = OTHER_DIR.parent
+RUBRIC_PATH = REPO_ROOT / "backend" / "data" / "rubric.json"
+LATEX_CRITERION = "latex_syntax_quality"
 
-CRITERIA = [
-    "preserve_physical_content",
-    "scenario_variation",
-    "numerical_variation",
-    "physics_correctness",
-    "numeric_reasonableness",
-    "distractor_structure_preservation",
-    "clerical_quality",
-    "solvable_and_specified",
-]
-
-PER_FILE_HEADERS = [
-    "source_id",
-    "status",
-    *[f"{criterion}_score" for criterion in CRITERIA],
-]
-
-COMPILED_HEADERS = [
-    "source_id",
-    "max_versions",
-    *[f"{criterion}_score_total" for criterion in CRITERIA],
-]
+# Professor's manual classification of source questions in physics_1_set.pdf.
+# Source IDs are 1-indexed. Conceptual = no meaningful numerical content;
+# Abstract = symbolic / abstract-scenario items the professor flagged; the
+# remainder are treated as Numerical.
+CONCEPTUAL_IDS = {1, 3, 7, 10}
+ABSTRACT_IDS = {5, 6, 9, 11}
+NUMERICAL_IDS = {2, 4, 8, 12, 13}
 
 HEADER_FILL = PatternFill("solid", fgColor="1F4E78")
 HEADER_FONT = Font(color="FFFFFF", bold=True)
 PASS_FILL = PatternFill("solid", fgColor="C6EFCE")
 FAIL_FILL = PatternFill("solid", fgColor="FFC7CE")
-TOTAL_FILL = PatternFill("solid", fgColor="D9EAF7")
+NA_FILL = PatternFill("solid", fgColor="E7E6E6")
+AVG_FILL = PatternFill("solid", fgColor="D9EAF7")
+
+
+def load_rubric() -> list[dict[str, Any]]:
+    data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
+    return [c for c in data.get("criteria", []) if c.get("name") and c["name"] != LATEX_CRITERION]
 
 
 def source_sort_key(value: Any) -> tuple[int, Any]:
@@ -70,23 +67,10 @@ def source_sort_key(value: Any) -> tuple[int, Any]:
     return (2, text)
 
 
-def truthy(value: str) -> bool:
-    return str(value).strip().upper() in {"TRUE", "1", "YES", "PASSED", "PASS"}
-
-
-def cell_source_id(value: Any) -> int | str:
-    text = str(value).strip()
-    return int(text) if text.isdigit() else text
-
-
 def newest_batch() -> Path:
     candidates = sorted(
-        [
-            path
-            for path in OTHER_DIR.glob("*other-phase1-eval-batch*")
-            if path.is_dir()
-        ],
-        key=lambda path: path.stat().st_mtime,
+        [p for p in OTHER_DIR.glob("*other-phase1-eval-batch*") if p.is_dir()],
+        key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
     if not candidates:
@@ -95,112 +79,165 @@ def newest_batch() -> Path:
 
 
 def batch_report_dirs(batch_dir: Path) -> list[Path]:
-    report_dirs = []
-    for path in sorted(batch_dir.iterdir(), key=lambda item: item.name):
-        csv_path = path / "evaluation_outputs" / "evaluation_spreadsheet.csv"
-        if csv_path.exists():
-            report_dirs.append(path)
-    return report_dirs
+    dirs = []
+    for path in sorted(batch_dir.iterdir(), key=lambda i: i.name):
+        if (path / "evaluation_outputs" / "evaluation_spreadsheet.csv").exists():
+            dirs.append(path)
+    return dirs
 
 
-def load_rows(csv_path: Path) -> list[dict[str, str]]:
+def parse_cell(score_text: str, passed_text: str) -> int | str:
+    s = (score_text or "").strip()
+    p = (passed_text or "").strip().upper()
+    if p == "NA" or s.upper() == "NA":
+        return "na"
+    if p in {"TRUE", "PASS", "PASSED", "1"}:
+        return 1
+    if p in {"FALSE", "FAIL", "FAILED", "0"}:
+        return 0
+    if not s:
+        return 0
+    try:
+        return 1 if float(s) >= 1 else 0
+    except ValueError:
+        return 0
+
+
+def load_pdf_grid(csv_path: Path, criteria_names: list[str]) -> dict[int, dict[str, int | str]]:
+    """Return {source_id: {criterion: 0|1|'na'}} for one PDF's CSV."""
+    grid: dict[int, dict[str, int | str]] = {}
     with csv_path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
+        for row in csv.DictReader(handle):
+            sid_text = (row.get("source_id") or "").strip()
+            if not sid_text.isdigit():
+                continue
+            sid = int(sid_text)
+            cells: dict[str, int | str] = {}
+            for name in criteria_names:
+                cells[name] = parse_cell(
+                    row.get(f"{name}_score", ""),
+                    row.get(f"{name}_passed", ""),
+                )
+            grid[sid] = cells
+    return grid
 
 
-def cleaned_rows(rows: list[dict[str, str]]) -> list[list[Any]]:
-    output_rows = []
-    for row in rows:
-        source_id = row.get("source_id", "")
-        status = row.get("status", "")
-        values = [cell_source_id(source_id), status]
-        for criterion in CRITERIA:
-            passed_key = f"{criterion}_passed"
-            score_key = f"{criterion}_score"
-            if passed_key in row and row[passed_key] != "":
-                values.append(1 if truthy(row[passed_key]) else 0)
-            else:
-                try:
-                    values.append(1 if float(row.get(score_key, 0) or 0) >= 70 else 0)
-                except ValueError:
-                    values.append(0)
-        output_rows.append(values)
-    return sorted(output_rows, key=lambda item: source_sort_key(item[0]))
+def style_cell(cell, value: int | str) -> None:
+    cell.alignment = Alignment(horizontal="center", vertical="center")
+    if value == "na":
+        cell.fill = NA_FILL
+    elif value == 1:
+        cell.fill = PASS_FILL
+    elif value == 0:
+        cell.fill = FAIL_FILL
 
 
-def safe_sheet_name(name: str) -> str:
-    cleaned = re.sub(r"[\[\]:*?/\\]", "-", name).strip() or "Sheet1"
-    return cleaned[:31]
-
-
-def style_sheet(ws, *, compiled: bool = False) -> None:
-    max_row = ws.max_row
-    max_col = ws.max_column
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = ws.dimensions
-
-    widths = [14, 14, 33, 28, 30, 30, 34, 46, 28, 34]
-    for idx, width in enumerate(widths[:max_col], start=1):
-        ws.column_dimensions[chr(64 + idx)].width = width
-
+def write_pdf_sheet(wb: Workbook, pdf_name: str, source_ids: list[int],
+                    grid: dict[int, dict[str, int | str]],
+                    criteria: list[dict[str, Any]]) -> None:
+    ws = wb.create_sheet(pdf_name[:31])
+    ws.append([pdf_name, *source_ids])
+    for criterion in criteria:
+        name = criterion["name"]
+        row = [criterion.get("question", name)]
+        for sid in source_ids:
+            row.append(grid.get(sid, {}).get(name, "na"))
+        ws.append(row)
+    # Style
     for cell in ws[1]:
         cell.fill = HEADER_FILL
         cell.font = HEADER_FONT
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    ws.row_dimensions[1].height = 42 if compiled else 38
-
-    for row in ws.iter_rows(min_row=2, max_row=max_row, max_col=max_col):
-        for cell in row:
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-        if compiled and row[0].value == "TOTAL":
-            for cell in row:
-                cell.fill = TOTAL_FILL
-                cell.font = Font(bold=True)
-            continue
-        if not compiled:
-            status = str(row[1].value or "").lower()
-            status_fill = PASS_FILL if status == "passed" else FAIL_FILL
-            row[1].fill = status_fill
-            for cell in row[2:]:
-                cell.fill = PASS_FILL if cell.value == 1 else FAIL_FILL
+    ws.row_dimensions[1].height = 30
+    ws.column_dimensions["A"].width = 75
+    for idx in range(2, len(source_ids) + 2):
+        ws.column_dimensions[get_column_letter(idx)].width = 6
+    for r in range(2, ws.max_row + 1):
+        ws.cell(row=r, column=1).alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        for c in range(2, ws.max_column + 1):
+            cell = ws.cell(row=r, column=c)
+            style_cell(cell, cell.value)
+    ws.freeze_panes = "B2"
 
 
-def write_workbook(path: Path, sheet_name: str, headers: list[str], rows: list[list[Any]], *, compiled: bool = False) -> None:
-    wb = Workbook()
-    ws = wb.active
-    ws.title = safe_sheet_name(sheet_name)
-    ws.append(headers)
-    for row in rows:
-        ws.append(row)
-    style_sheet(ws, compiled=compiled)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(path)
-
-
-def build_compiled(per_file_rows: dict[str, list[list[Any]]]) -> list[list[Any]]:
-    counts: dict[str, int] = defaultdict(int)
-    totals: dict[str, list[int]] = defaultdict(lambda: [0] * len(CRITERIA))
-
-    for rows in per_file_rows.values():
-        seen_in_file: set[str] = set()
-        for row in rows:
-            source_id = str(row[0])
-            if source_id not in seen_in_file:
-                counts[source_id] += 1
-                seen_in_file.add(source_id)
-            for index, value in enumerate(row[2:]):
-                totals[source_id][index] += int(value or 0)
-
-    compiled_rows = [
-        [cell_source_id(source_id), counts[source_id], *totals[source_id]]
-        for source_id in sorted(totals, key=source_sort_key)
+def write_summary_sheet(wb: Workbook, source_ids: list[int],
+                        per_pdf_grids: dict[str, dict[int, dict[str, int | str]]],
+                        criteria: list[dict[str, Any]]) -> None:
+    ws = wb.create_sheet("Summary", 0)
+    headers = [
+        "All", *source_ids,
+        "Overall Average", "Conceptual Average", "Abstract Average", "Numerical Average",
     ]
-    if compiled_rows:
-        total_row = ["TOTAL", sum(row[1] for row in compiled_rows)]
-        for index in range(len(CRITERIA)):
-            total_row.append(sum(row[index + 2] for row in compiled_rows))
-        compiled_rows.append(total_row)
-    return compiled_rows
+    ws.append(headers)
+    n_pdfs = len(per_pdf_grids)
+
+    for criterion in criteria:
+        name = criterion["name"]
+        question = criterion.get("question", name)
+        row: list[Any] = [question]
+        # Per-source-id sum (or 'na' if all PDFs say na for this id)
+        sums: dict[int, int | str] = {}
+        for sid in source_ids:
+            values = [grid.get(sid, {}).get(name) for grid in per_pdf_grids.values()]
+            numeric = [v for v in values if isinstance(v, int)]
+            if numeric:
+                sums[sid] = sum(numeric)
+            else:
+                sums[sid] = "na"
+            row.append(sums[sid])
+
+        def avg(ids: set[int]) -> float | str:
+            cells = []
+            for sid in ids:
+                if sid not in source_ids:
+                    continue
+                for grid in per_pdf_grids.values():
+                    v = grid.get(sid, {}).get(name)
+                    if isinstance(v, int):
+                        cells.append(v)
+            if not cells:
+                return "na"
+            return sum(cells) / len(cells)
+
+        overall = avg(set(source_ids))
+        conceptual = avg(CONCEPTUAL_IDS)
+        abstract = avg(ABSTRACT_IDS)
+        numerical = avg(NUMERICAL_IDS)
+        row.extend([overall, conceptual, abstract, numerical])
+        ws.append(row)
+
+    # Style
+    for cell in ws[1]:
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[1].height = 42
+    ws.column_dimensions["A"].width = 75
+    for idx in range(2, len(source_ids) + 2):
+        ws.column_dimensions[get_column_letter(idx)].width = 6
+    for idx in range(len(source_ids) + 2, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(idx)].width = 14
+
+    for r in range(2, ws.max_row + 1):
+        ws.cell(row=r, column=1).alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        for c in range(2, len(source_ids) + 2):
+            cell = ws.cell(row=r, column=c)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            v = cell.value
+            if v == "na":
+                cell.fill = NA_FILL
+            elif isinstance(v, (int, float)):
+                if v == n_pdfs:
+                    cell.fill = PASS_FILL
+                elif v == 0:
+                    cell.fill = FAIL_FILL
+        for c in range(len(source_ids) + 2, len(headers) + 1):
+            cell = ws.cell(row=r, column=c)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.fill = AVG_FILL
+            if isinstance(cell.value, float):
+                cell.number_format = "0.000"
+    ws.freeze_panes = "B2"
 
 
 def create_xlsx(batch_dir: Path) -> Path:
@@ -212,48 +249,46 @@ def create_xlsx(batch_dir: Path) -> Path:
     if not report_dirs:
         raise FileNotFoundError(f"No evaluation_spreadsheet.csv files found in {batch_dir}")
 
-    output_dir = batch_dir / "XLSX"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    criteria = load_rubric()
+    criteria_names = [c["name"] for c in criteria]
 
-    per_file_rows: dict[str, list[list[Any]]] = {}
+    per_pdf_grids: dict[str, dict[int, dict[str, int | str]]] = {}
+    all_source_ids: set[int] = set()
     for report_dir in report_dirs:
         csv_path = report_dir / "evaluation_outputs" / "evaluation_spreadsheet.csv"
-        rows = cleaned_rows(load_rows(csv_path))
-        per_file_rows[report_dir.name] = rows
-        write_workbook(
-            output_dir / f"{report_dir.name}.xlsx",
-            report_dir.name,
-            PER_FILE_HEADERS,
-            rows,
-        )
+        grid = load_pdf_grid(csv_path, criteria_names)
+        per_pdf_grids[report_dir.name] = grid
+        all_source_ids.update(grid.keys())
 
-    compiled_rows = build_compiled(per_file_rows)
-    write_workbook(
-        output_dir / "compiled.xlsx",
-        "Compiled Totals",
-        COMPILED_HEADERS,
-        compiled_rows,
-        compiled=True,
-    )
-    return output_dir
+    source_ids = sorted(all_source_ids)
+
+    output_dir = batch_dir / "XLSX"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "compiled.xlsx"
+
+    wb = Workbook()
+    # Drop the default sheet — write_summary_sheet inserts "Summary" at index 0.
+    wb.remove(wb.active)
+    for pdf_name in sorted(per_pdf_grids, key=source_sort_key):
+        write_pdf_sheet(wb, pdf_name, source_ids, per_pdf_grids[pdf_name], criteria)
+    write_summary_sheet(wb, source_ids, per_pdf_grids, criteria)
+
+    wb.save(output_path)
+    return output_path
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "batch",
-        nargs="?",
-        type=Path,
-        help="Batch folder to convert. Defaults to the newest Other/*other-phase1-eval-batch* folder.",
-    )
+    parser.add_argument("batch", nargs="?", type=Path,
+                        help="Batch folder to convert. Defaults to newest under Other/.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     batch_dir = args.batch or newest_batch()
-    output_dir = create_xlsx(batch_dir)
-    print(f"Wrote XLSX files to {output_dir}")
+    out = create_xlsx(batch_dir)
+    print(f"Wrote {out}")
     return 0
 
 

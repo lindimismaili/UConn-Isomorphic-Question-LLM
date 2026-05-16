@@ -26,107 +26,13 @@ REPO_ROOT = THIS_DIR.parent
 DATA_DIR = REPO_ROOT / "data"
 RUBRIC_PATH = DATA_DIR / "rubric.json"
 LATEX_CRITERION_NAME = "latex_syntax_quality"
-PASSING_SCORE_THRESHOLD = 70.0
+PASSING_SCORE_THRESHOLD = 1.0
 EVALUATION_OUTPUTS_DIRNAME = "evaluation_outputs"
 EVALUATION_REPORT_FILENAME = "evaluation_report.json"
 EVALUATION_DATASET_FILENAME = "evaluation_dataset.jsonl"
 EVALUATION_ITEMS_FILENAME = "evaluation_agents.jsonl"
 EVALUATION_SPREADSHEET_FILENAME = "evaluation_spreadsheet.csv"
 EVALUATION_RUBRIC_FILENAME = "rubric.json"
-
-
-DEFAULT_RUBRIC_CRITERIA: list[dict[str, Any]] = [
-    {
-        "name": "preserve_physical_content",
-        "category": "Preservation",
-        "question": "Does the generated question preserve the original physical content?",
-        "guidance": [
-            "Reward preservation of the underlying physics concept, law, modeling assumption, and required reasoning steps.",
-            "Do not require the same story, object names, numerical values, or final numeric answer.",
-            "Penalize changes that move to a different physics topic, require a different law, or change the intended conceptual distinction.",
-        ],
-    },
-    {
-        "name": "scenario_variation",
-        "category": "Variation",
-        "question": "Does the generated question use a scenario different from the original one?",
-        "guidance": [
-            "This criterion rewards appropriate surface-context variation while keeping the same physics task.",
-            "A different real-world object, setting, or story should score high when the same concept and reasoning are preserved.",
-            "Do not mark a changed scenario as a failure merely because it is different. Penalize exact copying, overly superficial edits, or changes that break the isomorphic physics mapping.",
-        ],
-    },
-    {
-        "name": "numerical_variation",
-        "category": "Variation",
-        "question": "If the original question is numerical, does the generated question appropriately modify numerical values?",
-        "guidance": [
-            "For numerical questions, reward changed values that are recalculated consistently throughout the stem, answer choices, and explanations.",
-            "The generated question may have a different final value or correct option if the new values support it.",
-            "For conceptual questions with only incidental scales or no meaningful numerical values, do not penalize the generated question for having little numerical variation.",
-        ],
-    },
-    {
-        "name": "physics_correctness",
-        "category": "Quality control",
-        "question": "Is the generated question free of physics errors or misconceptions?",
-        "guidance": [
-            "Judge the generated question on its own physics correctness.",
-            "Check equations, units, signs, assumptions, and whether the marked or implied correct answer is actually correct.",
-            "Do not penalize for being a different scenario if the generated physics is internally correct.",
-        ],
-    },
-    {
-        "name": "numeric_reasonableness",
-        "category": "Quality control",
-        "question": "Do all numerical values have physically reasonable magnitudes and units?",
-        "guidance": [
-            "Check dimensional consistency and whether magnitudes are plausible for the stated context.",
-            "Incorrect distractor values can still be reasonable if they are plausible wrong answers with correct units.",
-            "Penalize impossible units, nonsensical scales, or values that contradict the stated physical setup.",
-        ],
-    },
-    {
-        "name": "distractor_structure_preservation",
-        "category": "Preservation",
-        "question": "Does the generated question preserve the logical structure of the distractors?",
-        "guidance": [
-            "Compare the role of each answer choice, not the option letter. The generated question may reorder choices and move the correct answer.",
-            "Reward preservation of the same misconception types, such as adding vector components instead of using magnitude, confusing coefficients with derivatives, or overgeneralizing an idealization.",
-            "Pay attention to structural roles such as 'none of the above', single-correct vs multi-correct, and whether the same kind of correct statement remains present.",
-            "Do not penalize the generated item merely because each option includes an answer explanation or correctness rationale; explanations are expected metadata and should not be treated as changing the distractor role.",
-        ],
-    },
-    {
-        "name": "clerical_quality",
-        "category": "Quality control",
-        "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
-        "guidance": [
-            "Judge spelling, notation, missing symbols, grammar that affects meaning, and formatting ambiguity.",
-            "Do not penalize the presence of explanations, rationales, or answer-key notes attached to answer choices. The generator normally includes explanations for correct and incorrect options, and their presence alone is not a clerical error.",
-            "Do not penalize harmless wording changes or valid notation differences.",
-        ],
-    },
-    {
-        "name": "latex_syntax_quality",
-        "category": "Quality control",
-        "question": "Is the generated LaTeX code free of syntax errors?",
-        "guidance": [
-            "This criterion is checked from generated LaTeX/PDF artifacts rather than by the score model.",
-        ],
-    },
-    {
-        "name": "solvable_and_specified",
-        "category": "Quality control",
-        "question": "Is the generated question fully specified and solvable as written?",
-        "guidance": [
-            "Check whether the generated stem gives enough information for a unique intended answer.",
-            "For multiple-choice questions, verify that the answer choices do not create multiple correct answers unless the stem asks for them.",
-            "Do not score lower solely because option choices include explanations or rationales after the answer text; treat those explanations as normal generated answer metadata, not as extra answer choices or ambiguity.",
-            "Do not require extra source details if the generated question is independently solvable.",
-        ],
-    },
-]
 
 
 GENERAL_GRADER_INSTRUCTIONS = """\
@@ -163,12 +69,7 @@ def _load_rubric_config() -> dict[str, Any]:
     criteria = data.get("criteria")
     model = data.get("model")
     if not isinstance(criteria, list) or not criteria:
-        logger.warning(
-            "Rubric file %s is missing a valid criteria list; using default criteria",
-            RUBRIC_PATH,
-        )
-        criteria = DEFAULT_RUBRIC_CRITERIA
-
+        raise ValueError(f"Rubric file {RUBRIC_PATH} must define a non-empty 'criteria' list")
     if not isinstance(model, str) or not model:
         raise ValueError(f"Rubric file {RUBRIC_PATH} must define a non-empty 'model' string")
 
@@ -315,15 +216,25 @@ def _build_spreadsheet_rows(
         if not isinstance(item, dict):
             item = {}
         grades, passes = _extract_eval_result_maps(record)
-        known_results = [name for name in criteria if name in grades or name in passes]
+        na_names = {
+            name
+            for name in criteria
+            if isinstance(grades.get(name), (int, float)) and float(grades[name]) < 0
+        }
+        known_results = [
+            name for name in criteria
+            if (name in grades or name in passes) and name not in na_names
+        ]
         failed_names = [
             name
             for name in criteria
-            if passes.get(name) is False
-            or (
-                name not in passes
-                and isinstance(grades.get(name), (int, float))
-                and float(grades[name]) < threshold
+            if name not in na_names and (
+                passes.get(name) is False
+                or (
+                    name not in passes
+                    and isinstance(grades.get(name), (int, float))
+                    and float(grades[name]) < threshold
+                )
             )
         ]
         passed_names = [
@@ -351,13 +262,17 @@ def _build_spreadsheet_rows(
 
         for criterion_name in criteria:
             score = grades.get(criterion_name)
-            row[f"{criterion_name}_score"] = (
-                round(score, 2) if isinstance(score, (int, float)) else ""
-            )
-            if criterion_name in passes:
-                row[f"{criterion_name}_passed"] = "TRUE" if passes[criterion_name] else "FALSE"
+            if criterion_name in na_names:
+                row[f"{criterion_name}_score"] = "NA"
+                row[f"{criterion_name}_passed"] = "NA"
             else:
-                row[f"{criterion_name}_passed"] = ""
+                row[f"{criterion_name}_score"] = (
+                    round(score, 2) if isinstance(score, (int, float)) else ""
+                )
+                if criterion_name in passes:
+                    row[f"{criterion_name}_passed"] = "TRUE" if passes[criterion_name] else "FALSE"
+                else:
+                    row[f"{criterion_name}_passed"] = ""
 
         rows.append(row)
 
@@ -491,9 +406,8 @@ def _format_criterion_prompt(criterion: dict[str, Any]) -> str:
         lines.extend(f"- {line}" for line in scoring_guide)
     else:
         lines.append(
-            "\nScoring guide: 90-100 means the criterion is strongly satisfied; "
-            "70-89 means it is satisfied with minor issues; 40-69 means partial "
-            "satisfaction; 0-39 means the criterion is mostly not satisfied."
+            "\nScoring guide: return 1 (pass) if the criterion is satisfied per the "
+            "guidance above; return 0 (fail) otherwise."
         )
 
     return "\n".join(lines)
@@ -592,6 +506,19 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
     """Build the criterion definitions used when creating an eval."""
     criteria: list[dict[str, Any]] = []
     for criterion in QUESTION_LEVEL_CRITERIA:
+        na_allowed = bool(criterion.get("na_allowed"))
+        score_range = [-1, 1] if na_allowed else [0, 1]
+        if na_allowed:
+            return_instruction = (
+                "Return exactly -1 if the criterion is Not Applicable for this source "
+                "(per the N/A rule in the rubric guidance), 1 if the criterion is satisfied (pass), "
+                "or 0 if not (fail). Do not return any other value."
+            )
+        else:
+            return_instruction = (
+                "Return exactly 1 if the criterion is satisfied (pass) or 0 if not (fail). "
+                "Do not return any other value."
+            )
         criteria.append(
             {
                 "name": criterion["name"],
@@ -601,16 +528,16 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
                     "reasoning_effort": RUBRIC_REASONING_EFFORT,
                 },
                 "pass_threshold": PASSING_SCORE_THRESHOLD,
-                "range": [0, 100],
+                "range": score_range,
                 "input": [
                     {
                         "role": "system",
                         "content": (
                             f"{GENERAL_GRADER_INSTRUCTIONS}\n"
                             f"{_format_criterion_prompt(criterion)}\n\n"
-                            "Return a single numeric score from 0 to 100, where 0 means the criterion is not satisfied at all "
-                            "and 100 means it is fully satisfied. Use the full range when appropriate. "
-                            "Judge only the provided source and generated question text."
+                            f"{return_instruction} "
+                            "Apply the rules in the rubric guidance literally, "
+                            "and judge only the provided source and generated question text."
                         ),
                     },
                     {
@@ -634,8 +561,36 @@ def _build_run_data_source(eval_data_file_id: str) -> dict[str, Any]:
     }
 
 
+LATEX_LOG_ERROR_PATTERNS = (
+    "! LaTeX Error",
+    "! Undefined control sequence",
+    "! Missing $",
+    "! Emergency stop",
+    "! Package",  # e.g. "! Package amsmath Error"
+    "Runaway argument",
+)
+
+
+def _scan_latex_log(log_path: Path) -> list[str]:
+    """Return a list of error lines found in a TeX .log file, empty on success."""
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if any(pat in line for pat in LATEX_LOG_ERROR_PATTERNS)
+    ]
+
+
 def _resolve_latex_check(latex_path: Optional[Path], pdf_path: Optional[Path] = None) -> dict[str, Any]:
-    """Return a synthetic pass/fail record for the LaTeX artifact check."""
+    """Return a synthetic pass/fail record for the LaTeX artifact check.
+
+    Beyond artifact existence, the ``.log`` file (if present) is scanned for
+    known fatal error markers; any match downgrades the status to ``failed``
+    and surfaces the offending log lines.
+    """
     criterion = RUBRIC_CRITERIA_BY_NAME.get(
         LATEX_CRITERION_NAME,
         {
@@ -646,28 +601,36 @@ def _resolve_latex_check(latex_path: Optional[Path], pdf_path: Optional[Path] = 
     )
 
     pdf_path = pdf_path or (latex_path.with_suffix(".pdf") if latex_path else None)
+    log_path = latex_path.with_suffix(".log") if latex_path else None
     latex_exists = bool(latex_path and latex_path.exists())
     pdf_exists = bool(pdf_path and pdf_path.exists())
-    passed = latex_exists and pdf_exists
+    log_errors = _scan_latex_log(log_path) if log_path and log_path.exists() else []
+
+    passed = latex_exists and pdf_exists and not log_errors
     status = "passed" if passed else "failed"
 
-    if passed:
+    if log_errors:
+        reason = f"LaTeX .log reports {len(log_errors)} error line(s); see latex_log_errors."
+    elif passed:
         reason = "Generated LaTeX document and compiled PDF artifact are both present."
     elif latex_exists:
         reason = "Generated LaTeX document exists, but the compiled PDF artifact is missing."
     else:
         reason = "Generated LaTeX document is missing."
 
-    return {
+    record = {
         "name": criterion["name"],
         "category": criterion.get("category", ""),
         "question": criterion.get("question", ""),
-        "score": 100.0 if passed else 0.0,
+        "score": 1.0 if passed else 0.0,
         "status": status,
         "reason": reason,
         "latex_file": latex_path.name if latex_path else "",
         "pdf_file": pdf_path.name if pdf_path else "",
     }
+    if log_errors:
+        record["latex_log_errors"] = log_errors[:20]
+    return record
 
 
 def _normalize_criterion_name(result_name: str) -> Optional[str]:
@@ -717,9 +680,17 @@ def _write_output_items_jsonl(path: Path, output_items: list[Any]) -> None:
 
 
 def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any], list[str]]:
-    """Aggregate per-criterion scores and return any unmatched result names."""
+    """Aggregate per-criterion scores and return any unmatched result names.
+
+    N/A scores (-1) are tracked separately as ``na_count`` rather than silently
+    dropped, so consumers can distinguish "all items judged N/A" from "no items
+    received a pass".
+    """
     criterion_scores: dict[str, list[float]] = {
         criterion["name"]: [] for criterion in QUESTION_LEVEL_CRITERIA
+    }
+    criterion_na: dict[str, int] = {
+        criterion["name"]: 0 for criterion in QUESTION_LEVEL_CRITERIA
     }
     unmatched_results: list[str] = []
 
@@ -734,21 +705,32 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
 
             score = getattr(result, "score", None)
             if isinstance(score, (int, float)):
-                criterion_scores[criterion_name].append(float(score))
+                value = float(score)
+                if value < 0:
+                    criterion_na[criterion_name] = criterion_na.get(criterion_name, 0) + 1
+                else:
+                    criterion_scores[criterion_name].append(value)
 
     summary: dict[str, Any] = {}
     missing_scores: list[str] = []
     for criterion in QUESTION_LEVEL_CRITERIA:
         name = criterion["name"]
         values = criterion_scores[name]
-        average_score = round(sum(values) / len(values), 2) if values else None
-        if average_score is None:
+        na_count = criterion_na.get(name, 0)
+        average_score = round(sum(values) / len(values), 4) if values else None
+        if average_score is None and na_count == 0:
             missing_scores.append(name)
+        items_passed = sum(1 for value in values if value >= 1.0)
+        total_observed = len(values) + na_count
         summary[name] = {
             "category": criterion.get("category", ""),
             "question": criterion.get("question", ""),
             "score": average_score,
+            "pass_rate": average_score,
+            "items_passed": items_passed,
             "items_scored": len(values),
+            "na_count": na_count,
+            "na_rate": round(na_count / total_observed, 4) if total_observed else None,
         }
 
     return summary, sorted(set(unmatched_results + missing_scores))
@@ -756,9 +738,14 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
 
 def _compute_overall_score(
     question_level_scores: dict[str, Any],
-    latex_document_check: dict[str, Any],
+    latex_document_check: dict[str, Any],  # noqa: ARG001 — kept for call-site stability
 ) -> Optional[float]:
-    """Compute a combined score across question-level and LaTeX checks."""
+    """Average of question-level criterion scores.
+
+    LaTeX is reported separately via `latex_document_check` rather than diluting
+    the rubric average; a single LaTeX failure should not look like a one-criterion
+    rubric drop.
+    """
     numeric_scores = [
         entry["score"]
         for entry in question_level_scores.values()
@@ -766,17 +753,7 @@ def _compute_overall_score(
     ]
     if not numeric_scores:
         return None
-    latex_score = latex_document_check.get("score")
-    if isinstance(latex_score, (int, float)):
-        numeric_scores.append(float(latex_score))
     return round(sum(numeric_scores) / len(numeric_scores), 2)
-
-
-def _resolve_score_status(overall_score: Optional[float]) -> str:
-    """Translate the overall score into a coarse status label."""
-    if not isinstance(overall_score, (int, float)):
-        return "incomplete"
-    return "passed" if float(overall_score) >= PASSING_SCORE_THRESHOLD else "failed"
 
 
 def _build_base_report(
@@ -876,31 +853,46 @@ def run_openai_output_evaluation(
         if source_id:
             generated_by_source.setdefault(source_id, []).append(generated)
 
-    figure_skip_errors: list[str] = []
-    checked_figure_ids: list[str] = []
-    for source in source_candidates:
-        if not isinstance(source, dict) or not source.get("has_figure"):
-            continue
-        source_id = str(source.get("source_id") or "")
-        checked_figure_ids.append(source_id)
-        items_for_source = generated_by_source.get(source_id, [])
-        if len(items_for_source) != 1:
-            figure_skip_errors.append(f"{source_id}: expected one skipped placeholder")
-            continue
-        generated = items_for_source[0]
-        if (
-            not generated.get("skipped")
-            or generated.get("stem")
-            or generated.get("options")
-            or generated.get("parts")
-            or not str(generated.get("skip_reason") or "").strip()
-        ):
-            figure_skip_errors.append(f"{source_id}: invalid skipped placeholder")
-    deterministic_checks["figure_skips"] = {
-        "status": "failed" if figure_skip_errors else "passed",
-        "checked_source_ids": checked_figure_ids,
-        "errors": figure_skip_errors,
-    }
+    if contract_report and isinstance(contract_report, dict):
+        figure_ids = [
+            str(s.get("source_id") or "")
+            for s in source_candidates
+            if isinstance(s, dict) and s.get("has_figure")
+        ]
+        deterministic_checks["figure_skips"] = {
+            "status": contract_report.get("status", "passed"),
+            "checked_source_ids": figure_ids,
+            "errors": [
+                err for err in contract_report.get("errors", [])
+                if "figure" in err.lower() or "skipped" in err.lower()
+            ],
+        }
+    else:
+        figure_skip_errors: list[str] = []
+        checked_figure_ids: list[str] = []
+        for source in source_candidates:
+            if not isinstance(source, dict) or not source.get("has_figure"):
+                continue
+            source_id = str(source.get("source_id") or "")
+            checked_figure_ids.append(source_id)
+            items_for_source = generated_by_source.get(source_id, [])
+            if len(items_for_source) != 1:
+                figure_skip_errors.append(f"{source_id}: expected one skipped placeholder")
+                continue
+            generated = items_for_source[0]
+            if (
+                not generated.get("skipped")
+                or generated.get("stem")
+                or generated.get("options")
+                or generated.get("parts")
+                or not str(generated.get("skip_reason") or "").strip()
+            ):
+                figure_skip_errors.append(f"{source_id}: invalid skipped placeholder")
+        deterministic_checks["figure_skips"] = {
+            "status": "failed" if figure_skip_errors else "passed",
+            "checked_source_ids": checked_figure_ids,
+            "errors": figure_skip_errors,
+        }
 
     if not hasattr(client, "evals"):
         report = _build_base_report(
@@ -1009,6 +1001,7 @@ def run_openai_output_evaluation(
         output_items: list[Any] = []
         output_item_records: list[dict[str, Any]] = []
 
+        coverage_mismatch: Optional[dict[str, Any]] = None
         if run_status == "completed":
             output_items = _collect_output_items(client, eval_obj.id, current.id)
             if output_items:
@@ -1020,6 +1013,21 @@ def run_openai_output_evaluation(
                     _to_jsonable(output_item) for output_item in output_items
                 ]
             criterion_scores, aggregation_notes = _aggregate_question_scores(output_items)
+            expected = len(items)
+            actual = len(output_items)
+            if expected != actual:
+                coverage_mismatch = {
+                    "expected_items": expected,
+                    "received_items": actual,
+                    "missing": expected - actual,
+                }
+                aggregation_notes.append(
+                    f"coverage_mismatch: expected {expected} eval items, received {actual}"
+                )
+                logger.warning(
+                    "Eval coverage mismatch: expected %d items, received %d",
+                    expected, actual,
+                )
 
         _write_evaluation_spreadsheet(
             spreadsheet_path,
@@ -1030,9 +1038,11 @@ def run_openai_output_evaluation(
 
         overall_score = _compute_overall_score(criterion_scores, latex_document_check)
         if report_status == "completed":
-            report_status = _resolve_score_status(overall_score)
+            report_status = "complete" if isinstance(overall_score, (int, float)) else "incomplete"
         if deterministic_checks.get("figure_skips", {}).get("status") == "failed":
             report_status = "failed"
+        if coverage_mismatch:
+            deterministic_checks["coverage_mismatch"] = coverage_mismatch
         report = {
             "status": report_status,
             "created_at": _utc_timestamp(),

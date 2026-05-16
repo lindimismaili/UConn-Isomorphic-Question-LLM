@@ -44,6 +44,10 @@ def _has_explanations(options: Iterable[object]) -> bool:
     return all(bool(str(getattr(option, "explanation", "")).strip()) for option in options)
 
 
+def _has_distractor_logic(options: Iterable[object]) -> bool:
+    return all(bool(str(getattr(option, "distractor_logic", "")).strip()) for option in options)
+
+
 def validate_verifier_output(
     extracted_questions: list[SourceQuestionItem],
     verified_output: VerifierOutput,
@@ -74,6 +78,11 @@ def validate_verifier_output(
                     f"Verifier source_id {verified.source_id} has missing option explanations",
                     verified.source_id,
                 )
+            if not _has_distractor_logic(verified.options):
+                report.add(
+                    f"Verifier source_id {verified.source_id} has missing option distractor_logic",
+                    verified.source_id,
+                )
         if verified.question_type == "open_ended" and not verified.answer.strip():
             report.add(f"Verifier source_id {verified.source_id} is missing an answer", verified.source_id)
         if verified.question_type == "multi_part":
@@ -81,7 +90,11 @@ def validate_verifier_output(
                 report.add(f"Verifier source_id {verified.source_id} changed part count", verified.source_id)
             for part in verified.parts:
                 if part.question_type == "multiple_choice" or part.options:
-                    if _correct_count(part.options) != 1 or not _has_explanations(part.options):
+                    if (
+                        _correct_count(part.options) != 1
+                        or not _has_explanations(part.options)
+                        or not _has_distractor_logic(part.options)
+                    ):
                         report.add(
                             f"Verifier source_id {verified.source_id} has incomplete MC part {part.part_label}",
                             verified.source_id,
@@ -91,6 +104,54 @@ def validate_verifier_output(
                         f"Verifier source_id {verified.source_id} has missing answer for part {part.part_label}",
                         verified.source_id,
                     )
+    return report
+
+
+def _collect_distractor_labels(options: Iterable[object]) -> list[str]:
+    labels: list[str] = []
+    for option in options:
+        raw = str(getattr(option, "distractor_logic", "") or "").strip().lower()
+        if raw:
+            labels.append(raw)
+    return labels
+
+
+def validate_distractor_logic_preservation(
+    source_questions: list[SourceQuestionItem],
+    generated_output: GeneratorOutput,
+) -> ValidationReport:
+    """Verify every source `distractor_logic` label appears in the matching generated item.
+
+    The rubric's `distractor_structure_preservation` criterion treats misconception
+    preservation as the central pedagogical property; this check enforces it
+    deterministically before the LLM judge is involved.
+    """
+    report = ValidationReport()
+    generated_by_source: dict[str, list] = {}
+    for generated in generated_output.isomorphic_questions:
+        generated_by_source.setdefault(generated.source_id, []).append(generated)
+
+    for source in source_questions:
+        if source.has_figure:
+            continue
+        source_labels = _collect_distractor_labels(getattr(source, "options", []))
+        if not source_labels:
+            continue
+        for generated in generated_by_source.get(source.source_id, []):
+            if generated.skipped:
+                continue
+            generated_labels = _collect_distractor_labels(getattr(generated, "options", []))
+            missing = [
+                label for label in source_labels
+                if label not in generated_labels
+                and label != "generic_plausible_value"
+            ]
+            if missing:
+                report.add(
+                    f"Generator source_id {source.source_id} missing distractor_logic label(s): "
+                    f"{', '.join(sorted(set(missing)))}",
+                    source.source_id,
+                )
     return report
 
 
@@ -149,6 +210,11 @@ def validate_generator_output(
                         f"Generator source_id {source.source_id} has missing option explanations",
                         source.source_id,
                     )
+                if not _has_distractor_logic(generated.options):
+                    report.add(
+                        f"Generator source_id {source.source_id} has missing option distractor_logic",
+                        source.source_id,
+                    )
             elif generated.question_type == "open_ended":
                 if generated.options or generated.parts or not generated.answer.strip():
                     report.add(
@@ -168,7 +234,11 @@ def validate_generator_output(
                     )
                 for part in generated.parts:
                     if part.question_type == "multiple_choice" or part.options:
-                        if _correct_count(part.options) != 1 or not _has_explanations(part.options):
+                        if (
+                            _correct_count(part.options) != 1
+                            or not _has_explanations(part.options)
+                            or not _has_distractor_logic(part.options)
+                        ):
                             report.add(
                                 f"Generator source_id {source.source_id} has incomplete MC part {part.part_label}",
                                 source.source_id,
@@ -178,5 +248,13 @@ def validate_generator_output(
                             f"Generator source_id {source.source_id} has missing answer for part {part.part_label}",
                             source.source_id,
                         )
+
+    distractor_report = validate_distractor_logic_preservation(source_questions, generated_output)
+    if not distractor_report.valid:
+        report.valid = False
+        report.errors.extend(distractor_report.errors)
+        for sid in distractor_report.repair_source_ids:
+            if sid not in report.repair_source_ids:
+                report.repair_source_ids.append(sid)
     return report
 

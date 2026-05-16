@@ -11,6 +11,10 @@ The core workflow is:
 
 `Normalizer -> Extracter -> Verifier -> Generator -> Latexifier -> Evaluation -> Output`
 
+For an in-depth audit of the generation and evaluation pipelines (including the
+judge↔professor agreement harness in `Other/compare_to_professor.py`), see
+[docs/ANALYSIS.md](docs/ANALYSIS.md).
+
 ## Architecture
 
 The repository is split into two runtime surfaces:
