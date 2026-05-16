@@ -179,6 +179,17 @@ class EvaluationContractTests(unittest.TestCase):
                 "low",
             )
 
+    def test_score_model_uses_pass_fail_range(self) -> None:
+        criteria = _build_testing_criteria(model="test-model")
+        self.assertGreater(len(criteria), 0)
+        na_criteria = {"numerical_variation", "numeric_reasonableness"}
+        for criterion in criteria:
+            self.assertEqual(criterion.get("pass_threshold"), 1.0)
+            if criterion["name"] in na_criteria:
+                self.assertEqual(criterion.get("range"), [-1, 1])
+            else:
+                self.assertEqual(criterion.get("range"), [0, 1])
+
     def test_workflow_and_grading_models_use_gpt_5_5(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
         agents = json.loads((repo_root / "backend/data/agents.json").read_text(encoding="utf-8"))

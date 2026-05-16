@@ -99,8 +99,7 @@ try:
         load_agents_config,
         load_prompt,
         merge_extracted_metadata_into_config,
-        missing_generation_source_ids,
-        reconcile_verified_questions,
+        normalize_question_types,
         resolve_prompt_path,
         upload_file_to_openai,
     )
@@ -143,8 +142,7 @@ except ImportError:
         load_agents_config,
         load_prompt,
         merge_extracted_metadata_into_config,
-        missing_generation_source_ids,
-        reconcile_verified_questions,
+        normalize_question_types,
         resolve_prompt_path,
         upload_file_to_openai,
     )
@@ -2883,10 +2881,7 @@ async def _execute_workflow(
                 )
                 elapsed = time.time() - start_time
                 verifier_output: VerifierOutput = verifier_result.final_output
-                verifier_output.questions = reconcile_verified_questions(
-                    extracter_output.questions,
-                    verifier_output.questions,
-                )
+                normalize_question_types(verifier_output.questions)
                 apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
                 verifier_report = validate_verifier_output(extracter_output.questions, verifier_output)
                 if not verifier_report.valid:
@@ -2915,10 +2910,7 @@ async def _execute_workflow(
                             if q.source_id not in set(verifier_report.repair_source_ids)
                         ] + repair_output.questions
                         verifier_output = VerifierOutput(questions=merged_questions)
-                        verifier_output.questions = reconcile_verified_questions(
-                            extracter_output.questions,
-                            verifier_output.questions,
-                        )
+                        normalize_question_types(verifier_output.questions)
                         apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
                         verifier_report = validate_verifier_output(extracter_output.questions, verifier_output)
                     if not verifier_report.valid:
@@ -2954,10 +2946,7 @@ async def _execute_workflow(
                         uploaded_agent_payload,
                         extracter_output,
                     )
-                    verifier_output.questions = reconcile_verified_questions(
-                        extracter_output.questions,
-                        verifier_output.questions,
-                    )
+                    normalize_question_types(verifier_output.questions)
                     apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
                     _mark_provided_agent_state(
                         workflow,
@@ -2984,10 +2973,7 @@ async def _execute_workflow(
                         resume_source_dir,
                         "verifier",
                     )
-                    verifier_output.questions = reconcile_verified_questions(
-                        extracter_output.questions,
-                        verifier_output.questions,
-                    )
+                    normalize_question_types(verifier_output.questions)
                     apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
                     _mark_reused_agent_state(
                         workflow,
@@ -3083,44 +3069,6 @@ async def _execute_workflow(
                     agents["generator"], input=generator_input, run_config=run_config
                 )
                 generator_output: GeneratorOutput = generator_result.final_output
-
-                missing_source_ids = missing_generation_source_ids(
-                    verifier_output.questions,
-                    generator_output.isomorphic_questions,
-                    normalizer_output.new_questions_per_question,
-                )
-                if missing_source_ids:
-                    retry_questions = [
-                        q for q in verifier_output.questions if q.source_id in missing_source_ids
-                    ]
-                    retry_payload = {
-                        "task": "generate_isomorphic_questions_retry",
-                        "reason": "missing_required_source_ids",
-                        "missing_source_ids": missing_source_ids,
-                        "configuration": normalizer_output.model_dump(),
-                        "source_questions": {"questions": [q.model_dump() for q in retry_questions]},
-                        "requirements": generator_requirements,
-                    }
-                    retry_input = build_json_message(retry_payload)
-                    retry_result = await Runner.run(
-                        agents["generator"], input=retry_input, run_config=run_config
-                    )
-                    retry_output: GeneratorOutput = retry_result.final_output
-                    missing_source_ids_set = set(missing_source_ids)
-                    generator_output.isomorphic_questions.extend(
-                        q for q in retry_output.isomorphic_questions
-                        if q.source_id in missing_source_ids_set
-                    )
-                    missing_source_ids = missing_generation_source_ids(
-                        verifier_output.questions,
-                        generator_output.isomorphic_questions,
-                        normalizer_output.new_questions_per_question,
-                    )
-                    if missing_source_ids:
-                        raise ValueError(
-                            "Generator failed to produce required outputs for source_id(s): "
-                            + ", ".join(missing_source_ids)
-                        )
 
                 style_review_payload = {
                     "task": "review_and_revise_isomorphic_questions_for_style",

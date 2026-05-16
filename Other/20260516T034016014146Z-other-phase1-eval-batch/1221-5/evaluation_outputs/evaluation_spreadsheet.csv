@@ -1,0 +1,173 @@
+row,source_id,status,passed_criteria_count,failed_criteria_count,failed_criteria,source_question_text,generated_question_text,preserve_physical_content_score,preserve_physical_content_passed,scenario_variation_score,scenario_variation_passed,numerical_variation_score,numerical_variation_passed,physics_correctness_score,physics_correctness_passed,numeric_reasonableness_score,numeric_reasonableness_passed,distractor_structure_preservation_score,distractor_structure_preservation_passed,clerical_quality_score,clerical_quality_passed,solvable_and_specified_score,solvable_and_specified_passed
+1,7,passed,6,0,,"7. A Chinook salmon can jump out of water with a speed v0 and an angle 𝜃 above the horizontal. What is the speed of the fish when it is at the maximum height?
+A. 𝑣0.
+B. 𝑣0 cos 𝜃.
+C. 𝑣0 sin 𝜃.
+D. 0.","Q7. A tennis ball is launched with speed u0 at an angle α above the horizontal (ignore air resistance). What is the speed of the ball when it is at its maximum height?
+A. u0.
+This is incorrect because the vertical component of velocity decreases to zero at the top, reducing the speed from its launch value.
+B. u0 cos α.
+This is correct because at maximum height the vertical velocity is zero, so the speed equals the unchanged horizontal component u0 cos α.
+C. u0 sin α.
+This is incorrect because u0 sin α is the initial vertical component, which is not the speed at the peak.
+D. 0.
+This is incorrect because although the vertical velocity is zero at the top, the horizontal velocity is still nonzero.",1.0,TRUE,1.0,TRUE,NA,NA,1.0,TRUE,NA,NA,1.0,TRUE,1.0,TRUE,1.0,TRUE
+2,8,passed,8,0,,"8. A spaceship is traveling with an initial velocity of 𝑣⃗0 = (20.1 𝑚/𝑠)𝑖̂ when its rockets fire, imparting an acceleration of 𝑎⃗ = (2.02 𝑚 𝑠2 ⁄ )𝑖̂+ (4.03 𝑚 𝑠2 ⁄ )𝑗̂. Based on this scenario, which of the following statements is correct?
+A. The x-component of the spaceship’s velocity remains constant.
+B. The y-component of the spaceship’s velocity remains constant.
+C. Both the direction of motion and speed change.
+D. None of the above is correct.","Q8. A rescue drone is initially moving with velocity ⃗v0 = (18.0 m/s)ˆı when its motors adjust and produce an acceleration ⃗a = (1.50 m/s^2)ˆı + (3.20 m/s^2)ˆȷ. Based on this scenario, which of the following statements is correct?
+A. The x-component of the drone’s velocity remains constant.
+This is incorrect because a nonzero ax changes vx over time.
+B. The y-component of the drone’s velocity remains constant.
+This is incorrect because a nonzero ay changes vy over time.
+C. Both the direction of motion and speed change.
+This is correct because acceleration has components in both directions, altering the velocity vector’s magnitude and its direction.
+D. None of the above is correct.
+This is incorrect because the presence of both ax and ay makes one statement (about changing speed and direction) true.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+3,3,failed,6,1,distractor_structure_preservation,"3. Which option has the incorrect unit?
+A. Energy: joule
+B. Velocity: meter/second
+C. Acceleration: meter2/second2
+D. Force: kilogram ∙ meter/second2","Q3. Which option has the incorrect unit?
+A. Power: watt
+This is correct because the watt (W) is the SI unit of power (J/s).
+B. Pressure: newton/meter2
+This is correct because pressure is force per area, with units N/m2 (pascal).
+C. Momentum: kilogram · meter/second
+This is correct because momentum is mass times velocity, with units kg · m/s.
+D. Work: newton/meter
+This is incorrect because work has units of N · m (joule), while N/m is the unit of a spring constant.",1.0,TRUE,1.0,TRUE,NA,NA,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+4,2,passed,8,0,,"2. Which of the following equations is correct?
+A. 1 ¢ = 1 $
+B. 1 = 0.01
+C. 1 ¢ = 0.01 $
+D. 100 ¢ = 0.01 $","Q2. Which of the following equations is correct?
+A. 1 p = 1 £
+This is incorrect because one penny is much smaller than one pound, not equal to it.
+B. 1 = 0.01
+This is incorrect because it equates two different numerical values without any units or conversion factor.
+C. 1 p = 0.01 £
+This is correct because 1 penny is defined as one hundredth of a pound.
+D. 100 p = 0.01 £
+This is incorrect because 100 p equals 1 £, not 0.01 £.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+5,1,passed,7,0,,"1. Which of the following statements is correct?
+A. We can assume a ""spherical cow"" when analyzing the motion of a cow's leg.
+B. We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.
+C. We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.
+D. None of the above is correct.","Q1. Which of the following statements is correct?
+A. We can treat a bicycle wheel as a point mass when studying how the spokes flex as it rolls.
+This is incorrect because spoke flex depends on the wheel’s size and shape, so a point-mass model throws away the needed geometry.
+B. We can reasonably treat a delivery van as a point mass when estimating how far it travels across town in 15 minutes.
+For city-scale motion, the van’s size is tiny compared with the travel distance, so a point-mass approximation captures its position change well.
+C. We are not allowed to assume motion in a vacuum even if we want to neglect air resistance in a first-pass calculation.
+This is incorrect because “ignore air resistance” is essentially the same modeling step as treating the situation like a vacuum for that effect.
+D. None of the above is correct.
+This is incorrect because one of the statements (about using a point-mass model over large distances) is a valid approximation.",1.0,TRUE,1.0,TRUE,NA,NA,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+6,10,failed,4,2,scenario_variation | distractor_structure_preservation,"10. An object can escape a planet with radius R and mass M at an escape speed given by 𝑣 = √2𝐺𝑀⁄𝑅, where 𝐺 is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?
+A. A heavier object requires a higher speed to escape from the planet.
+B. A lighter object requires a lower speed to escape from the planet.
+C. An object requires a higher speed to escape from a planet with smaller mass and a larger radius.
+D. An object requires a higher speed to escape from a planet with greater mass and a smaller radius.","Q10. An object can escape a planet with radius R and mass M at an escape speed given by v = √(2GM/R), where G is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?
+A. A more massive spacecraft needs a larger escape speed from the same planet.
+This is incorrect because the spacecraft’s mass does not appear in v = √(2GM/R).
+B. A planet with the same mass but a larger radius has a larger escape speed.
+This is incorrect because increasing R makes 2GM/R smaller, lowering the escape speed.
+C. A planet with smaller mass and smaller radius must always have a higher escape speed.
+This is incorrect because changing M and R in opposite ways can increase or decrease M/R, so it is not “always” higher.
+D. A planet with greater mass and smaller radius requires a higher escape speed.
+This is correct because v increases with larger M and decreases with larger R, so larger M and smaller R both push v upward.",1.0,TRUE,0.0,FALSE,NA,NA,1.0,TRUE,NA,NA,0.0,FALSE,1.0,TRUE,1.0,TRUE
+7,6,passed,8,0,,"6. An object takes 3 second to move from position A (𝑟⃗𝐴 = −4.0𝑖̂+ 10𝑗̂) to position B (𝑟⃗𝐵 = 2.0𝑖̂+ 5.0𝑗̂) along a straight path, where length units are in meters. Which of the following statements is correct?
+A. The moving distance is 7.8 m.
+B. The speed at t = 0 must be 2.6 m/s.
+C. The acceleration at t = 0 must be 0.87 m/s2
+D. None of the above is correct.","Q6. An object takes 5 seconds to move from position A (⃗rA = 1.0ˆı − 3.0ˆȷ) to position B (⃗rB = −5.0ˆı + 5.0ˆȷ) along a straight path, where length units are in meters. Which of the following statements is correct?
+A. The moving distance is 10 m.
+This is correct because along a straight path the distance is |⃗rB − ⃗rA| = √((-6)^2 + 8^2) = 10 m.
+B. The speed at t = 0 must be 2.0 m/s.
+This is incorrect because the travel time alone only determines average speed, not the instantaneous speed at t = 0.
+C. The acceleration at t = 0 must be 0.40 m/s^2.
+This is incorrect because no information about how velocity changes with time is given, so acceleration cannot be fixed.
+D. None of the above is correct.
+This is incorrect because the straight-line distance can be computed from the coordinates and matches one option.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+8,5,passed,8,0,,"5. If the displacement of an object is given by the function 𝑠⃗ = ((1.3𝑚/𝑠3)𝑡3 + (2.7𝑚/𝑠2)𝑡2)𝑖̂, which of the following statement is correct?
+A. This is a constant acceleration motion.
+B. The magnitude of the acceleration is 2.7 m/s2
+C. The magnitude of the acceleration at t = 0 is 0 m/s2
+D. The magnitude of the acceleration at t = 0 is 5.4 m/s2","Q5. If the displacement of an object is given by the function ⃗s = ((0.80 m/s^3)t^3 + (1.9 m/s^2)t^2) ˆı, which of the following statements is correct?
+A. This is a constant-acceleration motion.
+This is incorrect because the presence of a t^3 term makes the acceleration depend on time.
+B. The magnitude of the acceleration is 1.9 m/s^2.
+This is incorrect because 1.9 is a coefficient in position, not the (time-varying) acceleration.
+C. The magnitude of the acceleration at t = 0 is 0 m/s^2.
+This is incorrect because differentiating twice leaves a nonzero constant term in acceleration.
+D. The magnitude of the acceleration at t = 0 is 3.8 m/s^2.
+This is correct because a(t) = d^2s/dt^2 = (4.8t + 3.8) m/s^2 so at t = 0 it equals 3.8 m/s^2.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+9,11,failed,7,1,distractor_structure_preservation,"11. The force 𝐹⃗ = (3.04N)𝑖̂+ (4.01N)𝑗̂. acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?
+A. 20.5 J
+B. 14.3 J
+C. 5.00 J
+D. 35.7 J","Q11. The force F⃗ = (5.50 N)ˆı + (1.20 N)ˆȷ acts on a particle as it moves along the x axis from x = −1.20 m to x = 2.80 m. What is the work, in joules, done by the force on the particle?
+A. 22.0 J
+This is correct because the displacement is purely in x, so W = F⃗ · ∆⃗r = Fx∆x = 5.50(4.00) = 22.0 J.
+B. 15.4 J
+This is incorrect because it effectively uses xf instead of the change in position ∆x = xf − xi.
+C. 22.5 J
+This is incorrect because it uses the force magnitude |F⃗| instead of the component parallel to the motion.
+D. 4.8 J
+This is incorrect because it wrongly uses the y-component of force even though there is no y displacement.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+10,9,failed,7,1,distractor_structure_preservation,"9. If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?
+A. It stays the same.
+B. It decreases by a factor of 31/2.
+C. It increases by a factor of 3.
+D. It increases by a factor of 9.
+E. It increases by a factor of 31/2.","Q9. If the magnitudes of both charges are tripled and their separation is doubled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?
+A. It stays the same.
+This is incorrect because changing charges and distance changes q1q2/r^2 in Coulomb’s law.
+B. It decreases by a factor of 9/4.
+This is incorrect because tripling the charges increases the force contribution from charge product rather than decreasing it.
+C. It increases by a factor of 3.
+This is incorrect because the net scaling is 9/4, not 3, after accounting for both charges and separation.
+D. It increases by a factor of 9/4.
+This is correct because F ∝ q1q2/r^2, so q1q2 scales by 3×3 = 9 while r^2 scales by 2^2 = 4, giving F′ = (9/4)F.
+E. It increases by a factor of 9.
+This is incorrect because it accounts for tripling the charges but forgets that doubling the separation reduces the force by a factor of 4.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+11,4,passed,8,0,,"4. The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates 𝑟⃗4 = 3𝑖̂+ 6𝑗̂ at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?
+A. The distance between the white walkers and the Castle Black is 9 kilofurlongs.
+B. The distance between the white walkers and the Castle Black is 6 kilofurlongs.
+C. The distance between the white walkers and the Castle Black is 3 kilofurlongs.
+D. None of the above is correct.","Q4. A scout drone is launched from a base at the origin and spots a target at the coordinates ⃗r = −4ˆı + 7ˆȷ, where length units are in hectometers. Which of the following statements is correct?
+A. The distance between the target and the base is 11 hectometers.
+This is incorrect because it adds components or guesses rather than using the Pythagorean distance formula.
+B. The distance between the target and the base is 7 hectometers.
+This is incorrect because it uses only the y-component and ignores the x-component.
+C. The distance between the target and the base is 4 hectometers.
+This is incorrect because it uses only the magnitude of the x-component and ignores the y-component.
+D. None of the above is correct.
+This is correct because the distance is √((-4)^2 + 7^2) = √65 ≈ 8.1 hectometers, which is not 11, 7, or 4.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+12,13,failed,4,4,preserve_physical_content | numerical_variation | distractor_structure_preservation | solvable_and_specified,"13. A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?
+A. 0.077 m/s
+B. 0.091 m/s
+C. 102 m/s
+D. 28.6 m/s","Q13. A 65 kg baseball player is initially at rest. A 145 g baseball traveling at 35 m/s is caught and sticks in the glove (perfectly inelastic). What is the speed of the player immediately after the catch?
+A. 0.078 m/s
+This is correct because momentum conservation gives v = mballv0/(mplayer + mball) = 0.145·35/65.145 ≈ 0.078 m/s.
+B. 0.11 m/s
+This is incorrect because it overestimates the result by not properly accounting for the large total mass after the catch.
+C. 35 m/s
+This is incorrect because it assumes the player simply takes on the ball’s original speed, ignoring the player’s much larger mass.
+D. 2.5 m/s
+This is incorrect because it confuses momentum conservation with energy conservation and produces an unrealistically large recoil speed.",0.0,FALSE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,0.0,FALSE
+13,12,failed,7,1,distractor_structure_preservation,"12. A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?
+A. 47.3 N.
+B. 18 N.
+C. 76.5 N.
+D. None of the above is correct.","Q12. A 3.2 kg cart initially moving at 1.8 m/s collides with a wall and rebounds at a speed of 0.6 m/s moving backward. The collision lasts for 0.15 seconds. What is the average force exerted on the cart during the collision?
+A. 51.2 N
+This is correct because Favg = ∆p/∆t = m(vf − vi)/∆t = 3.2(−0.6 − 1.8)/0.15 = −51.2 N, so the magnitude is 51.2 N.
+B. 38.4 N
+This is incorrect because it treats the velocity change as (−0.6)−(−1.8) or otherwise mishandles the sign for a rebound.
+C. 64.0 N
+This is incorrect because it uses an incorrect velocity change or divides by the wrong collision time.
+D. 7.68 N
+This is incorrect because it computes impulse |∆p| but forgets to divide by the collision duration to get force.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE

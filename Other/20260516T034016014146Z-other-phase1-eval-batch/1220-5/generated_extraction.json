@@ -1,0 +1,575 @@
+{
+  "filename": "1220-5.pdf",
+  "title": "Isomorphic Questions",
+  "theme": "physics_abstract",
+  "author": "",
+  "date": "",
+  "course": "",
+  "questions": [
+    {
+      "source_id": "Q1",
+      "source_raw": "Q1. Which of the following statements is correct about choosing a simplified model in physics?\nA. It is reasonable to treat a hummingbird as a sphere when analyzing the detailed flapping motion of one wing.\nThis is incorrect because wing-flap details depend on shape and rotation, so a spherical approximation throws away essential geometry.\nB. It is reasonable to treat a delivery van as a point mass when estimating how far it travels along a highway over tens of kilometers.\nThis is correct because the van’s size is negligible compared with kilometer-scale displacements, making a point-mass model appropriate.\nC. You are not allowed to assume “vacuum conditions” in a calculation even when you explicitly intend to neglect air resistance.\nThis is incorrect because assuming vacuum is a standard idealization used precisely to justify ignoring drag.\nD. None of the above is correct.\nThis is incorrect because one of the statements (the point-mass approximation over large distances) is a valid modeling choice.",
+      "stem": "Which of the following statements is correct about choosing a simplified model in physics?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It is reasonable to treat a hummingbird as a sphere when analyzing the detailed flapping motion of one wing.",
+          "is_correct": false,
+          "explanation": "This is incorrect because wing-flap details depend on shape and rotation, so a spherical approximation throws away essential geometry."
+        },
+        {
+          "key": "B",
+          "text": "It is reasonable to treat a delivery van as a point mass when estimating how far it travels along a highway over tens of kilometers.",
+          "is_correct": true,
+          "explanation": "This is correct because the van’s size is negligible compared with kilometer-scale displacements, making a point-mass model appropriate."
+        },
+        {
+          "key": "C",
+          "text": "You are not allowed to assume “vacuum conditions” in a calculation even when you explicitly intend to neglect air resistance.",
+          "is_correct": false,
+          "explanation": "This is incorrect because assuming vacuum is a standard idealization used precisely to justify ignoring drag."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "This is incorrect because one of the statements (the point-mass approximation over large distances) is a valid modeling choice."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "modeling",
+        "idealization",
+        "point mass"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q2",
+      "source_raw": "Q2. Which of the following equations is correct?\nA. 1 mm = 0.01 m\nThis is incorrect because a millimeter is one-thousandth of a meter, not one-hundredth.\nB. 1 = 10^{-3}\nThis is incorrect because it equates a dimensionless 1 to a different dimensionless number.\nC. 1 mm = 10^{-3} m\nThis is correct because the prefix “milli-” means a factor of 10^{-3}.\nD. 1000 mm = 0.001 m\nThis is incorrect because 1000 mm equals 1 m, not 0.001 m.",
+      "stem": "Which of the following equations is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1 mm = 0.01 m",
+          "is_correct": false,
+          "explanation": "This is incorrect because a millimeter is one-thousandth of a meter, not one-hundredth."
+        },
+        {
+          "key": "B",
+          "text": "1 = 10^{-3}",
+          "is_correct": false,
+          "explanation": "This is incorrect because it equates a dimensionless 1 to a different dimensionless number."
+        },
+        {
+          "key": "C",
+          "text": "1 mm = 10^{-3} m",
+          "is_correct": true,
+          "explanation": "This is correct because the prefix “milli-” means a factor of 10^{-3}."
+        },
+        {
+          "key": "D",
+          "text": "1000 mm = 0.001 m",
+          "is_correct": false,
+          "explanation": "This is incorrect because 1000 mm equals 1 m, not 0.001 m."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "units",
+        "metric prefixes",
+        "unit conversion"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q3",
+      "source_raw": "Q3. Which option has the incorrect unit?\nA. Power: watt\nThis is correct because the SI unit of power is the watt (J/s).\nB. Momentum: kg · m/s\nThis is correct because momentum has units of kg · m/s.\nC. Pressure: N/m\nThis is incorrect because pressure is force per area, so it should be N/m^2 (pascal), not N/m.\nD. Force: kg · m/s^2\nThis is correct because the SI unit of force is the newton, equal to kg · m/s^2.",
+      "stem": "Which option has the incorrect unit?",
+      "options": [
+        {
+          "key": "A",
+          "text": "Power: watt",
+          "is_correct": false,
+          "explanation": "This is correct because the SI unit of power is the watt (J/s)."
+        },
+        {
+          "key": "B",
+          "text": "Momentum: kg · m/s",
+          "is_correct": false,
+          "explanation": "This is correct because momentum has units of kg · m/s."
+        },
+        {
+          "key": "C",
+          "text": "Pressure: N/m",
+          "is_correct": true,
+          "explanation": "This is incorrect because pressure is force per area, so it should be N/m^2 (pascal), not N/m."
+        },
+        {
+          "key": "D",
+          "text": "Force: kg · m/s^2",
+          "is_correct": false,
+          "explanation": "This is correct because the SI unit of force is the newton, equal to kg · m/s^2."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "SI units",
+        "dimensional analysis",
+        "pressure"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q4",
+      "source_raw": "Q4. A scout drone departs from a base located at the origin and detects a signal at position \\vec{r} = 4 \\hat{i} + 7 \\hat{j}, where distances are measured in megameters. Which of the following statements is correct?\nA. The distance between the signal and the base is 11 megameters.\nThis is incorrect because 11 is the sum of components, not the Euclidean distance.\nB. The distance between the signal and the base is 8 megameters.\nThis is incorrect because the actual distance is \\sqrt{4^2 + 7^2} = \\sqrt{65} \\approx 8.06, not exactly 8.\nC. The distance between the signal and the base is 7 megameters.\nThis is incorrect because 7 is just the y-component, not the magnitude of the position vector.\nD. None of the above is correct.\nThis is correct because the distance is \\sqrt{65} \\approx 8.06 megameters, which is not 11, 8, or 7.",
+      "stem": "A scout drone departs from a base located at the origin and detects a signal at position \\vec{r} = 4 \\hat{i} + 7 \\hat{j}, where distances are measured in megameters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The distance between the signal and the base is 11 megameters.",
+          "is_correct": false,
+          "explanation": "This is incorrect because 11 is the sum of components, not the Euclidean distance."
+        },
+        {
+          "key": "B",
+          "text": "The distance between the signal and the base is 8 megameters.",
+          "is_correct": false,
+          "explanation": "This is incorrect because the actual distance is \\sqrt{4^2 + 7^2} = \\sqrt{65} \\approx 8.06, not exactly 8."
+        },
+        {
+          "key": "C",
+          "text": "The distance between the signal and the base is 7 megameters.",
+          "is_correct": false,
+          "explanation": "This is incorrect because 7 is just the y-component, not the magnitude of the position vector."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": true,
+          "explanation": "This is correct because the distance is \\sqrt{65} \\approx 8.06 megameters, which is not 11, 8, or 7."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [
+        "vectors",
+        "position",
+        "distance"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q5",
+      "source_raw": "Q5. If the displacement of an object is given by the function \\vec{s} = \\left((0.80\\ \\mathrm{m/s^3})t^3 - (1.6\\ \\mathrm{m/s^2})t^2\\right)\\hat{i}, which of the following statement is correct?\nA. This is a constant acceleration motion.\nThis is incorrect because differentiating twice yields an acceleration that depends on t due to the t^3 term.\nB. The magnitude of the acceleration is 1.6 m/s^2.\nThis is incorrect because the acceleration is not constant and does not equal the quadratic coefficient.\nC. The magnitude of the acceleration at t = 0 is 0 m/s^2.\nThis is incorrect because a(0) = 2b for s = at^3 + bt^2, which is nonzero here.\nD. The magnitude of the acceleration at t = 0 is 3.2 m/s^2.\nThis is correct because \\vec{a}(t) = \\frac{d^2\\vec{s}}{dt^2} = (4.8t - 3.2)\\hat{i}, so |a(0)| = 3.2 m/s^2.",
+      "stem": "If the displacement of an object is given by the function \\vec{s} = \\left((0.80\\ \\mathrm{m/s^3})t^3 - (1.6\\ \\mathrm{m/s^2})t^2\\right)\\hat{i}, which of the following statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "This is a constant acceleration motion.",
+          "is_correct": false,
+          "explanation": "This is incorrect because differentiating twice yields an acceleration that depends on t due to the t^3 term."
+        },
+        {
+          "key": "B",
+          "text": "The magnitude of the acceleration is 1.6 m/s^2.",
+          "is_correct": false,
+          "explanation": "This is incorrect because the acceleration is not constant and does not equal the quadratic coefficient."
+        },
+        {
+          "key": "C",
+          "text": "The magnitude of the acceleration at t = 0 is 0 m/s^2.",
+          "is_correct": false,
+          "explanation": "This is incorrect because a(0) = 2b for s = at^3 + bt^2, which is nonzero here."
+        },
+        {
+          "key": "D",
+          "text": "The magnitude of the acceleration at t = 0 is 3.2 m/s^2.",
+          "is_correct": true,
+          "explanation": "This is correct because \\vec{a}(t) = \\frac{d^2\\vec{s}}{dt^2} = (4.8t - 3.2)\\hat{i}, so |a(0)| = 3.2 m/s^2."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "kinematics",
+        "acceleration",
+        "calculus"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q6",
+      "source_raw": "Q6. A robot takes 5 seconds to move from position \\vec{r}_A = 1.0 \\hat{i} - 2.0 \\hat{j} to position \\vec{r}_B = -5.0 \\hat{i} + 4.0 \\hat{j} along a straight path, where length units are in meters. Which of the following statements is correct?\nA. The moving distance is 8.5 m.\nThis is correct because |\\Delta\\vec{r}| = \\sqrt{(-6)^2 + (6)^2} = \\sqrt{72} \\approx 8.49 m \\approx 8.5 m.\nB. The speed at t = 0 must be 1.7 m/s.\nThis is incorrect because knowing only endpoints and total time does not determine the instantaneous speed at the start.\nC. The acceleration at t = 0 must be 0.34 m/s^2.\nThis is incorrect because endpoint information alone does not fix the acceleration without a motion model.\nD. None of the above is correct.\nThis is incorrect because the straight-line distance statement in option A is correct.",
+      "stem": "A robot takes 5 seconds to move from position \\vec{r}_A = 1.0 \\hat{i} - 2.0 \\hat{j} to position \\vec{r}_B = -5.0 \\hat{i} + 4.0 \\hat{j} along a straight path, where length units are in meters. Which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The moving distance is 8.5 m.",
+          "is_correct": true,
+          "explanation": "This is correct because |\\Delta\\vec{r}| = \\sqrt{(-6)^2 + (6)^2} = \\sqrt{72} \\approx 8.49 m \\approx 8.5 m."
+        },
+        {
+          "key": "B",
+          "text": "The speed at t = 0 must be 1.7 m/s.",
+          "is_correct": false,
+          "explanation": "This is incorrect because knowing only endpoints and total time does not determine the instantaneous speed at the start."
+        },
+        {
+          "key": "C",
+          "text": "The acceleration at t = 0 must be 0.34 m/s^2.",
+          "is_correct": false,
+          "explanation": "This is incorrect because endpoint information alone does not fix the acceleration without a motion model."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "This is incorrect because the straight-line distance statement in option A is correct."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [
+        "vectors",
+        "displacement",
+        "distance"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q7",
+      "source_raw": "Q7. A tennis ball is launched with initial speed v_0 at an angle \\theta above the horizontal (ignore air resistance). What is the ball’s speed at the top of its trajectory?\nA. v_0 \\sin \\theta\nThis is incorrect because v_0 \\sin \\theta is the initial vertical component, which becomes zero at the top.\nB. v_0 \\cos \\theta\nThis is correct because the vertical velocity is zero at maximum height while the horizontal component remains v_0 \\cos \\theta.\nC. v_0\nThis is incorrect because the vertical component decreases to zero, so the speed is less than v_0 unless \\theta = 0.\nD. 0\nThis is incorrect because only the vertical component is zero at the top; the horizontal component generally remains nonzero.",
+      "stem": "A tennis ball is launched with initial speed v_0 at an angle \\theta above the horizontal (ignore air resistance). What is the ball’s speed at the top of its trajectory?",
+      "options": [
+        {
+          "key": "A",
+          "text": "v_0 \\sin \\theta",
+          "is_correct": false,
+          "explanation": "This is incorrect because v_0 \\sin \\theta is the initial vertical component, which becomes zero at the top."
+        },
+        {
+          "key": "B",
+          "text": "v_0 \\cos \\theta",
+          "is_correct": true,
+          "explanation": "This is correct because the vertical velocity is zero at maximum height while the horizontal component remains v_0 \\cos \\theta."
+        },
+        {
+          "key": "C",
+          "text": "v_0",
+          "is_correct": false,
+          "explanation": "This is incorrect because the vertical component decreases to zero, so the speed is less than v_0 unless \\theta = 0."
+        },
+        {
+          "key": "D",
+          "text": "0",
+          "is_correct": false,
+          "explanation": "This is incorrect because only the vertical component is zero at the top; the horizontal component generally remains nonzero."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "everyday_activity",
+      "topic_tags": [
+        "projectile motion",
+        "velocity components",
+        "kinematics"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q8",
+      "source_raw": "Q8. A drone initially moves with velocity \\vec{v}_0 = (15.0\\ \\mathrm{m/s}) \\hat{i}. Its motors then produce a constant acceleration \\vec{a} = (-1.5\\ \\mathrm{m/s^2}) \\hat{i} + (0.80\\ \\mathrm{m/s^2}) \\hat{j}. Based on this scenario, which of the following statements is correct?\nA. The x-component of the drone’s velocity remains constant.\nThis is incorrect because a nonzero a_x changes the x-component of velocity over time.\nB. The y-component of the drone’s velocity remains constant.\nThis is incorrect because a nonzero a_y causes the y-component of velocity to change from its initial value.\nC. Both the direction of motion and speed change.\nThis is correct because acceleration has components in both axes, altering both the direction and the magnitude of velocity.\nD. None of the above is correct.\nThis is incorrect because option C correctly describes the effect of having both a_x and a_y.",
+      "stem": "A drone initially moves with velocity \\vec{v}_0 = (15.0\\ \\mathrm{m/s}) \\hat{i}. Its motors then produce a constant acceleration \\vec{a} = (-1.5\\ \\mathrm{m/s^2}) \\hat{i} + (0.80\\ \\mathrm{m/s^2}) \\hat{j}. Based on this scenario, which of the following statements is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "The x-component of the drone’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": "This is incorrect because a nonzero a_x changes the x-component of velocity over time."
+        },
+        {
+          "key": "B",
+          "text": "The y-component of the drone’s velocity remains constant.",
+          "is_correct": false,
+          "explanation": "This is incorrect because a nonzero a_y causes the y-component of velocity to change from its initial value."
+        },
+        {
+          "key": "C",
+          "text": "Both the direction of motion and speed change.",
+          "is_correct": true,
+          "explanation": "This is correct because acceleration has components in both axes, altering both the direction and the magnitude of velocity."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "This is incorrect because option C correctly describes the effect of having both a_x and a_y."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "engineering",
+      "topic_tags": [
+        "kinematics",
+        "acceleration",
+        "velocity components"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q9",
+      "source_raw": "Q9. If the magnitudes of both charges are doubled and their separation is cut in half, what happens to the magnitude of the electrostatic force that each charge exerts on the other?\nA. It stays the same.\nThis is incorrect because changing both charge and distance generally changes the Coulomb force.\nB. It decreases by a factor of 4.\nThis is incorrect because reducing distance increases force rather than decreasing it.\nC. It increases by a factor of 4.\nThis is incorrect because doubling both charges gives a factor of 4, and halving distance gives another factor of 4, for a total of 16.\nD. It increases by a factor of 16.\nThis is correct because F \\propto \\frac{q_1 q_2}{r^2} so q_1q_2 becomes 4 times larger and r^2 becomes 4 times smaller, giving a net factor of 16.\nE. It increases by a factor of 8.\nThis is incorrect because it combines the scaling effects inconsistently (the correct combined factor is 16).",
+      "stem": "If the magnitudes of both charges are doubled and their separation is cut in half, what happens to the magnitude of the electrostatic force that each charge exerts on the other?",
+      "options": [
+        {
+          "key": "A",
+          "text": "It stays the same.",
+          "is_correct": false,
+          "explanation": "This is incorrect because changing both charge and distance generally changes the Coulomb force."
+        },
+        {
+          "key": "B",
+          "text": "It decreases by a factor of 4.",
+          "is_correct": false,
+          "explanation": "This is incorrect because reducing distance increases force rather than decreasing it."
+        },
+        {
+          "key": "C",
+          "text": "It increases by a factor of 4.",
+          "is_correct": false,
+          "explanation": "This is incorrect because doubling both charges gives a factor of 4, and halving distance gives another factor of 4, for a total of 16."
+        },
+        {
+          "key": "D",
+          "text": "It increases by a factor of 16.",
+          "is_correct": true,
+          "explanation": "This is correct because F \\propto \\frac{q_1 q_2}{r^2} so q_1q_2 becomes 4 times larger and r^2 becomes 4 times smaller, giving a net factor of 16."
+        },
+        {
+          "key": "E",
+          "text": "It increases by a factor of 8.",
+          "is_correct": false,
+          "explanation": "This is incorrect because it combines the scaling effects inconsistently (the correct combined factor is 16)."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "electrostatics",
+        "Coulomb force",
+        "scaling"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q10",
+      "source_raw": "Q10. An object can escape a planet with radius R and mass M at an escape speed given by v = \\sqrt{\\frac{2GM}{R}}, where G is the universal gravitational constant. Based on this expression, which statement is correct?\nA. A more massive spacecraft needs a larger escape speed from the same planet.\nThis is incorrect because the formula for escape speed depends on the planet (M and R), not the escaping object’s mass.\nB. Escape speed is higher for a planet with smaller mass and smaller radius.\nThis is incorrect because decreasing M lowers escape speed even if R also decreases.\nC. Escape speed is lower for a planet with greater mass and smaller radius.\nThis is incorrect because greater M and smaller R both increase the value of M/R.\nD. Escape speed is higher for a planet with greater mass and smaller radius.\nThis is correct because v \\propto \\sqrt{M/R}, so increasing M and decreasing R both increase escape speed.",
+      "stem": "An object can escape a planet with radius R and mass M at an escape speed given by v = \\sqrt{\\frac{2GM}{R}}, where G is the universal gravitational constant. Based on this expression, which statement is correct?",
+      "options": [
+        {
+          "key": "A",
+          "text": "A more massive spacecraft needs a larger escape speed from the same planet.",
+          "is_correct": false,
+          "explanation": "This is incorrect because the formula for escape speed depends on the planet (M and R), not the escaping object’s mass."
+        },
+        {
+          "key": "B",
+          "text": "Escape speed is higher for a planet with smaller mass and smaller radius.",
+          "is_correct": false,
+          "explanation": "This is incorrect because decreasing M lowers escape speed even if R also decreases."
+        },
+        {
+          "key": "C",
+          "text": "Escape speed is lower for a planet with greater mass and smaller radius.",
+          "is_correct": false,
+          "explanation": "This is incorrect because greater M and smaller R both increase the value of M/R."
+        },
+        {
+          "key": "D",
+          "text": "Escape speed is higher for a planet with greater mass and smaller radius.",
+          "is_correct": true,
+          "explanation": "This is correct because v \\propto \\sqrt{M/R}, so increasing M and decreasing R both increase escape speed."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "escape speed",
+        "gravitation",
+        "formula interpretation"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q11",
+      "source_raw": "Q11. The force \\vec{F} = (-2.50\\ \\mathrm{N}) \\hat{i} + (6.20\\ \\mathrm{N}) \\hat{j} acts on a particle as it moves along the y axis from y = 0.40 m to y = 2.90 m. What is the work, in joules, done by the force on the particle?\nA. 15.5 J\nThis is correct because the displacement is \\Delta\\vec{r} = (2.50\\ \\mathrm{m}) \\hat{j} so W = \\vec{F} \\cdot \\Delta\\vec{r} = (6.20)(2.50) = 15.5 J.\nB. -6.25 J\nThis is incorrect because it mistakenly uses the x-component of force even though the motion is purely along y.\nC. 6.20 J\nThis is incorrect because it forgets to multiply the relevant force component by the distance traveled.\nD. 21.8 J\nThis is incorrect because it effectively treats the full force magnitude as aligned with the motion instead of using the dot product.",
+      "stem": "The force \\vec{F} = (-2.50\\ \\mathrm{N}) \\hat{i} + (6.20\\ \\mathrm{N}) \\hat{j} acts on a particle as it moves along the y axis from y = 0.40 m to y = 2.90 m. What is the work, in joules, done by the force on the particle?",
+      "options": [
+        {
+          "key": "A",
+          "text": "15.5 J",
+          "is_correct": true,
+          "explanation": "This is correct because the displacement is \\Delta\\vec{r} = (2.50\\ \\mathrm{m}) \\hat{j} so W = \\vec{F} \\cdot \\Delta\\vec{r} = (6.20)(2.50) = 15.5 J."
+        },
+        {
+          "key": "B",
+          "text": "-6.25 J",
+          "is_correct": false,
+          "explanation": "This is incorrect because it mistakenly uses the x-component of force even though the motion is purely along y."
+        },
+        {
+          "key": "C",
+          "text": "6.20 J",
+          "is_correct": false,
+          "explanation": "This is incorrect because it forgets to multiply the relevant force component by the distance traveled."
+        },
+        {
+          "key": "D",
+          "text": "21.8 J",
+          "is_correct": false,
+          "explanation": "This is incorrect because it effectively treats the full force magnitude as aligned with the motion instead of using the dot product."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "work",
+        "dot product",
+        "force"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q12",
+      "source_raw": "Q12. A 3.0 kg cart moving at 4.0 m/s hits a rigid barrier and rebounds at 1.5 m/s in the opposite direction. The collision lasts 0.10 s. What is the magnitude of the average force exerted on the cart during the collision?\nA. 165 N\nThis is correct because |F_{avg}| = \\frac{|\\Delta p|}{\\Delta t} = \\frac{m|v_f - v_i|}{\\Delta t} = \\frac{3.0 \\times 5.5}{0.10} = 165 N.\nB. 55 N\nThis is incorrect because it effectively uses only one of the speeds (or divides by the wrong time) instead of the full velocity change.\nC. 330 N\nThis is incorrect because it double-counts the momentum change (or uses a time half as large).\nD. None of the above is correct.\nThis is incorrect because the impulse calculation yields 165 N, which appears in the options.",
+      "stem": "A 3.0 kg cart moving at 4.0 m/s hits a rigid barrier and rebounds at 1.5 m/s in the opposite direction. The collision lasts 0.10 s. What is the magnitude of the average force exerted on the cart during the collision?",
+      "options": [
+        {
+          "key": "A",
+          "text": "165 N",
+          "is_correct": true,
+          "explanation": "This is correct because |F_{avg}| = \\frac{|\\Delta p|}{\\Delta t} = \\frac{m|v_f - v_i|}{\\Delta t} = \\frac{3.0 \\times 5.5}{0.10} = 165 N."
+        },
+        {
+          "key": "B",
+          "text": "55 N",
+          "is_correct": false,
+          "explanation": "This is incorrect because it effectively uses only one of the speeds (or divides by the wrong time) instead of the full velocity change."
+        },
+        {
+          "key": "C",
+          "text": "330 N",
+          "is_correct": false,
+          "explanation": "This is incorrect because it double-counts the momentum change (or uses a time half as large)."
+        },
+        {
+          "key": "D",
+          "text": "None of the above is correct.",
+          "is_correct": false,
+          "explanation": "This is incorrect because the impulse calculation yields 165 N, which appears in the options."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "physics_abstract",
+      "topic_tags": [
+        "impulse",
+        "momentum",
+        "average force"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    },
+    {
+      "source_id": "Q13",
+      "source_raw": "Q13. An 85 kg person standing on frictionless ice catches a 0.20 kg ball moving horizontally at 30 m/s; after the catch they move together. What is the person’s speed immediately after catching the ball?\nA. 0.071 m/s\nThis is correct because momentum conservation for a catch gives v_f = \\frac{mv}{M+m} = \\frac{0.20 \\times 30}{85 + 0.20} \\approx 0.070 m/s.\nB. 0.14 m/s\nThis is incorrect because it approximates v_f \\approx \\frac{mv}{M} without properly accounting for the total combined mass.\nC. 30 m/s\nThis is incorrect because it assumes the person instantly matches the ball’s speed despite the person being much more massive.\nD. 0.0024 m/s\nThis is incorrect because it comes from a unit/mass conversion mistake (e.g., treating 0.20 kg as 0.20 g or similar).",
+      "stem": "An 85 kg person standing on frictionless ice catches a 0.20 kg ball moving horizontally at 30 m/s; after the catch they move together. What is the person’s speed immediately after catching the ball?",
+      "options": [
+        {
+          "key": "A",
+          "text": "0.071 m/s",
+          "is_correct": true,
+          "explanation": "This is correct because momentum conservation for a catch gives v_f = \\frac{mv}{M+m} = \\frac{0.20 \\times 30}{85 + 0.20} \\approx 0.070 m/s."
+        },
+        {
+          "key": "B",
+          "text": "0.14 m/s",
+          "is_correct": false,
+          "explanation": "This is incorrect because it approximates v_f \\approx \\frac{mv}{M} without properly accounting for the total combined mass."
+        },
+        {
+          "key": "C",
+          "text": "30 m/s",
+          "is_correct": false,
+          "explanation": "This is incorrect because it assumes the person instantly matches the ball’s speed despite the person being much more massive."
+        },
+        {
+          "key": "D",
+          "text": "0.0024 m/s",
+          "is_correct": false,
+          "explanation": "This is incorrect because it comes from a unit/mass conversion mistake (e.g., treating 0.20 kg as 0.20 g or similar)."
+        }
+      ],
+      "has_explicit_answer": true,
+      "difficulty": "",
+      "question_type": "multiple_choice",
+      "theme": "everyday_activity",
+      "topic_tags": [
+        "momentum conservation",
+        "inelastic collision",
+        "ice"
+      ],
+      "has_figure": false,
+      "answer": "",
+      "parts": []
+    }
+  ]
+}

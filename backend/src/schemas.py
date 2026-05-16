@@ -14,6 +14,7 @@ class OptionItem(BaseModel):
     text: str
     is_correct: bool
     explanation: str
+    distractor_logic: str = ""
 
 
 class QuestionPart(BaseModel):

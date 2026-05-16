@@ -44,7 +44,6 @@ from agents import RunConfig, Runner, trace  # noqa: E402
 from backend.src.evaluation import (  # noqa: E402
     EVALUATION_OUTPUTS_DIRNAME,
     EVALUATION_REPORT_FILENAME,
-    PASSING_SCORE_THRESHOLD,
     run_openai_output_evaluation,
 )
 from backend.src.helpers import build_json_message, upload_file_to_openai  # noqa: E402
@@ -311,11 +310,7 @@ def mark_latex_check_skipped(report: dict[str, Any], phase_pdf: Path) -> dict[st
         and not report.get("error")
         and isinstance(question_only_score, (int, float))
     ):
-        report["status"] = (
-            "passed"
-            if question_only_score >= PASSING_SCORE_THRESHOLD
-            else "failed"
-        )
+        report["status"] = "complete"
     return report
 
 

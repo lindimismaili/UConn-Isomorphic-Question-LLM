@@ -1,0 +1,173 @@
+row,source_id,status,passed_criteria_count,failed_criteria_count,failed_criteria,source_question_text,generated_question_text,preserve_physical_content_score,preserve_physical_content_passed,scenario_variation_score,scenario_variation_passed,numerical_variation_score,numerical_variation_passed,physics_correctness_score,physics_correctness_passed,numeric_reasonableness_score,numeric_reasonableness_passed,distractor_structure_preservation_score,distractor_structure_preservation_passed,clerical_quality_score,clerical_quality_passed,solvable_and_specified_score,solvable_and_specified_passed
+1,7,passed,8,0,,"7. A Chinook salmon can jump out of water with a speed \(v_0\) and an angle \(\theta\) above the horizontal. What is the speed of the fish when it is at the maximum height?
+A. \(v_0\).
+B. \(v_0 \cos \theta\).
+C. \(v_0 \sin \theta\).
+D. 0.","A soccer ball is kicked with initial speed $v_0$ at an angle $\theta$ above the horizontal (ignore air resistance). What is the ball’s speed at its maximum height?
+A. $v_0$
+This is incorrect because the vertical component decreases to zero at the top, reducing the speed.
+B. $v_0\cos\theta$
+This is correct because at maximum height the vertical velocity is zero, so the speed equals the constant horizontal component $v_0\cos\theta$.
+C. $v_0\sin\theta$
+This is incorrect because $v_0\sin\theta$ is the initial vertical component, which becomes zero at the top.
+D. 0
+This is incorrect because only the vertical component is zero at the top; the horizontal component remains.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+2,2,failed,7,1,distractor_structure_preservation,"2. Which of the following equations is correct?
+A. 1 ¢ = 1 $
+B. 1 = 0.01
+C. 1 ¢ = 0.01 $
+D. 100 ¢ = 0.01 $","Which of the following unit-conversion equations is correct?
+A. 1 mm = 10^{-2} m
+This mistake confuses millimeters with centimeters (off by a factor of 10).
+B. 1 m = 0.001 mm
+This reverses the conversion direction; meters are larger than millimeters.
+C. 1 mm = 0.001 m
+This is correct because “milli-” means 10^{-3}, so 1 mm = 10^{-3} m.
+D. 1000 mm = 0.001 m
+This is wrong because 1000 mm equals 1 m, not 10^{-3} m.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+3,8,passed,8,0,,"8. A spaceship is traveling with an initial velocity of \(\vec{v}_0 = (20.1\,\mathrm{m}/\mathrm{s})\hat{i}\) when its rockets fire, imparting an acceleration of \(\vec{a} = (2.02\,\mathrm{m}/\mathrm{s}^2)\hat{i} + (4.03\,\mathrm{m}/\mathrm{s}^2)\hat{j}\). Based on this scenario, which of the following statements is correct?
+A. The x-component of the spaceship’s velocity remains constant.
+B. The y-component of the spaceship’s velocity remains constant.
+C. Both the direction of motion and speed change.
+D. None of the above is correct.","A hovercraft starts with initial velocity $\vec{v}_0=(18.0\ \mathrm{m/s})\hat{\imath}$. Its thrusters then produce a constant acceleration $\vec{a}=(1.50\ \mathrm{m/s^2})\hat{\imath}+(3.00\ \mathrm{m/s^2})\hat{\jmath}$. Which statement is correct?
+A. The x-component of the hovercraft’s velocity remains constant.
+This is incorrect because a nonzero $a_x$ changes the x-component of velocity over time.
+B. The y-component of the hovercraft’s velocity remains constant.
+This is incorrect because a nonzero $a_y$ causes the y-component of velocity to change from 0 to nonzero.
+C. Both the direction of motion and the speed change.
+This is correct because acceleration changes both components of velocity, altering the velocity vector’s magnitude and direction.
+D. None of the above is correct.
+This is incorrect because option C correctly describes the kinematics with two-component acceleration.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+4,9,failed,7,1,distractor_structure_preservation,"9. If the magnitudes of both charges are tripled and their separation is also tripled, what happens to the magnitude of the electrostatic force that each charge exerts on the other?
+A. It stays the same.
+B. It decreases by a factor of \(3^{1/2}\).
+C. It increases by a factor of 3.
+D. It increases by a factor of 9.
+E. It increases by a factor of \(3^{1/2}\).","Two point charges exert an electrostatic force on each other. If each charge’s magnitude is cut in half and the separation distance is doubled, what happens to the magnitude of the force?
+A. It stays the same.
+This is incorrect because Coulomb’s law scales with both charge and distance changes.
+B. It decreases by a factor of 16.
+This is correct because $F\propto q_1q_2/r^2$ gives a factor $(1/2)(1/2)/(2^2)=1/16$.
+C. It decreases by a factor of 4.
+This ignores that the distance change contributes a squared factor in the denominator.
+D. It increases by a factor of 4.
+This has the scaling direction wrong; reducing charges and increasing distance must reduce the force.
+E. It increases by a factor of 16.
+This reverses the correct scaling and mistakenly treats the changes as amplifying the force.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+5,10,failed,7,1,distractor_structure_preservation,"10. An object can escape a planet with radius R and mass M at an escape speed given by \(v = \sqrt{2GM/R}\), where \(G\) is the universal gravitational constant. Based on this expression for escape speed, which of the following statements is correct?
+A. A heavier object requires a higher speed to escape from the planet.
+B. A lighter object requires a lower speed to escape from the planet.
+C. An object requires a higher speed to escape from a planet with smaller mass and a larger radius.
+D. An object requires a higher speed to escape from a planet with greater mass and a smaller radius.","An escape speed from a planet is given by $v=\sqrt{2GM/R}$. Which statement is correct?
+A. Doubling the mass of a spacecraft increases the required escape speed.
+This is incorrect because the formula depends on the planet’s M and R, not on the escaping object’s mass.
+B. A smaller planet radius always lowers the escape speed.
+This is incorrect because decreasing R increases $GM/R$ and thus increases escape speed.
+C. A planet with half the mass and half the radius has a higher escape speed.
+This is incorrect because M/R is unchanged when both are halved, so the escape speed stays the same.
+D. A planet with greater mass and smaller radius has a higher escape speed.
+This is correct because v increases when M increases and when R decreases (since $v\propto\sqrt{M/R}$).",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+6,1,failed,7,1,distractor_structure_preservation,"1. Which of the following statements is correct?
+A. We can assume a ""spherical cow"" when analyzing the motion of a cow's leg.
+B. We can safely assume a cow is a point mass when analyzing its position change in the scale of a mile over a certain time period.
+C. We can never assume the cow is in a vacuum, even when we need to ignore the effect of air resistance.
+D. None of the above is correct.","Which of the following statements about physical modeling is most appropriate?
+A. A bicycle must always be modeled as a rigid body even when only its center-of-mass path down a long road is needed.
+This is a misconception because center-of-mass motion over long distances often does not require rigid-body details.
+B. A city bus can be treated as a point particle when estimating how far it travels along a highway over several kilometers.
+This is correct because the bus’s size is negligible compared with kilometer-scale translation, so a point-mass model captures its position change.
+C. If air drag is small, it is never acceptable to approximate the motion as occurring in a vacuum.
+This is wrong because “vacuum” is commonly used as an approximation meaning air resistance is neglected.
+D. None of the above is correct.
+This is incorrect because one of the statements (the point-particle approximation over large distances) is valid.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+7,5,passed,8,0,,"5. If the displacement of an object is given by the function \(\vec{s} = ((1.3\,\mathrm{m}/\mathrm{s}^3)t^3 + (2.7\,\mathrm{m}/\mathrm{s}^2)t^2)\hat{i}\), which of the following statement is correct?
+A. This is a constant acceleration motion.
+B. The magnitude of the acceleration is 2.7 m/s2
+C. The magnitude of the acceleration at t = 0 is 0 m/s2
+D. The magnitude of the acceleration at t = 0 is 5.4 m/s2","If the displacement of an object is given by $\vec{s}=\left((0.80\ \mathrm{m/s^3})t^3-(1.60\ \mathrm{m/s^2})t^2\right)\hat{\imath}$, which statement is correct?
+A. This motion has constant acceleration.
+This is incorrect because differentiating twice yields an acceleration that depends on t.
+B. The magnitude of the acceleration is 1.60 m/s^2 for all t.
+This treats a coefficient in s(t) as if it were the (constant) acceleration.
+C. The magnitude of the acceleration at t = 0 is 0 m/s^2.
+This mistake assumes acceleration must vanish at t = 0 without actually differentiating.
+D. The magnitude of the acceleration at t = 0 is 3.20 m/s^2.
+This is correct because $a(t)=d^2s/dt^2=(4.80t-3.20)\hat{\imath}$, so at t = 0 the magnitude is 3.20 m/s^2.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+8,4,failed,7,1,distractor_structure_preservation,"4. The raven is sent from the Castle Black, which is at the origin, observing the white walkers at the coordinates \(\vec{r}_4 = 3\hat{i} + 6\hat{j}\) at the beginning of season 4, where length units are in kilofurlongs. Which of the following statements is correct?
+A. The distance between the white walkers and the Castle Black is 9 kilofurlongs.
+B. The distance between the white walkers and the Castle Black is 6 kilofurlongs.
+C. The distance between the white walkers and the Castle Black is 3 kilofurlongs.
+D. None of the above is correct.","A scout reports an outpost located at the position vector $\vec{r}=4\hat{\imath}+7\hat{\jmath}$, where distances are measured in “megalinks.” Which statement is correct?
+A. The distance from the origin to the outpost is 8 megalinks.
+This is a common rounding/estimation error because the true distance is $\sqrt{65}\approx 8.06$, not exactly 8.
+B. The distance from the origin to the outpost is 7 megalinks.
+This incorrectly treats one component magnitude as the full distance.
+C. The distance from the origin to the outpost is 4 megalinks.
+This incorrectly uses only the x-component as the distance from the origin.
+D. None of the above is correct.
+This is correct because $|\vec{r}|=\sqrt{4^2+7^2}=\sqrt{65}\approx 8.06$ megalinks, which is not 8, 7, or 4.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+9,3,passed,8,0,,"3. Which option has the incorrect unit?
+A. Energy: joule
+B. Velocity: meter/second
+C. Acceleration: meter2/second2
+D. Force: kilogram ∙ meter/second2","Which option lists an incorrect SI unit for the given quantity?
+A. Power: watt (W)
+This is correct because power is measured in watts (J/s).
+B. Momentum: kilogram·meter/second (kg m/s)
+This is correct because momentum has dimensions of mass times velocity.
+C. Pressure: newton/meter (N/m)
+This is incorrect because pressure is force per area, so the SI unit is N/m^2 (pascal), not N/m.
+D. Charge: coulomb (C)
+This is correct because electric charge is measured in coulombs.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+10,11,failed,7,1,distractor_structure_preservation,"11. The force \(\vec{F} = (3.04\mathrm{N})\hat{i} + (4.01\mathrm{N})\hat{j}\). acts on a particle as it moves along the x axis from x = 0.33 m to x = 5.03 m. What is the work, in joules, done by the force on the particle?
+A. 20.5 J
+B. 14.3 J
+C. 5.00 J
+D. 35.7 J","A constant force $\vec{F}=(-2.50\ \mathrm{N})\hat{\imath}+(6.00\ \mathrm{N})\hat{\jmath}$ acts on a particle while it moves along the x-axis from x = 1.2 m to x = 4.8 m. What is the work done by the force?
+A. −9.0 J
+This is correct because $\Delta\vec{r}=(3.6\ \mathrm{m})\hat{\imath}$ so $W=\vec{F}\cdot\Delta\vec{r}=(-2.50)(3.6)=-9.0$ J.
+B. 21.6 J
+This incorrectly uses the y-component of force even though there is no y-displacement.
+C. 9.0 J
+This gets the sign wrong by ignoring that $F_x$ is negative while $\Delta x$ is positive.
+D. −21.6 J
+This incorrectly multiplies the y-force by the x-displacement as if they were parallel components.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+11,12,passed,8,0,,"12. A 4.5 kg cart initially moving at 2.1 m/s collides with a wall and rebounds at a speed of 1.3 m/s moving backward. The collision lasts for 0.2 seconds. What is the average force exerted on the cart during the collision?
+A. 47.3 N.
+B. 18 N.
+C. 76.5 N.
+D. None of the above is correct.","A 3.0 kg cart moves toward a bumper at 4.0 m/s, hits it, and rebounds at 2.0 m/s in the opposite direction. The contact time is 0.15 s. What is the magnitude of the average force on the cart during the collision?
+A. 80 N
+This results from using only a partial velocity change (e.g., 4 → 0) instead of the full reversal.
+B. 120 N
+This is correct because $\Delta p=m(v_f-v_i)=3.0(-2.0-4.0)=-18\ \mathrm{N\ s}$ so $|F_{avg}|=|\Delta p|/\Delta t=18/0.15=120$ N.
+C. 40 N
+This typically comes from dividing by the wrong time or forgetting that the cart reverses direction.
+D. None of the above is correct.
+This is incorrect because the impulse-momentum calculation gives a value that is listed.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE
+12,6,failed,7,1,distractor_structure_preservation,"6. An object takes 3 second to move from position A (\(\vec{r}_A = -4.0\hat{i} + 10\hat{j}\)) to position B (\(\vec{r}_B = 2.0\hat{i} + 5.0\hat{j}\)) along a straight path, where length units are in meters. Which of the following statements is correct?
+A. The moving distance is 7.8 m.
+B. The speed at t = 0 must be 2.6 m/s.
+C. The acceleration at t = 0 must be 0.87 m/s2
+D. None of the above is correct.","A robot moves along a straight line from position $\vec{r}_A=1.0\hat{\imath}-2.0\hat{\jmath}$ to $\vec{r}_B=7.0\hat{\imath}+5.0\hat{\jmath}$ in 4 s (meters). Which statement is correct?
+A. The distance traveled is 9.2 m.
+This is correct because the straight-line distance is $|\Delta\vec{r}|=\sqrt{(6)^2+(7)^2}=\sqrt{85}\approx 9.2$ m.
+B. The speed at t = 0 must be 2.3 m/s.
+This is incorrect because knowing only endpoints and total time does not determine the instantaneous speed at t = 0.
+C. The acceleration at t = 0 must be 0.58 m/s^2.
+This is incorrect because the motion could have many different acceleration profiles while still connecting the same endpoints in 4 s.
+D. None of the above is correct.
+This is incorrect because the straight-line distance can be computed uniquely from the given coordinates.",1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE
+13,13,failed,4,4,preserve_physical_content | numerical_variation | distractor_structure_preservation | solvable_and_specified,"13. A 78kg hockey goalie is originally at rest protecting his goal. The opposing team attempts a shot on goal, however the goalie catches the 170g puck with his glove. The initial velocity of the puck before the goalie catches it is 150 km/hr. What is the speed of the goalie after catching the puck?
+A. 0.077 m/s
+B. 0.091 m/s
+C. 102 m/s
+D. 28.6 m/s","A 62 kg person on a frictionless skateboard is initially at rest. They catch a 2.0 kg medicine ball thrown horizontally at 8.0 m/s. After the catch, what is the person’s speed (with the ball)?
+A. 0.26 m/s
+This is correct because momentum conservation for an inelastic catch gives $v_f=(2.0)(8.0)/(62+2.0)\approx 0.25$ m/s (about 0.26 m/s).
+B. 0.13 m/s
+This typically comes from mistakenly dividing by only the person’s mass and then halving again.
+C. 8.0 m/s
+This ignores that the catcher is much more massive, so the shared final speed must be far smaller than the ball’s initial speed.
+D. 4.0 m/s
+This incorrectly averages speeds instead of conserving momentum for a perfectly inelastic collision.",0.0,FALSE,1.0,TRUE,0.0,FALSE,1.0,TRUE,1.0,TRUE,0.0,FALSE,1.0,TRUE,0.0,FALSE

@@ -31,6 +31,10 @@ Use these paths:
 - `backend/src/main.py`
 - `backend/src/container.py`
 - `backend/src/evaluation.py`
+- `backend/src/judge_agreement.py` (judge ↔ professor κ/agreement metrics)
+- `backend/src/pipeline_validation.py` (includes deterministic distractor_logic preservation check)
+- `Other/compare_to_professor.py` (CLI: per-criterion κ + confusion vs `Other/Evaluation.xlsx`)
+- `docs/ANALYSIS.md` (full pipeline audit + overhaul notes)
 - `backend/data/agents.json`
 - `frontend/src/App.jsx`
 - `frontend/src/hooks/useWorkflow.js`

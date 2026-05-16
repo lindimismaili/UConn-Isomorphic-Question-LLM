@@ -27,32 +27,18 @@ from openai import OpenAI
 from openai.types.shared.reasoning import Reasoning
 try:
     from .artifacts import (
-        AGENT_ARTIFACTS_DIRNAME,
         AGENT_DISPLAY_NAMES,
-        AGENT_METADATA_RELATIVE_PATH,
         write_agent_artifacts,
         write_workflow_metadata,
     )
-    from .evaluation import (
-        EVALUATION_OUTPUTS_DIRNAME,
-        EVALUATION_RUBRIC_FILENAME,
-        EVALUATION_SPREADSHEET_FILENAME,
-        run_openai_output_evaluation,
-    )
+    from .evaluation import run_openai_output_evaluation
 except ImportError:
     from artifacts import (
-        AGENT_ARTIFACTS_DIRNAME,
         AGENT_DISPLAY_NAMES,
-        AGENT_METADATA_RELATIVE_PATH,
         write_agent_artifacts,
         write_workflow_metadata,
     )
-    from evaluation import (
-        EVALUATION_OUTPUTS_DIRNAME,
-        EVALUATION_RUBRIC_FILENAME,
-        EVALUATION_SPREADSHEET_FILENAME,
-        run_openai_output_evaluation,
-    )
+    from evaluation import run_openai_output_evaluation
 try:
     from .container import SharedWorkflowRuntime, allowed_domains_from_env
     from .schemas import (
@@ -72,11 +58,14 @@ try:
         load_agents_config,
         load_prompt,
         merge_extracted_metadata_into_config,
-        missing_generation_source_ids,
-        reconcile_verified_questions,
+        normalize_question_types,
         upload_file_to_openai,
     )
     from .safety import create_unique_run_dir, ensure_child_path, safe_filename
+    from .pipeline_validation import (
+        validate_generator_output,
+        validate_verifier_output,
+    )
 except ImportError:
     from container import SharedWorkflowRuntime, allowed_domains_from_env
     from schemas import (
@@ -96,11 +85,14 @@ except ImportError:
         load_agents_config,
         load_prompt,
         merge_extracted_metadata_into_config,
-        missing_generation_source_ids,
-        reconcile_verified_questions,
+        normalize_question_types,
         upload_file_to_openai,
     )
     from safety import create_unique_run_dir, ensure_child_path, safe_filename
+    from pipeline_validation import (
+        validate_generator_output,
+        validate_verifier_output,
+    )
 
 # =============================================================================
 # Configuration
@@ -119,6 +111,40 @@ AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 QUESTION_DATA_DIR = REPO_ROOT / "Question Data Files"
 if not QUESTION_DATA_DIR.exists():
     QUESTION_DATA_DIR = REPO_ROOT / "archive" / "Question Data Files"
+
+
+def _style_mismatch_source_ids(
+    source_questions: list[SourceQuestionItem],
+    generated_questions: list[Any],
+    min_ratio: float = 0.5,
+    max_ratio: float = 2.0,
+    min_source_len: int = 40,
+) -> list[str]:
+    """Return source_ids whose generated stem length is well outside source length.
+
+    Cheap heuristic for when the generator likely compressed or padded the stem,
+    used to decide whether the second-pass style-review LLM call is worth firing.
+    Short source stems are skipped to avoid noisy ratios on terse items.
+    """
+    source_by_id = {q.source_id: q for q in source_questions}
+    outliers: list[str] = []
+    for generated in generated_questions:
+        if getattr(generated, "skipped", False):
+            continue
+        source = source_by_id.get(getattr(generated, "source_id", None))
+        if source is None or source.has_figure:
+            continue
+        source_len = len((source.source_raw or source.stem or "").strip())
+        if source_len < min_source_len:
+            continue
+        generated_len = len((getattr(generated, "stem", "") or "").strip())
+        if generated_len == 0:
+            outliers.append(source.source_id)
+            continue
+        ratio = generated_len / source_len
+        if ratio < min_ratio or ratio > max_ratio:
+            outliers.append(source.source_id)
+    return outliers
 
 
 def _load_dotenv(path: Path) -> None:
@@ -582,6 +608,14 @@ Remember:
         )
         extracter_output: ExtracterOutput = extracter_result.final_output
         if file_ids and not extracter_output.questions:
+            file_diag = ", ".join(
+                f"{Path(p).name} ({Path(p).stat().st_size if Path(p).exists() else 'missing'} bytes)"
+                for p in workflow_input.file_paths
+            )
+            logger.warning(
+                "Extractor returned zero questions on first pass; retrying. Files: %s",
+                file_diag,
+            )
             retry_extract_input = [
                 {
                     "role": "user",
@@ -665,11 +699,43 @@ For each question:
             "generator",
         )
         verifier_output: VerifierOutput = verifier_result.final_output
-        verifier_output.questions = reconcile_verified_questions(
-            extracter_output.questions,
-            verifier_output.questions,
-        )
+        normalize_question_types(verifier_output.questions)
+
+        verifier_report = validate_verifier_output(extracter_output.questions, verifier_output)
+        if not verifier_report.valid:
+            repair_ids = set(verifier_report.repair_source_ids)
+            repair_questions = [
+                q for q in extracter_output.questions if q.source_id in repair_ids
+            ]
+            if repair_questions:
+                repair_payload = {
+                    "task": "verify_source_questions_repair",
+                    "reason": verifier_report.summary(),
+                    "source_questions": {
+                        **extracter_output.model_dump(),
+                        "questions": [q.model_dump() for q in repair_questions],
+                    },
+                }
+                repair_result = await run_agent(
+                    agents["verifier"],
+                    build_json_message(repair_payload),
+                    run_config,
+                    agent_outputs,
+                    "verifier",
+                    "verifier",
+                )
+                repair_output: VerifierOutput = repair_result.final_output
+                merged_questions = [
+                    q for q in verifier_output.questions if q.source_id not in repair_ids
+                ] + repair_output.questions
+                verifier_output = VerifierOutput(questions=merged_questions)
+                normalize_question_types(verifier_output.questions)
+                verifier_report = validate_verifier_output(extracter_output.questions, verifier_output)
+            if not verifier_report.valid:
+                raise ValueError(f"Verifier output failed validation: {verifier_report.summary()}")
+
         apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
+
         logger.info("Verified %d multiple-choice questions", len(verifier_output.questions))
         
         # =================================================================
@@ -716,85 +782,95 @@ For each question:
         )
         generator_output: GeneratorOutput = generator_result.final_output
 
-        missing_source_ids = missing_generation_source_ids(
-            verifier_output.questions,
-            generator_output.isomorphic_questions,
-            normalizer_output.new_questions_per_question,
+        style_outliers = _style_mismatch_source_ids(
+            verifier_output.questions, generator_output.isomorphic_questions
         )
-        if missing_source_ids:
-            retry_questions = [
-                q for q in verifier_output.questions if q.source_id in missing_source_ids
-            ]
-            retry_input = build_json_message(
+        if style_outliers:
+            logger.info(
+                "Running style review for %d outlier(s): %s",
+                len(style_outliers), ", ".join(style_outliers),
+            )
+            style_review_input = build_json_message(
                 {
-                    "task": "generate_isomorphic_questions_retry",
-                    "reason": "missing_required_source_ids",
-                    "missing_source_ids": missing_source_ids,
+                    "task": "review_and_revise_isomorphic_questions_for_style",
                     "configuration": normalizer_output.model_dump(),
-                    "source_questions": {
-                        "questions": [q.model_dump() for q in retry_questions]
+                    "source_questions": verifier_output.model_dump(),
+                    "draft_isomorphic_questions": generator_output.model_dump(),
+                    "requirements": {
+                        **generator_requirements,
+                        "preserve_ids_and_source_ids": True,
+                        "return_complete_final_set": True,
+                        "revise_only_when_needed": True,
+                        "review_focus": [
+                            "Preserve the source question's verbosity and rhetorical style.",
+                            "Keep verbose open-ended questions verbose and explanation-oriented.",
+                            "Do not compress narrative or multi-sentence source stems into short directives.",
+                            "Do not add narrative padding to concise sources.",
+                            "Preserve part structure and skip placeholders exactly.",
+                        ],
                     },
-                    "requirements": generator_requirements,
                 }
             )
-            retry_result = await run_agent(
+            style_review_result = await run_agent(
                 agents["generator"],
-                retry_input,
+                style_review_input,
                 run_config,
                 agent_outputs,
                 "generator",
                 "generator",
             )
-            retry_output: GeneratorOutput = retry_result.final_output
-            missing_source_ids_set = set(missing_source_ids)
-            generator_output.isomorphic_questions.extend(
-                q for q in retry_output.isomorphic_questions
-                if q.source_id in missing_source_ids_set
-            )
-            missing_source_ids = missing_generation_source_ids(
-                verifier_output.questions,
-                generator_output.isomorphic_questions,
-                normalizer_output.new_questions_per_question,
-            )
-            if missing_source_ids:
-                raise ValueError(
-                    f"Generator failed to produce required outputs for source_id(s): {', '.join(missing_source_ids)}"
-                )
+            generator_output = style_review_result.final_output
+        else:
+            logger.info("Skipping style review: all stems within length tolerance")
+        apply_requested_difficulty(
+            generator_output.isomorphic_questions,
+            normalizer_output.difficulty,
+        )
 
-        style_review_input = build_json_message(
-            {
-                "task": "review_and_revise_isomorphic_questions_for_style",
+        generator_report = validate_generator_output(
+            verifier_output.questions,
+            generator_output,
+            normalizer_output.new_questions_per_question,
+        )
+        if not generator_report.valid:
+            repair_questions = [
+                q for q in verifier_output.questions
+                if q.source_id in set(generator_report.repair_source_ids)
+            ]
+            repair_payload = {
+                "task": "repair_generator_contract_violations",
+                "reason": generator_report.summary(),
                 "configuration": normalizer_output.model_dump(),
-                "source_questions": verifier_output.model_dump(),
+                "source_questions": {
+                    "questions": [q.model_dump() for q in repair_questions]
+                },
                 "draft_isomorphic_questions": generator_output.model_dump(),
                 "requirements": {
                     **generator_requirements,
                     "preserve_ids_and_source_ids": True,
                     "return_complete_final_set": True,
-                    "revise_only_when_needed": True,
-                    "review_focus": [
-                        "Preserve the source question's verbosity and rhetorical style.",
-                        "Keep verbose open-ended questions verbose and explanation-oriented.",
-                        "Do not compress narrative or multi-sentence source stems into short directives.",
-                        "Do not add narrative padding to concise sources.",
-                        "Preserve part structure and skip placeholders exactly.",
-                    ],
                 },
             }
-        )
-        style_review_result = await run_agent(
-            agents["generator"],
-            style_review_input,
-            run_config,
-            agent_outputs,
-            "generator",
-            "generator",
-        )
-        generator_output = style_review_result.final_output
-        apply_requested_difficulty(
-            generator_output.isomorphic_questions,
-            normalizer_output.difficulty,
-        )
+            repair_result = await run_agent(
+                agents["generator"],
+                build_json_message(repair_payload),
+                run_config,
+                agent_outputs,
+                "generator",
+                "generator",
+            )
+            generator_output = repair_result.final_output
+            apply_requested_difficulty(
+                generator_output.isomorphic_questions,
+                normalizer_output.difficulty,
+            )
+            generator_report = validate_generator_output(
+                verifier_output.questions,
+                generator_output,
+                normalizer_output.new_questions_per_question,
+            )
+            if not generator_report.valid:
+                raise ValueError(f"Generator output failed validation: {generator_report.summary()}")
 
         logger.info("Generated %d new questions", len(generator_output.isomorphic_questions))
         
@@ -884,7 +960,8 @@ Set filename to "isomorphic_questions.tex"
         print("=" * 60)
         evaluation_stage_start = time.time()
 
-        evaluation_report = run_openai_output_evaluation(
+        evaluation_report = await asyncio.to_thread(
+            run_openai_output_evaluation,
             client=client,
             final_result={
                 "source_questions": [q.model_dump() for q in extracter_output.questions],
@@ -894,6 +971,10 @@ Set filename to "isomorphic_questions.tex"
             outputs_dir=outputs_dir,
             latex_path=latex_path,
             source_files=workflow_input.file_paths,
+            contract_report={
+                "status": "passed" if generator_report.valid else "failed",
+                **generator_report.model_dump(),
+            },
         )
         evaluation_elapsed = time.time() - evaluation_stage_start
         agent_outputs.append(
@@ -924,48 +1005,10 @@ Set filename to "isomorphic_questions.tex"
         logger.info("Results saved to: %s", result_path)
         logger.info("LaTeX file: %s", latex_path)
         logger.info("PDF file: %s", pdf_path)
-        output_files = sorted(
-            file_path.name for file_path in outputs_dir.iterdir() if file_path.is_file()
-        )
-        evaluation_outputs_dir = outputs_dir / EVALUATION_OUTPUTS_DIRNAME
-        if evaluation_outputs_dir.exists():
-            output_files.extend(
-                sorted(
-                    f"{EVALUATION_OUTPUTS_DIRNAME}/{file_path.name}"
-                    for file_path in evaluation_outputs_dir.iterdir()
-                    if file_path.is_file()
-                )
-            )
-        if f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_SPREADSHEET_FILENAME}" not in output_files:
-            spreadsheet_path = evaluation_outputs_dir / EVALUATION_SPREADSHEET_FILENAME
-            if spreadsheet_path.exists():
-                output_files.append(
-                    f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_SPREADSHEET_FILENAME}"
-                )
-        if f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_RUBRIC_FILENAME}" not in output_files:
-            rubric_path = evaluation_outputs_dir / EVALUATION_RUBRIC_FILENAME
-            if rubric_path.exists():
-                output_files.append(
-                    f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_RUBRIC_FILENAME}"
-                )
-        for record in agent_outputs:
-            agent_name = str(record.get("agent_name", "Agent"))
-            agent_key = _agent_key_from_display_name(agent_name)
-            output_files.extend(
-                [
-                    f"{AGENT_ARTIFACTS_DIRNAME}/{agent_key}/agent_input.jsonl",
-                    f"{AGENT_ARTIFACTS_DIRNAME}/{agent_key}/agent_output.jsonl",
-                ]
-            )
-        output_files.extend(
-            [
-                f"{AGENT_ARTIFACTS_DIRNAME}/output/agent_input.jsonl",
-                f"{AGENT_ARTIFACTS_DIRNAME}/output/agent_output.jsonl",
-            ]
-        )
-        if AGENT_METADATA_RELATIVE_PATH not in output_files:
-            output_files.append(AGENT_METADATA_RELATIVE_PATH)
-        output_files = sorted(dict.fromkeys(output_files))
+        # File listing will be populated after artifacts are written; placeholder
+        # for now so the Output agent record gets a value even if rglob misses
+        # late writes (the post-write pass below overwrites this in place).
+        output_files: list[str] = []
         output_elapsed = time.time() - output_stage_start
         agent_outputs.append(
             {
@@ -987,6 +1030,14 @@ Set filename to "isomorphic_questions.tex"
             agent_outputs=agent_outputs,
             output_folder_label=output_folder_label,
             source_files=workflow_input.file_paths,
+        )
+
+        output_files.extend(
+            sorted(
+                str(p.relative_to(outputs_dir)).replace(os.sep, "/")
+                for p in outputs_dir.rglob("*")
+                if p.is_file()
+            )
         )
 
         print(f"\n✅ Results saved to: {result_path}")
