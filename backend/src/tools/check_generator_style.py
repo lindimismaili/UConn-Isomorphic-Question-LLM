@@ -5,10 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-try:
-    from .style_testing import generator_style_report_from_outputs
-except ImportError:
-    from style_testing import generator_style_report_from_outputs
+from ..paths import OUTPUTS_DIR
+from .style_testing import generator_style_report_from_outputs
 
 
 def _resolve_outputs_dir(raw: str) -> Path:
@@ -18,9 +16,7 @@ def _resolve_outputs_dir(raw: str) -> Path:
     if candidate.exists():
         return candidate.resolve()
 
-    here = Path(__file__).resolve().parent
-    backend_root = here.parent
-    fallback = backend_root / "outputs" / raw
+    fallback = OUTPUTS_DIR / raw
     if fallback.exists():
         return fallback.resolve()
 
@@ -32,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args = list(argv or [])
     if not args:
-        print("Usage: python -m backend.src.check_generator_style <output-folder>")
+        print("Usage: python -m backend.src.tools.check_generator_style <output-folder>")
         return 2
 
     outputs_dir = _resolve_outputs_dir(args[0])

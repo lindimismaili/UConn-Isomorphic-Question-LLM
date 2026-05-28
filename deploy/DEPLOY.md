@@ -190,13 +190,23 @@ bash deploy/sync.sh --remove-timer
 To launch the backend plus Vite development UI:
 
 ```bash
-bash deploy/test.sh
+bash deploy/test.sh           # macOS / Linux / Raspberry Pi
+```
+
+```powershell
+pwsh deploy/test.ps1          # Windows
 ```
 
 The script installs missing frontend dependencies, uses an active venv or the
 newest `~/venvs/main_py*` Python for the backend, starts FastAPI on
 `127.0.0.1:8000`, then runs `npm -C frontend run dev:ui` with `HOST=0.0.0.0`
 and `PORT=5173` by default.
+
+`test.ps1` is the Windows counterpart: it resolves a Python interpreter in
+this priority — active `VIRTUAL_ENV` → `.venv\Scripts\python.exe` at repo
+root → `py` launcher → `python` on `PATH` — and accepts the same overrides
+via `-BindHost`, `-Port`, `-BackendHost`, `-BackendPort` parameters or the
+`HOST`, `PORT`, `BACKEND_HOST`, `BACKEND_PORT` environment variables.
 
 ## Troubleshooting
 

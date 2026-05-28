@@ -12,7 +12,6 @@ from backend.src.evaluation import (
     _attach_report_file_metadata,
     _build_testing_criteria,
     _render_generated_question_text,
-    _resolve_latex_check,
     run_openai_output_evaluation,
 )
 
@@ -65,17 +64,6 @@ class EvaluationContractTests(unittest.TestCase):
         self.assertIn("Part a: Find speed.", multipart)
         self.assertIn("Part answer: 3 m/s", multipart)
         self.assertIn("A. 10 N [correct] Explanation: F=ma", multipart)
-
-    def test_latex_check_uses_explicit_pdf_path(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            latex_path = root / "custom.tex"
-            pdf_path = root / "renamed.pdf"
-            latex_path.write_text("\\documentclass{article}", encoding="utf-8")
-            pdf_path.write_bytes(b"%PDF-1.4")
-            check = _resolve_latex_check(latex_path, pdf_path)
-        self.assertEqual(check["status"], "passed")
-        self.assertEqual(check["pdf_file"], "renamed.pdf")
 
     def test_figure_skip_placeholders_are_excluded_from_score_model_dataset(self) -> None:
         final_result = {

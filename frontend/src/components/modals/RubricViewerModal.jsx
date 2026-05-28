@@ -73,7 +73,7 @@ export default function RubricViewerModal({ isOpen, onClose }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Evaluation Rubric"
+      title="Evaluator Rubric"
       large
       modalBodyClassName="modal-body-flush"
       footer={

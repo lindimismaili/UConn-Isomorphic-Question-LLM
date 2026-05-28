@@ -3,27 +3,84 @@ import { createPortal } from 'react-dom';
 import { IconClose } from '../Icons.jsx';
 
 let openModalCount = 0;
-let previousBodyOverflow = '';
-let previousBodyPaddingRight = '';
+let lockedScrollX = 0;
+let lockedScrollY = 0;
+
+const SCROLL_KEYS = new Set([
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'PageUp',
+  'PageDown',
+  'Home',
+  'End',
+  ' ',
+  'Spacebar',
+]);
 
 /**
- * Prevents the background page from scrolling while a modal is open.
+ * Returns true if the event target lives inside a scrollable element that
+ * the user should still be able to scroll while a modal is open (e.g. the
+ * modal body when its content overflows).
+ *
+ * @param {EventTarget | null} target
+ * @returns {boolean}
+ */
+function isInsideScrollableModalArea(target) {
+  let el = target instanceof Element ? target : null;
+  while (el && el !== document.body) {
+    const style = window.getComputedStyle(el);
+    const overflowY = style.overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+      return true;
+    }
+    el = el.parentElement;
+  }
+  return false;
+}
+
+function handleScroll() {
+  if (window.scrollX !== lockedScrollX || window.scrollY !== lockedScrollY) {
+    window.scrollTo(lockedScrollX, lockedScrollY);
+  }
+}
+
+function handleWheelOrTouch(event) {
+  if (isInsideScrollableModalArea(event.target)) return;
+  if (event.cancelable) event.preventDefault();
+}
+
+function handleKeyDown(event) {
+  if (!SCROLL_KEYS.has(event.key)) return;
+  const target = event.target;
+  if (
+    target instanceof HTMLElement &&
+    (target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.isContentEditable)
+  ) {
+    return;
+  }
+  if (isInsideScrollableModalArea(target)) return;
+  if (event.cancelable) event.preventDefault();
+}
+
+/**
+ * Prevents the background page from scrolling while a modal is open without
+ * hiding the page scrollbar. Page scroll position is pinned via event
+ * interception; scrolling inside an overflowing modal region is still allowed.
  */
 function lockBodyScroll() {
   if (openModalCount === 0) {
-    previousBodyOverflow = document.body.style.overflow;
-    previousBodyPaddingRight = document.body.style.paddingRight;
-
-    const scrollbarWidth = Math.max(
-      0,
-      window.innerWidth - document.documentElement.clientWidth,
-    );
-
+    lockedScrollX = window.scrollX;
+    lockedScrollY = window.scrollY;
     document.body.classList.add('modal-open');
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('wheel', handleWheelOrTouch, { passive: false });
+    window.addEventListener('touchmove', handleWheelOrTouch, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
   }
 
   openModalCount += 1;
@@ -37,10 +94,10 @@ function unlockBodyScroll() {
   if (openModalCount > 0) return;
 
   document.body.classList.remove('modal-open');
-  document.body.style.overflow = previousBodyOverflow;
-  document.body.style.paddingRight = previousBodyPaddingRight;
-  previousBodyOverflow = '';
-  previousBodyPaddingRight = '';
+  window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('wheel', handleWheelOrTouch);
+  window.removeEventListener('touchmove', handleWheelOrTouch);
+  window.removeEventListener('keydown', handleKeyDown);
 }
 
 /**

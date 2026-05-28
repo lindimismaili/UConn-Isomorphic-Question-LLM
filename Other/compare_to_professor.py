@@ -21,11 +21,11 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT / "backend" / "src"))
+sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "Other"))
 
 from createXLSX import create_xlsx, load_rubric  # noqa: E402
-from judge_agreement import (  # noqa: E402
+from backend.src.tools.judge_agreement import (  # noqa: E402
     compare_grids,
     load_xlsx_grids,
     write_disagreements_csv,
@@ -98,7 +98,7 @@ def main() -> int:
         print(f"Generating judge workbook: {compiled}")
         compiled = create_xlsx(batch_dir)
 
-    criteria = load_rubric()  # excludes latex_syntax_quality
+    criteria = load_rubric()
     professor_grids = load_xlsx_grids(args.professor, criteria)
     judge_grids = load_xlsx_grids(compiled, criteria)
 

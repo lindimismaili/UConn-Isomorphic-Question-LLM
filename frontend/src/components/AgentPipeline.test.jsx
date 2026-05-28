@@ -7,7 +7,7 @@ import AgentPipeline from './AgentPipeline.jsx';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-const PIPELINE_KEYS = ['setup', 'normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation', 'output'];
+const PIPELINE_KEYS = ['setup', 'normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
 
 let root;
 let container;

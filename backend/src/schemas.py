@@ -254,7 +254,7 @@ AGENT_OUTPUT_TYPES = {
     "extracter": ExtracterOutput,
     "verifier": VerifierOutput,
     "generator": GeneratorOutput,
-    "latex": LaTeXOutput,
+    "latexifier": LaTeXOutput,
 }
 
 
@@ -263,6 +263,6 @@ AGENT_INPUT_TYPES = {
     "extracter": ExtracterInput,
     "verifier": VerifierInput,
     "generator": GeneratorInput,
-    "latex": LaTeXInput,
+    "latexifier": LaTeXInput,
     "evaluation": EvaluationInput,
 }

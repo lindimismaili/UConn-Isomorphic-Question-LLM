@@ -2,18 +2,11 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent / "src"
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from pipeline_validation import (  # noqa: E402
+from backend.src.pipeline_validation import (
     validate_distractor_logic_preservation,
     validate_generator_output,
 )
-from schemas import (  # noqa: E402
+from backend.src.schemas import (
     GeneratorOutput,
     NewQuestionItem,
     OptionItem,

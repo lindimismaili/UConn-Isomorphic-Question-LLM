@@ -285,7 +285,7 @@ h4 {
 
 .top-panels {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--layout-gap);
   align-items: stretch;
 }
@@ -382,11 +382,9 @@ h4 {
 }
 
 .prompt-input {
-  grid-area: prompt;
   align-self: stretch;
   width: 100%;
-  height: 100%;
-  min-height: 136px;
+  min-height: 180px;
   padding: var(--spacing-md);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -409,43 +407,22 @@ h4 {
 }
 
 .prompt-layout {
-  display: grid;
-  grid-template-columns:
-    minmax(280px, 0.9fr)
-    minmax(160px, 0.32fr)
-    minmax(160px, 0.34fr)
-    minmax(145px, 0.28fr);
-  grid-template-areas:
-    "prompt theme files workflow"
-    "devtools devtools devtools devtools";
-  align-items: stretch;
+  display: flex;
+  flex-direction: column;
   gap: var(--panel-gap);
 }
 
-.prompt-dropdown-panel {
-  grid-area: theme;
-}
-
-.prompt-files-panel {
-  grid-area: files;
-}
-
-.prompt-workflow-actions {
-  grid-area: workflow;
-}
-
-.prompt-control-section {
-  align-self: stretch;
+.prompt-theme-row {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  min-width: 0;
-  width: 100%;
-  height: 100%;
+  gap: 4px;
 }
 
-.prompt-dropdown-panel {
-  gap: 3px;
+.prompt-actions-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(140px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.8fr);
+  gap: var(--panel-gap);
+  align-items: stretch;
 }
 
 .prompt-dropdown-label {
@@ -477,12 +454,6 @@ h4 {
   cursor: not-allowed;
 }
 
-.prompt-dropdown-help {
-  font-size: 0.78rem;
-  line-height: 1.4;
-  color: var(--color-text-secondary);
-}
-
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
@@ -500,76 +471,39 @@ h4 {
   padding-top: var(--panel-padding);
 }
 
-.upload-group {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 3px;
+.prompt-actions-row > .btn {
   width: 100%;
-}
-
-.prompt-files-panel .btn,
-.prompt-workflow-actions .btn,
-.file-count-btn {
-  width: 100%;
-}
-
-.file-count-btn {
-  flex: 1 1 auto;
-  justify-content: flex-start;
-  min-height: 72px;
-  text-align: left;
-}
-
-.file-count-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  line-height: 1.2;
-}
-
-.file-count-copy span:first-child {
-  color: var(--color-text);
-  font-weight: 700;
-}
-
-.file-count-copy span:last-child {
-  color: var(--color-text-muted);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-
-.file-limit-text {
-  font-size: 0.72rem;
-  color: var(--color-text-muted);
-  text-align: center;
-  pointer-events: none;
-}
-
-.prompt-workflow-actions .btn {
-  flex: 1 1 0;
-  min-height: 64px;
+  min-height: 56px;
+  height: 56px;
 }
 
 .send-action {
   margin-left: 0;
 }
 
-.developer-tools-inline {
-  grid-area: devtools;
+.developer-tools-card {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  padding-top: var(--panel-gap);
-  border-top: 1px solid rgba(91, 141, 238, 0.16);
+  flex-direction: column;
 }
 
-.developer-tools-inline-header {
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  font-weight: 700;
-  margin-right: var(--spacing-sm);
+.developer-tools-card .card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.developer-tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--panel-gap);
+  flex: 1;
+  align-content: start;
+}
+
+.developer-tools-grid .developer-tool-btn,
+.developer-tools-grid .developer-toggle {
+  width: 100%;
+  min-height: 72px;
 }
 
 .developer-toggle {
@@ -648,14 +582,12 @@ h4 {
 }
 
 @media (max-width: 900px) {
-  .prompt-layout {
+  .prompt-actions-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .developer-tools-grid {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "prompt"
-      "theme"
-      "files"
-      "workflow"
-      "devtools";
   }
 
   .prompt-input {
@@ -2532,6 +2464,14 @@ body.modal-open .footer {
   color: var(--color-text-muted);
   font-family: "Consolas", "Monaco", monospace;
   margin-top: 2px;
+}
+
+.test-file-toggle-btn {
+  min-width: 120px;
+  min-height: 44px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .btn-remove {

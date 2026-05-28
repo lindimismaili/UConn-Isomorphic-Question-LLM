@@ -121,7 +121,7 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
                 </div>
               </div>
               <button
-                className={`btn btn-sm ${selected ? 'btn-remove' : 'btn-secondary'}`}
+                className={`btn test-file-toggle-btn ${selected ? 'btn-remove' : 'btn-secondary'}`}
                 onClick={() => toggleTestFile(item)}
                 disabled={isRunning}
               >

@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from backend.src.schemas import NewQuestionItem, SourceQuestionItem
-from backend.src.style_testing import (
+from backend.src.tools.style_testing import (
     extract_agent_input_payload,
     find_style_drift_issues,
     normalize_generated_question_sequence,

@@ -3,7 +3,7 @@ import AgentCard from './AgentCard.jsx';
 import { IconBrain } from './Icons.jsx';
 
 /** Fixed stage order used to lay out the workflow graph. */
-const PIPELINE_KEYS = ['setup', 'normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation', 'output'];
+const PIPELINE_KEYS = ['setup', 'normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
 const PLACEHOLDER_BRAINS = [0, 1, 2, 3, 4, 5];
 /** Static connector map used to draw the pipeline SVG paths. */
 const CONNECTIONS = PIPELINE_KEYS.slice(0, -1).map((from, index) => {

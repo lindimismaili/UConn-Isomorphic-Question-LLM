@@ -2,6 +2,7 @@ import { useReducer, useEffect, useState } from "react";
 import "./styles/app.css";
 
 import PromptInput from "./components/PromptInput.jsx";
+import DeveloperToolsPanel from "./components/DeveloperToolsPanel.jsx";
 import AgentPipeline from "./components/AgentPipeline.jsx";
 import LogPanel from "./components/LogPanel.jsx";
 import ResultsSection from "./components/ResultsSection.jsx";
@@ -103,7 +104,7 @@ const INITIAL_AGENTS = {
     inputText: "",
     outputText: "",
   },
-  latex: {
+  latexifier: {
     name: "Unavailable",
     description: "Unavailable",
     model: "Unavailable",
@@ -114,12 +115,12 @@ const INITIAL_AGENTS = {
     endTime: null,
     executionTime: null,
     inputFrom: "Generator",
-    outputTo: "Evaluation",
+    outputTo: "Evaluator",
     inputText: "",
     outputText: "",
   },
   evaluation: {
-    name: "Evaluation",
+    name: "Evaluator",
     description: "Scores generated outputs and writes evaluation artifacts",
     model: "Unavailable",
     reasoningLevel: "low",
@@ -143,7 +144,7 @@ const INITIAL_AGENTS = {
     startTime: null,
     endTime: null,
     executionTime: null,
-    inputFrom: "Evaluation",
+    inputFrom: "Evaluator",
     outputTo: "User",
     inputText: "",
     outputText: "",
@@ -157,8 +158,8 @@ const NEXT_AGENT_BY_KEY = {
   normalizer: "extracter",
   extracter: "verifier",
   verifier: "generator",
-  generator: "latex",
-  latex: "evaluation",
+  generator: "latexifier",
+  latexifier: "evaluation",
   evaluation: "output",
 };
 
@@ -671,15 +672,19 @@ export default function App() {
                 dispatch({ type: "OPEN_MODAL", modal: "files" })
               }
               onShowHelp={() => dispatch({ type: "OPEN_MODAL", modal: "help" })}
+            />
+            <DeveloperToolsPanel
+              isRunning={state.isRunning}
+              serviceInactive={serviceInactive}
               isCreateDataRunning={
                 createDataState.isRunning || createDataState.isStarting
-              }
-              onShowTestFiles={() =>
-                dispatch({ type: "OPEN_MODAL", modal: "test-files" })
               }
               onCreateData={handleCreateData}
               onInputToAgent={() =>
                 dispatch({ type: "OPEN_MODAL", modal: "input-to-agent" })
+              }
+              onShowTestFiles={() =>
+                dispatch({ type: "OPEN_MODAL", modal: "test-files" })
               }
               runEvaluations={runEvaluations}
               onRunEvaluationsChange={setRunEvaluations}

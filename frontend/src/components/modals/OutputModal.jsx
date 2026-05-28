@@ -18,14 +18,14 @@ export default function OutputModal({ isOpen, onClose }) {
       <div className="setup-modal-body modal-body-stack">
         <p>
           <strong>Workflow Runtime</strong> is not an agent. It represents the
-          final workflow step after <strong>Evaluation</strong>, when the system
+          final workflow step after <strong>Evaluator</strong>, when the system
           writes and exposes the completed output artifacts.
         </p>
         <h4>What it does</h4>
         <ul>
           <li>Finalize the workflow result payload</li>
           <li>Write the final result JSON, LaTeX, and PDF files</li>
-          <li>Collect evaluation and agent artifact download metadata</li>
+          <li>Collect evaluator and agent artifact download metadata</li>
           <li>Make the completed files available in the download panel</li>
         </ul>
       </div>

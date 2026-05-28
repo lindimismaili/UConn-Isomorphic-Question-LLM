@@ -13,19 +13,16 @@ import logging
 import time
 import traceback
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
 from openai import OpenAI
 
+from .paths import EVALUATOR_PROMPT_PATH, REPO_ROOT, RUBRIC_PATH
+
 logger = logging.getLogger(__name__)
 
-
-THIS_DIR = Path(__file__).resolve().parent
-REPO_ROOT = THIS_DIR.parent
-DATA_DIR = REPO_ROOT / "data"
-RUBRIC_PATH = DATA_DIR / "rubric.json"
-LATEX_CRITERION_NAME = "latex_syntax_quality"
 PASSING_SCORE_THRESHOLD = 1.0
 EVALUATION_OUTPUTS_DIRNAME = "evaluation_outputs"
 EVALUATION_REPORT_FILENAME = "evaluation_report.json"
@@ -35,59 +32,66 @@ EVALUATION_SPREADSHEET_FILENAME = "evaluation_spreadsheet.csv"
 EVALUATION_RUBRIC_FILENAME = "rubric.json"
 
 
-GENERAL_GRADER_INSTRUCTIONS = """\
-You are grading one generated isomorphic physics question against its source.
-
-An isomorphic generated question should preserve the source question's core physics
-idea and reasoning pattern while changing surface details such as names, settings,
-numbers, and sometimes answer order. Grade only the current criterion. Do not
-double-penalize an issue that belongs to another criterion unless it directly
-affects the current criterion.
-
-Before scoring, identify the source's intended answer logic and the generated
-question's intended answer logic. For multiple-choice questions, compare answer
-choice roles and misconception patterns; option letters do not need to match.
-
-Generated multiple-choice items may include correctness labels, answer-key notes,
-or explanations/rationales after each option because the generator produces
-answers and explanations for both right and wrong answers. Treat those
-explanations as normal evaluation context, not as student-facing option clutter,
-extra answer choices, ambiguity, or a clerical defect. Do not lower a score
-solely because explanations appear with the options.
-"""
+@lru_cache(maxsize=1)
+def general_grader_instructions() -> str:
+    """Evaluator system prompt prefix, loaded on first call."""
+    if not EVALUATOR_PROMPT_PATH.exists():
+        raise FileNotFoundError(f"Evaluator prompt not found: {EVALUATOR_PROMPT_PATH}")
+    return EVALUATOR_PROMPT_PATH.read_text(encoding="utf-8")
 
 
-def _load_rubric_config() -> dict[str, Any]:
-    """Load rubric criteria and grading model configuration from disk."""
+@lru_cache(maxsize=1)
+def _rubric_config() -> dict[str, Any]:
+    """Rubric criteria + grader model + reasoning level, loaded on first call."""
     if not RUBRIC_PATH.exists():
         raise FileNotFoundError(f"Rubric file not found: {RUBRIC_PATH}")
-
     data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError(f"Rubric file {RUBRIC_PATH} must be a JSON object")
-
     criteria = data.get("criteria")
     model = data.get("model")
     if not isinstance(criteria, list) or not criteria:
         raise ValueError(f"Rubric file {RUBRIC_PATH} must define a non-empty 'criteria' list")
     if not isinstance(model, str) or not model:
         raise ValueError(f"Rubric file {RUBRIC_PATH} must define a non-empty 'model' string")
+    reasoning = data.get("reasoning") or "low"
+    return {"criteria": criteria, "model": model, "reasoning": reasoning}
 
-    return {"criteria": criteria, "model": model}
+
+def rubric_criteria() -> list[dict[str, Any]]:
+    return _rubric_config()["criteria"]
 
 
-RUBRIC_CONFIG = _load_rubric_config()
-RUBRIC_CRITERIA = RUBRIC_CONFIG["criteria"]
-RUBRIC_MODEL = RUBRIC_CONFIG["model"]
-RUBRIC_REASONING_EFFORT = "low"
-RUBRIC_CRITERIA_BY_NAME = {
-    criterion["name"]: criterion for criterion in RUBRIC_CRITERIA if criterion.get("name")
-}
-QUESTION_LEVEL_CRITERIA = [
-    criterion
-    for criterion in RUBRIC_CRITERIA
-    if criterion.get("name") and criterion["name"] != LATEX_CRITERION_NAME
-]
+def rubric_model() -> str:
+    return _rubric_config()["model"]
+
+
+def rubric_reasoning_effort() -> str:
+    return _rubric_config()["reasoning"]
+
+
+def rubric_criteria_by_name() -> dict[str, dict[str, Any]]:
+    return {
+        criterion["name"]: criterion
+        for criterion in rubric_criteria()
+        if criterion.get("name")
+    }
+
+
+def question_level_criteria() -> list[dict[str, Any]]:
+    return [criterion for criterion in rubric_criteria() if criterion.get("name")]
+
+
+@lru_cache(maxsize=1)
+def rubric_payload() -> dict[str, Any]:
+    """Return the full rubric.json contents (or a minimal stub if absent)."""
+    if not RUBRIC_PATH.exists():
+        return {"model": "gpt-5.5", "criteria": []}
+    try:
+        data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {"model": "gpt-5.5", "criteria": []}
+    except Exception:
+        return {"model": "gpt-5.5", "criteria": []}
 
 
 def _utc_timestamp() -> str:
@@ -204,7 +208,7 @@ def _build_spreadsheet_rows(
 ) -> list[dict[str, Any]]:
     """Build flat rows for spreadsheet export."""
     rows: list[dict[str, Any]] = []
-    criteria = [criterion["name"] for criterion in QUESTION_LEVEL_CRITERIA]
+    criteria = [criterion["name"] for criterion in question_level_criteria()]
 
     if output_items:
         records: list[dict[str, Any]] = output_items
@@ -502,10 +506,11 @@ def _render_generated_question_text(question: dict[str, Any]) -> str:
     return _render_question_text(question)
 
 
-def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
+def _build_testing_criteria(model: str | None = None) -> list[dict[str, Any]]:
     """Build the criterion definitions used when creating an eval."""
+    model = model or rubric_model()
     criteria: list[dict[str, Any]] = []
-    for criterion in QUESTION_LEVEL_CRITERIA:
+    for criterion in question_level_criteria():
         na_allowed = bool(criterion.get("na_allowed"))
         score_range = [-1, 1] if na_allowed else [0, 1]
         if na_allowed:
@@ -525,7 +530,7 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
                 "type": "score_model",
                 "model": model,
                 "sampling_params": {
-                    "reasoning_effort": RUBRIC_REASONING_EFFORT,
+                    "reasoning_effort": rubric_reasoning_effort(),
                 },
                 "pass_threshold": PASSING_SCORE_THRESHOLD,
                 "range": score_range,
@@ -533,7 +538,7 @@ def _build_testing_criteria(model: str = RUBRIC_MODEL) -> list[dict[str, Any]]:
                     {
                         "role": "system",
                         "content": (
-                            f"{GENERAL_GRADER_INSTRUCTIONS}\n"
+                            f"{general_grader_instructions()}\n"
                             f"{_format_criterion_prompt(criterion)}\n\n"
                             f"{return_instruction} "
                             "Apply the rules in the rubric guidance literally, "
@@ -561,83 +566,12 @@ def _build_run_data_source(eval_data_file_id: str) -> dict[str, Any]:
     }
 
 
-LATEX_LOG_ERROR_PATTERNS = (
-    "! LaTeX Error",
-    "! Undefined control sequence",
-    "! Missing $",
-    "! Emergency stop",
-    "! Package",  # e.g. "! Package amsmath Error"
-    "Runaway argument",
-)
-
-
-def _scan_latex_log(log_path: Path) -> list[str]:
-    """Return a list of error lines found in a TeX .log file, empty on success."""
-    try:
-        text = log_path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return []
-    return [
-        line.strip()
-        for line in text.splitlines()
-        if any(pat in line for pat in LATEX_LOG_ERROR_PATTERNS)
-    ]
-
-
-def _resolve_latex_check(latex_path: Optional[Path], pdf_path: Optional[Path] = None) -> dict[str, Any]:
-    """Return a synthetic pass/fail record for the LaTeX artifact check.
-
-    Beyond artifact existence, the ``.log`` file (if present) is scanned for
-    known fatal error markers; any match downgrades the status to ``failed``
-    and surfaces the offending log lines.
-    """
-    criterion = RUBRIC_CRITERIA_BY_NAME.get(
-        LATEX_CRITERION_NAME,
-        {
-            "name": LATEX_CRITERION_NAME,
-            "category": "Quality control",
-            "question": "Is the generated LaTeX code free of syntax errors?",
-        },
-    )
-
-    pdf_path = pdf_path or (latex_path.with_suffix(".pdf") if latex_path else None)
-    log_path = latex_path.with_suffix(".log") if latex_path else None
-    latex_exists = bool(latex_path and latex_path.exists())
-    pdf_exists = bool(pdf_path and pdf_path.exists())
-    log_errors = _scan_latex_log(log_path) if log_path and log_path.exists() else []
-
-    passed = latex_exists and pdf_exists and not log_errors
-    status = "passed" if passed else "failed"
-
-    if log_errors:
-        reason = f"LaTeX .log reports {len(log_errors)} error line(s); see latex_log_errors."
-    elif passed:
-        reason = "Generated LaTeX document and compiled PDF artifact are both present."
-    elif latex_exists:
-        reason = "Generated LaTeX document exists, but the compiled PDF artifact is missing."
-    else:
-        reason = "Generated LaTeX document is missing."
-
-    record = {
-        "name": criterion["name"],
-        "category": criterion.get("category", ""),
-        "question": criterion.get("question", ""),
-        "score": 1.0 if passed else 0.0,
-        "status": status,
-        "reason": reason,
-        "latex_file": latex_path.name if latex_path else "",
-        "pdf_file": pdf_path.name if pdf_path else "",
-    }
-    if log_errors:
-        record["latex_log_errors"] = log_errors[:20]
-    return record
-
-
 def _normalize_criterion_name(result_name: str) -> Optional[str]:
     """Map an eval result name back to a rubric criterion name when possible."""
-    if result_name in RUBRIC_CRITERIA_BY_NAME:
+    by_name = rubric_criteria_by_name()
+    if result_name in by_name:
         return result_name
-    for criterion_name in RUBRIC_CRITERIA_BY_NAME:
+    for criterion_name in by_name:
         if result_name.startswith(f"{criterion_name}-"):
             return criterion_name
     return None
@@ -686,11 +620,12 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
     dropped, so consumers can distinguish "all items judged N/A" from "no items
     received a pass".
     """
+    criteria = question_level_criteria()
     criterion_scores: dict[str, list[float]] = {
-        criterion["name"]: [] for criterion in QUESTION_LEVEL_CRITERIA
+        criterion["name"]: [] for criterion in criteria
     }
     criterion_na: dict[str, int] = {
-        criterion["name"]: 0 for criterion in QUESTION_LEVEL_CRITERIA
+        criterion["name"]: 0 for criterion in criteria
     }
     unmatched_results: list[str] = []
 
@@ -698,7 +633,7 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
         for result in getattr(output_item, "results", []) or []:
             raw_name = str(getattr(result, "name", "") or "")
             criterion_name = _normalize_criterion_name(raw_name)
-            if not criterion_name or criterion_name == LATEX_CRITERION_NAME:
+            if not criterion_name:
                 if raw_name:
                     unmatched_results.append(raw_name)
                 continue
@@ -713,7 +648,7 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
 
     summary: dict[str, Any] = {}
     missing_scores: list[str] = []
-    for criterion in QUESTION_LEVEL_CRITERIA:
+    for criterion in criteria:
         name = criterion["name"]
         values = criterion_scores[name]
         na_count = criterion_na.get(name, 0)
@@ -736,16 +671,8 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
     return summary, sorted(set(unmatched_results + missing_scores))
 
 
-def _compute_overall_score(
-    question_level_scores: dict[str, Any],
-    latex_document_check: dict[str, Any],  # noqa: ARG001 — kept for call-site stability
-) -> Optional[float]:
-    """Average of question-level criterion scores.
-
-    LaTeX is reported separately via `latex_document_check` rather than diluting
-    the rubric average; a single LaTeX failure should not look like a one-criterion
-    rubric drop.
-    """
+def _compute_overall_score(question_level_scores: dict[str, Any]) -> Optional[float]:
+    """Average of question-level criterion scores."""
     numeric_scores = [
         entry["score"]
         for entry in question_level_scores.values()
@@ -763,19 +690,17 @@ def _build_base_report(
     grader_model: str,
     dataset_path: Optional[Path],
     items_evaluated: int,
-    latex_document_check: dict[str, Any],
 ) -> dict[str, Any]:
     """Build the common evaluation report skeleton."""
     report: dict[str, Any] = {
         "status": status,
         "created_at": _utc_timestamp(),
-        "rubric": RUBRIC_CRITERIA,
+        "rubric": rubric_criteria(),
         "grader_model": grader_model,
         "items_evaluated": items_evaluated,
         "dataset_file": _evaluation_relative_path(dataset_path) if dataset_path else "",
         "criterion_scores": {},
-        "latex_document_check": latex_document_check,
-        "overall_score": _compute_overall_score({}, latex_document_check),
+        "overall_score": _compute_overall_score({}),
         "passing_score_threshold": PASSING_SCORE_THRESHOLD,
     }
     if reason:
@@ -787,17 +712,13 @@ def run_openai_output_evaluation(
     client: OpenAI,
     final_result: dict[str, Any],
     outputs_dir: Path,
-    latex_path: Optional[Path] = None,
-    pdf_path: Optional[Path] = None,
     source_files: Optional[list[str]] = None,
     grader_model: Optional[str] = None,
     contract_report: Optional[dict[str, Any]] = None,
     poll_interval_seconds: float = 3.0,
     max_wait_seconds: int = 900,
 ) -> dict[str, Any]:
-    """
-    Evaluate generated questions using OpenAI Evals and save evaluation_report.json.
-    """
+    """Evaluate generated questions using OpenAI Evals and save evaluation_report.json."""
     evaluation_outputs_dir = outputs_dir / EVALUATION_OUTPUTS_DIRNAME
     evaluation_outputs_dir.mkdir(parents=True, exist_ok=True)
     report_path = evaluation_outputs_dir / EVALUATION_REPORT_FILENAME
@@ -805,8 +726,7 @@ def run_openai_output_evaluation(
     output_items_path = evaluation_outputs_dir / EVALUATION_ITEMS_FILENAME
     spreadsheet_path = evaluation_outputs_dir / EVALUATION_SPREADSHEET_FILENAME
     rubric_snapshot_path = evaluation_outputs_dir / EVALUATION_RUBRIC_FILENAME
-    grader_model = grader_model or RUBRIC_MODEL
-    latex_document_check = _resolve_latex_check(latex_path, pdf_path)
+    grader_model = grader_model or rubric_model()
     rubric_file = _write_rubric_snapshot(rubric_snapshot_path) or ""
     source_files = source_files or []
 
@@ -826,7 +746,6 @@ def run_openai_output_evaluation(
             grader_model=grader_model,
             dataset_path=None,
             items_evaluated=0,
-            latex_document_check=latex_document_check,
         )
         report["deterministic_checks"] = deterministic_checks
         report = _attach_report_file_metadata(
@@ -901,7 +820,6 @@ def run_openai_output_evaluation(
             grader_model=grader_model,
             dataset_path=None,
             items_evaluated=0,
-            latex_document_check=latex_document_check,
         )
         report["deterministic_checks"] = deterministic_checks
         report = _attach_report_file_metadata(
@@ -938,7 +856,6 @@ def run_openai_output_evaluation(
             grader_model=grader_model,
             dataset_path=None,
             items_evaluated=0,
-            latex_document_check=latex_document_check,
         )
         report["deterministic_checks"] = deterministic_checks
         report = _attach_report_file_metadata(
@@ -1036,7 +953,7 @@ def run_openai_output_evaluation(
             threshold=PASSING_SCORE_THRESHOLD,
         )
 
-        overall_score = _compute_overall_score(criterion_scores, latex_document_check)
+        overall_score = _compute_overall_score(criterion_scores)
         if report_status == "completed":
             report_status = "complete" if isinstance(overall_score, (int, float)) else "incomplete"
         if deterministic_checks.get("figure_skips", {}).get("status") == "failed":
@@ -1046,12 +963,11 @@ def run_openai_output_evaluation(
         report = {
             "status": report_status,
             "created_at": _utc_timestamp(),
-            "rubric": RUBRIC_CRITERIA,
+            "rubric": rubric_criteria(),
             "items_evaluated": len(items),
             "grader_model": grader_model,
             "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": criterion_scores,
-            "latex_document_check": latex_document_check,
             "overall_score": overall_score,
             "passing_score_threshold": PASSING_SCORE_THRESHOLD,
             "eval_data_file_id": eval_data_file.id,
@@ -1092,13 +1008,12 @@ def run_openai_output_evaluation(
         report = {
             "status": "failed",
             "created_at": _utc_timestamp(),
-            "rubric": RUBRIC_CRITERIA,
+            "rubric": rubric_criteria(),
             "items_evaluated": len(items),
             "grader_model": grader_model,
             "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": {},
-            "latex_document_check": latex_document_check,
-            "overall_score": _compute_overall_score({}, latex_document_check),
+            "overall_score": _compute_overall_score({}),
             "passing_score_threshold": PASSING_SCORE_THRESHOLD,
             "error": str(exc),
             "traceback": traceback.format_exc(),

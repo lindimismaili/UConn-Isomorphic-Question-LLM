@@ -15,7 +15,7 @@ const AGENT_ORDER = [
   'extracter',
   'verifier',
   'generator',
-  'latex',
+  'latexifier',
   'evaluation',
   'output',
 ];
@@ -26,8 +26,8 @@ const AGENT_LABELS = {
   extracter: 'Extracter',
   verifier: 'Verifier',
   generator: 'Generator',
-  latex: 'Latexifier',
-  evaluation: 'Evaluation',
+  latexifier: 'Latexifier',
+  evaluation: 'Evaluator',
   output: 'Output',
 };
 
@@ -357,9 +357,9 @@ export default function ResultsSection({ result }) {
               {[
                 { title: 'Main', files: mainFiles, empty: 'No main output files.' },
                 {
-                  title: 'Evaluation',
+                  title: 'Evaluator',
                   files: evaluationFiles,
-                  empty: 'No evaluation files.',
+                  empty: 'No evaluator files.',
                 },
               ].map((column) => (
                 <div className="download-column" key={column.title}>

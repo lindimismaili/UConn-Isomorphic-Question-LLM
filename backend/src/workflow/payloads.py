@@ -4,10 +4,117 @@ from __future__ import annotations
 
 from typing import Any
 
-try:
-    from .schemas import ExtracterOutput, GeneratorOutput, NormalizerOutput, VerifierOutput
-except ImportError:
-    from schemas import ExtracterOutput, GeneratorOutput, NormalizerOutput, VerifierOutput
+from ..schemas import ExtracterOutput, GeneratorOutput, NormalizerOutput, VerifierOutput
+
+
+def build_normalizer_input(prompt: str, file_names: list[str]) -> dict[str, Any]:
+    """Canonical normalizer task payload."""
+    return {
+        "task": "normalize_user_request",
+        "user_input": {
+            "prompt": prompt or "",
+            "files": list(file_names),
+        },
+        "defaults": {
+            "new_questions_per_question": 1,
+            "difficulty": "",
+            "theme": "",
+            "title": "",
+        },
+        "rules": {
+            "difficulty": (
+                "leave empty unless the user explicitly requests a difficulty target"
+            ),
+            "theme": (
+                "leave empty unless the user requests a target generation theme; "
+                "the extracter determines source theme"
+            ),
+            "title": (
+                "leave empty unless the user requests an output title; "
+                "the extracter determines source title"
+            ),
+        },
+    }
+
+
+def build_extracter_input(
+    file_names: list[str],
+    normalizer_config: NormalizerOutput,
+) -> dict[str, Any]:
+    """Canonical extracter task payload (first pass)."""
+    return {
+        "task": "extract_source_questions",
+        "files": list(file_names),
+        "normalizer_config": normalizer_config.model_dump(),
+        "requirements": {
+            "preserve_math_latex": True,
+            "extract_metadata": ["title", "theme", "author", "date", "course"],
+            "determine_title_from_source": True,
+            "determine_theme_from_extracted_information": True,
+            "must_include_multiple_choice": True,
+            "multiple_choice_option_keys": ["A", "B", "C", "D"],
+            "set_has_explicit_answer_only_if_marked": True,
+            "difficulty_rule": (
+                "leave question difficulty empty unless normalizer_config.difficulty "
+                "is non-empty"
+            ),
+        },
+    }
+
+
+def build_extracter_retry_input(
+    file_names: list[str],
+    normalizer_config: NormalizerOutput,
+) -> dict[str, Any]:
+    """Canonical extracter retry payload after a zero-question first pass."""
+    return {
+        "task": "extract_source_questions_retry",
+        "reason": "previous_result_had_zero_questions",
+        "files": list(file_names),
+        "normalizer_config": normalizer_config.model_dump(),
+        "requirements": {
+            "must_include_multiple_choice": True,
+            "determine_title_from_source": True,
+            "determine_theme_from_extracted_information": True,
+            "difficulty_rule": (
+                "leave question difficulty empty unless "
+                "normalizer_config.difficulty is non-empty"
+            ),
+        },
+    }
+
+
+def build_verifier_input(extraction: ExtracterOutput) -> dict[str, Any]:
+    """Canonical verifier task payload."""
+    return {
+        "task": "verify_source_questions",
+        "source_questions": extraction.model_dump(),
+        "requirements": {
+            "preserve_all_questions": True,
+            "if_answer_marked_keep_it": True,
+            "if_unmarked_solve_and_mark_correct_option": True,
+            "add_option_explanations": True,
+            "use_code_interpreter_for_calculations": True,
+            "solve_open_ended_and_provide_answer": True,
+            "solve_multi_part_questions_per_part": True,
+        },
+    }
+
+
+def build_verifier_repair_input(
+    extraction: ExtracterOutput,
+    repair_questions: list[Any],
+    reason: str,
+) -> dict[str, Any]:
+    """Verifier repair payload covering only the failing source IDs."""
+    base = build_verifier_input(extraction)
+    base["task"] = "verify_source_questions_repair"
+    base["reason"] = reason
+    base["source_questions"] = {
+        **extraction.model_dump(),
+        "questions": [q.model_dump() for q in repair_questions],
+    }
+    return base
 
 
 def generator_requirements(config: NormalizerOutput) -> dict[str, Any]:
@@ -33,6 +140,30 @@ def generator_requirements(config: NormalizerOutput) -> dict[str, Any]:
         "do_not_compress_narrative_stems_into_short_directives": True,
         "do_not_add_padding_to_concise_sources": True,
         "self_review_style_before_return": True,
+    }
+
+
+def build_generator_repair_input(
+    config: NormalizerOutput,
+    verifier_output: VerifierOutput,
+    generator_output: GeneratorOutput,
+    repair_questions: list[Any],
+    reason: str,
+) -> dict[str, Any]:
+    """Generator repair payload covering only the failing source IDs."""
+    return {
+        "task": "repair_generator_contract_violations",
+        "reason": reason,
+        "configuration": config.model_dump(),
+        "source_questions": {
+            "questions": [q.model_dump() for q in repair_questions],
+        },
+        "draft_isomorphic_questions": generator_output.model_dump(),
+        "requirements": {
+            **generator_requirements(config),
+            "preserve_ids_and_source_ids": True,
+            "return_complete_final_set": True,
+        },
     }
 
 
