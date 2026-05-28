@@ -68,7 +68,7 @@ from backend.src.safety import (
 from backend.src.schemas import AGENT_INPUT_TYPES
 from backend.src.workflow import (
     extract_agent_input_payload as _extract_agent_input_payload,
-    run_workflow_async,
+    run_workflow_async as _engine_run_workflow_async,
 )
 from backend.src.workflow.resume import agent_input_has_generated_questions as _agent_input_has_generated_questions
 from backend.src.workflow.store import WorkflowStore
@@ -1780,7 +1780,7 @@ async def _execute_workflow(
     """Run the workflow via the shared engine; surface FastAPI cancel/error states."""
     client = get_openai_client()
     try:
-        await run_workflow_async(
+        await _engine_run_workflow_async(
             client=client,
             workflow_id=workflow_id,
             workflow=workflow,

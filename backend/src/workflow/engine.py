@@ -304,6 +304,12 @@ async def run_workflow_async(
         if resume_from_agent not in WORKFLOW_AGENT_SEQUENCE:
             raise ValueError(f"Unknown resume_from_agent: {resume_from_agent}")
 
+        logger.info(
+            "Workflow %s engine starting (resume_from=%s, files=%d)",
+            workflow_id,
+            resume_from_agent,
+            len(file_paths),
+        )
         outputs_dir.mkdir(parents=True, exist_ok=True)
         workflow["outputFolder"] = output_folder_label
         workflow["status"] = "running"
@@ -348,6 +354,12 @@ async def run_workflow_async(
         file_paths_to_upload = (
             file_paths if should_run_agent("extracter", resume_from_agent) else []
         )
+        if file_paths_to_upload:
+            logger.info(
+                "Workflow %s uploading %d source file(s) to OpenAI",
+                workflow_id,
+                len(file_paths_to_upload),
+            )
         for file_path in file_paths_to_upload:
             path = Path(file_path)
             if path.exists():
@@ -356,6 +368,12 @@ async def run_workflow_async(
                 file_names.append(path.name)
         if not file_names:
             file_names = [Path(path).name for path in file_paths]
+        if file_paths_to_upload:
+            logger.info(
+                "Workflow %s finished file upload (%d file_ids)",
+                workflow_id,
+                len(file_ids),
+            )
 
         if not hasattr(client, "containers"):
             raise RuntimeError(
@@ -363,6 +381,7 @@ async def run_workflow_async(
             )
         workflow["container"]["status"] = "creating"
         touch_workflow(workflow)
+        logger.info("Workflow %s creating OpenAI container", workflow_id)
         container = await to_thread(
             client.containers.create,
             name=f"isomorphic-workflow-{workflow_id}-{output_folder_label.replace('/', '-')}",
@@ -374,6 +393,11 @@ async def run_workflow_async(
         workflow["container"]["id"] = shared_container_id
         workflow["container"]["allowedDomains"] = allowed_domains_from_env()
         touch_workflow(workflow)
+        logger.info(
+            "Workflow %s container created (id=%s); bootstrapping runtime",
+            workflow_id,
+            shared_container_id,
+        )
         shared_runtime = SharedWorkflowRuntime(
             client=client,
             container_id=shared_container_id,
@@ -383,6 +407,7 @@ async def run_workflow_async(
         await to_thread(shared_runtime.bootstrap)
         workflow["container"]["status"] = "active"
         touch_workflow(workflow)
+        logger.info("Workflow %s runtime bootstrap complete", workflow_id)
 
         agents = create_agents(
             file_ids=file_ids,
@@ -394,6 +419,7 @@ async def run_workflow_async(
 
         # ---- Normalizer ----
         if should_run_agent("normalizer", resume_from_agent):
+            logger.info("Workflow %s starting Normalizer", workflow_id)
             workflow["agents"]["normalizer"]["status"] = "thinking"
             workflow["agents"]["normalizer"]["data"]["startTime"] = datetime.now().isoformat()
             touch_workflow(workflow)
