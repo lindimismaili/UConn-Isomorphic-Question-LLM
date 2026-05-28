@@ -9,10 +9,7 @@ from typing import Any, Optional
 
 from openai import OpenAI
 
-try:
-    from .schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
-except ImportError:
-    from schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
+from .schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
 
 
 VALID_THEMES = {
@@ -45,44 +42,26 @@ def load_agents_config(config_path: Path, logger: Any) -> dict[str, Any]:
         return {}
 
 
+def resolve_prompt_path(prompts_dir: Path, name: str) -> Path | None:
+    """Return the prompt file path for a prompt name, or None if missing."""
+    candidate = prompts_dir / f"{name}.txt"
+    return candidate if candidate.exists() else None
+
+
 def load_prompt(prompts_dir: Path, logger: Any, name: str) -> str:
     """Load a named prompt template from disk.
 
-    Args:
-        prompts_dir: Directory containing prompt text files.
-        logger: Logger used to report missing or unreadable prompt files.
-        name: Prompt base name, without the `.txt` suffix.
-
-    Returns:
-        Prompt text, or an empty string when no usable file is found.
+    Returns the prompt text, or an empty string when no usable file is found.
     """
-
-    prompt_candidates = [prompts_dir / f"{name}.txt"]
-    if name == "latex":
-        prompt_candidates.insert(0, prompts_dir / "latex_1.txt")
-
-    for prompt_path in prompt_candidates:
-        if not prompt_path.exists():
-            continue
-        try:
-            return prompt_path.read_text(encoding="utf-8")
-        except Exception as exc:
-            logger.warning("Failed to load prompt %s from %s: %s", name, prompt_path, exc)
-            return ""
-
-    logger.warning("Prompt file not found for %s. Checked: %s", name, prompt_candidates)
-    return ""
-
-
-def resolve_prompt_path(prompts_dir: Path, name: str) -> Path | None:
-    """Return the existing prompt file path for a prompt name."""
-    prompt_candidates = [prompts_dir / f"{name}.txt"]
-    if name == "latex":
-        prompt_candidates.insert(0, prompts_dir / "latex_1.txt")
-    for prompt_path in prompt_candidates:
-        if prompt_path.exists():
-            return prompt_path
-    return None
+    prompt_path = resolve_prompt_path(prompts_dir, name)
+    if prompt_path is None:
+        logger.warning("Prompt file not found for %s in %s", name, prompts_dir)
+        return ""
+    try:
+        return prompt_path.read_text(encoding="utf-8")
+    except Exception as exc:
+        logger.warning("Failed to load prompt %s from %s: %s", name, prompt_path, exc)
+        return ""
 
 
 def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:

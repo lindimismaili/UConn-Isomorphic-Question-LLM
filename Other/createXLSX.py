@@ -34,7 +34,6 @@ SCRIPT_PATH = Path(__file__).resolve()
 OTHER_DIR = SCRIPT_PATH.parent
 REPO_ROOT = OTHER_DIR.parent
 RUBRIC_PATH = REPO_ROOT / "backend" / "data" / "rubric.json"
-LATEX_CRITERION = "latex_syntax_quality"
 
 # Professor's manual classification of source questions in physics_1_set.pdf.
 # Source IDs are 1-indexed. Conceptual = no meaningful numerical content;
@@ -54,7 +53,7 @@ AVG_FILL = PatternFill("solid", fgColor="D9EAF7")
 
 def load_rubric() -> list[dict[str, Any]]:
     data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
-    return [c for c in data.get("criteria", []) if c.get("name") and c["name"] != LATEX_CRITERION]
+    return [c for c in data.get("criteria", []) if c.get("name")]
 
 
 def source_sort_key(value: Any) -> tuple[int, Any]:

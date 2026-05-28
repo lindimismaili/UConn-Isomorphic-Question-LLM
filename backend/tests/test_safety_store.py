@@ -11,7 +11,7 @@ from backend.src.safety import (
     safe_filename,
     unique_child_name,
 )
-from backend.src.workflow_store import WorkflowStore
+from backend.src.workflow.store import WorkflowStore
 
 
 class SafetyStoreTests(unittest.TestCase):

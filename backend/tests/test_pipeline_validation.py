@@ -62,6 +62,31 @@ class PipelineValidationTests(unittest.TestCase):
         report = validate_verifier_output([source_question("q1", has_figure=True)], VerifierOutput(questions=[]))
         self.assertTrue(report.valid)
 
+    def test_verifier_figure_question_requires_distractor_logic(self) -> None:
+        source = source_question("fig-1", has_figure=True)
+        verified = source_question("fig-1", has_figure=True)
+        for opt in verified.options:
+            opt.distractor_logic = ""
+        report = validate_verifier_output([source], VerifierOutput(questions=[verified]))
+        self.assertFalse(report.valid)
+        self.assertIn("(figure) has missing option distractor_logic", report.summary())
+        self.assertEqual(report.repair_source_ids, ["fig-1"])
+
+    def test_verifier_figure_question_requires_explanations(self) -> None:
+        source = source_question("fig-2", has_figure=True)
+        verified = source_question("fig-2", has_figure=True)
+        for opt in verified.options:
+            opt.explanation = ""
+        report = validate_verifier_output([source], VerifierOutput(questions=[verified]))
+        self.assertFalse(report.valid)
+        self.assertIn("(figure) has missing option explanations", report.summary())
+
+    def test_verifier_complete_figure_question_passes(self) -> None:
+        source = source_question("fig-3", has_figure=True)
+        verified = source_question("fig-3", has_figure=True)
+        report = validate_verifier_output([source], VerifierOutput(questions=[verified]))
+        self.assertTrue(report.valid)
+
     def test_generator_requires_exact_count_after_style_review(self) -> None:
         report = validate_generator_output(
             [source_question("q1")],

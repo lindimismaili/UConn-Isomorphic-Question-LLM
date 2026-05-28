@@ -11,12 +11,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-try:
-    from .artifacts import load_agent_input_payload, load_agent_output_payload
-    from .schemas import GeneratorOutput, NewQuestionItem, SourceQuestionItem
-except ImportError:
-    from artifacts import load_agent_input_payload, load_agent_output_payload
-    from schemas import GeneratorOutput, NewQuestionItem, SourceQuestionItem
+from ..artifacts import load_agent_input_payload, load_agent_output_payload
+from ..schemas import GeneratorOutput, NewQuestionItem, SourceQuestionItem
 
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)?")

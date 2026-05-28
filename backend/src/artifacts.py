@@ -11,14 +11,13 @@ from typing import Any
 AGENT_ARTIFACTS_DIRNAME = "agent_outputs"
 AGENT_METADATA_FILENAME = "agent_metadata_output.json"
 AGENT_METADATA_RELATIVE_PATH = f"{AGENT_ARTIFACTS_DIRNAME}/{AGENT_METADATA_FILENAME}"
-LEGACY_AGENT_OUTPUTS_FILENAME = "agent_outputs.json"
 
 WORKFLOW_AGENT_SEQUENCE = [
     "normalizer",
     "extracter",
     "verifier",
     "generator",
-    "latex",
+    "latexifier",
     "evaluation",
     "output",
 ]
@@ -28,8 +27,8 @@ AGENT_DISPLAY_NAMES = {
     "extracter": "Extracter",
     "verifier": "Verifier",
     "generator": "Generator",
-    "latex": "Latexifier",
-    "evaluation": "Evaluation",
+    "latexifier": "Latexifier",
+    "evaluation": "Evaluator",
     "output": "Output",
 }
 
@@ -402,10 +401,8 @@ def write_workflow_metadata(
 
 
 def load_workflow_metadata(outputs_dir: Path) -> dict[str, Any]:
-    """Load the workflow index from the current or legacy metadata location."""
+    """Load the workflow index from the canonical metadata location."""
     metadata_path = workflow_metadata_path(outputs_dir)
-    if not metadata_path.exists():
-        metadata_path = outputs_dir / AGENT_METADATA_FILENAME
     if not metadata_path.exists():
         return {}
     try:
@@ -436,13 +433,7 @@ def load_agent_input_payload(outputs_dir: Path, agent_key: str) -> Any:
     record = read_last_jsonl(input_path)
     if _is_wrapped_agent_record(record, "input"):
         return record["input"]
-    if record is not None:
-        return record
-
-    legacy_record = _load_legacy_agent_record(outputs_dir, agent_key)
-    if legacy_record is not None:
-        return legacy_record.get("input_messages")
-    return None
+    return record
 
 
 def load_agent_output_payload(outputs_dir: Path, agent_key: str) -> Any:
@@ -451,75 +442,4 @@ def load_agent_output_payload(outputs_dir: Path, agent_key: str) -> Any:
     record = read_last_jsonl(output_path)
     if _is_wrapped_agent_record(record, "output"):
         return record["output"]
-    if record is not None:
-        return record
-
-    legacy_record = _load_legacy_agent_record(outputs_dir, agent_key)
-    if legacy_record is not None:
-        for key in ("output", "output_object"):
-            if key in legacy_record:
-                return legacy_record[key]
-
-    return _load_final_result_agent_output(outputs_dir, agent_key)
-
-
-def _load_legacy_agent_record(outputs_dir: Path, agent_key: str) -> dict[str, Any] | None:
-    """Load a matching record from the legacy flat agent output file."""
-    legacy_path = outputs_dir / LEGACY_AGENT_OUTPUTS_FILENAME
-    if not legacy_path.exists():
-        return None
-    try:
-        payload = json.loads(legacy_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
-    agents = payload.get("agents") if isinstance(payload, dict) else None
-    if not isinstance(agents, list):
-        return None
-
-    expected_names = {
-        AGENT_DISPLAY_NAMES.get(agent_key, agent_key).lower(),
-        agent_key.lower(),
-    }
-    if agent_key == "latex":
-        expected_names.update({"latexifier", "latex formatter", "latex"})
-    for record in reversed(agents):
-        if not isinstance(record, dict):
-            continue
-        agent_name = str(record.get("agent_name", "")).lower()
-        if agent_name in expected_names:
-            return record
-    return None
-
-
-def _load_final_result_agent_output(outputs_dir: Path, agent_key: str) -> Any:
-    """Recover a best-effort agent output from final_result.json."""
-    result_path = outputs_dir / "final_result.json"
-    if not result_path.exists():
-        return None
-    try:
-        payload = json.loads(result_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(payload, dict):
-        return None
-
-    if agent_key == "normalizer":
-        return payload.get("config")
-    if agent_key == "extracter":
-        return {"questions": payload.get("source_questions", [])}
-    if agent_key == "verifier":
-        return {"questions": payload.get("verified_questions", [])}
-    if agent_key == "generator":
-        return {"isomorphic_questions": payload.get("generated_questions", [])}
-    if agent_key == "latex":
-        filename = payload.get("latex_file") or "isomorphic_questions.tex"
-        latex_path = outputs_dir / str(filename)
-        latex_content = latex_path.read_text(encoding="utf-8") if latex_path.exists() else ""
-        return {
-            "latex_content": latex_content,
-            "filename": filename,
-            "pdf_filename": payload.get("pdf_file") or "",
-        }
-    if agent_key == "evaluation":
-        return payload.get("evaluation")
-    return None
+    return record

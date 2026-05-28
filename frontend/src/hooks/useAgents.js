@@ -3,8 +3,9 @@ import { useEffect } from 'react';
 /** Maps backend naming variants onto the frontend agent keys. */
 const AGENT_KEY_ALIASES = {
   extractor: 'extracter',
-  latex_formatter: 'latex',
-  latexformatter: 'latex',
+  latex: 'latexifier',
+  latex_formatter: 'latexifier',
+  latexformatter: 'latexifier',
 };
 
 /** Agent keys the frontend knows how to render and update. */
@@ -14,7 +15,7 @@ const KNOWN_AGENT_KEYS = new Set([
   'extracter',
   'verifier',
   'generator',
-  'latex',
+  'latexifier',
   'evaluation',
   'output',
 ]);

@@ -18,13 +18,13 @@ Optional examples:
 
     python Other/runEvals.py --limit 2
     python Other/runEvals.py --phase-pdf Other/Phase_1/0121-1.pdf
+    python Other/runEvals.py --concurrency 4
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import json
 import sys
 import time
 from datetime import datetime, timezone
@@ -41,6 +41,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from agents import RunConfig, Runner, trace  # noqa: E402
 
+from backend.src.artifacts import to_jsonable  # noqa: E402
 from backend.src.evaluation import (  # noqa: E402
     EVALUATION_OUTPUTS_DIRNAME,
     EVALUATION_REPORT_FILENAME,
@@ -48,9 +49,10 @@ from backend.src.evaluation import (  # noqa: E402
 )
 from backend.src.helpers import build_json_message, upload_file_to_openai  # noqa: E402
 from backend.src.main import get_cli_openai_client  # noqa: E402
+from backend.src.safety import safe_stem
+from backend.src.safety import write_json as _safe_write_json  # noqa: E402
 from backend.src.schemas import ExtracterOutput, NormalizerOutput, SourceQuestionItem  # noqa: E402
-from backend.src.safety import safe_stem  # noqa: E402
-from backend.src.server import create_agents  # noqa: E402
+from backend.src.workflow import create_agents  # noqa: E402
 
 
 DEFAULT_SOURCE_PDF = OTHER_DIR / "physics_1_set.pdf"
@@ -58,20 +60,9 @@ DEFAULT_PHASE_DIR = OTHER_DIR / "Phase_1"
 DEFAULT_OUTPUT_PREFIX = "other-phase1-eval-batch"
 
 
-def _json_default(value: Any) -> Any:
-    if hasattr(value, "model_dump"):
-        return value.model_dump()
-    if isinstance(value, Path):
-        return str(value)
-    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
-
-
 def write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, default=_json_default),
-        encoding="utf-8",
-    )
+    """Write a JSON payload, converting Pydantic models and Paths along the way."""
+    _safe_write_json(path, to_jsonable(payload))
 
 
 def timestamp_label() -> str:
@@ -288,32 +279,6 @@ def recompute_question_only_score(report: dict[str, Any]) -> float | None:
     return round(sum(float(score) for score in scores) / len(scores), 2)
 
 
-def mark_latex_check_skipped(report: dict[str, Any], phase_pdf: Path) -> dict[str, Any]:
-    report["latex_document_check"] = {
-        "name": "latex_syntax_quality",
-        "category": "Quality control",
-        "question": "Is the generated LaTeX code free of syntax errors?",
-        "score": None,
-        "status": "skipped",
-        "reason": (
-            "Skipped for this evaluation-only run because Phase_1 contains existing "
-            "PDFs, not regenerated .tex artifacts."
-        ),
-        "latex_file": "",
-        "pdf_file": phase_pdf.name,
-    }
-
-    question_only_score = recompute_question_only_score(report)
-    report["overall_score"] = question_only_score
-    if (
-        report.get("run_status") == "completed"
-        and not report.get("error")
-        and isinstance(question_only_score, (int, float))
-    ):
-        report["status"] = "complete"
-    return report
-
-
 def report_summary(
     *,
     phase_pdf: Path,
@@ -375,12 +340,10 @@ async def run_one_phase_pdf(
             client=client,
             final_result=final_result,
             outputs_dir=output_dir,
-            latex_path=None,
-            pdf_path=phase_pdf,
             source_files=[str(source_pdf), str(phase_pdf)],
             grader_model=eval_model,
         )
-        report = mark_latex_check_skipped(report, phase_pdf)
+        report["overall_score"] = recompute_question_only_score(report)
         report_path = output_dir / EVALUATION_OUTPUTS_DIRNAME / EVALUATION_REPORT_FILENAME
         write_json(report_path, report)
 
@@ -467,6 +430,15 @@ def parse_args() -> argparse.Namespace:
             "because gpt-5.5-mini is not available on this API account."
         ),
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=2,
+        help=(
+            "Number of Phase_1 PDFs to evaluate concurrently. Defaults to 2 to "
+            "match BATCH_WORKFLOW_CONCURRENCY in the FastAPI server."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -506,23 +478,31 @@ async def async_main() -> int:
         write_json(source_output_dir / "source_extraction.json", source_extraction)
         print(f"Extracted {len(source_extraction.questions)} source questions")
 
-        reports: list[dict[str, Any]] = []
-        for index, phase_pdf in enumerate(phase_pdfs, start=1):
-            print(f"[{index}/{len(phase_pdfs)}] Evaluating {phase_pdf.name}")
-            result = await run_one_phase_pdf(
-                client=client,
-                source_pdf=source_pdf,
-                source_extraction=source_extraction,
-                phase_pdf=phase_pdf,
-                output_root=output_root,
-                run_config=run_config,
-                extract_model=args.extract_model,
-                eval_model=args.eval_model,
+        semaphore = asyncio.Semaphore(max(1, args.concurrency))
+
+        async def _evaluate_one(index: int, phase_pdf: Path) -> dict[str, Any]:
+            async with semaphore:
+                print(f"[{index}/{len(phase_pdfs)}] Evaluating {phase_pdf.name}")
+                result = await run_one_phase_pdf(
+                    client=client,
+                    source_pdf=source_pdf,
+                    source_extraction=source_extraction,
+                    phase_pdf=phase_pdf,
+                    output_root=output_root,
+                    run_config=run_config,
+                    extract_model=args.extract_model,
+                    eval_model=args.eval_model,
+                )
+                status = result.get("status", "unknown")
+                score = result.get("overall_score")
+                print(f"  [{index}/{len(phase_pdfs)}] {phase_pdf.name}: {status}, score={score}, output={result['output_folder']}")
+                return result
+
+        reports: list[dict[str, Any]] = list(
+            await asyncio.gather(
+                *(_evaluate_one(i, p) for i, p in enumerate(phase_pdfs, start=1))
             )
-            reports.append(result)
-            status = result.get("status", "unknown")
-            score = result.get("overall_score")
-            print(f"  {status}, score={score}, output={result['output_folder']}")
+        )
 
     summary = {
         "created_at": datetime.now(timezone.utc).isoformat(),

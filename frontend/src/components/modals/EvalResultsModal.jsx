@@ -405,7 +405,7 @@ export default function EvalResultsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Evaluation Results"
+      title="Evaluator Results"
       size="full"
       contentClassName="eval-results-modal"
       footer={(

@@ -5,15 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-try:
-    from .schemas import AGENT_INPUT_TYPES
-except ImportError:
-    from schemas import AGENT_INPUT_TYPES
+from ..paths import TESTING_DIR
+from ..schemas import AGENT_INPUT_TYPES
 
 
-THIS_DIR = Path(__file__).resolve().parent
-BACKEND_ROOT = THIS_DIR.parent
-TESTING_DIR = BACKEND_ROOT / "data" / "testing"
 AGENT_INPUTS_DIR = TESTING_DIR / "agent_inputs"
 PROMPTS_DIR = TESTING_DIR / "prompts"
 SOURCES_DIR = TESTING_DIR / "sources"

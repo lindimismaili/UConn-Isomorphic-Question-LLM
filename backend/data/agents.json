@@ -35,13 +35,13 @@
     "outputTo": "Latexifier",
     "useCodeInterpreter": true
   },
-  "latex": {
+  "latexifier": {
     "name": "Latexifier",
     "description": "Converts questions to LaTeX format",
     "model": "gpt-5.5",
     "reasoning": "medium",
     "inputFrom": "Generator",
-    "outputTo": "Evaluation",
+    "outputTo": "Evaluator",
     "useCodeInterpreter": false
   }
 }

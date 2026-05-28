@@ -8,7 +8,7 @@ const INPUT_AGENT_KEYS = [
   'extracter',
   'verifier',
   'generator',
-  'latex',
+  'latexifier',
   'evaluation',
 ];
 

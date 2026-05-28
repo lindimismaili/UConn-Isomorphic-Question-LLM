@@ -1,10 +1,12 @@
 {
   "model": "gpt-5.5",
+  "reasoning": "low",
   "scale": "pass_fail",
   "criteria": [
     {
       "name": "preserve_physical_content",
       "category": "Preservation",
+      "na_allowed": false,
       "question": "Does the generated question preserve the original physical content?",
       "guidance": [
         "Reward preservation of the underlying physics concept, law, model, and reasoning path.",
@@ -22,16 +24,17 @@
     {
       "name": "scenario_variation",
       "category": "Variation",
+      "na_allowed": false,
       "question": "Does the generated question use a different surface scenario while preserving the same underlying physics task?",
       "guidance": [
         "This criterion rewards appropriate scenario variation. A new object, setting, or story is good when the same physics reasoning is preserved.",
-        "Any genuine surface change in the scenario passes — e.g., swapping a baseball for an apple, a cow for a runner, a raven for a drone — provided the underlying physics task is unchanged.",
+        "Any genuine surface change in the scenario passes \u2014 e.g., swapping a baseball for an apple, a cow for a runner, a raven for a drone \u2014 provided the underlying physics task is unchanged.",
         "Do not score low merely because the generated scenario is different from the source. That is the point of this criterion.",
         "For abstract equation or unit-conversion items with no story, changed quantities, units, coefficients, or objects can count as scenario variation if the same kind of task remains.",
         "Only fail when the scenario is copied verbatim or token-rewritten with no meaningful contextual change, OR when the new scenario breaks the physics isomorphism."
       ],
       "scoring_guide": [
-        "Pass (1): at least one concrete surface element of the scenario changed (object, setting, story, or — for abstract items — quantities/coefficients) while the physics task remains intact.",
+        "Pass (1): at least one concrete surface element of the scenario changed (object, setting, story, or \u2014 for abstract items \u2014 quantities/coefficients) while the physics task remains intact.",
         "Fail (0): the scenario is essentially copied or only superficially rephrased with no real contextual change, or the change broke the physics mapping."
       ]
     },
@@ -41,7 +44,7 @@
       "na_allowed": true,
       "question": "If the original question is numerical, does the generated question appropriately modify numerical values?",
       "guidance": [
-        "If the SOURCE question contains no meaningful numerical content (purely conceptual or purely symbolic with no concrete values to vary), this criterion is Not Applicable — return -1.",
+        "If the SOURCE question contains no meaningful numerical content (purely conceptual or purely symbolic with no concrete values to vary), this criterion is Not Applicable \u2014 return -1.",
         "For numerical source questions, values should usually be changed and all dependent values should be recalculated consistently.",
         "The generated final answer, answer letter, or scale factor may differ from the source if the new numbers support it.",
         "Check that units stay dimensionally consistent and that distractors remain plausible for the new values.",
@@ -56,6 +59,7 @@
     {
       "name": "physics_correctness",
       "category": "Quality control",
+      "na_allowed": false,
       "question": "Is the generated question free of physics errors or misconceptions?",
       "guidance": [
         "Judge the generated question on its own physics correctness.",
@@ -74,7 +78,7 @@
       "na_allowed": true,
       "question": "Do all numerical values have physically reasonable magnitudes and units?",
       "guidance": [
-        "If the SOURCE question contains no meaningful numerical content (purely conceptual or purely symbolic), this criterion is Not Applicable — return -1.",
+        "If the SOURCE question contains no meaningful numerical content (purely conceptual or purely symbolic), this criterion is Not Applicable \u2014 return -1.",
         "Check dimensional consistency in the generated stem and answer choices.",
         "Values should be plausible for the stated setting unless the source intentionally uses abstract or fictional units.",
         "A wrong distractor can still be reasonable if it is a plausible wrong value with appropriate units.",
@@ -89,10 +93,11 @@
     {
       "name": "distractor_structure_preservation",
       "category": "Preservation",
+      "na_allowed": false,
       "question": "Does the generated question preserve the logical structure of the distractors?",
       "guidance": [
         "PRIMARY EVIDENCE: each source option carries a `distractor_logic` field naming the specific solver error or structural role it encodes (e.g., 'uses mass instead of weight', 'sign flip on recoil term', 'forgets km/h to m/s conversion', 'structural: none_of_the_above', or 'generic_plausible_value'). Grade by checking that every source role is reproduced in the generated option set.",
-        "For each source distractor role, verify the generated set contains a matching distractor that (a) declares the same `distractor_logic` label and (b) numerically/conceptually results from applying that same error to the NEW numbers and scenario. Recompute the expected wrong value yourself to confirm — a matching label with a value that does not actually follow from that error is a fail.",
+        "For each source distractor role, verify the generated set contains a matching distractor that (a) declares the same `distractor_logic` label and (b) numerically/conceptually results from applying that same error to the NEW numbers and scenario. Recompute the expected wrong value yourself to confirm \u2014 a matching label with a value that does not actually follow from that error is a fail.",
         "Compare answer-choice roles and misconception patterns, not option letters. The generated question may reorder choices and move the correct answer.",
         "Reward one-to-one preservation across the full set: component-vs-magnitude errors, coefficient-vs-derivative errors, sign errors, unit-conversion errors, unit-dimension errors, or overgeneralized modeling assumptions.",
         "Substituting a generic 'plausible wrong number' for a role that originally encoded a specific misconception is a fail, even if the new number looks reasonable. The only exception is when the source's own `distractor_logic` is explicitly `generic_plausible_value`.",
@@ -109,6 +114,7 @@
     {
       "name": "clerical_quality",
       "category": "Quality control",
+      "na_allowed": false,
       "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
       "guidance": [
         "Check spelling, grammar, missing symbols, broken math notation, duplicated or missing options, and wording that creates ambiguity.",
@@ -121,16 +127,9 @@
       ]
     },
     {
-      "name": "latex_syntax_quality",
-      "category": "Quality control",
-      "question": "Is the generated LaTeX code free of syntax errors?",
-      "guidance": [
-        "This criterion is evaluated from generated LaTeX and PDF artifacts instead of model grading."
-      ]
-    },
-    {
       "name": "solvable_and_specified",
       "category": "Quality control",
+      "na_allowed": false,
       "question": "Is the generated question fully specified and solvable as written?",
       "guidance": [
         "The generated question should provide enough information for a unique intended answer.",

@@ -9,7 +9,7 @@ const AGENT_PROMPT_MAP = {
   extracter: 'extracter',
   verifier: 'verifier',
   generator: 'generator',
-  latex: 'latex',
+  latexifier: 'latexifier',
 };
 
 const AGENT_PROMPT_TITLES = {
@@ -17,7 +17,7 @@ const AGENT_PROMPT_TITLES = {
   extracter: 'Extracter',
   verifier: 'Verifier',
   generator: 'Generator',
-  latex: 'Latexifier',
+  latexifier: 'Latexifier',
 };
 
 const DEFAULT_TIME_ZONE = 'America/New_York';

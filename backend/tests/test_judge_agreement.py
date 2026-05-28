@@ -5,12 +5,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent / "src"
+ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import pytest  # noqa: E402
-from judge_agreement import (  # noqa: E402
+from backend.src.tools.judge_agreement import (  # noqa: E402
     cohen_kappa,
     compare_grids,
     load_xlsx_grids,

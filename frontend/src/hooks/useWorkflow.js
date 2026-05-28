@@ -80,8 +80,8 @@ const AGENT_LABELS = {
   extracter: 'Extracter',
   verifier: 'Verifier',
   generator: 'Generator',
-  latex: 'Latexifier',
-  evaluation: 'Evaluation',
+  latexifier: 'Latexifier',
+  evaluation: 'Evaluator',
   output: 'Output',
 };
 
@@ -206,7 +206,7 @@ export function useWorkflow(dispatch) {
    * @param {AbortSignal} signal - Abort signal for this run.
    */
   const pollWorkflow = useCallback(async (workflowId, setupElapsedSeconds, signal, runId) => {
-    const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latex', 'evaluation', 'output'];
+    const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
     const statusByAgent = {};
 
     while (true) {

@@ -5,10 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Iterable
 
-try:
-    from .schemas import GeneratorOutput, SourceQuestionItem, VerifierOutput
-except ImportError:
-    from schemas import GeneratorOutput, SourceQuestionItem, VerifierOutput
+from .schemas import GeneratorOutput, SourceQuestionItem, VerifierOutput
 
 
 @dataclass
@@ -66,6 +63,17 @@ def validate_verifier_output(
                 report.add(f"Verifier omitted source_id {source.source_id}", source.source_id)
             continue
         if verified.has_figure:
+            if verified.question_type == "multiple_choice" or verified.options:
+                if not _has_explanations(verified.options):
+                    report.add(
+                        f"Verifier source_id {verified.source_id} (figure) has missing option explanations",
+                        verified.source_id,
+                    )
+                if not _has_distractor_logic(verified.options):
+                    report.add(
+                        f"Verifier source_id {verified.source_id} (figure) has missing option distractor_logic",
+                        verified.source_id,
+                    )
             continue
         if verified.question_type == "multiple_choice" or verified.options:
             if _correct_count(verified.options) != 1:

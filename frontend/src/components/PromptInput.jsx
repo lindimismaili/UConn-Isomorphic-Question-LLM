@@ -6,11 +6,14 @@ import {
   IconTrash,
   IconSend,
   IconInfo,
-  IconZap,
 } from './Icons.jsx';
 
 /**
  * Normalizes the theme-prompt payload from `/api/dropdown`.
+ *
+ * The dropdown JSON stores only `label` and `prompt`; the `value` (used as the
+ * select option key) is derived from the label by lowercasing and replacing
+ * spaces with underscores. e.g. "Video Games" → "video_games".
  *
  * @param {unknown} raw
  * @returns {Array<{value: string, label: string, prompt: string}>}
@@ -20,11 +23,15 @@ function normalizeDropdownItems(raw) {
   if (!Array.isArray(source)) return [];
 
   return source
-    .map((item) => ({
-      value: String(item?.value || item?.label || '').trim(),
-      label: String(item?.label || item?.value || '').trim(),
-      prompt: String(item?.prompt || '').trim(),
-    }))
+    .map((item) => {
+      const label = String(item?.label || '').trim();
+      const value = label.toLowerCase().replace(/\s+/g, '_');
+      return {
+        value,
+        label,
+        prompt: String(item?.prompt || '').trim(),
+      };
+    })
     .filter((item) => item.value && item.label && item.prompt);
 }
 
@@ -62,12 +69,6 @@ export default function PromptInput({
   onClearAgents,
   onShowFiles,
   onShowHelp,
-  isCreateDataRunning,
-  onShowTestFiles,
-  onCreateData,
-  onInputToAgent,
-  runEvaluations,
-  onRunEvaluationsChange,
 }) {
   const [resetFeedback, setResetFeedback] = useState(false);
   const [uploadWarning, setUploadWarning] = useState(false);
@@ -178,18 +179,7 @@ export default function PromptInput({
 
       <div className="card-body">
         <div className="prompt-layout">
-          <textarea
-            id="prompt-input"
-            name="prompt"
-            className="prompt-input"
-            placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'"
-            value={prompt}
-            onChange={(e) => onPromptChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isRunning || serviceInactive}
-          />
-
-          <div className="prompt-dropdown-panel prompt-control-section">
+          <div className="prompt-theme-row">
             <label className="prompt-dropdown-label" htmlFor="theme-prompt-select">
               Theme Prompt
             </label>
@@ -207,55 +197,20 @@ export default function PromptInput({
                 </option>
               ))}
             </select>
-            <p className="prompt-dropdown-help">
-              Adds a theme instruction to the prompt.
-            </p>
           </div>
 
-          <div className="prompt-files-panel prompt-control-section">
-            <div className="upload-group">
-              <button
-                className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
-                onClick={() => {
-                  if (limitReached) {
-                    handleUploadWarning();
-                    return;
-                  }
-                  fileInputRef.current?.click();
-                }}
-                disabled={isRunning || serviceInactive}
-              >
-                <IconUpload className="btn-icon" />
-                <span className="btn-label">{uploadWarning ? 'Too many files!' : 'Upload Files'}</span>
-              </button>
-              <span className="file-limit-text">Limit: 5 Files</span>
-              <input
-                ref={fileInputRef}
-                id="source-files-input"
-                name="source_files"
-                type="file"
-                multiple
-                accept=".pdf,.docx,.doc,.txt"
-                hidden
-                onChange={handleFileSelect}
-              />
-            </div>
+          <textarea
+            id="prompt-input"
+            name="prompt"
+            className="prompt-input"
+            placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'"
+            value={prompt}
+            onChange={(e) => onPromptChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isRunning || serviceInactive}
+          />
 
-            <button
-              className="btn btn-secondary file-count-btn"
-              onClick={onShowFiles}
-              type="button"
-              aria-label={`Files - ${files.length} selected files to upload`}
-            >
-              <IconFile className="btn-icon" />
-              <span className="file-count-copy">
-                <span>Files - {files.length}</span>
-                <span>selected files to upload</span>
-              </span>
-            </button>
-          </div>
-
-          <div className="prompt-workflow-actions prompt-control-section">
+          <div className="prompt-actions-row">
             <button
               className="btn btn-primary send-action"
               onClick={handleSend}
@@ -264,6 +219,43 @@ export default function PromptInput({
               <IconSend className="btn-icon" />
               <span>Send</span>
             </button>
+
+            <button
+              className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
+              onClick={() => {
+                if (limitReached) {
+                  handleUploadWarning();
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
+              disabled={isRunning || serviceInactive}
+              title="Upload up to 5 files (.pdf, .docx, .doc, .txt)"
+            >
+              <IconUpload className="btn-icon" />
+              <span className="btn-label">{uploadWarning ? 'Too many files!' : 'Upload Files'}</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              id="source-files-input"
+              name="source_files"
+              type="file"
+              multiple
+              accept=".pdf,.docx,.doc,.txt"
+              hidden
+              onChange={handleFileSelect}
+            />
+
+            <button
+              className="btn btn-secondary file-count-btn"
+              onClick={onShowFiles}
+              type="button"
+              aria-label={`Files - ${files.length} selected files to upload`}
+            >
+              <IconFile className="btn-icon" />
+              <span className="btn-label">Files - {files.length}</span>
+            </button>
+
             <button
               className={`btn btn-secondary${resetFeedback ? ' btn-feedback' : ''}`}
               onClick={handleReset}
@@ -271,51 +263,6 @@ export default function PromptInput({
             >
               <IconTrash className="btn-icon" />
               <span className="btn-label">Reset</span>
-            </button>
-          </div>
-
-          <div className="developer-tools-inline">
-            <div className="developer-tools-inline-header">Developer Tools</div>
-            <label className="developer-toggle">
-              <input
-                type="checkbox"
-                checked={runEvaluations}
-                onChange={(event) => onRunEvaluationsChange(event.target.checked)}
-                disabled={isRunning}
-              />
-              <span className="developer-toggle-track" aria-hidden="true">
-                <span className="developer-toggle-thumb" />
-              </span>
-              <span className="developer-toggle-label">Run Evaluations</span>
-            </label>
-            <button
-              className="btn btn-secondary"
-              onClick={onCreateData}
-              disabled={isRunning || (serviceInactive && !isCreateDataRunning)}
-              type="button"
-            >
-              <IconZap className="btn-icon" />
-              <span className="btn-label">
-                {isCreateDataRunning ? 'Test Data Running...' : 'Create Test Data'}
-              </span>
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={onInputToAgent}
-              disabled={isRunning || serviceInactive}
-              type="button"
-            >
-              <IconUpload className="btn-icon" />
-              <span className="btn-label">Input To Agent</span>
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={onShowTestFiles}
-              disabled={serviceInactive || isRunning}
-              type="button"
-            >
-              <IconFile className="btn-icon" />
-              <span className="btn-label">Browse Test Files</span>
             </button>
           </div>
         </div>
