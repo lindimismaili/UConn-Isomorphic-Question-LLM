@@ -20,28 +20,34 @@ Actual runtime pipeline:
 Distinction:
 
 - `backend/data/agents.json` defines only the 5 OpenAI agents.
-- `setup`, `evaluation`, and `output` are orchestrated by application code in
-  `backend/src/server.py` and `backend/src/main.py`.
+- `setup`, `evaluation`, and `output` are orchestrated by the shared workflow
+  engine (`backend/src/workflow/engine.py`), which both the server and CLI call.
 - The frontend displays a 6-stage visible pipeline ending in `evaluation`.
 
 ## Source-Of-Truth Paths
 
 Backend:
 
-- `backend/src/server.py` — FastAPI app and API routes
-- `backend/src/run.py` — Uvicorn launcher; auto-rebuilds `dist/` when stale
-- `backend/src/main.py` — CLI workflow orchestration
+- `backend/src/server.py` — FastAPI app factory (CORS, lifespan, static mount).
+  Launch with `uvicorn backend.src.server:app` or `python -m backend.src.server`.
+- `backend/src/api/` — route handlers split by domain (`health`, `config`,
+  `files`, `workflows`, `batch`) plus `state.py` (in-memory registries, config,
+  helpers, workflow-runner wrappers, background pruning loop)
+- `backend/src/workflow/` — shared engine, agent factory, payload builders,
+  resume/replay helpers, SQLite `store.py` (single source of truth for orchestration)
+- `backend/src/main.py` — CLI workflow orchestration (delegates to the engine)
 - `backend/src/container.py` — shared OpenAI container bootstrap + LaTeX compile
-- `backend/src/evaluation.py` — OpenAI Evals integration; LaTeX `.log` scanning;
+- `backend/src/evaluation.py` — OpenAI Evals integration;
   `na_count`/`coverage_mismatch` reporting
 - `backend/src/pipeline_validation.py` — deterministic generator/verifier
   contract checks, incl. `validate_distractor_logic_preservation`
-- `backend/src/judge_agreement.py` — judge ↔ professor κ / agreement metrics
-- `backend/src/schemas.py`, `backend/src/helpers.py`, `backend/src/safety.py`
+- `backend/src/tools/judge_agreement.py` — judge ↔ professor κ / agreement metrics
+- `backend/src/schemas.py`, `backend/src/helpers.py`, `backend/src/safety.py`,
+  `backend/src/paths.py`
 - `backend/data/agents.json` — agent + model + reasoning config
 - `backend/data/prompts/*.txt` — agent instructions
 - `backend/data/rubric.json` — eval rubric (pass/fail scale, grader = gpt-5.5)
-- `backend/data/skills/**`, `backend/data/evaluation/**`
+- `backend/data/evaluation/**` — bundled source PDFs for the Create Data batch flow
 
 Frontend:
 
@@ -56,10 +62,7 @@ Tooling / analysis:
 - `Other/compare_to_professor.py` — CLI: judge ↔ professor κ, confusion,
   disagreements; appends an `Agreement` sheet to `compiled.xlsx`
 - `Other/Evaluation.xlsx` — professor's hand-graded ground-truth grid
-- `docs/ANALYSIS.md` — full pipeline audit + overhaul notes
-- `pyproject.toml`, `.github/workflows/ci.yml` — ruff + pytest CI
-
-Ignore the top-level `src/` directory; it only contains Python cache artifacts.
+- `pyproject.toml` — ruff + pytest config (line length 110, target py310)
 
 ## Commands That Work
 
@@ -72,15 +75,16 @@ python3.12 -m venv .venv
 npm -C frontend install
 ```
 
-Full app locally (frontend served from `dist/`):
+Full app locally (frontend served from `dist/`; build it first with
+`npm -C frontend run build`):
 
 ```bash
-.venv/bin/python -m backend.src.run --host 127.0.0.1 --port 8000
+.venv/bin/python -m uvicorn backend.src.server:app --host 127.0.0.1 --port 8000
 ```
 
 Available at `http://127.0.0.1:8000`.
 
-Frontend-only Vite dev server (proxies `/api`, `/version.json`, `/data`, `/skills`
+Frontend-only Vite dev server (proxies `/api`, `/version.json`, `/data`
 to `http://127.0.0.1:8000`; override with `VITE_BACKEND_URL`):
 
 ```bash
@@ -116,32 +120,31 @@ python Other/compare_to_professor.py Other/<timestamp>-other-phase1-eval-batch
 ## Environment Variables
 
 `.env` at the repo root is loaded manually by backend code if values aren't
-already in the environment.
+already in the environment. `.env` is gitignored; copy `.env.example` to `.env`
+and fill it in. Never commit real keys.
 
 Required for real workflow execution:
 
 - `OPENAI_API_KEY`
 
-Optional app/runtime vars:
+Optional app/runtime vars (see `.env.example` for the full list + defaults):
 
 - `MAX_UPLOAD_BYTES`
-- `WORKFLOW_TTL_SECONDS`
-- `WORKFLOW_MAX_ENTRIES`
+- `WORKFLOW_TTL_SECONDS`, `WORKFLOW_MAX_ENTRIES`
+- `PRUNE_INTERVAL_SECONDS` (background prune cadence, default 60)
 - `OPENAI_STATUS_TIMEOUT_SECONDS`
 - `BATCH_WORKFLOW_CONCURRENCY` (default 2)
-- `OPENAI_CONTAINER_BOOTSTRAP_MODEL`
-- `OPENAI_CONTAINER_ALLOWED_DOMAINS`
-
-Deploy-related vars also present in `.env` (not required for local startup):
-`GITHUB_SSH_KEY_PATH`, `GITHUB_SSH_KEY_PASSPHRASE`, `GIT_FORCE_BRANCH`.
+- `OPENAI_CONTAINER_BOOTSTRAP_MODEL`, `OPENAI_CONTAINER_ALLOWED_DOMAINS`
 
 ## Architecture
 
 ### Backend
 
-- FastAPI in `backend/src/server.py`; uvicorn launcher in `backend/src/run.py`.
-- In-memory `workflows` and `batch_jobs` dicts; no database. Pruned by TTL +
-  max entry count; not durable across restarts.
+- FastAPI app factory in `backend/src/server.py`; routers under `backend/src/api/`.
+  Launch with `uvicorn backend.src.server:app`.
+- In-memory `workflows` and `batch_jobs` dicts in `backend/src/api/state.py`,
+  mirrored to a SQLite store (`backend/src/workflow/store.py`). Pruned by TTL +
+  max entry count on a background interval (not on the request path).
 - Uploads → `backend/uploads/<sessionId>/`.
 - Run outputs → `backend/outputs/<timestamp>/`.
 - If `dist/index.html` is missing, falls back to a simple HTML message.
@@ -175,33 +178,33 @@ Configured agents (`backend/data/agents.json`):
 4. `generator` — creates isomorphic questions
 5. `latex` — produces LaTeX and triggers PDF compilation in the container
 
-Runtime-managed (`backend/src/main.py` / `server.py`):
+Runtime-managed by the engine (`backend/src/workflow/engine.py`):
 
 6. `evaluation` — runs OpenAI Evals; writes the report + spreadsheet + rubric snapshot
-7. `output` — writes `final_result.json`, `agent_outputs.json`, file metadata
+7. `output` — writes `final_result.json`, `agent_outputs/` artifacts, file metadata
 
 ## API Surface
 
-Routes in `backend/src/server.py`:
+Routes live in `backend/src/api/` (registered on the app in `server.py`):
 
 - `GET /api/health`, `GET /api/openai/status`, `GET /version.json`
 - `POST /api/upload` (5 files max, 20 MB each by default; `.pdf .docx .doc .txt`)
-- `GET /api/sliders`, `GET /api/agents`
+- `GET /api/dropdown`, `GET /api/rubric`, `GET /api/agents`
 - `GET /api/prompts/{prompt_name}`
-- `GET /api/skills`, `GET /api/skills/{skill_name}`
 - `GET /api/evaluation/files`
 - `POST /api/workflow/start`
+- `POST /api/workflow/rerun-from-agent`, `POST /api/workflow/start-from-agent-input`
 - `GET /api/workflow/{workflow_id}/status`
 - `GET /api/workflow/{workflow_id}/result`
 - `GET /api/workflow/{workflow_id}/stream` (SSE; current frontend polls instead)
-- `GET /api/download/{workflow_id}/{filename}`
-- `POST /api/create-data/start`
+- `GET /api/download/{workflow_id}/{file_path}`
+- `POST /api/create-data/start`, `POST /api/create-data/{batch_id}/stop`
 - `GET /api/create-data/{batch_id}/status`
 - `GET /api/create-data/{batch_id}/result`
 
 ## Evaluation System
 
-Lives in `backend/src/evaluation.py`. See `docs/ANALYSIS.md` for the full audit.
+Lives in `backend/src/evaluation.py`.
 
 Current behavior:
 
@@ -252,18 +255,19 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 | Task | Files |
 |---|---|
 | Change models / reasoning / tool usage | `backend/data/agents.json` |
-| Change agent behavior / instructions | `backend/data/prompts/*.txt`, `backend/data/skills/**` |
-| Workflow orchestration / API | `backend/src/server.py`, `backend/src/main.py`, `backend/src/helpers.py`, `backend/src/schemas.py` |
+| Change agent behavior / instructions | `backend/data/prompts/*.txt` |
+| Workflow orchestration | `backend/src/workflow/engine.py`, `backend/src/workflow/payloads.py`, `backend/src/main.py` |
+| API routes / server state | `backend/src/api/**`, `backend/src/server.py` |
 | Deterministic pipeline validation | `backend/src/pipeline_validation.py` |
 | Eval scoring / reporting | `backend/src/evaluation.py`, `backend/data/rubric.json` |
-| Judge ↔ professor agreement | `backend/src/judge_agreement.py`, `Other/compare_to_professor.py` |
+| Judge ↔ professor agreement | `backend/src/tools/judge_agreement.py`, `Other/compare_to_professor.py` |
 | Frontend UX / state | `frontend/src/App.jsx`, `frontend/src/hooks/**`, `frontend/src/components/**`, `frontend/src/styles/app.css` |
 
 ## Deployment Notes
 
-Deploy scripts target Raspberry Pi + nginx + systemd: `deploy/raspi-deploy.sh`,
-`docs/DEPLOYMENT_RPI_NGINX.md`, `docs/LIVE.md`. Treat them as operational
-guides, not source of truth for local development.
+Deploy scripts live in `deploy/` (`deploy.sh` for the systemd/uvicorn service,
+`preview.sh` for a local preview build, `DEPLOY.md` for notes). Treat them as
+operational guides, not source of truth for local development.
 
 ## Agent Warnings / Gotchas
 
@@ -274,9 +278,9 @@ guides, not source of truth for local development.
 - `frontend/README.md` is the stock Vite template, not project docs.
 - Canonical spelling is `extracter` everywhere.
 - Frontend pipeline ends at `evaluation`; backend also tracks `output`.
-- `dist/` is generated; `backend/src/run.py` rebuilds it when stale.
-- Workflow state is in-memory only — server restart drops active runs.
-- No ORM, no database.
+- `dist/` is generated by `npm -C frontend run build`; it is gitignored.
+- Workflow state is in-memory plus a SQLite mirror (`backend/runtime/`); active
+  in-flight runs do not resume across a restart.
 - Model id `gpt-5.5` is intentional (kept across `agents.json` and
   `rubric.json`); do not "fix" it.
 
