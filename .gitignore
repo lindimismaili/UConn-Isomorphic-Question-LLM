@@ -36,7 +36,6 @@ coverage.xml
 *old/
 
 # IDEs / editors
-.vscode/
 .idea/
 *.swp
 

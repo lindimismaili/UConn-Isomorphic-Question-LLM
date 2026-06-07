@@ -89,16 +89,16 @@ Frontend dev proxy:
 
 ## Local Server
 
-Run the local backend plus Vite dev UI:
+Run the local backend plus Vite hot-reload UI:
 
 ```bash
-bash deploy/test.sh
+bash deploy/preview.sh --dev
 ```
 
 Open:
 
-- `http://127.0.0.1:5173` for the Vite UI
-- `http://127.0.0.1:8000/api/health` for a quick backend check
+- `http://isomorphic.localhost:5173` for the Vite UI
+- `http://isomorphic.localhost:5173/api/health` for a quick backend check through the dev proxy
 
 To run only the backend API:
 
@@ -109,8 +109,7 @@ python -m uvicorn backend.src.server:app --host 0.0.0.0 --port 8000 --reload
 To serve the built frontend from the backend, build `dist/` first:
 
 ```bash
-npm -C frontend run build
-python -m backend.src.server
+bash deploy/preview.sh --web
 ```
 
 ## Dev UI
@@ -121,7 +120,7 @@ Run the Vite dev server in a second terminal:
 npm -C frontend run dev:ui
 ```
 
-The Vite dev server proxies API requests to `http://127.0.0.1:8000` by default.
+The Vite dev server proxies API requests to the local backend started by `deploy/preview.sh`.
 If your backend is elsewhere, set `VITE_BACKEND_URL` before starting Vite.
 
 Useful frontend commands:
@@ -194,16 +193,16 @@ Those files are the primary record of how the generated questions were judged.
 
 - [backend/BACKEND.md](backend/BACKEND.md) backend API, CLI, data folders, and maintenance notes
 - [frontend/FRONTEND.md](frontend/FRONTEND.md) Vite UI commands, proxy behavior, and build notes
-- [deploy/DEPLOY.md](deploy/DEPLOY.md) Raspberry Pi, nginx, Cloudflare Tunnel, and sync scripts
+- [deploy/DEPLOY.md](deploy/DEPLOY.md) Raspberry Pi, nginx, Cloudflare Tunnel, and local preview scripts
 
 ## Troubleshooting
 
 - `OPENAI_API_KEY` missing: the backend API can start, but workflow execution will fail until the key is set.
 - `dist/index.html` missing: run `npm -C frontend run build`, then restart `python -m backend.src.server`.
-- `crypto.hash is not a function` or Vite says Node 20.19+/22.12+ is required: upgrade Node. Node 21 is not in Vite's allowed range. On Raspberry Pi, pull the latest repo and run `bash deploy/packages.sh`; the deploy script installs Node 22 from NodeSource when the current Node is missing or too old.
+- `crypto.hash is not a function` or Vite says Node 20.19+/22.12+ is required: upgrade Node. Node 21 is not in Vite's allowed range. On Raspberry Pi, run `bash deploy/deploy.sh`; the deploy script installs Node 22 from NodeSource when the current Node is missing or too old.
 - Upload rejected: check the file extension and `MAX_UPLOAD_BYTES`.
 - Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `backend/outputs/`.
-- Frontend cannot reach the backend in dev mode: confirm the backend is on `127.0.0.1:8000` or set `VITE_BACKEND_URL`.
+- Frontend cannot reach the backend in dev mode: run `bash deploy/preview.sh --dev` and open `http://isomorphic.localhost:5173`.
 
 ## Development Notes
 
