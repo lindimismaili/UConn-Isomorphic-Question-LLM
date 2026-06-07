@@ -9,7 +9,6 @@ itself stays independent of HTTP and CLI concerns.
 from __future__ import annotations
 
 import asyncio
-import json
 import mimetypes
 import shutil
 import time
@@ -17,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
-from agents import Runner, RunConfig, trace
+from agents import RunConfig, Runner, trace
 from agents.logger import logger
 from openai import OpenAI
 
@@ -52,7 +51,13 @@ from ..pipeline_validation import (
     validate_generator_output,
     validate_verifier_output,
 )
-from ..safety import ensure_child_path, safe_filename, stable_short_hash
+from ..safety import (
+    LATEX_SUFFIXES,
+    PDF_SUFFIXES,
+    ensure_child_path,
+    safe_filename,
+    stable_short_hash,
+)
 from ..schemas import (
     ExtracterOutput,
     GeneratorOutput,
@@ -86,10 +91,6 @@ from .resume import (
     runner_input_from_upload,
     should_run_agent,
 )
-
-
-LATEX_SUFFIXES = {".tex"}
-PDF_SUFFIXES = {".pdf"}
 
 ToThread = Callable[..., Awaitable[Any]]
 TouchWorkflow = Callable[[dict[str, Any]], None]
@@ -550,9 +551,7 @@ async def run_workflow_async(
                 extracter_input_payload = retry_extract_payload
                 extracter_output = retry_extract_result.final_output
             elapsed = time.time() - start_time
-            for q in extracter_output.questions:
-                if q.options:
-                    q.question_type = "multiple_choice"
+            normalize_question_types(extracter_output.questions)
             if file_ids and not extracter_output.questions:
                 raise ValueError("Extractor returned zero questions after retry.")
             merge_extracted_metadata_into_config(normalizer_output, extracter_output)
@@ -591,9 +590,7 @@ async def run_workflow_async(
         else:
             if is_input_to_agent_run:
                 extracter_output = coerce_extracter_from_agent_input(uploaded_agent_payload)
-                for q in extracter_output.questions:
-                    if q.options:
-                        q.question_type = "multiple_choice"
+                normalize_question_types(extracter_output.questions)
                 merge_extracted_metadata_into_config(normalizer_output, extracter_output)
                 workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
                 mark_provided_agent_state(
@@ -618,9 +615,7 @@ async def run_workflow_async(
                 raise ValueError("resume_source_dir is required for cached extracter output")
             else:
                 extracter_output = load_resume_agent_output(resume_source_dir, "extracter")
-                for q in extracter_output.questions:
-                    if q.options:
-                        q.question_type = "multiple_choice"
+                normalize_question_types(extracter_output.questions)
                 merge_extracted_metadata_into_config(normalizer_output, extracter_output)
                 workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
                 mark_reused_agent_state(

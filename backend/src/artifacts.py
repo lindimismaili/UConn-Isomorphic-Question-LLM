@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .safety import utc_now_iso
 
 AGENT_ARTIFACTS_DIRNAME = "agent_outputs"
 AGENT_METADATA_FILENAME = "agent_metadata_output.json"
@@ -62,7 +62,7 @@ _WRAPPED_RECORD_MARKER_KEYS = {"recorded_at", "agent_key", "attempt"}
 
 def utc_timestamp() -> str:
     """Return the current UTC timestamp in ISO-8601 format."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return utc_now_iso()
 
 
 def to_jsonable(value: Any) -> Any:

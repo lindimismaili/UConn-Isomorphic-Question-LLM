@@ -14,7 +14,6 @@ from typing import Any
 from ..artifacts import load_agent_input_payload, load_agent_output_payload
 from ..schemas import GeneratorOutput, NewQuestionItem, SourceQuestionItem
 
-
 WORD_RE = re.compile(r"[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)?")
 SENTENCE_END_RE = re.compile(r"[.!?]+(?=\s|$)")
 LATEX_MARKER_RE = re.compile(r"(\\\(|\\\[|\$|\\frac|\\vec|\\hat|\\text\{|\\begin\{)")
@@ -278,6 +277,7 @@ def find_style_drift_issues(
                     source.parts,
                     generated.parts,
                     target["parts"],
+                    strict=False,
                 ):
                     part_messages = _compare_style_profiles(
                         label=f"Part {source_part.part_label}",

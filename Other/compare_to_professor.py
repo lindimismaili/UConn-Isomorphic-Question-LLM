@@ -25,6 +25,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "Other"))
 
 from createXLSX import create_xlsx, load_rubric  # noqa: E402
+
 from backend.src.tools.judge_agreement import (  # noqa: E402
     compare_grids,
     load_xlsx_grids,

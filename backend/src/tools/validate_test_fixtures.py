@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from ..paths import TESTING_DIR
 from ..schemas import AGENT_INPUT_TYPES
-
 
 AGENT_INPUTS_DIR = TESTING_DIR / "agent_inputs"
 PROMPTS_DIR = TESTING_DIR / "prompts"

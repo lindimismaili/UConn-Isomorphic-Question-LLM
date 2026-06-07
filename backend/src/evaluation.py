@@ -11,15 +11,15 @@ import csv
 import json
 import logging
 import time
-import traceback
-from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
 from openai import OpenAI
 
-from .paths import EVALUATOR_PROMPT_PATH, REPO_ROOT, RUBRIC_PATH
+from .artifacts import to_jsonable
+from .paths import EVALUATION_FIXTURES_DIR, EVALUATOR_PROMPT_PATH, REPO_ROOT, RUBRIC_PATH
+from .safety import utc_now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -94,11 +94,6 @@ def rubric_payload() -> dict[str, Any]:
         return {"model": "gpt-5.5", "criteria": []}
 
 
-def _utc_timestamp() -> str:
-    """Return the current UTC timestamp in ISO-8601 format."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
 def _to_jsonl(items: list[dict[str, Any]]) -> str:
     """Serialize evaluation items to JSONL text."""
     return "\n".join(json.dumps({"item": item}, ensure_ascii=False) for item in items)
@@ -128,7 +123,7 @@ def _safe_relative_display_path(path: Path) -> str:
 def _categorize_source_file(path: Path) -> str:
     """Classify a source file as a user input or a bundled test fixture."""
     try:
-        path.resolve().relative_to((DATA_DIR / "evaluation").resolve())
+        path.resolve().relative_to(EVALUATION_FIXTURES_DIR.resolve())
         return "test"
     except ValueError:
         return "input"
@@ -591,23 +586,10 @@ def _collect_output_items(client: OpenAI, eval_id: str, run_id: str) -> list[Any
     return items
 
 
-def _to_jsonable(value: Any) -> Any:
-    """Convert OpenAI eval output objects into JSON-serializable values."""
-    if hasattr(value, "model_dump"):
-        return value.model_dump(mode="json")
-    if hasattr(value, "to_dict"):
-        return value.to_dict()
-    if isinstance(value, dict):
-        return {str(key): _to_jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_to_jsonable(item) for item in value]
-    return value
-
-
 def _write_output_items_jsonl(path: Path, output_items: list[Any]) -> None:
     """Write eval output items to a JSONL file."""
     lines = [
-        json.dumps(_to_jsonable(output_item), ensure_ascii=False, default=str)
+        json.dumps(to_jsonable(output_item), ensure_ascii=False, default=str)
         for output_item in output_items
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -694,7 +676,7 @@ def _build_base_report(
     """Build the common evaluation report skeleton."""
     report: dict[str, Any] = {
         "status": status,
-        "created_at": _utc_timestamp(),
+        "created_at": utc_now_iso(),
         "rubric": rubric_criteria(),
         "grader_model": grader_model,
         "items_evaluated": items_evaluated,
@@ -927,7 +909,7 @@ def run_openai_output_evaluation(
                     output_items,
                 )
                 output_item_records = [
-                    _to_jsonable(output_item) for output_item in output_items
+                    to_jsonable(output_item) for output_item in output_items
                 ]
             criterion_scores, aggregation_notes = _aggregate_question_scores(output_items)
             expected = len(items)
@@ -962,7 +944,7 @@ def run_openai_output_evaluation(
             deterministic_checks["coverage_mismatch"] = coverage_mismatch
         report = {
             "status": report_status,
-            "created_at": _utc_timestamp(),
+            "created_at": utc_now_iso(),
             "rubric": rubric_criteria(),
             "items_evaluated": len(items),
             "grader_model": grader_model,
@@ -1005,9 +987,10 @@ def run_openai_output_evaluation(
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
     except Exception as exc:
+        logger.exception("Evaluation run failed for outputs at %s", outputs_dir)
         report = {
             "status": "failed",
-            "created_at": _utc_timestamp(),
+            "created_at": utc_now_iso(),
             "rubric": rubric_criteria(),
             "items_evaluated": len(items),
             "grader_model": grader_model,
@@ -1016,7 +999,6 @@ def run_openai_output_evaluation(
             "overall_score": _compute_overall_score({}),
             "passing_score_threshold": PASSING_SCORE_THRESHOLD,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
             "deterministic_checks": deterministic_checks,
         }
         if dataset_path.exists():

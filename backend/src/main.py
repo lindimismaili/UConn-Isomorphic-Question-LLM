@@ -13,6 +13,7 @@ from __future__ import annotations
 # insert is a no-op because the repo root is already on sys.path.
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import argparse
@@ -28,17 +29,13 @@ from backend.src.bootstrap import load_dotenv as _load_dotenv
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
 from backend.src.paths import (
-    BACKEND_ROOT,
     ENV_PATH,
+    OUTPUTS_DIR,
     QUESTION_DATA_DIR,
 )
 from backend.src.safety import create_unique_run_dir
 from backend.src.schemas import WorkflowInput, WorkflowResult
 from backend.src.workflow import run_workflow_async
-
-
-PROJECT_ROOT = BACKEND_ROOT
-
 
 _load_dotenv(ENV_PATH)
 
@@ -83,7 +80,7 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
     client = get_cli_openai_client()
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     outputs_dir, output_folder_label = create_unique_run_dir(
-        PROJECT_ROOT / "outputs",
+        OUTPUTS_DIR,
         f"cli-{timestamp}",
     )
     workflow_record = _new_cli_workflow_record()

@@ -13,6 +13,7 @@ Provides REST API endpoints for:
 # `uvicorn backend.src.server:app` modes the insert is a harmless no-op.
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import asyncio
@@ -28,14 +29,13 @@ from typing import Any, Optional
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from agents.logger import logger
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import ValidationError
-
-from agents.logger import logger
 from openai import OpenAI
+from pydantic import ValidationError
 
 from backend.src.artifacts import WORKFLOW_AGENT_SEQUENCE, load_source_file_paths
 from backend.src.bootstrap import load_dotenv as _load_dotenv
@@ -44,17 +44,18 @@ from backend.src.evaluation import rubric_payload as _load_rubric_payload
 from backend.src.helpers import resolve_prompt_path
 from backend.src.paths import (
     AGENTS_CONFIG_PATH,
-    BACKEND_ROOT,
-    DATA_DIR,
     DIST_DIR,
+    DROPDOWN_PATH,
     ENV_PATH,
-    EVALUATION_FIXTURES_DIR as EVALUATION_DIR,
     OUTPUTS_DIR,
     PROMPTS_DIR,
-    REPO_ROOT,
+    RUBRIC_PATH,
     RUNTIME_DIR,
     UPLOADS_DIR,
     VERSION_PATHS,
+)
+from backend.src.paths import (
+    EVALUATION_FIXTURES_DIR as EVALUATION_DIR,
 )
 from backend.src.safety import (
     create_unique_run_dir,
@@ -63,21 +64,27 @@ from backend.src.safety import (
     safe_stem,
     stable_short_hash,
     unique_child_name,
+    utc_now_iso,
     write_json,
 )
 from backend.src.schemas import AGENT_INPUT_TYPES
 from backend.src.workflow import (
     extract_agent_input_payload as _extract_agent_input_payload,
+)
+from backend.src.workflow import (
     run_workflow_async as _engine_run_workflow_async,
 )
-from backend.src.workflow.resume import agent_input_has_generated_questions as _agent_input_has_generated_questions
+from backend.src.workflow.resume import (
+    agent_input_has_generated_questions as _agent_input_has_generated_questions,
+)
 from backend.src.workflow.store import WorkflowStore
 
 # =============================================================================
 # Configuration
 # =============================================================================
 
-PROJECT_ROOT = BACKEND_ROOT
+_load_dotenv(ENV_PATH)
+
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt"}
 ALLOWED_AGENT_INPUT_EXTENSIONS = {".json", ".jsonl", ".txt"}
 SOURCE_FILE_INPUT_AGENTS = {"normalizer", "extracter"}
@@ -110,23 +117,6 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 EVALUATION_DIR.mkdir(parents=True, exist_ok=True)
-
-
-_load_dotenv(ENV_PATH)
-
-# Refresh environment-derived values after loading the project .env file.
-MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(MAX_UPLOAD_BYTES)))
-WORKFLOW_TTL_SECONDS = int(os.getenv("WORKFLOW_TTL_SECONDS", str(WORKFLOW_TTL_SECONDS)))
-WORKFLOW_MAX_ENTRIES = int(os.getenv("WORKFLOW_MAX_ENTRIES", str(WORKFLOW_MAX_ENTRIES)))
-OUTPUT_RETENTION_SECONDS = int(os.getenv("OUTPUT_RETENTION_SECONDS", str(OUTPUT_RETENTION_SECONDS)))
-OUTPUT_MAX_RUNS = int(os.getenv("OUTPUT_MAX_RUNS", str(OUTPUT_MAX_RUNS)))
-OUTPUT_MAX_BYTES = int(os.getenv("OUTPUT_MAX_BYTES", str(OUTPUT_MAX_BYTES)))
-UPLOAD_RETENTION_SECONDS = int(os.getenv("UPLOAD_RETENTION_SECONDS", str(UPLOAD_RETENTION_SECONDS)))
-UPLOAD_MAX_BYTES = int(os.getenv("UPLOAD_MAX_BYTES", str(UPLOAD_MAX_BYTES)))
-ARTIFACT_CLEANUP_INTERVAL_SECONDS = int(os.getenv("ARTIFACT_CLEANUP_INTERVAL_SECONDS", str(ARTIFACT_CLEANUP_INTERVAL_SECONDS)))
-ACTIVE_WORKFLOW_STALE_SECONDS = int(os.getenv("ACTIVE_WORKFLOW_STALE_SECONDS", str(ACTIVE_WORKFLOW_STALE_SECONDS)))
-OPENAI_WORKFLOW_BLOCKING_CONCURRENCY = max(1, int(os.getenv("OPENAI_WORKFLOW_BLOCKING_CONCURRENCY", str(OPENAI_WORKFLOW_BLOCKING_CONCURRENCY))))
-BATCH_WORKFLOW_CONCURRENCY = max(1, int(os.getenv("BATCH_WORKFLOW_CONCURRENCY", str(BATCH_WORKFLOW_CONCURRENCY))))
 
 _openai_client: Optional[OpenAI] = None
 workflow_store = WorkflowStore(RUNTIME_DIR / "workflows.sqlite3")
@@ -290,14 +280,11 @@ batch_tasks: dict[str, asyncio.Task] = {}
 TERMINAL_STATUSES = {"completed", "errored", "cancelled", "lost"}
 LOST_STATUS = "lost"
 UPLOAD_MANIFEST_FILENAME = "manifest.json"
-UPLOAD_SOURCE_EXTENSIONS = ALLOWED_UPLOAD_EXTENSIONS
-LATEX_SUFFIXES = {".tex"}
-PDF_SUFFIXES = {".pdf"}
 
 
 def _workflow_now() -> str:
     """Return the server's workflow timestamp string."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return utc_now_iso()
 
 
 def _workflow_id_for_record(target: dict[str, Any]) -> str:
@@ -996,7 +983,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
         manifest = {"sessionId": session_id, "files": []}
         used_names: set[str] = set()
         logger.info("Created session directory: %s", session_dir)
-        
+
         for file in files:
             if file.filename:
                 # Sanitize filename to prevent path traversal
@@ -1016,7 +1003,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
                 file_path = session_dir / stored_name
                 file_id = stable_short_hash(f"{session_id}:{stored_name}:{len(used_names)}", 12)
                 logger.info("Saving file: %s", stored_name)
-                
+
                 try:
                     total_size = 0
                     with open(file_path, "wb") as f:
@@ -1049,8 +1036,8 @@ async def upload_files(files: list[UploadFile] = File(...)):
                         raise
                     raise HTTPException(
                         status_code=500,
-                        detail=f"Failed to save file {original_name}: {str(file_error)}"
-                    )
+                        detail=f"Failed to save file {original_name}",
+                    ) from file_error
                 finally:
                     await file.close()
         _write_upload_manifest(session_dir, manifest)
@@ -1058,8 +1045,9 @@ async def upload_files(files: list[UploadFile] = File(...)):
         raise
     except Exception as e:
         logger.error("Upload error: %s", e)
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-    
+        raise HTTPException(status_code=500, detail="Upload failed") from e
+
+
     return {
         "success": True,
         "sessionId": session_id,
@@ -1070,41 +1058,40 @@ async def upload_files(files: list[UploadFile] = File(...)):
 @app.get("/api/dropdown")
 async def get_dropdown():
     """Get the prompt dropdown configuration for the frontend."""
-    dropdown_path = DATA_DIR / "dropdown.json"
-    if not dropdown_path.exists():
+    if not DROPDOWN_PATH.exists():
         raise HTTPException(status_code=404, detail="Dropdown configuration not found")
 
     try:
-        return json.loads(dropdown_path.read_text(encoding="utf-8"))
+        return json.loads(DROPDOWN_PATH.read_text(encoding="utf-8"))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load dropdown: {str(e)}")
+        logger.error("Failed to load dropdown configuration: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to load dropdown configuration") from e
 
 
 @app.get("/api/rubric")
 async def get_rubric():
     """Get the evaluation rubric configuration for the frontend."""
-    rubric_path = DATA_DIR / "rubric.json"
-    if not rubric_path.exists():
+    if not RUBRIC_PATH.exists():
         raise HTTPException(status_code=404, detail="Rubric configuration not found")
 
     try:
-        rubric = json.loads(rubric_path.read_text(encoding="utf-8"))
+        rubric = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
         if not isinstance(rubric, dict):
             raise ValueError("Rubric root must be a JSON object")
         return rubric
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load rubric: {str(e)}")
+        logger.error("Failed to load rubric configuration: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to load rubric configuration") from e
 
 
 @app.get("/api/agents")
 async def get_agents():
     """Get the agents configuration for the frontend."""
-    agents_path = DATA_DIR / "agents.json"
-    if not agents_path.exists():
+    if not AGENTS_CONFIG_PATH.exists():
         raise HTTPException(status_code=404, detail="Agents configuration not found")
-    
+
     try:
-        agents = json.loads(agents_path.read_text(encoding="utf-8"))
+        agents = json.loads(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))
         rubric_model = _load_rubric_model()
 
         return {
@@ -1138,7 +1125,8 @@ async def get_agents():
             },
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load agents: {str(e)}")
+        logger.error("Failed to load agents configuration: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to load agents configuration") from e
 
 
 @app.get("/api/prompts/{prompt_name}")
@@ -1148,17 +1136,16 @@ async def get_prompt(prompt_name: str):
     allowed_prompts = ["normalizer", "extracter", "verifier", "generator", "latexifier", "evaluator"]
     if prompt_name not in allowed_prompts:
         raise HTTPException(status_code=404, detail="Prompt not found")
-    
+
     prompt_path = resolve_prompt_path(PROMPTS_DIR, prompt_name)
     if prompt_path is None:
         raise HTTPException(status_code=404, detail="Prompt file not found")
-    if not prompt_path.exists():
-        raise HTTPException(status_code=404, detail="Prompt file not found")
-    
+
     try:
         return PlainTextResponse(prompt_path.read_text(encoding="utf-8"))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load prompt: {str(e)}")
+        logger.error("Failed to load prompt %s: %s", prompt_name, e)
+        raise HTTPException(status_code=500, detail="Failed to load prompt") from e
 
 
 @app.get("/api/evaluation/files")
@@ -1176,7 +1163,8 @@ async def get_evaluation_files():
                 }
             )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load evaluation files: {str(e)}")
+        logger.error("Failed to load evaluation files: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to load evaluation files") from e
 
     return {"files": files}
 
@@ -1204,7 +1192,7 @@ async def get_workflow_result(workflow_id: str):
     _touch_workflow(workflow)
     if workflow.get("status") != "completed":
         raise HTTPException(status_code=400, detail="Workflow not yet completed")
-    
+
     return {
         "workflowId": workflow_id,
         "result": workflow.get("result"),
@@ -1243,7 +1231,7 @@ async def download_file(workflow_id: str, file_path: str, inline: bool = False):
         raise HTTPException(status_code=400, detail="Invalid file path")
     if not resolved_file_path.exists() or not resolved_file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     media_type, _ = mimetypes.guess_type(str(resolved_file_path))
     content_disposition_type = "inline" if inline and media_type == "application/pdf" else "attachment"
 
@@ -1267,7 +1255,7 @@ async def start_workflow(
     try:
         get_openai_client()
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
 
     _prune_workflows()
     _prune_batch_jobs()
@@ -1294,7 +1282,7 @@ async def start_workflow(
             and candidate.suffix.lower() in ALLOWED_UPLOAD_EXTENSIONS
         ):
             file_paths.append(str(candidate))
-    
+
     # If sessionId provided, get files from upload directory
     if sessionId:
         try:
@@ -1313,11 +1301,11 @@ async def start_workflow(
         seen_paths.add(path)
         deduped_file_paths.append(path)
     file_paths = deduped_file_paths
-    
+
     # Initialize workflow state
     workflows[workflow_id] = _new_workflow_record()
     _persist_workflow(workflow_id, workflows[workflow_id])
-    
+
     # Start workflow in background
     _register_workflow_task(
         workflow_id,
@@ -1328,7 +1316,7 @@ async def start_workflow(
             run_evaluation=_parse_form_bool(runEvaluation, default=False),
         ),
     )
-    
+
     return {"success": True, "workflowId": workflow_id}
 
 
@@ -1342,7 +1330,7 @@ async def rerun_workflow_from_agent(
     try:
         get_openai_client()
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
 
     _prune_workflows()
     _prune_batch_jobs()
@@ -1407,7 +1395,7 @@ async def start_workflow_from_agent_input(
     try:
         get_openai_client()
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
 
     _prune_workflows()
     _prune_batch_jobs()
@@ -1486,7 +1474,7 @@ async def start_create_data(prompt: str = Form("")):
     try:
         get_openai_client()
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
 
     _prune_workflows()
     _prune_batch_jobs()
@@ -1659,13 +1647,13 @@ async def stream_workflow(workflow_id: str):
             if current_status != last_status:
                 yield f"data: {current_status}\n\n"
                 last_status = current_status
-            
+
             # Check if workflow is done
             if workflow.get("status") in TERMINAL_STATUSES:
                 break
-            
+
             await asyncio.sleep(0.5)
-    
+
     return StreamingResponse(
         generate_events(),
         media_type="text/event-stream",
