@@ -48,8 +48,6 @@ router = APIRouter()
 @router.get("/api/workflow/{workflow_id}/status")
 async def get_workflow_status(workflow_id: str):
     """Get the current status of a workflow."""
-    _prune_workflows()
-    _prune_batch_jobs()
     workflow = _get_workflow_record(workflow_id)
     if workflow is None:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -59,8 +57,6 @@ async def get_workflow_status(workflow_id: str):
 @router.get("/api/workflow/{workflow_id}/result")
 async def get_workflow_result(workflow_id: str):
     """Get the final result of a workflow."""
-    _prune_workflows()
-    _prune_batch_jobs()
     workflow = _get_workflow_record(workflow_id)
     if workflow is None:
         raise HTTPException(status_code=404, detail="Workflow not found")
