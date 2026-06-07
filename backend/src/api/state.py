@@ -22,7 +22,7 @@ from fastapi import HTTPException
 from openai import OpenAI
 from pydantic import ValidationError
 
-from backend.src.artifacts import WORKFLOW_AGENT_SEQUENCE
+from backend.src.artifacts import AGENT_DISPLAY_NAMES, WORKFLOW_AGENT_SEQUENCE
 from backend.src.bootstrap import load_dotenv as _load_dotenv
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
@@ -64,14 +64,8 @@ ALLOWED_AGENT_INPUT_EXTENSIONS = {".json", ".jsonl", ".txt"}
 
 SOURCE_FILE_INPUT_AGENTS = {"normalizer", "extracter"}
 
-INPUT_TO_AGENT_SEQUENCE = [
-    "normalizer",
-    "extracter",
-    "verifier",
-    "generator",
-    "latexifier",
-    "evaluation",
-]
+# Every runnable stage (the canonical sequence minus the terminal "output" node).
+INPUT_TO_AGENT_SEQUENCE = list(WORKFLOW_AGENT_SEQUENCE[:-1])
 
 MAX_UPLOAD_FILES = 5
 
@@ -435,13 +429,7 @@ def _new_workflow_record() -> dict[str, Any]:
             "id": "",
         },
         "agents": {
-            "normalizer": {"status": "inactive", "data": {}},
-            "extracter": {"status": "inactive", "data": {}},
-            "verifier": {"status": "inactive", "data": {}},
-            "generator": {"status": "inactive", "data": {}},
-            "latexifier": {"status": "inactive", "data": {}},
-            "evaluation": {"status": "inactive", "data": {}},
-            "output": {"status": "inactive", "data": {}},
+            key: {"status": "inactive", "data": {}} for key in WORKFLOW_AGENT_SEQUENCE
         },
         "files": [],
         "outputFolder": "",
@@ -753,14 +741,9 @@ def _parse_form_bool(value: str, *, default: bool = False) -> bool:
         return False
     return default
 
+# (key, display name) for every stage, derived from the canonical artifacts maps.
 CREATE_DATA_STEP_SEQUENCE: list[tuple[str, str]] = [
-    ("normalizer", "Normalizer"),
-    ("extracter", "Extracter"),
-    ("verifier", "Verifier"),
-    ("generator", "Generator"),
-    ("latexifier", "Latexifier"),
-    ("evaluation", "Evaluator"),
-    ("output", "Output"),
+    (key, AGENT_DISPLAY_NAMES[key]) for key in WORKFLOW_AGENT_SEQUENCE
 ]
 
 def _get_batch_entry_step(entry: dict[str, Any]) -> dict[str, Any]:
