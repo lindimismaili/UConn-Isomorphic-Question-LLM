@@ -112,6 +112,108 @@ public_backend_is_healthy() {
   curl -fsS "http://${LOCAL_DOMAIN}:${WEB_PORT}/api/health" 2>/dev/null | grep -q '"status":"healthy"'
 }
 
+port_is_listening() {
+  local port="$1"
+
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1
+    return
+  fi
+
+  if command -v nc >/dev/null 2>&1; then
+    nc -z "${BACKEND_HOST}" "${port}" >/dev/null 2>&1
+    return
+  fi
+
+  (echo >"/dev/tcp/${BACKEND_HOST}/${port}") >/dev/null 2>&1
+}
+
+select_backend_port() {
+  local start_port="${BACKEND_PORT}"
+  local candidate="${start_port}"
+
+  for _ in $(seq 1 100); do
+    BACKEND_PORT="${candidate}"
+
+    if backend_is_healthy; then
+      info "Using existing backend at http://${BACKEND_HOST}:${BACKEND_PORT}"
+      return
+    fi
+
+    if ! port_is_listening "${BACKEND_PORT}"; then
+      if [[ "${BACKEND_PORT}" != "${start_port}" ]]; then
+        warn "Using backend port ${BACKEND_PORT}; ${start_port} was unavailable."
+      fi
+      return
+    fi
+
+    warn "Backend port ${BACKEND_PORT} is in use by another process; trying $((BACKEND_PORT + 1))."
+    candidate="$((candidate + 1))"
+  done
+
+  err "No available backend port found after ${start_port}."
+  exit 1
+}
+
+select_dev_port() {
+  local start_port="${DEV_PORT}"
+  local candidate="${start_port}"
+
+  for _ in $(seq 1 100); do
+    if ! port_is_listening "${candidate}"; then
+      DEV_PORT="${candidate}"
+      if [[ "${DEV_PORT}" != "${start_port}" ]]; then
+        warn "Using dev preview port ${DEV_PORT}; ${start_port} was unavailable."
+      fi
+      return
+    fi
+
+    warn "Dev preview port ${candidate} is in use; trying $((candidate + 1))."
+    candidate="$((candidate + 1))"
+  done
+
+  err "No available dev preview port found after ${start_port}."
+  exit 1
+}
+
+select_web_port() {
+  local start_port="${WEB_PORT}"
+  local candidate="${start_port}"
+
+  for _ in $(seq 1 100); do
+    WEB_PORT="${candidate}"
+
+    if public_backend_is_healthy; then
+      info "Using existing built web preview at http://${LOCAL_DOMAIN}:${WEB_PORT}"
+      return
+    fi
+
+    if ! port_is_listening "${WEB_PORT}"; then
+      if [[ "${WEB_PORT}" != "${start_port}" ]]; then
+        warn "Using built web preview port ${WEB_PORT}; ${start_port} was unavailable."
+      fi
+      return
+    fi
+
+    warn "Built web preview port ${WEB_PORT} is in use by another process; trying $((WEB_PORT + 1))."
+    candidate="$((candidate + 1))"
+  done
+
+  err "No available built web preview port found after ${start_port}."
+  exit 1
+}
+
+preview_allowed_origins() {
+  local dynamic_origins="http://${LOCAL_DOMAIN}:${DEV_PORT},http://${LOCAL_DOMAIN}:${WEB_PORT}"
+
+  if [[ -n "${ALLOWED_ORIGINS:-}" ]]; then
+    printf '%s,%s\n' "${ALLOWED_ORIGINS}" "${dynamic_origins}"
+    return
+  fi
+
+  printf '%s\n' "${dynamic_origins}"
+}
+
 print_port_listeners() {
   local port="$1"
 
@@ -123,15 +225,18 @@ print_port_listeners() {
 }
 
 start_backend_if_needed() {
+  select_backend_port
+
   if backend_is_healthy; then
-    info "Using existing backend at http://${BACKEND_HOST}:${BACKEND_PORT}"
     return
   fi
 
   info "Starting backend at http://${LOCAL_DOMAIN}:${BACKEND_PORT}"
   (
     cd "${REPO_DIR}"
-    exec "${PYTHON_BIN}" -m uvicorn backend.src.server:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --reload
+    exec env \
+      ALLOWED_ORIGINS="$(preview_allowed_origins)" \
+      "${PYTHON_BIN}" -m uvicorn backend.src.server:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --reload
   ) &
   BACKEND_PID="$!"
 
@@ -147,19 +252,20 @@ start_backend_if_needed() {
 run_dev_preview() {
   ensure_local_domain
   ensure_dependencies
+  select_dev_port
   start_backend_if_needed
 
   info "Starting hot reload dev preview at http://${LOCAL_DOMAIN}:${DEV_PORT}"
   VITE_BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}" \
-    npm -C "${FRONTEND_DIR}" run dev:ui -- --host "0.0.0.0" --port "${DEV_PORT}"
+    npm -C "${FRONTEND_DIR}" run dev:ui -- --host "0.0.0.0" --port "${DEV_PORT}" --strictPort
 }
 
 run_web_preview() {
   ensure_local_domain
   ensure_dependencies
+  select_web_port
 
   if public_backend_is_healthy; then
-    info "Using existing built web preview at http://${LOCAL_DOMAIN}:${WEB_PORT}"
     return
   fi
 
@@ -178,7 +284,7 @@ run_web_preview() {
   exec env \
     HOST="${BACKEND_HOST}" \
     PORT="${WEB_PORT}" \
-    ALLOWED_ORIGINS="http://${LOCAL_DOMAIN}:${WEB_PORT},http://${LOCAL_DOMAIN}:${DEV_PORT}" \
+    ALLOWED_ORIGINS="$(preview_allowed_origins)" \
     "${PYTHON_BIN}" -m backend.src.server
 }
 
