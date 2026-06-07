@@ -172,8 +172,9 @@ After the preamble, structure your document as:
 
 \begin{center}
 {\huge \textbf{<TITLE>}}\\[0.25em]
-{\Large <Subtitle>}\\[0.25em]
-{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+{\Large <SUBTITLE>}\\[0.25em]
+% Only include the next line when requirements.show_answers is true (omit it entirely when false):
+{\large Answer the questions below. Correct answers are in \textcolor{AnsRed}{RED}, while incorrect answers are in \textcolor{WrongBlue}{BLUE}.}
 \end{center}
 
 \vspace{0.75em}
@@ -182,6 +183,29 @@ After the preamble, structure your document as:
 
 \end{document}
 ```
+
+Header field rules — apply in order:
+
+**`<TITLE>`** (the big heading — what TYPE of document this is):
+1. Use `document.title` if it is explicitly set by the user (non-empty).
+2. Otherwise, if `document.theme` is non-empty, produce: "[Theme] Practice Questions"
+   (e.g. "Physics Practice Questions" for theme "physics_abstract").
+3. Otherwise default to: "Isomorphic Practice Questions".
+Do NOT use `document.source_title` as the `<TITLE>` — the source title belongs in `<SUBTITLE>`.
+
+**`<SUBTITLE>`** (the source context line — where questions came from):
+1. Use `document.subtitle` if non-empty.
+2. Otherwise build from available fields in priority order:
+   - If `document.course` is non-empty: use it (e.g. "PHYS 1101").
+   - If `document.source_title` is non-empty: use it (e.g. "Quiz #2").
+   - If `document.theme` is non-empty: use theme as a fallback.
+3. If nothing is available: omit the subtitle line entirely.
+
+**Color-coding instruction line** (third line):
+- Include it only when `requirements.show_answers` is `true` (the default).
+- Omit it entirely when `requirements.show_answers` is `false`.
+- When omitted, also set `\showreasonfalse` instead of `\showreasontrue` in the preamble
+  so that explanations are hidden throughout the document.
 
 # Formatting Rules
 
@@ -211,10 +235,18 @@ Apply the following rules in order for each question:
   - MC sub-part: `\MCPart{<label>}{<stem>}{<options>}{<answer key>}`
   - OE sub-part: `\OEPart{<label>}{<stem>}{<answer>}`
 
+**Point values** — when `questions[i].points > 0`, append the point value to the stem:
+- Format: `<stem text>\hfill\textit{(\,X\,pts)}`  where X is the numeric value.
+- Use integer display when the value is a whole number (e.g. 5.0 → "5 pts").
+- Example stem arg: `A ball is dropped from rest.\hfill\textit{(\,5\,pts)}`
+
 **General rules:**
 - All math formatted as LaTeX math (`$...$` for inline, `\[...\]` for display).
 - Preserve all mathematical notation exactly.
 - Correct MC answers appear in RED (AnsRed color); incorrect in BLUE (WrongBlue color).
+- When `requirements.show_answers` is `false`, use plain text for all options (no color
+  macros). Replace `\Correct{text}{explanation}` with `\item text` and `\Wrong{text}{explanation}`
+  with `\item text` — no colors, no explanations, no answer keys in `\QBlock`.
 
 # Output Requirements
 
@@ -223,6 +255,8 @@ Apply the following rules in order for each question:
 - After writing the full document, call the provided `compile_latex_pdf` tool with the same LaTeX source and basename `isomorphic_questions`.
 - Set `pdf_filename` to `"isomorphic_questions.pdf"` after the compile tool succeeds.
 - Ensure the document compiles without errors.
-- Replace `<TITLE>` with `document.title` or the explicit `Title:` value when provided.
-- Replace `<Subtitle>` with the best available source context from `document.course`,
-  `document.source_title`, `document.theme`, or the explicit theme/course values in input.
+- Apply the `<TITLE>` and `<SUBTITLE>` rules from the Document Structure section above.
+  Never use the same text for both `<TITLE>` and `<SUBTITLE>`.
+- When `requirements.show_answers` is `false`, set `\showreasonfalse` in the preamble
+  (not `\showreasontrue`) and omit all answer keys, color macros, and the color-coding
+  instruction line from the header.

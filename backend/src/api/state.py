@@ -186,6 +186,10 @@ batch_jobs: dict[str, dict[str, Any]] = {}
 
 batch_tasks: dict[str, asyncio.Task] = {}
 
+eval_batch_jobs: dict[str, dict[str, Any]] = {}
+
+eval_batch_tasks: dict[str, asyncio.Task] = {}
+
 TERMINAL_STATUSES = {"completed", "errored", "cancelled", "lost"}
 
 LOST_STATUS = "lost"
@@ -259,7 +263,20 @@ def _register_workflow_task(workflow_id: str, coroutine: Any) -> asyncio.Task:
     """Track process-local workflow tasks while durable status lives in SQLite."""
     task = asyncio.create_task(coroutine)
     workflow_tasks[workflow_id] = task
-    task.add_done_callback(lambda _task, current_id=workflow_id: workflow_tasks.pop(current_id, None))
+
+    def _on_task_done(done_task: asyncio.Task, current_id: str = workflow_id) -> None:
+        workflow_tasks.pop(current_id, None)
+        if done_task.cancelled():
+            return
+        # The failure is already recorded on the workflow record and logged by
+        # _execute_workflow. Retrieve the exception here so asyncio doesn't emit
+        # a spurious "Task exception was never retrieved" traceback for this
+        # fire-and-forget background task.
+        exc = done_task.exception()
+        if exc is not None:
+            logger.debug("Workflow %s task finished with error: %s", current_id, exc)
+
+    task.add_done_callback(_on_task_done)
     return task
 
 def _prune_workflows() -> None:
@@ -354,6 +371,228 @@ def _prune_batch_jobs() -> None:
         if len(batch_jobs) <= WORKFLOW_MAX_ENTRIES:
             break
 
+def _is_old(record: dict, now: float) -> bool:
+    raw = record.get("updated_at")
+    if not raw:
+        return False
+    try:
+        ts = datetime.fromisoformat(raw.replace("Z", "")).timestamp()
+        return now - ts > WORKFLOW_TTL_SECONDS
+    except Exception:
+        return False
+
+
+def _prune_eval_batch_jobs() -> None:
+    now = datetime.now(timezone.utc).timestamp()
+    expired = [bid for bid, b in eval_batch_jobs.items() if b.get("status") in TERMINAL_STATUSES and _is_old(b, now)]
+    for bid in expired:
+        eval_batch_jobs.pop(bid, None)
+        workflow_store.delete("batch", bid)
+        task = eval_batch_tasks.pop(bid, None)
+        if task and not task.done():
+            task.cancel()
+
+
+def _touch_eval_batch(batch: dict[str, Any]) -> None:
+    batch["updated_at"] = _workflow_now()
+    _persist_batch(_batch_id_for_record(batch), batch)
+
+
+def _get_eval_batch_record(batch_id: str) -> dict[str, Any] | None:
+    batch = eval_batch_jobs.get(batch_id)
+    if batch is not None:
+        return batch
+    batch = workflow_store.load("batch", batch_id)
+    if batch is not None:
+        batch["id"] = batch_id
+        eval_batch_jobs[batch_id] = batch
+    return batch
+
+
+def _refresh_eval_batch_progress(batch: dict[str, Any]) -> None:
+    entries = batch.get("entries", [])
+    batch["completedFiles"] = sum(1 for e in entries if e.get("status") == "completed")
+    batch["failedFiles"] = sum(1 for e in entries if e.get("status") == "errored")
+    batch["cancelledFiles"] = sum(1 for e in entries if e.get("status") == "cancelled")
+    batch["doneFiles"] = batch["completedFiles"] + batch["failedFiles"] + batch["cancelledFiles"]
+
+
+def _summarize_eval_batch_entries(entries: list[dict]) -> list[dict]:
+    return [{"name": e.get("name",""), "folder": e.get("folder",""), "status": e.get("status","unknown"), "score": e.get("score"), "itemsEvaluated": e.get("itemsEvaluated",0), "outputFolder": e.get("outputFolder",""), "error": e.get("error","")} for e in entries]
+
+
+def _list_output_runs(limit: int = 60) -> list[dict[str, Any]]:
+    """List output folders that contain a final_result.json, newest first."""
+    import json as _json
+    runs = []
+    try:
+        folders = sorted(OUTPUTS_DIR.iterdir(), key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
+    except OSError:
+        return []
+    for folder in folders:
+        if not folder.is_dir():
+            continue
+        result_path = folder / "final_result.json"
+        if not result_path.exists():
+            continue
+        try:
+            data = _json.loads(result_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        question_count = len(data.get("generated_questions", []))
+        eval_report_path = folder / "evaluation_outputs" / "evaluation_report.json"
+        existing_score = None
+        has_eval = eval_report_path.exists()
+        if has_eval:
+            try:
+                report = _json.loads(eval_report_path.read_text(encoding="utf-8"))
+                existing_score = report.get("overall_score")
+            except Exception:
+                pass
+        runs.append({
+            "folder": folder.name,
+            "label": folder.name,
+            "mtime": folder.stat().st_mtime if folder.exists() else 0,
+            "questionCount": question_count,
+            "hasEval": has_eval,
+            "existingScore": existing_score,
+        })
+        if len(runs) >= limit:
+            break
+    return runs
+
+
+async def run_eval_batch_async(batch_id: str) -> None:
+    """Run a batch-eval job (prior runs or uploaded PDFs)."""
+    import json as _json
+
+    from agents import RunConfig, trace
+
+    from backend.src.evaluation import (
+        EVALUATION_OUTPUTS_DIRNAME,
+        EVALUATION_REPORT_FILENAME,
+        run_openai_output_evaluation,
+    )
+
+    batch = eval_batch_jobs[batch_id]
+    mode = batch.get("mode", "prior_runs")
+    client = get_openai_client()
+    semaphore = asyncio.Semaphore(BATCH_WORKFLOW_CONCURRENCY)
+
+    try:
+        batch_output_dir, batch_output_label = create_unique_run_dir(OUTPUTS_DIR, batch_id, suffix="eval-batch")
+        batch["status"] = "running"
+        batch["outputFolder"] = batch_output_label
+        _touch_eval_batch(batch)
+
+        run_config = RunConfig(trace_metadata={"__trace_source__": "batch-eval", "batch_id": batch_id})
+
+        if mode == "upload":
+            from backend.src.eval_pipeline import extract_questions_from_pdf  # noqa: PLC0415
+            source_pdf_path = Path(batch.get("source_pdf_path", ""))
+            if not source_pdf_path.exists():
+                raise FileNotFoundError(f"Source PDF not found: {source_pdf_path}")
+
+            with trace("Batch Eval Upload"):
+                source_extraction = await extract_questions_from_pdf(client=client, pdf_path=source_pdf_path, run_config=run_config, generated_pdf=False)
+            write_json(batch_output_dir / "source_extraction.json", source_extraction.model_dump())
+
+        async def _eval_one(entry: dict) -> None:
+            async with semaphore:
+                if batch.get("cancel_requested") or batch.get("status") == "cancelled":
+                    entry["status"] = "cancelled"
+                    entry["error"] = "Stopped by user"
+                    _refresh_eval_batch_progress(batch)
+                    _touch_eval_batch(batch)
+                    return
+
+                entry["status"] = "running"
+                _refresh_eval_batch_progress(batch)
+                _touch_eval_batch(batch)
+
+                child_stem = safe_stem(entry.get("folder") or entry.get("name", "item"), fallback="item")
+                child_dir = batch_output_dir / child_stem
+                child_dir.mkdir(parents=True, exist_ok=True)
+
+                try:
+                    if mode == "prior_runs":
+                        source_folder = OUTPUTS_DIR / entry["folder"]
+                        result_path = source_folder / "final_result.json"
+                        if not result_path.exists():
+                            raise FileNotFoundError(f"final_result.json not found in {entry['folder']}")
+                        final_result = _json.loads(result_path.read_text(encoding="utf-8"))
+                    else:
+                        from backend.src.eval_pipeline import (  # noqa: PLC0415
+                            build_eval_final_result,
+                            extract_questions_from_pdf,
+                        )
+                        gen_pdf = Path(entry["pdf_path"])
+                        generated_extraction = await extract_questions_from_pdf(client=client, pdf_path=gen_pdf, run_config=run_config, generated_pdf=True)
+                        write_json(child_dir / "generated_extraction.json", generated_extraction.model_dump())
+                        final_result = build_eval_final_result(source_extraction=source_extraction, generated_extraction=generated_extraction, generated_pdf=gen_pdf)
+
+                    write_json(child_dir / "final_result.json", final_result)
+
+                    report = run_openai_output_evaluation(
+                        client=client,
+                        final_result=final_result,
+                        outputs_dir=child_dir,
+                        source_files=[],
+                    )
+                    # Recompute score excluding latex criterion (no tex file in batch eval)
+                    criterion_scores = report.get("criterion_scores") or {}
+                    numeric = [v.get("score") for v in criterion_scores.values() if isinstance(v, dict) and isinstance(v.get("score"), (int, float)) and v.get("criterion_name") != "latex_pdf_generated"]
+                    overall = round(sum(float(s) for s in numeric) / len(numeric), 3) if numeric else None
+                    report["overall_score"] = overall
+                    report_path = child_dir / EVALUATION_OUTPUTS_DIRNAME / EVALUATION_REPORT_FILENAME
+                    write_json(report_path, report)
+
+                    entry["status"] = "completed"
+                    entry["score"] = overall
+                    entry["itemsEvaluated"] = report.get("items_evaluated", 0)
+                    entry["outputFolder"] = f"{batch_output_label}/{child_stem}"
+                    entry["error"] = ""
+                except Exception as exc:
+                    write_json(child_dir / "error.json", {"status": "failed", "error": str(exc)})
+                    entry["status"] = "errored"
+                    entry["error"] = str(exc)
+                finally:
+                    _refresh_eval_batch_progress(batch)
+                    _touch_eval_batch(batch)
+
+        await asyncio.gather(*(_eval_one(e) for e in batch.get("entries", [])))
+
+        _refresh_eval_batch_progress(batch)
+        write_json(batch_output_dir / "batch_summary.json", {
+            "generated_at": datetime.now().isoformat(),
+            "batch_id": batch_id, "mode": mode,
+            "output_folder": batch_output_label,
+            "total_files": batch.get("totalFiles", 0),
+            "completed_files": batch.get("completedFiles", 0),
+            "failed_files": batch.get("failedFiles", 0),
+            "entries": _summarize_eval_batch_entries(batch.get("entries", [])),
+        })
+        batch["error"] = f"{batch['failedFiles']} of {batch['totalFiles']} evals failed." if batch.get("failedFiles", 0) > 0 else ""
+        batch["status"] = "completed"
+        _touch_eval_batch(batch)
+    except asyncio.CancelledError:
+        batch["status"] = "cancelled"
+        batch["error"] = "Stopped by user"
+        batch["cancel_requested"] = True
+        for entry in batch.get("entries", []):
+            if entry.get("status") not in TERMINAL_STATUSES:
+                entry["status"] = "cancelled"
+                entry["error"] = "Stopped by user"
+        _refresh_eval_batch_progress(batch)
+        _touch_eval_batch(batch)
+        raise
+    except Exception as exc:
+        logger.error("Eval batch %s failed: %s", batch_id, exc)
+        batch["status"] = "errored"
+        batch["error"] = str(exc)
+        _touch_eval_batch(batch)
+
+
 async def pruning_loop() -> None:
     """Periodically prune expired workflows/batches off the request path.
 
@@ -366,6 +605,7 @@ async def pruning_loop() -> None:
         try:
             await asyncio.to_thread(_prune_workflows)
             await asyncio.to_thread(_prune_batch_jobs)
+            await asyncio.to_thread(_prune_eval_batch_jobs)
         except Exception:
             logger.exception("Background pruning cycle failed")
 

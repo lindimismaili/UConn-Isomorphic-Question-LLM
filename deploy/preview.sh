@@ -128,6 +128,42 @@ port_is_listening() {
   (echo >"/dev/tcp/${BACKEND_HOST}/${port}") >/dev/null 2>&1
 }
 
+# Stop whatever is listening on a port (used to always start a fresh backend).
+# Only ever called for ports we've confirmed host *our* app backend via the
+# health check, so this restarts our own server rather than killing a stranger.
+stop_listeners_on_port() {
+  local port="$1"
+
+  if ! command -v lsof >/dev/null 2>&1; then
+    err "lsof is required to stop the existing backend on port ${port}."
+    exit 1
+  fi
+
+  local pids
+  pids="$(lsof -nP -iTCP:"${port}" -sTCP:LISTEN -t 2>/dev/null || true)"
+  if [[ -z "${pids}" ]]; then
+    return 0
+  fi
+
+  # shellcheck disable=SC2086 # pids is an intentional space-separated list
+  kill ${pids} 2>/dev/null || true
+  for _ in $(seq 1 20); do
+    port_is_listening "${port}" || return 0
+    sleep 0.25
+  done
+
+  warn "Backend on port ${port} did not stop gracefully; force-killing."
+  # shellcheck disable=SC2086
+  kill -9 ${pids} 2>/dev/null || true
+  for _ in $(seq 1 20); do
+    port_is_listening "${port}" || return 0
+    sleep 0.25
+  done
+
+  err "Could not free port ${port}."
+  exit 1
+}
+
 select_backend_port() {
   local start_port="${BACKEND_PORT}"
   local candidate="${start_port}"
@@ -136,7 +172,8 @@ select_backend_port() {
     BACKEND_PORT="${candidate}"
 
     if backend_is_healthy; then
-      info "Using existing backend at http://${BACKEND_HOST}:${BACKEND_PORT}"
+      warn "Stopping existing app backend on ${BACKEND_PORT} to start a fresh one."
+      stop_listeners_on_port "${BACKEND_PORT}"
       return
     fi
 
@@ -184,7 +221,8 @@ select_web_port() {
     WEB_PORT="${candidate}"
 
     if public_backend_is_healthy; then
-      info "Using existing built web preview at http://${LOCAL_DOMAIN}:${WEB_PORT}"
+      warn "Stopping existing app backend on ${WEB_PORT} to start a fresh one."
+      stop_listeners_on_port "${WEB_PORT}"
       return
     fi
 
@@ -224,12 +262,10 @@ print_port_listeners() {
   fi
 }
 
-start_backend_if_needed() {
+start_backend() {
+  # select_backend_port stops any existing app backend on the port, so we always
+  # launch a fresh one here rather than reusing a running process.
   select_backend_port
-
-  if backend_is_healthy; then
-    return
-  fi
 
   info "Starting backend at http://${LOCAL_DOMAIN}:${BACKEND_PORT}"
   (
@@ -253,31 +289,29 @@ run_dev_preview() {
   ensure_local_domain
   ensure_dependencies
   select_dev_port
-  start_backend_if_needed
+  start_backend
 
   info "Starting hot reload dev preview at http://${LOCAL_DOMAIN}:${DEV_PORT}"
+  # `--force` re-optimizes deps from scratch (ignores node_modules/.vite) so a
+  # fresh start never serves a stale pre-bundled cache. Source files are always
+  # served fresh by Vite's dev server / HMR.
   VITE_BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}" \
-    npm -C "${FRONTEND_DIR}" run dev:ui -- --host "0.0.0.0" --port "${DEV_PORT}" --strictPort
+    npm -C "${FRONTEND_DIR}" run dev:ui -- --host "0.0.0.0" --port "${DEV_PORT}" --strictPort --force
 }
 
 run_web_preview() {
   ensure_local_domain
   ensure_dependencies
-  select_web_port
 
-  if public_backend_is_healthy; then
-    return
-  fi
-
-  if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"${WEB_PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
-    err "Port ${WEB_PORT} is already in use, but http://${LOCAL_DOMAIN}:${WEB_PORT}/api/health is not this backend."
-    err "Stop the conflicting process or run with a different WEB_PORT."
-    print_port_listeners "${WEB_PORT}"
-    exit 1
-  fi
-
+  # Always produce a fresh build so the preview never serves stale assets.
+  # `vite build` empties dist first (emptyOutDir), so this is a full rebuild.
   info "Building frontend into ${REPO_DIR}/dist"
   npm -C "${FRONTEND_DIR}" run build
+
+  # Always serve from a fresh backend: select_web_port stops an existing app
+  # backend on the port (and bumps past unrelated processes), so the exec below
+  # is always a newly started server on freshly built assets.
+  select_web_port
 
   info "Starting built web preview at http://${LOCAL_DOMAIN}:${WEB_PORT}"
   cd "${REPO_DIR}"

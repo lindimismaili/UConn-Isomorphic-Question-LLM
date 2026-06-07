@@ -27,6 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.src.api import state
 from backend.src.api.batch import router as batch_router
 from backend.src.api.config import router as config_router
+from backend.src.api.eval_batch import router as eval_batch_router
 from backend.src.api.files import router as files_router
 from backend.src.api.health import router as health_router
 from backend.src.api.workflows import router as workflows_router
@@ -68,6 +69,7 @@ app.include_router(config_router)
 app.include_router(files_router)
 app.include_router(workflows_router)
 app.include_router(batch_router)
+app.include_router(eval_batch_router)
 
 
 # Mount static files last so API routes win.

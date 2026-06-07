@@ -26,8 +26,16 @@ Multi-file handling:
 Procedure:
 1. Read all files with Python tools (`pdfplumber`, `PyPDF2`, `python-docx`, OCR if needed).
 2. Extract document metadata from headers/footers/title blocks.
-   - Set top-level `title` to the best source title you can determine from the
-     title block, header, course/assessment label, or a concise cleaned filename fallback.
+   - Set top-level `title` to the literal source title as it appears in the document
+     (e.g. "Quiz #2", "Midterm Exam", "Problem Set 3"). Use a concise cleaned filename
+     as a fallback only when no document title is found.
+   - Set top-level `subtitle` to a descriptive subject phrase that is DIFFERENT from
+     `title`. Derive it from: the course name, topic coverage, chapter headings,
+     question subject matter, or any header/footer context. Examples:
+       * If title is "Quiz #2" and questions are about kinematics: subtitle = "Kinematics and Free Fall"
+       * If title is "Midterm Exam" and questions cover electricity: subtitle = "Electricity and Magnetism"
+       * If no distinct subject context is available: subtitle = "[theme] Concepts"
+     Do NOT simply repeat or paraphrase `title` as `subtitle`. They must convey different information.
    - Set top-level `theme` to the dominant theme across the extracted questions.
 3. Detect multi-part questions BEFORE extracting individual questions.
 4. Identify every question and classify:
@@ -82,6 +90,9 @@ New schema fields to populate for every SourceQuestionItem:
 - `parts` (list, default []): sub-parts for multi_part questions; empty for all other types.
 - `difficulty` (str, default ""): copy `normalizer_config.difficulty` only when it is non-empty.
   Otherwise leave `difficulty` as an empty string. Do not infer difficulty from the source.
+- `points` (float, default 0.0): the point value assigned to this question in the source document.
+  Detect patterns such as "(5 points)", "[10 pts]", "5 marks", "worth 3 points", etc.
+  Set to 0.0 if no point value is found.
 
 Explicit answer detection:
 - Set `has_explicit_answer=true` only when the source clearly marks correctness.

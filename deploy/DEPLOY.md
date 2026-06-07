@@ -55,6 +55,22 @@ bash deploy/preview.sh --web
 
 The preview script uses `isomorphic.localhost`, starts the backend, installs missing local dependencies into the active/project virtual environment, and warns if `OPENAI_API_KEY` is missing. It does not edit `/etc/hosts` or other files outside the repo.
 
+Both modes always rebuild the frontend **and start a fresh backend**, so a
+preview never serves stale assets or stale Python code:
+
+- `--web` runs `vite build` (which empties `dist/` first) on every invocation,
+  then starts a brand-new backend. If the app's own backend is already running
+  on the web port it is stopped first and relaunched on freshly built assets; an
+  unrelated process on that port is left alone and the preview moves to the next
+  free port instead.
+- `--dev` likewise stops any existing app backend and starts a fresh one (with
+  `--reload`), and launches Vite with `--force` so dependencies are re-optimized
+  from scratch (ignoring the `node_modules/.vite` cache). Source files are always
+  served fresh via HMR.
+
+Stopping only ever targets a process that answers the app's `/api/health` check,
+so it restarts the app's own backend rather than killing an unrelated process.
+
 ## Useful Checks
 
 ```bash

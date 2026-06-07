@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import argparse
 import asyncio
+import json
 import os
 from datetime import datetime
 from typing import Any
@@ -76,18 +77,28 @@ async def _to_thread(func, /, *args, **kwargs):
     return await asyncio.to_thread(func, *args, **kwargs)
 
 
-async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
-    """Run the full pipeline by delegating to the shared engine."""
+async def run_workflow(
+    workflow_input: WorkflowInput,
+    *,
+    from_agent: str = "normalizer",
+    agent_input: dict[str, Any] | None = None,
+    stop_after: str | None = None,
+    run_evaluation: bool = True,
+) -> WorkflowResult:
+    """Run the pipeline by delegating to the shared engine.
+
+    ``from_agent`` and ``agent_input`` allow starting from a specific stage
+    using a saved JSON artifact (e.g. an output from a previous run).
+    ``stop_after`` stops the pipeline after the named agent completes.
+    """
     client = get_cli_openai_client()
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    outputs_dir, output_folder_label = create_unique_run_dir(
-        OUTPUTS_DIR,
-        f"cli-{timestamp}",
-    )
+    run_label = f"cli-{timestamp}"
+    outputs_dir, output_folder_label = create_unique_run_dir(OUTPUTS_DIR, run_label)
     workflow_record = _new_cli_workflow_record()
-    workflow_id = f"cli-{timestamp}"
+    workflow_id = run_label
 
-    await run_workflow_async(
+    result = await run_workflow_async(
         client=client,
         workflow_id=workflow_id,
         workflow=workflow_record,
@@ -99,10 +110,19 @@ async def run_workflow(workflow_input: WorkflowInput) -> WorkflowResult:
         to_thread=_to_thread,
         load_rubric_model=_load_rubric_model,
         load_rubric_payload=_load_rubric_payload,
+        resume_from_agent=from_agent,
+        agent_input_override=agent_input,
+        agent_input_filename="",
+        input_to_agent_run=agent_input is not None,
+        run_evaluation=run_evaluation,
+        stop_after_agent=stop_after,
     )
 
-    result_payload = workflow_record.get("result") or {}
-    return WorkflowResult.model_validate(result_payload)
+    logger.info("Output directory: %s", outputs_dir)
+    return result
+
+
+_LLM_AGENTS = ("normalizer", "extracter", "verifier", "generator", "latexifier")
 
 
 def main() -> None:
@@ -126,28 +146,86 @@ def main() -> None:
         default=1,
         help="Number of isomorphic questions per source question",
     )
+    parser.add_argument(
+        "--from-agent",
+        dest="from_agent",
+        choices=list(_LLM_AGENTS),
+        default="normalizer",
+        metavar="AGENT",
+        help=(
+            "Start the pipeline from this agent using --agent-input. "
+            "Choices: " + ", ".join(_LLM_AGENTS)
+        ),
+    )
+    parser.add_argument(
+        "--agent-input",
+        dest="agent_input",
+        default=None,
+        metavar="FILE",
+        help="Path to a saved agent input JSON (output of a previous run stage). "
+             "Required when --from-agent is set to any agent other than normalizer.",
+    )
+    parser.add_argument(
+        "--stop-after",
+        dest="stop_after",
+        choices=list(_LLM_AGENTS),
+        default=None,
+        metavar="AGENT",
+        help="Stop the pipeline after this agent completes. "
+             "Choices: " + ", ".join(_LLM_AGENTS),
+    )
+    parser.add_argument(
+        "--no-eval",
+        dest="no_eval",
+        action="store_true",
+        help="Skip the evaluation stage",
+    )
     args = parser.parse_args()
 
-    if not args.files:
-        default_file = QUESTION_DATA_DIR / "PDF" / "Quiz_Compilation.pdf"
-        if default_file.exists():
-            args.files = [str(default_file)]
-            logger.info("Using default file: %s", default_file)
-        else:
-            logger.error("No files provided and default file not found: %s", default_file)
+    # Load agent input JSON if provided
+    agent_input_data: dict[str, Any] | None = None
+    if args.agent_input:
+        input_path = Path(args.agent_input)
+        if not input_path.exists():
+            logger.error("--agent-input file not found: %s", args.agent_input)
             raise SystemExit(1)
+        try:
+            agent_input_data = json.loads(input_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.error("Failed to load --agent-input: %s", exc)
+            raise SystemExit(1) from exc
+
+    # Require files only when starting from normalizer/extracter
+    from_agent = args.from_agent
+    if from_agent in ("normalizer", "extracter") and not agent_input_data:
+        if not args.files:
+            default_file = QUESTION_DATA_DIR / "PDF" / "Quiz_Compilation.pdf"
+            if default_file.exists():
+                args.files = [str(default_file)]
+                logger.info("Using default file: %s", default_file)
+            else:
+                logger.error("No files provided and default file not found: %s", default_file)
+                raise SystemExit(1)
 
     instructions = args.instructions
     if args.num_questions != 1:
         instructions = f"Generate {args.num_questions} questions per source. " + instructions
 
     workflow_input = WorkflowInput(
-        file_paths=args.files,
+        file_paths=args.files or [],
         user_instructions=instructions,
     )
 
     try:
-        result = asyncio.run(run_workflow(workflow_input))
+        result = asyncio.run(
+            run_workflow(
+                workflow_input,
+                from_agent=from_agent,
+                agent_input=agent_input_data,
+                stop_after=args.stop_after,
+                run_evaluation=not args.no_eval,
+            )
+        )
     except Exception as exc:
         logger.error("Workflow failed: %s", exc)
         raise SystemExit(1) from exc

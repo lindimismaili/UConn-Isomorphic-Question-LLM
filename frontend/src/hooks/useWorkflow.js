@@ -147,6 +147,17 @@ export function useWorkflow(dispatch) {
       }
       const status = await statusRes.json();
 
+      // The Starter node represents backend runtime setup (file upload + OpenAI
+      // container bootstrap). Keep it "thinking" until a real agent actually
+      // starts on the backend, then complete it. Idempotent in the reducer.
+      const anyAgentStarted = agentKeys.some((key) => {
+        const agentState = status.agents?.[key]?.status;
+        return agentState && agentState !== 'inactive' && agentState !== 'queued';
+      });
+      if (anyAgentStarted || status.status === 'completed') {
+        dispatch({ type: 'SETUP_COMPLETE' });
+      }
+
       for (const key of agentKeys) {
         const agentStatus = status.agents?.[key];
         if (agentStatus) {
@@ -305,7 +316,7 @@ export function useWorkflow(dispatch) {
       const { workflowId } = await startRes.json();
       const setupElapsedSeconds = (Date.now() - setupStartMs) / 1000;
 
-      dispatch({ type: 'SETUP_COMPLETE', workflowId });
+      dispatch({ type: 'WORKFLOW_REGISTERED', workflowId });
       dispatch({ type: 'LOG', message: `Workflow started (${workflowId})`, level: 'info' });
       await pollWorkflow(workflowId, setupElapsedSeconds, signal, runId);
     } catch (err) {
@@ -366,7 +377,7 @@ export function useWorkflow(dispatch) {
       const { workflowId } = await startRes.json();
       const setupElapsedSeconds = (Date.now() - setupStartMs) / 1000;
 
-      dispatch({ type: 'SETUP_COMPLETE', workflowId });
+      dispatch({ type: 'WORKFLOW_REGISTERED', workflowId });
       dispatch({
         type: 'LOG',
         message: `Workflow started from ${AGENT_LABELS[startAgent] || startAgent} (${workflowId})`,

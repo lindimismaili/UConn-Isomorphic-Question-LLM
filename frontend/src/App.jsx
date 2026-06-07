@@ -15,10 +15,12 @@ import SetupModal from "./components/modals/SetupModal.jsx";
 import OutputModal from "./components/modals/OutputModal.jsx";
 import HelpModal from "./components/modals/HelpModal.jsx";
 import InputToAgentModal from "./components/modals/InputToAgentModal.jsx";
+import BatchEvalModal from "./components/modals/BatchEvalModal.jsx";
 
 import { useWorkflow } from "./hooks/useWorkflow.js";
 import { useAgents } from "./hooks/useAgents.js";
 import { useCreateData } from "./hooks/useCreateData.js";
+import { useBatchEval } from "./hooks/useBatchEval.js";
 import { generateId } from "./utils/ids.js";
 
 // =============================================================================
@@ -336,8 +338,16 @@ function reducer(state, action) {
       };
     }
 
+    case "WORKFLOW_REGISTERED":
+      // The backend accepted the run; the Starter node stays "thinking" while
+      // the shared runtime (OpenAI container) is created and bootstrapped.
+      return { ...state, workflowId: action.workflowId };
+
     case "SETUP_COMPLETE": {
+      // Fired once the backend reports the first real agent has started (or the
+      // run finished). Idempotent so repeated polls don't re-log or re-complete.
       const setup = state.agents.setup;
+      if (setup.status !== "thinking") return state;
       const setupStart = setup.startTime
         ? new Date(setup.startTime).getTime()
         : null;
@@ -348,13 +358,8 @@ function reducer(state, action) {
         setupSeconds !== null
           ? `Starter completed in ${setupSeconds.toFixed(2)}s`
           : "Starter completed";
-      const normalizer = state.agents.normalizer;
-      const shouldStartNormalizerNow =
-        normalizer &&
-        (normalizer.status === "queued" || normalizer.status === "inactive");
       return {
         ...state,
-        workflowId: action.workflowId,
         agents: {
           ...state.agents,
           setup: {
@@ -363,16 +368,6 @@ function reducer(state, action) {
             endTime: new Date(setupEnd),
             executionTime: setupSeconds,
           },
-          ...(shouldStartNormalizerNow
-            ? {
-                normalizer: {
-                  ...normalizer,
-                  status: "thinking",
-                  startTime: normalizer.startTime || new Date(setupEnd),
-                  endTime: null,
-                },
-              }
-            : {}),
         },
         logs: [...state.logs, makeLog(setupMessage, "success")].slice(
           -MAX_LOGS,
@@ -388,11 +383,18 @@ function reducer(state, action) {
           ([, value]) => value !== undefined,
         ),
       );
+      // While the backend is still bootstrapping, polls report not-yet-started
+      // agents as "inactive". Don't let that drag an agent the UI has already
+      // advanced (thinking/completed/errored/cancelled) back to a hidden state.
+      const isBackwards =
+        (action.status === "inactive" || action.status === "queued") &&
+        ["thinking", "completed", "errored", "cancelled"].includes(agent.status);
+      const nextStatus = isBackwards ? agent.status : action.status;
       const nextAgents = {
         ...state.agents,
-        [action.agentKey]: { ...agent, ...patch, status: action.status },
+        [action.agentKey]: { ...agent, ...patch, status: nextStatus },
       };
-      if (action.status === "completed") {
+      if (nextStatus === "completed") {
         const nextKey = NEXT_AGENT_BY_KEY[action.agentKey];
         const nextAgent = nextKey ? nextAgents[nextKey] : null;
         if (
@@ -527,6 +529,12 @@ export default function App() {
     start: startCreateData,
     stop: stopCreateData,
   } = useCreateData();
+  const {
+    state: batchEvalState,
+    start: startBatchEval,
+    stop: stopBatchEval,
+    loadRuns: loadBatchEvalRuns,
+  } = useBatchEval();
   useAgents(dispatch);
 
   useEffect(() => {
@@ -615,6 +623,10 @@ export default function App() {
     dispatch({ type: "OPEN_MODAL", modal: "create-data" });
   };
 
+  const handleBatchEval = () => {
+    dispatch({ type: "OPEN_MODAL", modal: "batch-eval" });
+  };
+
   const handleInputToAgentRun = (agentKey, inputFile, callbacks = {}) => {
     if (serviceInactive) {
       callbacks.onError?.("OpenAI servers are down; agent-input workflow start blocked.");
@@ -677,6 +689,8 @@ export default function App() {
                 createDataState.isRunning || createDataState.isStarting
               }
               onCreateData={handleCreateData}
+              onBatchEval={handleBatchEval}
+              isBatchEvalRunning={batchEvalState.isRunning || batchEvalState.isStarting}
               onInputToAgent={() =>
                 dispatch({ type: "OPEN_MODAL", modal: "input-to-agent" })
               }
@@ -766,6 +780,12 @@ export default function App() {
       <SetupModal isOpen={state.activeModal === "setup"} onClose={closeModal} />
       <OutputModal isOpen={state.activeModal === "output"} onClose={closeModal} />
       <HelpModal isOpen={state.activeModal === "help"} onClose={closeModal} />
+      <BatchEvalModal
+        isOpen={state.activeModal === "batch-eval"}
+        onClose={closeModal}
+        batchEval={{ ...batchEvalState, start: startBatchEval, stop: stopBatchEval }}
+        loadRuns={loadBatchEvalRuns}
+      />
     </>
   );
 }

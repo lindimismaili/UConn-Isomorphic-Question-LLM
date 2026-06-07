@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Iterable
 
@@ -124,15 +125,64 @@ def _collect_distractor_labels(options: Iterable[object]) -> list[str]:
     return labels
 
 
+# Tokens that carry no misconception meaning on their own.
+_LOGIC_STOPWORDS = frozenset({
+    "the", "a", "an", "of", "by", "and", "to", "with", "in", "on", "for",
+    "is", "are", "then", "that", "it", "as", "or", "from", "into", "this",
+    "be", "at", "its", "use", "uses", "using", "value", "number",
+})
+_MATH_SPAN_RE = re.compile(r"\\\(.*?\\\)|\\\[.*?\\\]|\$.*?\$", re.DOTALL)
+_BACKSLASH_CMD_RE = re.compile(r"\\[a-zA-Z]+")
+
+
+def _logic_signature(label: str) -> frozenset[str]:
+    """Reduce a `distractor_logic` label to a wording/number-invariant token set.
+
+    The misconception *logic* must be preserved across an isomorphic variant, but
+    the wording and numbers must not (the generator is told to vary numbers, and
+    to rewrite the label "to reference the new quantities"). So strip LaTeX math
+    spans and commands — which carry the question-specific numbers — keep the
+    alphabetic skeleton, and drop stopwords. Two labels describing the same error
+    with different numbers/phrasing collapse to the same (or overlapping) set.
+    """
+    text = _MATH_SPAN_RE.sub(" ", label.lower())
+    text = _BACKSLASH_CMD_RE.sub(" ", text)
+    tokens = re.findall(r"[a-z]+", text)
+    return frozenset(token for token in tokens if token not in _LOGIC_STOPWORDS)
+
+
+def _logic_preserved(source_sig: frozenset[str], generated_sigs: list[frozenset[str]]) -> bool:
+    """True if some generated label carries the same misconception logic.
+
+    Matches on containment or majority token overlap (Jaccard >= 0.5), so a
+    renumbered/reworded restatement of the same error counts as preserved while a
+    genuinely different (or dropped) misconception does not. A source label with
+    no checkable tokens (pure math/numbers) is not enforced.
+    """
+    if not source_sig:
+        return True
+    for gen_sig in generated_sigs:
+        if not gen_sig:
+            continue
+        if source_sig <= gen_sig:
+            return True
+        union = len(source_sig | gen_sig)
+        if union and len(source_sig & gen_sig) / union >= 0.5:
+            return True
+    return False
+
+
 def validate_distractor_logic_preservation(
     source_questions: list[SourceQuestionItem],
     generated_output: GeneratorOutput,
 ) -> ValidationReport:
-    """Verify every source `distractor_logic` label appears in the matching generated item.
+    """Verify every source misconception is preserved in the matching generated item.
 
     The rubric's `distractor_structure_preservation` criterion treats misconception
     preservation as the central pedagogical property; this check enforces it
-    deterministically before the LLM judge is involved.
+    deterministically before the LLM judge is involved. Matching is on the
+    misconception *logic* (a number/wording-invariant signature), not the verbatim
+    label — an isomorphic variant keeps the error type but changes the numbers.
     """
     report = ValidationReport()
     generated_by_source: dict[str, list] = {}
@@ -142,17 +192,24 @@ def validate_distractor_logic_preservation(
     for source in source_questions:
         if source.has_figure:
             continue
-        source_labels = _collect_distractor_labels(getattr(source, "options", []))
+        # Exclude the generic sentinel: it explicitly means "no specific
+        # misconception to preserve".
+        source_labels = [
+            label for label in _collect_distractor_labels(getattr(source, "options", []))
+            if label != "generic_plausible_value"
+        ]
         if not source_labels:
             continue
         for generated in generated_by_source.get(source.source_id, []):
             if generated.skipped:
                 continue
-            generated_labels = _collect_distractor_labels(getattr(generated, "options", []))
+            generated_sigs = [
+                _logic_signature(label)
+                for label in _collect_distractor_labels(getattr(generated, "options", []))
+            ]
             missing = [
                 label for label in source_labels
-                if label not in generated_labels
-                and label != "generic_plausible_value"
+                if not _logic_preserved(_logic_signature(label), generated_sigs)
             ]
             if missing:
                 report.add(
