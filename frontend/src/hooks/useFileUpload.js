@@ -1,11 +1,9 @@
 import { useCallback } from 'react';
 
+import { generateId } from '../utils/ids';
+
 /** Maximum number of source files the UI accepts at once. */
 const MAX_FILES = 5;
-
-function generateId() {
-  return Math.random().toString(36).substring(2, 11);
-}
 
 /**
  * Returns file-selection helpers plus the current upload limit state.

@@ -1,18 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
+import { generateId } from '../../utils/ids';
 
 /** Mirrors the main upload limit for test-file selections. */
 const MAX_FILES = 5;
-
-/**
- * Generates a local id for synthetic test-file entries.
- *
- * @returns {string}
- */
-function generateId() {
-  return Math.random().toString(36).slice(2, 11);
-}
 
 /**
  * Lets the user pick evaluation fixtures from `/api/evaluation/files`.

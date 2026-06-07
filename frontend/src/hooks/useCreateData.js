@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { abortableSleep } from '../utils/abortableSleep';
+
 /** Baseline batch state before a Create Data run starts. */
 const INITIAL_STATE = {
   batchId: null,
@@ -19,36 +21,6 @@ const INITIAL_STATE = {
 
 /** Backend states that stop the polling loop. */
 const TERMINAL_STATUSES = new Set(['completed', 'errored', 'cancelled']);
-
-function sleep(ms, signal) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const cleanup = () => {
-      if (signal) signal.removeEventListener('abort', onAbort);
-    };
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve();
-    };
-    const onAbort = () => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeoutId);
-      cleanup();
-      reject(new DOMException('Aborted', 'AbortError'));
-    };
-    const timeoutId = setTimeout(finish, ms);
-    if (signal) {
-      if (signal.aborted) {
-        onAbort();
-        return;
-      }
-      signal.addEventListener('abort', onAbort, { once: true });
-    }
-  });
-}
 
 /**
  * Fetches a JSON payload from the batch-evaluation API.
@@ -166,7 +138,7 @@ export function useCreateData() {
           break;
         }
 
-        await sleep(400, signal);
+        await abortableSleep(400, signal);
       }
     } catch (error) {
       if (error?.name === 'AbortError') {
