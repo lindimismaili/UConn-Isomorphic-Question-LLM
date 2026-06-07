@@ -17,7 +17,6 @@ from backend.src.api.state import (
     _downloadable_file_names,
     _get_workflow_record,
     _is_under_directory,
-    _prune_batch_jobs,
     _prune_workflows,
     _touch_workflow,
     _write_upload_manifest,
@@ -126,8 +125,6 @@ async def upload_files(files: list[UploadFile] = File(...)):
 @router.get("/api/download/{workflow_id}/{file_path:path}")
 async def download_file(workflow_id: str, file_path: str, inline: bool = False):
     """Download a file from a completed workflow."""
-    _prune_workflows()
-    _prune_batch_jobs()
     workflow = _get_workflow_record(workflow_id)
     if workflow is None:
         raise HTTPException(status_code=404, detail="Workflow not found")

@@ -140,8 +140,6 @@ async def stop_create_data(batch_id: str):
 @router.get("/api/create-data/{batch_id}/status")
 async def get_create_data_status(batch_id: str):
     """Get batch create-data progress."""
-    _prune_workflows()
-    _prune_batch_jobs()
     batch = _get_batch_record(batch_id)
     if batch is None:
         raise HTTPException(status_code=404, detail="Batch job not found")
@@ -163,8 +161,6 @@ async def get_create_data_status(batch_id: str):
 @router.get("/api/create-data/{batch_id}/result")
 async def get_create_data_result(batch_id: str):
     """Get the final result of a create-data batch run."""
-    _prune_workflows()
-    _prune_batch_jobs()
     batch = _get_batch_record(batch_id)
     if batch is None:
         raise HTTPException(status_code=404, detail="Batch job not found")

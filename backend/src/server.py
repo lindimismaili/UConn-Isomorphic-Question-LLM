@@ -15,7 +15,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+import asyncio
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,10 +32,26 @@ from backend.src.api.health import router as health_router
 from backend.src.api.workflows import router as workflows_router
 from backend.src.paths import DIST_DIR
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Run registry/artifact pruning on an interval instead of on every request."""
+    prune_task = asyncio.create_task(state.pruning_loop())
+    try:
+        yield
+    finally:
+        prune_task.cancel()
+        try:
+            await prune_task
+        except asyncio.CancelledError:
+            pass
+
+
 app = FastAPI(
     title="Isomorphic Question Generator API",
     description="Generate isomorphic physics questions using AI agents",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

@@ -93,6 +93,8 @@ UPLOAD_MAX_BYTES = int(os.getenv("UPLOAD_MAX_BYTES", str(2 * 1024 * 1024 * 1024)
 
 ARTIFACT_CLEANUP_INTERVAL_SECONDS = int(os.getenv("ARTIFACT_CLEANUP_INTERVAL_SECONDS", str(60 * 60)))
 
+PRUNE_INTERVAL_SECONDS = max(5, int(os.getenv("PRUNE_INTERVAL_SECONDS", "60")))
+
 ACTIVE_WORKFLOW_STALE_SECONDS = int(os.getenv("ACTIVE_WORKFLOW_STALE_SECONDS", str(6 * 60 * 60)))
 
 OPENAI_WORKFLOW_BLOCKING_CONCURRENCY = max(1, int(os.getenv("OPENAI_WORKFLOW_BLOCKING_CONCURRENCY", "4")))
@@ -183,16 +185,24 @@ def _workflow_now() -> str:
     return utc_now_iso()
 
 def _workflow_id_for_record(target: dict[str, Any]) -> str:
-    """Find a workflow id by object identity."""
+    """Return a workflow's id, memoizing it on the record to avoid repeat scans."""
+    cached = target.get("id")
+    if cached:
+        return str(cached)
     for workflow_id, workflow in workflows.items():
         if workflow is target:
+            target["id"] = workflow_id
             return workflow_id
     return ""
 
 def _batch_id_for_record(target: dict[str, Any]) -> str:
-    """Find a batch id by object identity."""
+    """Return a batch's id, memoizing it on the record to avoid repeat scans."""
+    cached = target.get("id")
+    if cached:
+        return str(cached)
     for batch_id, batch in batch_jobs.items():
         if batch is target:
+            target["id"] = batch_id
             return batch_id
     return ""
 
@@ -213,6 +223,7 @@ def _get_workflow_record(workflow_id: str) -> dict[str, Any] | None:
         return workflow
     workflow = workflow_store.load("workflow", workflow_id)
     if workflow is not None:
+        workflow["id"] = workflow_id
         workflows[workflow_id] = workflow
     return workflow
 
@@ -223,6 +234,7 @@ def _get_batch_record(batch_id: str) -> dict[str, Any] | None:
         return batch
     batch = workflow_store.load("batch", batch_id)
     if batch is not None:
+        batch["id"] = batch_id
         batch_jobs[batch_id] = batch
     return batch
 
@@ -329,6 +341,21 @@ def _prune_batch_jobs() -> None:
                 task.cancel()
         if len(batch_jobs) <= WORKFLOW_MAX_ENTRIES:
             break
+
+async def pruning_loop() -> None:
+    """Periodically prune expired workflows/batches off the request path.
+
+    Started from the FastAPI lifespan. Keeping pruning here (instead of calling it
+    on every status poll) means the 150 ms client polling loop no longer triggers
+    full registry scans and filesystem cleanup on each request.
+    """
+    while True:
+        await asyncio.sleep(PRUNE_INTERVAL_SECONDS)
+        try:
+            await asyncio.to_thread(_prune_workflows)
+            await asyncio.to_thread(_prune_batch_jobs)
+        except Exception:
+            logger.exception("Background pruning cycle failed")
 
 def _directory_size(path: Path) -> int:
     """Return total size for files under a directory."""
