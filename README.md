@@ -195,9 +195,13 @@ Those files are the primary record of how the generated questions were judged.
 
 ## Project Docs
 
-- [AGENTS.md](AGENTS.md) the single source of truth: architecture, source-of-truth paths, conventions, API surface, gotchas (CLAUDE.md just points here)
-- [frontend/DESIGN.md](frontend/DESIGN.md) frontend design system: tokens, button/modal styles, consistency rules
+Every Markdown doc tracked in the repo:
+
+- [AGENTS.md](AGENTS.md) the single source of truth: architecture, source-of-truth paths, conventions, API surface, gotchas
+- [CLAUDE.md](CLAUDE.md) coding-agent entry point; points straight to AGENTS.md
+- [frontend/DESIGN.md](frontend/DESIGN.md) frontend design system: tokens, layout, buttons, modals, themes, transitions, consistency rules
 - [deploy/DEPLOY.md](deploy/DEPLOY.md) deployment and local preview scripts
+- [README.md](README.md) this file: setup, environment, run/CLI/output reference
 
 ## Troubleshooting
 

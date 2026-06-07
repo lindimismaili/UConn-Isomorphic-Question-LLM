@@ -17,7 +17,7 @@ dist/
 # Node.js
 node_modules/
 frontend/node_modules/
-**/node_modules/
+**/node_modules/A
 frontend/.vite/
 
 # Test / type / lint caches
