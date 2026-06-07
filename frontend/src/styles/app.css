@@ -76,6 +76,12 @@
   --radius-xl: 1.5rem;
   --radius-pill: 999px;
 
+  /* Control height scale (see DESIGN.md). Same-group controls share one tier. */
+  --control-height-sm: 36px;
+  --control-height: 44px;
+  --control-height-lg: 56px;
+  --control-height-xl: 72px;
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
@@ -433,7 +439,7 @@ h4 {
 
 .prompt-dropdown-select {
   width: 100%;
-  min-height: 42px;
+  min-height: var(--control-height);
   padding: 0.65rem 0.75rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -473,8 +479,8 @@ h4 {
 
 .prompt-actions-row > .btn {
   width: 100%;
-  min-height: 56px;
-  height: 56px;
+  min-height: var(--control-height-lg);
+  height: var(--control-height-lg);
 }
 
 .send-action {
@@ -503,7 +509,7 @@ h4 {
 .developer-tools-grid .developer-tool-btn,
 .developer-tools-grid .developer-toggle {
   width: 100%;
-  min-height: 72px;
+  min-height: var(--control-height-xl);
 }
 
 .developer-toggle {
@@ -604,9 +610,11 @@ h4 {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
+  min-height: var(--control-height-sm);
   padding: var(--spacing-sm) var(--spacing-lg);
   font-size: 0.9rem;
   font-weight: 500;
+  line-height: 1.2;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -615,13 +623,23 @@ h4 {
     background-color var(--transition-fast),
     color var(--transition-fast),
     border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
   white-space: nowrap;
   min-width: fit-content;
 }
 
 .btn-label {
   min-width: max-content;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
 
 .btn:disabled {
@@ -744,15 +762,23 @@ h4 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
   padding: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.btn-icon-only:active {
+  transform: translateY(1px);
 }
 
 .btn-icon-only svg {
@@ -767,7 +793,8 @@ h4 {
 }
 
 .file-count-btn {
-  font-size: 0.85rem;
+  /* Inherits the .btn 0.9rem so it matches its row siblings (see DESIGN.md). */
+  font-variant-numeric: tabular-nums;
 }
 
 /* =============================================================================
@@ -1666,7 +1693,7 @@ h4 {
 .btn-download,
 .btn-preview,
 .btn-eval-results {
-  min-height: 34px;
+  min-height: var(--control-height-sm);
   padding: 0.42rem 0.7rem;
   font-size: 0.8rem;
   white-space: nowrap;
@@ -2468,7 +2495,7 @@ body.modal-open .footer {
 
 .test-file-toggle-btn {
   min-width: 120px;
-  min-height: 44px;
+  min-height: var(--control-height);
   padding: 0.6rem 1.25rem;
   font-size: 0.95rem;
   font-weight: 600;
@@ -2688,7 +2715,7 @@ body.modal-open .footer {
 
 .input-to-agent-select {
   width: 100%;
-  min-height: 42px;
+  min-height: var(--control-height);
   padding: 0.65rem 0.75rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
