@@ -74,7 +74,7 @@ export default function CreateDataModal({
           >
             {isActive ? "Stop" : "Start"}
           </button>
-          <button className="btn btn-primary" onClick={onClose}>
+          <button className="btn btn-secondary" onClick={onClose}>
             Close
           </button>
         </div>
