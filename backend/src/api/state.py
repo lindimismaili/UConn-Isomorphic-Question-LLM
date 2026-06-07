@@ -58,7 +58,25 @@ from backend.src.workflow.store import WorkflowStore
 
 _load_dotenv(ENV_PATH)
 
-ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt"}
+ALLOWED_UPLOAD_EXTENSIONS = {
+    ".bmp",
+    ".doc",
+    ".docx",
+    ".gif",
+    ".jpeg",
+    ".jpg",
+    ".latex",
+    ".markdown",
+    ".md",
+    ".pdf",
+    ".png",
+    ".svg",
+    ".tex",
+    ".tif",
+    ".tiff",
+    ".txt",
+    ".webp",
+}
 
 ALLOWED_AGENT_INPUT_EXTENSIONS = {".json", ".jsonl", ".txt"}
 

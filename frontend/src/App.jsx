@@ -4,7 +4,6 @@ import "./styles/app.css";
 import PromptInput from "./components/PromptInput.jsx";
 import DeveloperToolsPanel from "./components/DeveloperToolsPanel.jsx";
 import AgentPipeline from "./components/AgentPipeline.jsx";
-import LogPanel from "./components/LogPanel.jsx";
 import ResultsSection from "./components/ResultsSection.jsx";
 import FailureSection from "./components/FailureSection.jsx";
 
@@ -669,9 +668,6 @@ export default function App() {
               onSend={handleSend}
               onClearInputs={handleClearInputs}
               onClearAgents={handleClearAgents}
-              onShowFiles={() =>
-                dispatch({ type: "OPEN_MODAL", modal: "files" })
-              }
               onShowHelp={() => dispatch({ type: "OPEN_MODAL", modal: "help" })}
             />
             <DeveloperToolsPanel
@@ -689,6 +685,7 @@ export default function App() {
               }
               runEvaluations={runEvaluations}
               onRunEvaluationsChange={setRunEvaluations}
+              logs={state.logs}
             />
           </div>
 
@@ -709,7 +706,6 @@ export default function App() {
                   />
                 </div>
               </div>
-              <LogPanel logs={state.logs} />
             </div>
           </section>
 

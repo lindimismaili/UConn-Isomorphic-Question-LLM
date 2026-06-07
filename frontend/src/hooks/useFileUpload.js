@@ -4,6 +4,36 @@ import { generateId } from '../utils/ids';
 
 /** Maximum number of source files the UI accepts at once. */
 const MAX_FILES = 5;
+const ALLOWED_EXTENSIONS = new Set([
+  'doc',
+  'docx',
+  'gif',
+  'jpeg',
+  'jpg',
+  'latex',
+  'markdown',
+  'md',
+  'pdf',
+  'png',
+  'svg',
+  'tex',
+  'tif',
+  'tiff',
+  'txt',
+  'webp',
+]);
+
+/**
+ * Checks whether the selected file is one of the frontend-supported source
+ * document formats.
+ *
+ * @param {File} file
+ * @returns {boolean}
+ */
+function isAllowedSourceFile(file) {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  return Boolean(extension && ALLOWED_EXTENSIONS.has(extension));
+}
 
 /**
  * Returns file-selection helpers plus the current upload limit state.
@@ -27,12 +57,12 @@ export function useFileUpload(files, dispatch) {
       return;
     }
 
-    const allowed = selected.slice(0, available);
+    const allowed = selected.filter(isAllowedSourceFile).slice(0, available);
     const newFiles = allowed
       .filter((f) => !files.some((existing) => existing.name === f.name && existing.size === f.size))
       .map((f) => ({ id: generateId(), name: f.name, size: f.size, type: f.type, file: f }));
 
-    if (selected.length > allowed.length) {
+    if (selected.length > allowed.length || selected.some((file) => !isAllowedSourceFile(file))) {
       dispatch({ type: 'UPLOAD_WARNING' });
     }
 

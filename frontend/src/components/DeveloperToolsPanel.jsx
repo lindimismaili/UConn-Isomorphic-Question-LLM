@@ -1,4 +1,5 @@
 import { IconFile, IconUpload, IconZap } from './Icons.jsx';
+import LogPanel from './LogPanel.jsx';
 
 /**
  * Right-hand panel containing developer / debugging actions.
@@ -14,6 +15,7 @@ export default function DeveloperToolsPanel({
   onShowTestFiles,
   runEvaluations,
   onRunEvaluationsChange,
+  logs,
 }) {
   return (
     <section className="card developer-tools-card">
@@ -28,7 +30,7 @@ export default function DeveloperToolsPanel({
       </div>
 
       <div className="card-body">
-        <div className="developer-tools-grid">
+        <div className="developer-tools-row">
           <label className="developer-toggle">
             <input
               type="checkbox"
@@ -73,6 +75,9 @@ export default function DeveloperToolsPanel({
             <IconFile className="btn-icon" />
             <span className="btn-label">Browse Test Files</span>
           </button>
+        </div>
+        <div className="developer-log-area">
+          <LogPanel logs={logs} />
         </div>
       </div>
     </section>
