@@ -11,6 +11,8 @@ export default function DeveloperToolsPanel({
   serviceInactive,
   isCreateDataRunning,
   onCreateData,
+  onBatchEval,
+  isBatchEvalRunning,
   onInputToAgent,
   onShowTestFiles,
   runEvaluations,
@@ -53,6 +55,18 @@ export default function DeveloperToolsPanel({
             <IconZap className="btn-icon" />
             <span className="btn-label">
               {isCreateDataRunning ? 'Test Data Running...' : 'Create Test Data'}
+            </span>
+          </button>
+
+          <button
+            className="btn btn-secondary developer-tool-btn"
+            onClick={onBatchEval}
+            disabled={isRunning || (serviceInactive && !isBatchEvalRunning)}
+            type="button"
+          >
+            <IconZap className="btn-icon" />
+            <span className="btn-label">
+              {isBatchEvalRunning ? 'Batch Eval Running...' : 'Batch Eval'}
             </span>
           </button>
 

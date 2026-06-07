@@ -43,6 +43,7 @@ class SourceQuestionItem(BaseModel):
     has_figure: bool = False
     answer: str = ""
     parts: list[QuestionPart] = []
+    points: float = 0.0
 
 
 class NewQuestionPart(BaseModel):
@@ -71,6 +72,7 @@ class NewQuestionItem(BaseModel):
     skip_reason: str = ""
     answer: str = ""
     parts: list[NewQuestionPart] = []
+    points: float = 0.0
 
 
 class NormalizerOutput(BaseModel):
@@ -81,6 +83,7 @@ class NormalizerOutput(BaseModel):
     theme: str = ""
     title: str = ""
     notes: str = ""
+    show_answers: bool = True
 
 
 class ExtracterOutput(BaseModel):
@@ -88,6 +91,7 @@ class ExtracterOutput(BaseModel):
 
     filename: str = ""
     title: str = ""
+    subtitle: str = ""
     theme: str = ""
     author: str = ""
     date: str = ""
@@ -173,6 +177,7 @@ class LaTeXDocumentInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str = ""
+    subtitle: str = ""
     theme: str = ""
     source_title: str = ""
     course: str = ""
@@ -191,6 +196,7 @@ class LaTeXQuestionInput(BaseModel):
     skip_reason: str = ""
     answer: str = ""
     parts: list[NewQuestionPart] = []
+    points: float = 0.0
 
 
 class LaTeXInput(BaseModel):

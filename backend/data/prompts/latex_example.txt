@@ -205,9 +205,9 @@
 \begin{document}
 
 \begin{center}
-{\huge \textbf{Physics: Forces and Motion}}\\[0.25em]
-{\Large Isomorphic Practice Questions}\\[0.25em]
-{\large Questions generated below. Multiple-choice answers in RED; incorrect answers in BLUE.}
+{\huge \textbf{Physics Practice Questions}}\\[0.25em]
+{\Large Forces and Motion}\\[0.25em]
+{\large Answer the questions below. Correct answers are in \textcolor{AnsRed}{RED}, while incorrect answers are in \textcolor{WrongBlue}{BLUE}.}
 \end{center}
 
 \vspace{0.75em}

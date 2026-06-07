@@ -182,6 +182,12 @@ Size tiers are applied by **container context**, per the consistency rule:
 - Developer-tools tiles → `--control-height-lg` (56) via `.developer-tools-row`.
 - Everything else → default `--control-height` (44), or `.btn-sm` (36).
 
+Developer-tools tiles get narrow (4 across on a half-width card), so inside
+`.developer-tools-row` the icon is pinned left + vertically centered and the
+`.btn-label` wraps to at most two lines then ellipsizes (`-webkit-line-clamp: 2`)
+— text never overflows the button. This is the one place `.btn`'s default
+`nowrap` / centered layout is intentionally overridden.
+
 Never create a new `*-btn` class with bespoke padding/font/height. Reuse a
 variant + the container tier.
 
@@ -219,7 +225,9 @@ raw checkbox:
 
 It exposes the standard `:focus-visible` primary ring and a disabled state
 (`:has(input:disabled)` → 0.6 opacity). Reuse this pattern for any on/off
-control rather than hand-rolling a switch.
+control rather than hand-rolling a switch. Like the dev-tool tiles, the
+`.developer-toggle-label` wraps to two lines then ellipsizes so a long label
+never pushes the track out of the control.
 
 ---
 

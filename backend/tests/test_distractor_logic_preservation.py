@@ -98,3 +98,50 @@ def test_figure_items_skip_distractor_check():
     gen = GeneratorOutput(isomorphic_questions=[])  # figures may be skipped placeholders
     report = validate_distractor_logic_preservation([src], gen)
     assert report.valid
+
+
+def test_renumbered_label_preserved():
+    # Same misconception, different numbers (the generator is told to vary
+    # numbers): wording differs only inside the LaTeX math, so it must pass.
+    src = _source_mc("1", [
+        "correct",
+        r"compute \(\delta x=5.03-0.33\) and multiply by \(f_x=3.04\)",
+    ])
+    gen = GeneratorOutput(isomorphic_questions=[_generated_mc("1", [
+        "correct",
+        r"compute \(\delta x=7.2-1.1\) and multiply by \(f_x=4.5\)",
+    ])])
+    report = validate_distractor_logic_preservation([src], gen)
+    assert report.valid, report.errors
+
+
+def test_reworded_same_logic_preserved():
+    # Light rewording of the same misconception still shares enough tokens.
+    src = _source_mc("1", ["correct", "uses mass instead of weight"])
+    gen = GeneratorOutput(isomorphic_questions=[
+        _generated_mc("1", ["correct", "uses the mass instead of the weight here"]),
+    ])
+    report = validate_distractor_logic_preservation([src], gen)
+    assert report.valid, report.errors
+
+
+def test_different_misconception_still_fails():
+    # A genuinely different error type must still be flagged as not preserved.
+    src = _source_mc("1", ["correct", "forgets to convert units"])
+    gen = GeneratorOutput(isomorphic_questions=[
+        _generated_mc("1", ["correct", "flips the sign of the acceleration"]),
+    ])
+    report = validate_distractor_logic_preservation([src], gen)
+    assert not report.valid
+    assert any("forgets to convert units" in e for e in report.errors)
+
+
+def test_pure_math_label_not_enforced():
+    # A label that is only math/numbers has no checkable logic signature, so it
+    # must not block (can't deterministically compare a bare expression).
+    src = _source_mc("1", ["correct", r"\(\delta x = 5.03 - 0.33\)"])
+    gen = GeneratorOutput(isomorphic_questions=[
+        _generated_mc("1", ["correct", r"\(q = 9.9\)"]),
+    ])
+    report = validate_distractor_logic_preservation([src], gen)
+    assert report.valid, report.errors

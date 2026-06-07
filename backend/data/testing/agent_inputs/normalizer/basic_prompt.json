@@ -1,0 +1,19 @@
+{
+  "task": "normalize_user_request",
+  "user_input": {
+    "prompt": "Generate 2 isomorphic questions per source at medium difficulty.",
+    "files": ["Quiz_Compilation.pdf"]
+  },
+  "defaults": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "show_answers": true
+  },
+  "rules": {
+    "difficulty": "leave empty unless the user explicitly requests a difficulty target",
+    "theme": "leave empty unless the user requests a target generation theme; the extracter determines source theme",
+    "title": "leave empty unless the user requests an output title; the extracter determines source title"
+  }
+}

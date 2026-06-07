@@ -110,6 +110,20 @@ def file_metadata(name: str, path: Path, *, downloadable: bool = True) -> dict[s
     }
 
 
+def _log_task_exception(task: "asyncio.Task", label: str) -> None:
+    """Retrieve a background task's exception so it never goes unobserved.
+
+    Used for the LaTeX bootstrap task, which is awaited at the latexifier stage.
+    If the run errors before that stage, this callback still consumes the
+    exception (avoiding an "exception was never retrieved" warning) and logs it.
+    """
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("%s failed: %s", label, exc)
+
+
 def materialize_latex_output(
     latex_output: LaTeXOutput,
     outputs_dir: Path,
@@ -387,6 +401,25 @@ def resolve_upstream_agent(
     return output
 
 
+def _build_partial_result(
+    *,
+    normalizer_output: NormalizerOutput,
+    extracter_output: Optional[ExtracterOutput] = None,
+    verifier_output: Optional[VerifierOutput] = None,
+    generator_output: Optional[GeneratorOutput] = None,
+    latex_output: Optional[LaTeXOutput] = None,
+) -> WorkflowResult:
+    """Build a WorkflowResult from whatever stages completed before an early stop."""
+    return WorkflowResult(
+        config=normalizer_output,
+        source_questions=extracter_output.questions if extracter_output else [],
+        verified_questions=verifier_output.questions if verifier_output else [],
+        generated_questions=generator_output.isomorphic_questions if generator_output else [],
+        latex_file=latex_output.filename if latex_output else "",
+        pdf_file=latex_output.pdf_filename if latex_output else "",
+    )
+
+
 async def run_workflow_async(
     *,
     client: OpenAI,
@@ -407,6 +440,7 @@ async def run_workflow_async(
     agent_input_filename: str = "",
     input_to_agent_run: bool = False,
     run_evaluation: bool = True,
+    stop_after_agent: Optional[str] = None,
 ) -> WorkflowResult:
     """Run the workflow and write artifacts into a specific output directory.
 
@@ -417,6 +451,11 @@ async def run_workflow_async(
     with trace("Isomorphic Question Generation Workflow"):
         if resume_from_agent not in WORKFLOW_AGENT_SEQUENCE:
             raise ValueError(f"Unknown resume_from_agent: {resume_from_agent}")
+        _stoppable_agents = ("normalizer", "extracter", "verifier", "generator", "latexifier")
+        if stop_after_agent is not None and stop_after_agent not in _stoppable_agents:
+            raise ValueError(
+                f"stop_after_agent must be one of {_stoppable_agents}, got: {stop_after_agent!r}"
+            )
 
         logger.info(
             "Workflow %s engine starting (resume_from=%s, files=%d)",
@@ -503,12 +542,12 @@ async def run_workflow_async(
             file_ids=file_ids,
         )
         shared_container_id = container.id
-        workflow["container"]["status"] = "bootstrapping"
+        workflow["container"]["status"] = "active"
         workflow["container"]["id"] = shared_container_id
         workflow["container"]["allowedDomains"] = allowed_domains_from_env()
         touch_workflow(workflow)
         logger.info(
-            "Workflow %s container created (id=%s); bootstrapping runtime",
+            "Workflow %s container created (id=%s)",
             workflow_id,
             shared_container_id,
         )
@@ -518,10 +557,23 @@ async def run_workflow_async(
             output_dir=outputs_dir,
             allowed_domains=allowed_domains_from_env(),
         )
-        await to_thread(shared_runtime.bootstrap)
-        workflow["container"]["status"] = "active"
-        touch_workflow(workflow)
-        logger.info("Workflow %s runtime bootstrap complete", workflow_id)
+
+        # Installing the LaTeX toolchain (apt-get texlive…) is the slow part of
+        # setup, but only the latexifier needs it. Kick it off in the background
+        # so normalizer→generator start as soon as the container exists instead
+        # of blocking on it; it's awaited at the top of the latexifier stage.
+        # compile_latex() also calls bootstrap() idempotently, so it installs
+        # exactly once.
+        latex_bootstrap_task: Optional[asyncio.Task] = None
+        if should_run_agent("latexifier", resume_from_agent):
+            latex_bootstrap_task = asyncio.ensure_future(
+                to_thread(shared_runtime.bootstrap)
+            )
+            latex_bootstrap_task.add_done_callback(
+                lambda task: _log_task_exception(
+                    task, f"Workflow {workflow_id} LaTeX runtime bootstrap"
+                )
+            )
 
         agents = create_agents(
             file_ids=file_ids,
@@ -594,6 +646,11 @@ async def run_workflow_async(
                 from_input=lambda: coerce_normalizer_from_agent_input(uploaded_agent_payload),
                 from_cache=lambda: load_resume_agent_output(resume_source_dir, "normalizer"),
             )
+
+        if stop_after_agent == "normalizer":
+            workflow["status"] = "completed"
+            touch_workflow(workflow)
+            return _build_partial_result(normalizer_output=normalizer_output)
 
         # ---- Extracter ----
         if should_run_agent("extracter", resume_from_agent):
@@ -689,6 +746,14 @@ async def run_workflow_async(
                 from_input=lambda: coerce_extracter_from_agent_input(uploaded_agent_payload),
                 from_cache=lambda: load_resume_agent_output(resume_source_dir, "extracter"),
                 post_process=_apply_extracter_metadata,
+            )
+
+        if stop_after_agent == "extracter":
+            workflow["status"] = "completed"
+            touch_workflow(workflow)
+            return _build_partial_result(
+                normalizer_output=normalizer_output,
+                extracter_output=extracter_output,
             )
 
         # ---- Verifier ----
@@ -788,6 +853,15 @@ async def run_workflow_async(
                 from_input=lambda: coerce_verifier_from_agent_input(uploaded_agent_payload, extracter_output),
                 from_cache=lambda: load_resume_agent_output(resume_source_dir, "verifier"),
                 post_process=_apply_verifier_post,
+            )
+
+        if stop_after_agent == "verifier":
+            workflow["status"] = "completed"
+            touch_workflow(workflow)
+            return _build_partial_result(
+                normalizer_output=normalizer_output,
+                extracter_output=extracter_output,
+                verifier_output=verifier_output,
             )
 
         verifier_report = validate_verifier_output(extracter_output.questions, verifier_output)
@@ -912,6 +986,16 @@ async def run_workflow_async(
                 post_process=_apply_generator_difficulty,
             )
 
+        if stop_after_agent == "generator":
+            workflow["status"] = "completed"
+            touch_workflow(workflow)
+            return _build_partial_result(
+                normalizer_output=normalizer_output,
+                extracter_output=extracter_output,
+                verifier_output=verifier_output,
+                generator_output=generator_output,
+            )
+
         generator_report = validate_generator_output(
             verifier_output.questions,
             generator_output,
@@ -925,6 +1009,13 @@ async def run_workflow_async(
             workflow["agents"]["latexifier"]["status"] = "thinking"
             workflow["agents"]["latexifier"]["data"]["startTime"] = datetime.now().isoformat()
             touch_workflow(workflow)
+
+            # Ensure the LaTeX toolchain finished installing before the latexifier
+            # compiles. By now normalizer→generator have run, so this usually
+            # returns immediately; any bootstrap failure surfaces here, attributed
+            # to the latexifier stage.
+            if latex_bootstrap_task is not None:
+                await latex_bootstrap_task
 
             latex_input_payload = build_latex_input(
                 normalizer_output, extracter_output, generator_output
@@ -1046,6 +1137,17 @@ async def run_workflow_async(
                 source_pdf_path = ensure_child_path(resume_source_dir, pdf_filename)
                 if source_pdf_path.exists():
                     await to_thread(shutil.copy2, source_pdf_path, pdf_path)
+
+        if stop_after_agent == "latexifier":
+            workflow["status"] = "completed"
+            touch_workflow(workflow)
+            return _build_partial_result(
+                normalizer_output=normalizer_output,
+                extracter_output=extracter_output,
+                verifier_output=verifier_output,
+                generator_output=generator_output,
+                latex_output=latex_output,
+            )
 
         # ---- Evaluation ----
         if should_run_evaluation:

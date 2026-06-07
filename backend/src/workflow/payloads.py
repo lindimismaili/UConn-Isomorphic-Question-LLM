@@ -216,6 +216,7 @@ def build_latex_questions(generator_output: GeneratorOutput) -> list[dict[str, A
             "skip_reason": q.skip_reason,
             "answer": q.answer,
             "parts": [part.model_dump() for part in q.parts],
+            "points": q.points,
         }
         for q in generator_output.isomorphic_questions
     ]
@@ -230,8 +231,9 @@ def build_latex_input(
     return {
         "task": "format_questions_to_latex",
         "document": {
-            "title": config.title or "Isomorphic Physics Questions",
-            "theme": config.theme,
+            "title": config.title or "Isomorphic Practice Questions",
+            "subtitle": extraction.subtitle,
+            "theme": config.theme or extraction.theme,
             "source_title": extraction.title,
             "course": extraction.course,
         },
@@ -251,6 +253,7 @@ def build_latex_input(
             "format_all_questions_with_macros": True,
             "proper_math_formatting": True,
             "filename": "isomorphic_questions.tex",
+            "show_answers": config.show_answers,
         },
     }
 

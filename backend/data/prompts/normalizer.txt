@@ -14,6 +14,7 @@ Output contract:
   - `theme`: ""
   - `title`: ""
   - `notes`: ""
+  - `show_answers`: true
 
 Rules:
 - Preserve user intent exactly; do not invent constraints.
@@ -29,3 +30,6 @@ Rules:
   - `physics_abstract`
 - If no theme is requested, keep `theme` as an empty string.
 - If no output title is requested, keep `title` as an empty string.
+- Set `show_answers` to `false` when the user explicitly requests a student/no-answer
+  version (e.g., "without answers", "no answer key", "student copy", "hide answers",
+  "don't show answers"). Default is `true` (instructor version with answers shown).

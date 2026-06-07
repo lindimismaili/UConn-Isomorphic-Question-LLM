@@ -1,0 +1,21 @@
+{
+  "task": "extract_source_questions",
+  "files": ["Quiz_Compilation.pdf"],
+  "normalizer_config": {
+    "new_questions_per_question": 1,
+    "difficulty": "",
+    "theme": "",
+    "title": "",
+    "notes": ""
+  },
+  "requirements": {
+    "preserve_math_latex": true,
+    "extract_metadata": ["title", "theme", "author", "date", "course"],
+    "determine_title_from_source": true,
+    "determine_theme_from_extracted_information": true,
+    "must_include_multiple_choice": true,
+    "multiple_choice_option_keys": ["A", "B", "C", "D"],
+    "set_has_explicit_answer_only_if_marked": true,
+    "difficulty_rule": "leave question difficulty empty unless normalizer_config.difficulty is non-empty"
+  }
+}
