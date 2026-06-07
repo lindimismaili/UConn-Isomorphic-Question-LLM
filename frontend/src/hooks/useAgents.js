@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 
+import { getJsonOrNull } from '../utils/api';
+
 /** Maps backend naming variants onto the frontend agent keys. */
 const AGENT_KEY_ALIASES = {
   extractor: 'extracter',
@@ -44,34 +46,17 @@ function normalizeAgentsConfig(raw) {
 }
 
 /**
- * Fetches a JSON document from a static or API endpoint.
- *
- * @param {string} url - Endpoint path to request.
- * @returns {Promise<object | null>} Parsed JSON on success, otherwise null.
- *   Network and parse failures are swallowed so startup can continue.
- */
-async function fetchJson(url) {
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    // Network/parse failures are non-fatal: callers fall back to the next source.
-    return null;
-  }
-}
-
-/**
  * Tries the runtime agent config endpoints in priority order.
  *
- * Touches: `/api/agents`, `/agents.json`, `/data/agents.json`.
+ * Touches: `/api/agents`, `/agents.json`, `/data/agents.json`. Failures are
+ * swallowed (getJsonOrNull) so startup can fall through to the next source.
  *
  * @returns {Promise<Record<string, object> | null>} The first usable config.
  */
 async function fetchAgentsConfig() {
   const endpoints = ['/api/agents', '/agents.json', '/data/agents.json'];
   for (const endpoint of endpoints) {
-    const data = await fetchJson(endpoint);
+    const data = await getJsonOrNull(endpoint);
     const normalized = normalizeAgentsConfig(data);
     if (normalized) return normalized;
   }

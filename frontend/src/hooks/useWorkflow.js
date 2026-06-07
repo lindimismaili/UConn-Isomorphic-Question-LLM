@@ -1,43 +1,7 @@
 import { useRef, useCallback } from 'react';
 
 import { abortableSleep } from '../utils/abortableSleep';
-
-/**
- * Fetch wrapper that preserves AbortError and wraps other network failures.
- *
- * @param {string} url - Endpoint path to request.
- * @param {RequestInit} [options] - Fetch options.
- * @param {AbortSignal} signal - Abort signal for the in-flight workflow.
- * @returns {Promise<Response>}
- */
-async function fetchWithAbort(url, options, signal) {
-  try {
-    return await fetch(url, { ...options, signal });
-  } catch (err) {
-    if (err.name === 'AbortError') throw err;
-    throw new Error(`Network error: ${err.message}`);
-  }
-}
-
-/**
- * Reads a useful error detail from a failed API response.
- *
- * @param {Response} response - Failed fetch response.
- * @param {string} fallback - Message to use when the response has no body.
- * @returns {Promise<string>}
- */
-async function readErrorDetail(response, fallback) {
-  const text = await response.text().catch(() => '');
-  if (!text) return fallback;
-  try {
-    const data = JSON.parse(text);
-    if (typeof data?.detail === 'string') return data.detail;
-    if (Array.isArray(data?.detail)) return data.detail.map((item) => item?.msg || String(item)).join('; ');
-  } catch {
-    // Fall through to raw text.
-  }
-  return text;
-}
+import { fetchWithAbort, readErrorDetail } from '../utils/api';
 
 /** Human-readable labels for workflow log messages. */
 const AGENT_LABELS = {

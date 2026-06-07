@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { abortableSleep } from '../utils/abortableSleep';
+import { requestJson } from '../utils/api';
 
 /** Baseline batch state before a Create Data run starts. */
 const INITIAL_STATE = {
@@ -21,24 +22,6 @@ const INITIAL_STATE = {
 
 /** Backend states that stop the polling loop. */
 const TERMINAL_STATUSES = new Set(['completed', 'errored', 'cancelled']);
-
-/**
- * Fetches a JSON payload from the batch-evaluation API.
- *
- * @param {string} url - Endpoint path to request.
- * @param {RequestInit} [options] - Fetch options.
- * @param {AbortSignal} [signal] - Abort signal used to cancel polling.
- * @returns {Promise<object>} Parsed response body.
- * @throws {Error} When the response is not OK.
- */
-async function fetchJson(url, options, signal) {
-  const response = await fetch(url, { ...options, signal });
-  if (!response.ok) {
-    const text = await response.text().catch(() => `Status ${response.status}`);
-    throw new Error(text || `Request failed with status ${response.status}`);
-  }
-  return response.json();
-}
 
 /**
  * Normalizes Create Data API payloads into stable hook state.
@@ -113,7 +96,7 @@ export function useCreateData() {
       const formData = new FormData();
       formData.append('prompt', prompt);
 
-      const started = await fetchJson('/api/create-data/start', { method: 'POST', body: formData }, signal);
+      const started = await requestJson('/api/create-data/start', { method: 'POST', body: formData, signal });
       let nextState = {
         ...INITIAL_STATE,
         batchId: started.batchId,
@@ -124,13 +107,13 @@ export function useCreateData() {
       setState(nextState);
 
       while (!signal.aborted) {
-        const statusPayload = await fetchJson(`/api/create-data/${started.batchId}/status`, {}, signal);
+        const statusPayload = await requestJson(`/api/create-data/${started.batchId}/status`, { signal });
         nextState = buildState(statusPayload, nextState);
         setState(nextState);
 
         if (TERMINAL_STATUSES.has(statusPayload.status)) {
           try {
-            const resultPayload = await fetchJson(`/api/create-data/${started.batchId}/result`, {}, signal);
+            const resultPayload = await requestJson(`/api/create-data/${started.batchId}/result`, { signal });
             setState(buildState(resultPayload, nextState));
           } catch {
             setState(nextState);
@@ -177,7 +160,7 @@ export function useCreateData() {
     }));
 
     try {
-      const stopped = await fetchJson(
+      const stopped = await requestJson(
         `/api/create-data/${batchId}/stop`,
         { method: 'POST' },
       );
