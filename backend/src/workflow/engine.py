@@ -274,6 +274,119 @@ def copy_or_record_reused_agent_artifact(
     )
 
 
+def finalize_agent_run(
+    *,
+    workflow: dict[str, Any],
+    outputs_dir: Path,
+    workflow_id: str,
+    agent_metadata_records: list[dict[str, Any]],
+    touch_workflow: TouchWorkflow,
+    agent_key: str,
+    agent_name: str,
+    elapsed: float,
+    input_payload: Any,
+    output_payload: Any,
+    metadata: dict[str, Any],
+) -> None:
+    """Record a freshly-run agent stage: mark completed, store output, persist artifacts.
+
+    ``output_payload`` is the pydantic stage output; its ``model_dump()`` is mirrored
+    into the live workflow state for the UI while the model itself is archived.
+    """
+    state = workflow["agents"][agent_key]
+    state["status"] = "completed"
+    data = state["data"]
+    data["endTime"] = datetime.now().isoformat()
+    data["executionTime"] = elapsed
+    data["output"] = output_payload.model_dump()
+    touch_workflow(workflow)
+    agent_metadata_records.append(
+        write_agent_artifacts(
+            outputs_dir=outputs_dir,
+            workflow_id=workflow_id,
+            agent_key=agent_key,
+            agent_name=agent_name,
+            input_payload=input_payload,
+            output_payload=output_payload,
+            metadata=metadata,
+        )
+    )
+
+
+def resolve_upstream_agent(
+    *,
+    workflow: dict[str, Any],
+    outputs_dir: Path,
+    workflow_id: str,
+    agent_metadata_records: list[dict[str, Any]],
+    touch_workflow: TouchWorkflow,
+    agent_key: str,
+    is_input_to_agent_run: bool,
+    resume_source_dir: Optional[Path],
+    resume_source_label: str,
+    agent_input_filename: str,
+    start_agent: str,
+    from_input: Callable[[], Any],
+    from_cache: Callable[[], Any],
+    post_process: Optional[Callable[[Any], None]] = None,
+) -> Any:
+    """Resolve a skipped upstream stage from an uploaded payload or cached run.
+
+    Both branches build the agent output, apply the same optional in-place
+    ``post_process`` (e.g. difficulty/metadata normalization), record state, and
+    append the artifact record — the only differences are the source of the
+    output and whether it is marked "provided" vs "reused".
+    """
+    if is_input_to_agent_run:
+        output = from_input()
+        if post_process is not None:
+            post_process(output)
+        mark_provided_agent_state(
+            workflow,
+            agent_key=agent_key,
+            agent_output=output,
+            input_filename=agent_input_filename,
+            start_agent=start_agent,
+        )
+        touch_workflow(workflow)
+        agent_metadata_records.append(
+            record_provided_agent_artifact(
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_key=agent_key,
+                agent_output=output,
+                input_filename=agent_input_filename,
+                start_agent=start_agent,
+            )
+        )
+        return output
+
+    if resume_source_dir is None:
+        raise ValueError(f"resume_source_dir is required for cached {agent_key} output")
+
+    output = from_cache()
+    if post_process is not None:
+        post_process(output)
+    mark_reused_agent_state(
+        workflow,
+        agent_key=agent_key,
+        agent_output=output,
+        source_folder=resume_source_label,
+    )
+    touch_workflow(workflow)
+    agent_metadata_records.append(
+        copy_or_record_reused_agent_artifact(
+            outputs_dir=outputs_dir,
+            workflow_id=workflow_id,
+            agent_key=agent_key,
+            agent_output=output,
+            resume_source_dir=resume_source_dir,
+            resume_source_label=resume_source_label,
+        )
+    )
+    return output
+
+
 async def run_workflow_async(
     *,
     client: OpenAI,
@@ -445,71 +558,42 @@ async def run_workflow_async(
             elapsed = time.time() - start_time
             normalizer_output: NormalizerOutput = normalizer_result.final_output
 
-            workflow["agents"]["normalizer"]["status"] = "completed"
-            workflow["agents"]["normalizer"]["data"]["endTime"] = datetime.now().isoformat()
-            workflow["agents"]["normalizer"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
-            touch_workflow(workflow)
-            agent_metadata_records.append(
-                write_agent_artifacts(
-                    outputs_dir=outputs_dir,
-                    workflow_id=workflow_id,
-                    agent_key="normalizer",
-                    agent_name="Normalizer",
-                    input_payload=normalizer_input,
-                    output_payload=normalizer_output,
-                    metadata={
-                        "model": agents["normalizer"].model,
-                        "reasoning_level": agent_reasoning_level(agents["normalizer"]),
-                        "execution_time_seconds": elapsed,
-                        "received_from_node": "user",
-                        "sent_to_node": "extracter",
-                        "input_summary": f"{len(normalizer_input)} message(s)",
-                    },
-                )
+            finalize_agent_run(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="normalizer",
+                agent_name="Normalizer",
+                elapsed=elapsed,
+                input_payload=normalizer_input,
+                output_payload=normalizer_output,
+                metadata={
+                    "model": agents["normalizer"].model,
+                    "reasoning_level": agent_reasoning_level(agents["normalizer"]),
+                    "execution_time_seconds": elapsed,
+                    "received_from_node": "user",
+                    "sent_to_node": "extracter",
+                    "input_summary": f"{len(normalizer_input)} message(s)",
+                },
             )
         else:
-            if is_input_to_agent_run:
-                normalizer_output = coerce_normalizer_from_agent_input(uploaded_agent_payload)
-                mark_provided_agent_state(
-                    workflow,
-                    agent_key="normalizer",
-                    agent_output=normalizer_output,
-                    input_filename=agent_input_filename,
-                    start_agent=resume_from_agent,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    record_provided_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="normalizer",
-                        agent_output=normalizer_output,
-                        input_filename=agent_input_filename,
-                        start_agent=resume_from_agent,
-                    )
-                )
-            elif resume_source_dir is None:
-                raise ValueError("resume_source_dir is required for cached normalizer output")
-            else:
-                normalizer_output = load_resume_agent_output(resume_source_dir, "normalizer")
-                mark_reused_agent_state(
-                    workflow,
-                    agent_key="normalizer",
-                    agent_output=normalizer_output,
-                    source_folder=resume_source_label,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="normalizer",
-                        agent_output=normalizer_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
-                    )
-                )
+            normalizer_output = resolve_upstream_agent(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="normalizer",
+                is_input_to_agent_run=is_input_to_agent_run,
+                resume_source_dir=resume_source_dir,
+                resume_source_label=resume_source_label,
+                agent_input_filename=agent_input_filename,
+                start_agent=resume_from_agent,
+                from_input=lambda: coerce_normalizer_from_agent_input(uploaded_agent_payload),
+                from_cache=lambda: load_resume_agent_output(resume_source_dir, "normalizer"),
+            )
 
         # ---- Extracter ----
         if should_run_agent("extracter", resume_from_agent):
@@ -563,78 +647,49 @@ async def run_workflow_async(
                 extracter_output.theme or "",
             )
 
-            workflow["agents"]["extracter"]["status"] = "completed"
-            workflow["agents"]["extracter"]["data"]["endTime"] = datetime.now().isoformat()
-            workflow["agents"]["extracter"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["extracter"]["data"]["output"] = extracter_output.model_dump()
-            touch_workflow(workflow)
-            agent_metadata_records.append(
-                write_agent_artifacts(
-                    outputs_dir=outputs_dir,
-                    workflow_id=workflow_id,
-                    agent_key="extracter",
-                    agent_name="Extracter",
-                    input_payload=extracter_input,
-                    output_payload=extracter_output,
-                    metadata={
-                        "model": agents["extracter"].model,
-                        "reasoning_level": agent_reasoning_level(agents["extracter"]),
-                        "execution_time_seconds": elapsed,
-                        "received_from_node": "normalizer",
-                        "sent_to_node": "verifier",
-                        "input_summary": f"{len(extracter_input)} message(s)",
-                        "questions_count": len(extracter_output.questions),
-                    },
-                )
+            finalize_agent_run(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="extracter",
+                agent_name="Extracter",
+                elapsed=elapsed,
+                input_payload=extracter_input,
+                output_payload=extracter_output,
+                metadata={
+                    "model": agents["extracter"].model,
+                    "reasoning_level": agent_reasoning_level(agents["extracter"]),
+                    "execution_time_seconds": elapsed,
+                    "received_from_node": "normalizer",
+                    "sent_to_node": "verifier",
+                    "input_summary": f"{len(extracter_input)} message(s)",
+                    "questions_count": len(extracter_output.questions),
+                },
             )
         else:
-            if is_input_to_agent_run:
-                extracter_output = coerce_extracter_from_agent_input(uploaded_agent_payload)
-                normalize_question_types(extracter_output.questions)
-                merge_extracted_metadata_into_config(normalizer_output, extracter_output)
+            def _apply_extracter_metadata(output: ExtracterOutput) -> None:
+                normalize_question_types(output.questions)
+                merge_extracted_metadata_into_config(normalizer_output, output)
                 workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
-                mark_provided_agent_state(
-                    workflow,
-                    agent_key="extracter",
-                    agent_output=extracter_output,
-                    input_filename=agent_input_filename,
-                    start_agent=resume_from_agent,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    record_provided_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="extracter",
-                        agent_output=extracter_output,
-                        input_filename=agent_input_filename,
-                        start_agent=resume_from_agent,
-                    )
-                )
-            elif resume_source_dir is None:
-                raise ValueError("resume_source_dir is required for cached extracter output")
-            else:
-                extracter_output = load_resume_agent_output(resume_source_dir, "extracter")
-                normalize_question_types(extracter_output.questions)
-                merge_extracted_metadata_into_config(normalizer_output, extracter_output)
-                workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
-                mark_reused_agent_state(
-                    workflow,
-                    agent_key="extracter",
-                    agent_output=extracter_output,
-                    source_folder=resume_source_label,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="extracter",
-                        agent_output=extracter_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
-                    )
-                )
+
+            extracter_output = resolve_upstream_agent(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="extracter",
+                is_input_to_agent_run=is_input_to_agent_run,
+                resume_source_dir=resume_source_dir,
+                resume_source_label=resume_source_label,
+                agent_input_filename=agent_input_filename,
+                start_agent=resume_from_agent,
+                from_input=lambda: coerce_extracter_from_agent_input(uploaded_agent_payload),
+                from_cache=lambda: load_resume_agent_output(resume_source_dir, "extracter"),
+                post_process=_apply_extracter_metadata,
+            )
 
         # ---- Verifier ----
         if should_run_agent("verifier", resume_from_agent):
@@ -692,79 +747,48 @@ async def run_workflow_async(
                 if not verifier_report.valid:
                     raise ValueError(f"Verifier output failed validation: {verifier_report.summary()}")
 
-            workflow["agents"]["verifier"]["status"] = "completed"
-            workflow["agents"]["verifier"]["data"]["endTime"] = datetime.now().isoformat()
-            workflow["agents"]["verifier"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["verifier"]["data"]["output"] = verifier_output.model_dump()
-            touch_workflow(workflow)
-            agent_metadata_records.append(
-                write_agent_artifacts(
-                    outputs_dir=outputs_dir,
-                    workflow_id=workflow_id,
-                    agent_key="verifier",
-                    agent_name="Verifier",
-                    input_payload=verifier_input,
-                    output_payload=verifier_output,
-                    metadata={
-                        "model": agents["verifier"].model,
-                        "reasoning_level": agent_reasoning_level(agents["verifier"]),
-                        "execution_time_seconds": elapsed,
-                        "received_from_node": "extracter",
-                        "sent_to_node": "generator",
-                        "input_summary": f"{len(verifier_input)} message(s)",
-                        "questions_count": len(verifier_output.questions),
-                    },
-                )
+            finalize_agent_run(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="verifier",
+                agent_name="Verifier",
+                elapsed=elapsed,
+                input_payload=verifier_input,
+                output_payload=verifier_output,
+                metadata={
+                    "model": agents["verifier"].model,
+                    "reasoning_level": agent_reasoning_level(agents["verifier"]),
+                    "execution_time_seconds": elapsed,
+                    "received_from_node": "extracter",
+                    "sent_to_node": "generator",
+                    "input_summary": f"{len(verifier_input)} message(s)",
+                    "questions_count": len(verifier_output.questions),
+                },
             )
         else:
-            if is_input_to_agent_run:
-                verifier_output = coerce_verifier_from_agent_input(
-                    uploaded_agent_payload,
-                    extracter_output,
-                )
-                normalize_question_types(verifier_output.questions)
-                apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
-                mark_provided_agent_state(
-                    workflow,
-                    agent_key="verifier",
-                    agent_output=verifier_output,
-                    input_filename=agent_input_filename,
-                    start_agent=resume_from_agent,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    record_provided_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="verifier",
-                        agent_output=verifier_output,
-                        input_filename=agent_input_filename,
-                        start_agent=resume_from_agent,
-                    )
-                )
-            elif resume_source_dir is None:
-                raise ValueError("resume_source_dir is required for cached verifier output")
-            else:
-                verifier_output = load_resume_agent_output(resume_source_dir, "verifier")
-                normalize_question_types(verifier_output.questions)
-                apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
-                mark_reused_agent_state(
-                    workflow,
-                    agent_key="verifier",
-                    agent_output=verifier_output,
-                    source_folder=resume_source_label,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="verifier",
-                        agent_output=verifier_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
-                    )
-                )
+            def _apply_verifier_post(output: VerifierOutput) -> None:
+                normalize_question_types(output.questions)
+                apply_requested_difficulty(output.questions, normalizer_output.difficulty)
+
+            verifier_output = resolve_upstream_agent(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="verifier",
+                is_input_to_agent_run=is_input_to_agent_run,
+                resume_source_dir=resume_source_dir,
+                resume_source_label=resume_source_label,
+                agent_input_filename=agent_input_filename,
+                start_agent=resume_from_agent,
+                from_input=lambda: coerce_verifier_from_agent_input(uploaded_agent_payload, extracter_output),
+                from_cache=lambda: load_resume_agent_output(resume_source_dir, "verifier"),
+                post_process=_apply_verifier_post,
+            )
 
         verifier_report = validate_verifier_output(extracter_output.questions, verifier_output)
         if not verifier_report.valid:
@@ -846,80 +870,47 @@ async def run_workflow_async(
             )
             elapsed = time.time() - start_time
 
-            workflow["agents"]["generator"]["status"] = "completed"
-            workflow["agents"]["generator"]["data"]["endTime"] = datetime.now().isoformat()
-            workflow["agents"]["generator"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["generator"]["data"]["output"] = generator_output.model_dump()
-            touch_workflow(workflow)
-            agent_metadata_records.append(
-                write_agent_artifacts(
-                    outputs_dir=outputs_dir,
-                    workflow_id=workflow_id,
-                    agent_key="generator",
-                    agent_name="Generator",
-                    input_payload=generator_input,
-                    output_payload=generator_output,
-                    metadata={
-                        "model": agents["generator"].model,
-                        "reasoning_level": agent_reasoning_level(agents["generator"]),
-                        "execution_time_seconds": elapsed,
-                        "received_from_node": "verifier",
-                        "sent_to_node": "latexifier",
-                        "input_summary": f"{len(generator_input)} message(s)",
-                        "questions_count": len(generator_output.isomorphic_questions),
-                    },
-                )
+            finalize_agent_run(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="generator",
+                agent_name="Generator",
+                elapsed=elapsed,
+                input_payload=generator_input,
+                output_payload=generator_output,
+                metadata={
+                    "model": agents["generator"].model,
+                    "reasoning_level": agent_reasoning_level(agents["generator"]),
+                    "execution_time_seconds": elapsed,
+                    "received_from_node": "verifier",
+                    "sent_to_node": "latexifier",
+                    "input_summary": f"{len(generator_input)} message(s)",
+                    "questions_count": len(generator_output.isomorphic_questions),
+                },
             )
         else:
-            if is_input_to_agent_run:
-                generator_output = coerce_generator_from_agent_input(uploaded_agent_payload)
-                apply_requested_difficulty(
-                    generator_output.isomorphic_questions,
-                    normalizer_output.difficulty,
-                )
-                mark_provided_agent_state(
-                    workflow,
-                    agent_key="generator",
-                    agent_output=generator_output,
-                    input_filename=agent_input_filename,
-                    start_agent=resume_from_agent,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    record_provided_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="generator",
-                        agent_output=generator_output,
-                        input_filename=agent_input_filename,
-                        start_agent=resume_from_agent,
-                    )
-                )
-            elif resume_source_dir is None:
-                raise ValueError("resume_source_dir is required for cached generator output")
-            else:
-                generator_output = load_resume_agent_output(resume_source_dir, "generator")
-                apply_requested_difficulty(
-                    generator_output.isomorphic_questions,
-                    normalizer_output.difficulty,
-                )
-                mark_reused_agent_state(
-                    workflow,
-                    agent_key="generator",
-                    agent_output=generator_output,
-                    source_folder=resume_source_label,
-                )
-                touch_workflow(workflow)
-                agent_metadata_records.append(
-                    copy_or_record_reused_agent_artifact(
-                        outputs_dir=outputs_dir,
-                        workflow_id=workflow_id,
-                        agent_key="generator",
-                        agent_output=generator_output,
-                        resume_source_dir=resume_source_dir,
-                        resume_source_label=resume_source_label,
-                    )
-                )
+            def _apply_generator_difficulty(output: GeneratorOutput) -> None:
+                apply_requested_difficulty(output.isomorphic_questions, normalizer_output.difficulty)
+
+            generator_output = resolve_upstream_agent(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="generator",
+                is_input_to_agent_run=is_input_to_agent_run,
+                resume_source_dir=resume_source_dir,
+                resume_source_label=resume_source_label,
+                agent_input_filename=agent_input_filename,
+                start_agent=resume_from_agent,
+                from_input=lambda: coerce_generator_from_agent_input(uploaded_agent_payload),
+                from_cache=lambda: load_resume_agent_output(resume_source_dir, "generator"),
+                post_process=_apply_generator_difficulty,
+            )
 
         generator_report = validate_generator_output(
             verifier_output.questions,
@@ -965,31 +956,27 @@ async def run_workflow_async(
                 shared_runtime,
             )
 
-            workflow["agents"]["latexifier"]["status"] = "completed"
-            workflow["agents"]["latexifier"]["data"]["endTime"] = datetime.now().isoformat()
-            workflow["agents"]["latexifier"]["data"]["executionTime"] = elapsed
-            workflow["agents"]["latexifier"]["data"]["output"] = latex_output.model_dump()
-            touch_workflow(workflow)
-
-            agent_metadata_records.append(
-                write_agent_artifacts(
-                    outputs_dir=outputs_dir,
-                    workflow_id=workflow_id,
-                    agent_key="latexifier",
-                    agent_name="Latexifier",
-                    input_payload=latex_input,
-                    output_payload=latex_output,
-                    metadata={
-                        "model": agents["latexifier"].model,
-                        "reasoning_level": agent_reasoning_level(agents["latexifier"]),
-                        "execution_time_seconds": elapsed,
-                        "received_from_node": "generator",
-                        "sent_to_node": "evaluation",
-                        "input_summary": f"{len(latex_input)} message(s)",
-                        "filename": latex_filename,
-                        "pdf_filename": pdf_filename,
-                    },
-                )
+            finalize_agent_run(
+                workflow=workflow,
+                outputs_dir=outputs_dir,
+                workflow_id=workflow_id,
+                agent_metadata_records=agent_metadata_records,
+                touch_workflow=touch_workflow,
+                agent_key="latexifier",
+                agent_name="Latexifier",
+                elapsed=elapsed,
+                input_payload=latex_input,
+                output_payload=latex_output,
+                metadata={
+                    "model": agents["latexifier"].model,
+                    "reasoning_level": agent_reasoning_level(agents["latexifier"]),
+                    "execution_time_seconds": elapsed,
+                    "received_from_node": "generator",
+                    "sent_to_node": "evaluation",
+                    "input_summary": f"{len(latex_input)} message(s)",
+                    "filename": latex_filename,
+                    "pdf_filename": pdf_filename,
+                },
             )
         else:
             if is_input_to_agent_run:
