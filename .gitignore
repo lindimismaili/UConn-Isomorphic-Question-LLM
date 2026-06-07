@@ -35,6 +35,10 @@ coverage.xml
 *.tmp
 *old/
 
+# Playwright MCP / local browser-driver output
+.playwright-mcp/
+baseline-*.png
+
 # IDEs / editors
 .idea/
 *.swp

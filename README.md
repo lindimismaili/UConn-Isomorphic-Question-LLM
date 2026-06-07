@@ -11,9 +11,8 @@ The core workflow is:
 
 `Normalizer -> Extracter -> Verifier -> Generator -> Latexifier -> Evaluation -> Output`
 
-For an in-depth audit of the generation and evaluation pipelines (including the
-judge↔professor agreement harness in `Other/compare_to_professor.py`), see
-[docs/ANALYSIS.md](docs/ANALYSIS.md).
+For a plain-English tour of how a run plays out, see [OUTLINE.md](OUTLINE.md); for
+coding-agent onboarding and conventions, see [AGENTS.md](AGENTS.md).
 
 ## Architecture
 
@@ -23,20 +22,23 @@ The repository is split into two runtime surfaces:
 - `frontend/`: React + Vite UI that talks to the backend API
 - `dist/`: built frontend assets served by the backend when present
 
-The backend creates a shared OpenAI container for each workflow run, uploads source files, executes the agent chain, compiles LaTeX to PDF, and writes the final artifacts into a timestamped output folder.
+The backend creates a shared OpenAI container for each workflow run, uploads source files, executes the agent chain, compiles LaTeX to PDF, and writes the final artifacts into a timestamped output folder. Both the server and the CLI drive the same engine in `backend/src/workflow/engine.py`.
 
 ## Repository Layout
 
 - `backend/src/main.py` command-line workflow runner
-- `backend/src/server.py` FastAPI app and API endpoints
+- `backend/src/server.py` FastAPI app factory (CORS, lifespan, static mount)
+- `backend/src/api/` HTTP routers by domain (health, config, files, workflows, batch) + `state.py`
+- `backend/src/workflow/` shared engine, agent factory, payload builders, resume, SQLite store
 - `backend/src/evaluation.py` OpenAI evals integration
 - `backend/src/artifacts.py` workflow and agent artifact writers/readers
 - `backend/src/container.py` shared OpenAI container runtime helpers
 - `backend/data/` prompts, rubric, agents config, and evaluation fixtures
 - `backend/uploads/` uploaded source files grouped by session
 - `backend/outputs/` timestamped workflow outputs
-- `frontend/src/` React UI, hooks, and components
-- `backend/BACKEND.md`, `frontend/FRONTEND.md`, `deploy/DEPLOY.md` detailed subsystem docs
+- `backend/runtime/` SQLite mirror of workflow/batch state
+- `frontend/src/` React UI (components, hooks, utils, styles)
+- `frontend/DESIGN.md` UI element mapping (design tokens, button/modal system)
 
 ## Prerequisites
 
@@ -64,7 +66,8 @@ If you prefer to keep the backend and frontend dependencies separate, activate t
 
 ## Environment Variables
 
-The backend loads `.env` from the repo root if present.
+The backend loads `.env` from the repo root if present. `.env` is gitignored —
+copy [.env.example](.env.example) to `.env` and fill it in.
 
 Required:
 
@@ -77,6 +80,7 @@ Backend runtime settings:
 - `MAX_UPLOAD_BYTES` - upload size limit in bytes, default `20971520`
 - `WORKFLOW_TTL_SECONDS` - how long workflow records stay in memory, default `86400`
 - `WORKFLOW_MAX_ENTRIES` - max workflow/batch records kept in memory, default `200`
+- `PRUNE_INTERVAL_SECONDS` - background prune cadence, default `60`
 - `BATCH_WORKFLOW_CONCURRENCY` - concurrent create-data batch limit, default `2`
 - `OPENAI_STATUS_TIMEOUT_SECONDS` - timeout for the OpenAI status probe, default `5`
 - `OPENAI_CONTAINER_EXPIRES_MINUTES` - shared container lifetime, clamped to `1..20`, default `20`
@@ -191,9 +195,11 @@ Those files are the primary record of how the generated questions were judged.
 
 ## Project Docs
 
-- [backend/BACKEND.md](backend/BACKEND.md) backend API, CLI, data folders, and maintenance notes
-- [frontend/FRONTEND.md](frontend/FRONTEND.md) Vite UI commands, proxy behavior, and build notes
-- [deploy/DEPLOY.md](deploy/DEPLOY.md) Raspberry Pi, nginx, Cloudflare Tunnel, and local preview scripts
+- [OUTLINE.md](OUTLINE.md) plain-English tour of the project and how a run plays out
+- [AGENTS.md](AGENTS.md) onboarding + conventions for coding agents (source-of-truth paths, gotchas)
+- [CLAUDE.md](CLAUDE.md) repository rules and pipeline conventions
+- [frontend/DESIGN.md](frontend/DESIGN.md) frontend design system: tokens, button/modal styles, consistency rules
+- [deploy/DEPLOY.md](deploy/DEPLOY.md) deployment and local preview scripts
 
 ## Troubleshooting
 

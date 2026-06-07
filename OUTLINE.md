@@ -29,7 +29,7 @@ Within one run these stages are **sequential** — each one needs the previous o
 6. Evaluation grades the result against the rubric.
 7. Everything lands in a timestamped folder under `backend/outputs/` — the source LaTeX, the compiled PDF, the structured artifacts for every agent (input + output as JSONL), and the evaluation report.
 
-The UI streams progress live via Server-Sent Events, so you watch each agent flip from idle → running → done as it goes.
+The UI polls the workflow status endpoint while a run is active, so you watch each agent flip from idle → running → done as it goes. (A Server-Sent Events `/stream` endpoint also exists, but the UI uses polling.)
 
 ## Two ways to run it
 
@@ -46,14 +46,21 @@ Both call the **same workflow engine** (`backend/src/workflow/engine.py`). There
 - **Evaluation-only batch script.** `Other/runEvals.py` does the same thing but from the command line, with `--concurrency N` to control parallelism.
 - **XLSX report.** `Other/createXLSX.py` rolls a batch's per-PDF JSON reports into a single spreadsheet for comparison.
 - **Judge agreement / professor comparison.** `Other/compare_to_professor.py` and `backend/src/tools/judge_agreement.py` measure how well the AI grader's pass/fail calls line up with a human professor's labels (Cohen's kappa, agreement rates).
-- **Workflow persistence.** Active workflows are kept in memory; when they finish, they're saved to a SQLite store (`backend/runtime/workflows.sqlite3`) so the UI can show recent runs across server restarts.
+- **Workflow persistence.** Active workflows are kept in memory and mirrored to a SQLite store (`backend/runtime/workflows.sqlite3`) so the UI can show recent runs across server restarts. Old records are pruned by TTL and a max-entry cap on a background interval (not on every request).
 
 ## Project layout (high-level)
 
 ```
 backend/
   src/
-    server.py       # FastAPI app. All HTTP routes live here. ~21 endpoints.
+    server.py       # FastAPI app factory. CORS, lifespan (background prune), static mount.
+    api/            # HTTP route handlers split by domain (~20 endpoints):
+      health.py     #   /api/health, /api/openai/status, /version.json
+      config.py     #   /api/dropdown, /api/rubric, /api/agents, /api/prompts, eval files
+      files.py      #   /api/upload, /api/download
+      workflows.py  #   /api/workflow/* (start, status, result, rerun, input-to-agent, stream)
+      batch.py      #   /api/create-data/* (start, stop, status, result)
+      state.py      #   In-memory registries, config, helpers, run wrappers, prune loop.
     main.py         # CLI entry point. Thin — just argument parsing.
     workflow/       # The actual pipeline. Engine, agent factory, resume helpers.
       engine.py     # Single source of truth: runs the 6 stages, writes artifacts.
@@ -62,10 +69,10 @@ backend/
       payloads.py   # Builds the JSON each stage receives.
       store.py      # SQLite session/workflow persistence.
     evaluation.py   # Rubric grading, report writing, CSV export.
-    artifacts.py    # Reading/writing per-agent input/output JSONL.
+    artifacts.py    # Reading/writing per-agent input/output JSONL + run metadata.
     pipeline_validation.py  # Deterministic sanity checks (figures, distractor logic, etc.)
     helpers.py      # Prompt loading, metadata merging, small utilities.
-    safety.py       # Filename sanitization, safe path joins.
+    safety.py       # Filename sanitization, safe path joins, timestamps.
     container.py    # OpenAI code-interpreter container lifecycle.
     schemas.py      # The Pydantic shapes for every agent's input and output.
     paths.py        # All file paths used across the backend.
@@ -83,11 +90,14 @@ backend/
   runtime/          # SQLite workflow store.
   tests/            # Pytest suite.
 frontend/
+  DESIGN.md                  # UI element mapping: tokens, button/modal system, rules.
   src/
-    App.jsx                  # Top-level UI shell.
+    App.jsx                  # Top-level UI shell (useReducer state).
     components/              # AgentPipeline, AgentCard, ResultsSection, etc.
-    components/modals/       # File picker, agent detail, eval results, etc.
-    hooks/                   # useWorkflow (SSE wiring), useAgents, useFileUpload.
+    components/modals/       # File picker, agent detail, eval results (modals/eval/), etc.
+    hooks/                   # useWorkflow (status polling), useAgents, useCreateData, useFileUpload.
+    utils/                   # api client, abortableSleep, ids.
+    styles/app.css           # All styling; design tokens live in :root.
 Other/                       # Eval-only batch scripts and XLSX/comparison tools.
 ```
 
