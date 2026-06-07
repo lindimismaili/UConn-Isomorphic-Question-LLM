@@ -11,8 +11,8 @@ The core workflow is:
 
 `Normalizer -> Extracter -> Verifier -> Generator -> Latexifier -> Evaluation -> Output`
 
-For a plain-English tour of how a run plays out, see [OUTLINE.md](OUTLINE.md); for
-coding-agent onboarding and conventions, see [AGENTS.md](AGENTS.md).
+For coding-agent onboarding, repo conventions, and a full tour of the
+architecture, see [AGENTS.md](AGENTS.md).
 
 ## Architecture
 
@@ -195,9 +195,7 @@ Those files are the primary record of how the generated questions were judged.
 
 ## Project Docs
 
-- [OUTLINE.md](OUTLINE.md) plain-English tour of the project and how a run plays out
-- [AGENTS.md](AGENTS.md) onboarding + conventions for coding agents (source-of-truth paths, gotchas)
-- [CLAUDE.md](CLAUDE.md) repository rules and pipeline conventions
+- [AGENTS.md](AGENTS.md) the single source of truth: architecture, source-of-truth paths, conventions, API surface, gotchas (CLAUDE.md just points here)
 - [frontend/DESIGN.md](frontend/DESIGN.md) frontend design system: tokens, button/modal styles, consistency rules
 - [deploy/DEPLOY.md](deploy/DEPLOY.md) deployment and local preview scripts
 
