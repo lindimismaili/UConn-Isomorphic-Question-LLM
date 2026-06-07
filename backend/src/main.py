@@ -25,6 +25,7 @@ from typing import Any
 from agents.logger import logger
 from openai import OpenAI
 
+from backend.src.artifacts import WORKFLOW_AGENT_SEQUENCE
 from backend.src.bootstrap import load_dotenv as _load_dotenv
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
@@ -59,7 +60,7 @@ def _new_cli_workflow_record() -> dict[str, Any]:
     The FastAPI server maintains the same shape and persists it for the UI; the
     CLI just discards the mutations after the run completes.
     """
-    agent_keys = ("normalizer", "extracter", "verifier", "generator", "latexifier", "evaluation", "output")
+    agent_keys = tuple(WORKFLOW_AGENT_SEQUENCE)
     return {
         "status": "pending",
         "outputFolder": "",
