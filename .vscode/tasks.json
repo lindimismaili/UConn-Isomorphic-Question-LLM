@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Web Preview",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "deploy/preview.sh",
+        "--web"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "LOCAL_DOMAIN": "isomorphic.localhost",
+          "WEB_PORT": "8000"
+        }
+      },
+      "isBackground": false,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Run Dev Preview",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "deploy/preview.sh",
+        "--dev"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PORT": "5173",
+          "LOCAL_DOMAIN": "isomorphic.localhost",
+          "BACKEND_PORT": "8000",
+          "ALLOWED_ORIGINS": "http://isomorphic.localhost:5173,http://isomorphic.localhost:8000"
+        }
+      },
+      "isBackground": false,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}
