@@ -1,8 +1,8 @@
 # UConn Isomorphic Question Generator — AGENTS.md
 
 Onboarding guide for coding agents (Claude, Codex, etc.) working in this repo.
-This file is the single source of truth; older `.claude/CLAUDE.md` / `.codex/AGENTS.md`
-references are stale.
+**This file is the single source of truth for the repo** — `CLAUDE.md` just points
+here. Older `.claude/CLAUDE.md` / `.codex/AGENTS.md` references are stale.
 
 ## What This Repo Is
 
@@ -183,6 +183,41 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 - The frontend currently knows about `evaluation` but not the backend-only
   `output` stage.
 
+## Code Conventions
+
+- **Data files are hand-curated.** Files under `backend/data/` (`*.json`,
+  `prompts/*.txt`, `template.tex`) are managed by the user. Don't delete, rename,
+  or rewrite them; only edit content when explicitly asked.
+- **Agent key is `latexifier`** in all configs and external surfaces (artifact
+  filenames, agent dict keys, `agents.json`). Internal Python identifiers may use
+  `latex` for brevity — keep it consistent within a file.
+- **The engine never touches HTTP/CLI state directly.** The server passes a
+  `touch_workflow` callback and a dict; the engine mutates that dict through the
+  callback. Don't import FastAPI types into `workflow/`.
+- **Reuse the engine's per-stage helpers** (`resolve_upstream_agent`,
+  `finalize_agent_run`) instead of copy-pasting a stage block.
+- **No blocking I/O in async paths.** Filesystem writes inside
+  `workflow/engine.py` go through the engine's `to_thread` parameter.
+- **No module-load side effects.** Don't read JSON/TXT at import time; use lazy
+  accessors (`functools.lru_cache`) or first-call loaders.
+- **Paths come from `paths.py`.** Don't recompute `REPO_ROOT`, `DATA_DIR`, etc.
+- **No `try/except ImportError` dances in new files.** The bootstrap shim makes
+  `from backend.src.x import ...` work in both package and script modes.
+- **Tests run from repo root** with absolute imports (`from backend.src.x ...`).
+- **API routers import shared state from `api/state.py`.** Routers hold only
+  route handlers; registries, config, helpers, and run wrappers live in `state.py`.
+- **Agent sequence/labels derive from `artifacts.WORKFLOW_AGENT_SEQUENCE` /
+  `AGENT_DISPLAY_NAMES`.** Don't re-declare stage order or display names.
+- **Frontend follows `frontend/DESIGN.md`** (see the Frontend notes above).
+
+### Pipeline parallelism
+
+- Within one workflow the 6 stages are sequential (each consumes the previous output).
+- Multi-file uploads in one workflow are intentionally combined into one dataset
+  (the extracter prompt handles this).
+- The batch endpoint runs workflows concurrently with `Semaphore(BATCH_WORKFLOW_CONCURRENCY=2)`.
+- `Other/runEvals.py` parallelizes per-PDF evaluations with `--concurrency` (default 2).
+
 ## Workflow Stages
 
 Configured agents (`backend/data/agents.json`):
@@ -302,6 +337,16 @@ operational guides, not source of truth for local development.
   in-flight runs do not resume across a restart.
 - Model id `gpt-5.5` is intentional (kept across `agents.json` and
   `rubric.json`); do not "fix" it.
+
+## Hard Don'ts
+
+- Don't import from `archive/` — nothing references it; it's the user's storage.
+- Don't add "remove this later" comments or feature flags for code you can just
+  remove now.
+- Don't reintroduce the old `latex_syntax_quality` rubric criterion — it was
+  removed intentionally.
+- Don't mock the database or external state in `pipeline_validation` tests;
+  integration tests must exercise the real validator.
 
 ## Local Visual Debugging
 
