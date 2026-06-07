@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFileUpload } from '../hooks/useFileUpload.js';
 import {
-  IconFile,
   IconUpload,
   IconTrash,
   IconSend,
@@ -67,7 +66,6 @@ export default function PromptInput({
   onSend,
   onClearInputs,
   onClearAgents,
-  onShowFiles,
   onShowHelp,
 }) {
   const [resetFeedback, setResetFeedback] = useState(false);
@@ -114,6 +112,10 @@ export default function PromptInput({
   };
 
   const handleSend = () => {
+    if (isRunning) {
+      handleReset();
+      return;
+    }
     if (serviceInactive) {
       alert('OpenAI servers are down. This site is currently inactive.');
       return;
@@ -212,15 +214,6 @@ export default function PromptInput({
 
           <div className="prompt-actions-row">
             <button
-              className="btn btn-primary send-action"
-              onClick={handleSend}
-              disabled={isRunning || serviceInactive}
-            >
-              <IconSend className="btn-icon" />
-              <span>Send</span>
-            </button>
-
-            <button
               className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
               onClick={() => {
                 if (limitReached) {
@@ -230,10 +223,16 @@ export default function PromptInput({
                 fileInputRef.current?.click();
               }}
               disabled={isRunning || serviceInactive}
-              title="Upload up to 5 files (.pdf, .docx, .doc, .txt)"
+              title="Upload up to 5 files (.txt, .pdf, images, .md, .tex, .latex, .docx, .doc)"
             >
               <IconUpload className="btn-icon" />
-              <span className="btn-label">{uploadWarning ? 'Too many files!' : 'Upload Files'}</span>
+              <span className="btn-label">
+                {uploadWarning
+                  ? 'Unsupported or too many files!'
+                  : files.length > 0
+                    ? `Upload Files - ${files.length}`
+                    : 'Upload Files'}
+              </span>
             </button>
             <input
               ref={fileInputRef}
@@ -241,28 +240,18 @@ export default function PromptInput({
               name="source_files"
               type="file"
               multiple
-              accept=".pdf,.docx,.doc,.txt"
+              accept=".txt,.pdf,image/*,.md,.markdown,.tex,.latex,.docx,.doc"
               hidden
               onChange={handleFileSelect}
             />
 
             <button
-              className="btn btn-secondary file-count-btn"
-              onClick={onShowFiles}
-              type="button"
-              aria-label={`Files - ${files.length} selected files to upload`}
+              className={`btn ${isRunning ? 'btn-danger' : 'btn-primary'} send-action${resetFeedback ? ' btn-feedback' : ''}`}
+              onClick={handleSend}
+              disabled={resetFeedback || (!isRunning && serviceInactive)}
             >
-              <IconFile className="btn-icon" />
-              <span className="btn-label">Files - {files.length}</span>
-            </button>
-
-            <button
-              className={`btn btn-secondary${resetFeedback ? ' btn-feedback' : ''}`}
-              onClick={handleReset}
-              disabled={isRunning || serviceInactive || resetFeedback}
-            >
-              <IconTrash className="btn-icon" />
-              <span className="btn-label">Reset</span>
+              {isRunning ? <IconTrash className="btn-icon" /> : <IconSend className="btn-icon" />}
+              <span>{isRunning ? 'Stop' : 'Send'}</span>
             </button>
           </div>
         </div>

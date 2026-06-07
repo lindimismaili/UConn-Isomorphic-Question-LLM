@@ -425,10 +425,10 @@ h4 {
 }
 
 .prompt-actions-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 0.8fr) minmax(140px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.8fr);
+  display: flex;
   gap: var(--panel-gap);
-  align-items: stretch;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .prompt-dropdown-label {
@@ -478,13 +478,14 @@ h4 {
 }
 
 .prompt-actions-row > .btn {
-  width: 100%;
+  width: auto;
   min-height: var(--control-height-lg);
   height: var(--control-height-lg);
 }
 
 .send-action {
   margin-left: 0;
+  min-width: 132px;
 }
 
 .developer-tools-card {
@@ -496,20 +497,49 @@ h4 {
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.developer-tools-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: var(--panel-gap);
-  flex: 1;
-  align-content: start;
 }
 
-.developer-tools-grid .developer-tool-btn,
-.developer-tools-grid .developer-toggle {
+.developer-tools-row {
+  display: flex;
+  gap: var(--panel-gap);
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.developer-tools-row .developer-tool-btn,
+.developer-tools-row .developer-toggle {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--control-height-lg);
+}
+
+.developer-log-area {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 300px;
+}
+
+.developer-log-area .log-panel-card {
   width: 100%;
-  min-height: var(--control-height-xl);
+}
+
+.developer-log-area .log-panel-card .card-header {
+  padding: 0 0 var(--spacing-sm);
+  border-bottom: 0;
+}
+
+.developer-log-area .log-panel-card .card-header h2 {
+  font-size: 1rem;
+  text-shadow: none;
+}
+
+.developer-log-area .log-panel-card .card-header .subtitle {
+  display: none;
+}
+
+.developer-log-area .log-panel-card .card-body {
+  padding: 0;
 }
 
 .developer-toggle {
@@ -589,11 +619,21 @@ h4 {
 
 @media (max-width: 900px) {
   .prompt-actions-row {
-    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    flex-direction: column;
   }
 
-  .developer-tools-grid {
-    grid-template-columns: 1fr;
+  .prompt-actions-row > .btn {
+    width: 100%;
+  }
+
+  .developer-tools-row {
+    flex-wrap: wrap;
+  }
+
+  .developer-tools-row .developer-tool-btn,
+  .developer-tools-row .developer-toggle {
+    flex-basis: calc(50% - var(--panel-gap));
   }
 
   .prompt-input {
