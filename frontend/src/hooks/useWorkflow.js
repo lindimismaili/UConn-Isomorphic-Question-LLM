@@ -1,41 +1,6 @@
 import { useRef, useCallback } from 'react';
 
-/**
- * Sleeps for a polling interval and aborts cleanly when the workflow stops.
- *
- * @param {number} ms - Delay in milliseconds.
- * @param {AbortSignal} [signal] - Optional abort signal.
- * @returns {Promise<void>}
- */
-function sleep(ms, signal) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const cleanup = () => {
-      if (signal) signal.removeEventListener('abort', onAbort);
-    };
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve();
-    };
-    const onAbort = () => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      cleanup();
-      reject(new DOMException('Aborted', 'AbortError'));
-    };
-    const timeout = setTimeout(finish, ms);
-    if (signal) {
-      if (signal.aborted) {
-        onAbort();
-        return;
-      }
-      signal.addEventListener('abort', onAbort, { once: true });
-    }
-  });
-}
+import { abortableSleep } from '../utils/abortableSleep';
 
 /**
  * Fetch wrapper that preserves AbortError and wraps other network failures.
@@ -303,7 +268,7 @@ export function useWorkflow(dispatch) {
         return;
       }
 
-      await sleep(STATUS_POLL_INTERVAL_MS, signal);
+      await abortableSleep(STATUS_POLL_INTERVAL_MS, signal);
     }
   }, [dispatch]);
 

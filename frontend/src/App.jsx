@@ -20,6 +20,7 @@ import InputToAgentModal from "./components/modals/InputToAgentModal.jsx";
 import { useWorkflow } from "./hooks/useWorkflow.js";
 import { useAgents } from "./hooks/useAgents.js";
 import { useCreateData } from "./hooks/useCreateData.js";
+import { generateId } from "./utils/ids.js";
 
 // =============================================================================
 // Initial State
@@ -184,7 +185,7 @@ function firstDefined(...values) {
  */
 function makeLog(message, level) {
   return {
-    id: Math.random().toString(36).slice(2),
+    id: generateId(),
     time: new Date().toLocaleTimeString(),
     message,
     level,
