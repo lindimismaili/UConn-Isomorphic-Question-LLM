@@ -28,6 +28,10 @@ pytest backend/tests --ignore=backend/tests/test_safety_store.py
 
 `test_safety_store.py` has a known Windows file-lock flake; it's excluded by convention until investigated.
 
+## Git Workflow
+
+- After completing a full feature, update, or significant upgrade, create a git commit before finalizing. Stage only the changes from that completed work and use a concise, descriptive commit message that captures the user-facing behavior and major implementation scope.
+
 ## Layout
 
 ```

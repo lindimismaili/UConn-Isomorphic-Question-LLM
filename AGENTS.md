@@ -106,6 +106,13 @@ Judge ↔ professor agreement on a generated batch:
 python Other/compare_to_professor.py Other/<timestamp>-other-phase1-eval-batch
 ```
 
+## Git Workflow
+
+- After completing a full feature, update, or significant upgrade, create a
+  git commit before finalizing. Stage only the changes from that completed work
+  and use a concise, descriptive commit message that captures the user-facing
+  behavior and major implementation scope.
+
 ## Environment Variables
 
 `.env` at the repo root is loaded manually by backend code if values aren't
