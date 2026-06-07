@@ -31,7 +31,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 SCRIPT_PATH = Path(__file__).resolve()
 OTHER_DIR = SCRIPT_PATH.parent
 REPO_ROOT = OTHER_DIR.parent
@@ -49,11 +48,10 @@ from backend.src.evaluation import (  # noqa: E402
 )
 from backend.src.helpers import build_json_message, upload_file_to_openai  # noqa: E402
 from backend.src.main import get_cli_openai_client  # noqa: E402
-from backend.src.safety import safe_stem
+from backend.src.safety import safe_stem  # noqa: E402
 from backend.src.safety import write_json as _safe_write_json  # noqa: E402
 from backend.src.schemas import ExtracterOutput, NormalizerOutput, SourceQuestionItem  # noqa: E402
 from backend.src.workflow import create_agents  # noqa: E402
-
 
 DEFAULT_SOURCE_PDF = OTHER_DIR / "physics_1_set.pdf"
 DEFAULT_PHASE_DIR = OTHER_DIR / "Phase_1"

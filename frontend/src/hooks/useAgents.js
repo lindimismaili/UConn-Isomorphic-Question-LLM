@@ -55,8 +55,8 @@ async function fetchJson(url) {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json();
-  } catch (err) {
-    console.debug(`Failed to load ${url}:`, err);
+  } catch {
+    // Network/parse failures are non-fatal: callers fall back to the next source.
     return null;
   }
 }

@@ -11,7 +11,6 @@ from openai import OpenAI
 
 from .schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
 
-
 VALID_THEMES = {
     "life_science",
     "engineering",

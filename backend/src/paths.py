@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 THIS_DIR = Path(__file__).resolve().parent
 BACKEND_ROOT = THIS_DIR.parent if THIS_DIR.name == "src" else THIS_DIR
 REPO_ROOT = BACKEND_ROOT.parent

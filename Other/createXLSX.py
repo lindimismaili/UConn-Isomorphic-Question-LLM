@@ -21,14 +21,12 @@ import argparse
 import csv
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
-
 
 SCRIPT_PATH = Path(__file__).resolve()
 OTHER_DIR = SCRIPT_PATH.parent
@@ -185,7 +183,7 @@ def write_summary_sheet(wb: Workbook, source_ids: list[int],
                 sums[sid] = "na"
             row.append(sums[sid])
 
-        def avg(ids: set[int]) -> float | str:
+        def avg(ids: set[int], name: str = name) -> float | str:
             cells = []
             for sid in ids:
                 if sid not in source_ids:

@@ -9,13 +9,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 _SAFE_NAME_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
+
+LATEX_SUFFIXES = {".tex"}
+PDF_SUFFIXES = {".pdf"}
 
 
 def utc_run_timestamp() -> str:
     """Return a sortable UTC timestamp with microsecond precision."""
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+
+
+def utc_now_iso() -> str:
+    """Return the current UTC time as an ISO-8601 string with a `Z` suffix."""
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def safe_stem(value: str, *, fallback: str = "item", max_length: int = 80) -> str:
