@@ -37,6 +37,7 @@ from backend.src.bootstrap import load_dotenv as _load_dotenv
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
 from backend.src.paths import ENV_PATH, OUTPUTS_DIR
+from backend.src.registry import agent_result_field as _agent_result_field
 from backend.src.registry import cli_descriptions as _cli_descriptions
 from backend.src.registry import llm_agents as _llm_agents
 from backend.src.safety import create_unique_run_dir
@@ -202,20 +203,16 @@ async def _run_from_agent(
         out.write_text(result.model_dump_json(indent=2), encoding="utf-8")
         print(f"\nResult JSON written to: {out}")
     elif stop_after:
-        # For run-one, pretty-print the relevant agent's output
-        if stop_after == "normalizer":
-            _print_partial(result.config.model_dump(), "normalizer output (config)")
-        elif stop_after == "extracter":
-            _print_partial({"questions": [q.model_dump() for q in result.source_questions]}, "extracter output")
-        elif stop_after == "verifier":
-            _print_partial({"questions": [q.model_dump() for q in result.verified_questions]}, "verifier output")
-        elif stop_after == "generator":
-            _print_partial(
-                {"isomorphic_questions": [q.model_dump() for q in result.generated_questions]}, "generator output"
-            )
-        elif stop_after == "latexifier":
-            if result.generated_questions:
-                print(f"\n[latexifier output] LaTeX written to {outputs_dir / result.latex_file}")
+        result_field = _agent_result_field(stop_after)
+        if result_field:
+            value = getattr(result, result_field, None)
+            if isinstance(value, str):
+                if value:
+                    print(f"\n[{stop_after} output] LaTeX written to {outputs_dir / value}")
+            elif isinstance(value, list):
+                _print_partial({result_field: [q.model_dump() for q in value]}, f"{stop_after} output")
+            elif value is not None:
+                _print_partial(value.model_dump(), f"{stop_after} output")
 
 
 def _print_partial(data: dict[str, Any], label: str) -> None:
