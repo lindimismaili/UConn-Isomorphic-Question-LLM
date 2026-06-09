@@ -15,12 +15,13 @@ from backend.src.api.state import (
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.helpers import resolve_prompt_path
 from backend.src.paths import (
-    AGENTS_CONFIG_PATH,
     DROPDOWN_PATH,
     PROMPTS_DIR,
     RUBRIC_PATH,
 )
 from backend.src.paths import EVALUATION_FIXTURES_DIR as EVALUATION_DIR
+from backend.src.registry import all_agents as _all_agents
+from backend.src.registry import promptable_agents as _promptable_agents
 
 router = APIRouter()
 
@@ -54,43 +55,12 @@ async def get_rubric():
 @router.get("/api/agents")
 async def get_agents():
     """Get the agents configuration for the frontend."""
-    if not AGENTS_CONFIG_PATH.exists():
-        raise HTTPException(status_code=404, detail="Agents configuration not found")
-
     try:
-        agents = json.loads(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))
+        agents = _all_agents()
         rubric_model = _load_rubric_model()
-
-        return {
-            "setup": {
-                "name": "Starter",
-                "description": "Prepares the shared workflow runtime",
-                "model": "OpenAI Runtime",
-                "reasoning": "none",
-                "kind": "runtime",
-                "inputFrom": "User",
-                "outputTo": "Normalizer",
-            },
-            **agents,
-            "evaluation": {
-                "name": "Evaluator",
-                "description": "Scores generated outputs and writes evaluator artifacts",
-                "model": rubric_model,
-                "reasoning": "low",
-                "kind": "agent",
-                "inputFrom": "Latexifier",
-                "outputTo": "Output",
-            },
-            "output": {
-                "name": "Output",
-                "description": "Finalizes workflow files and result metadata",
-                "model": "Workflow Runtime",
-                "reasoning": "none",
-                "kind": "runtime",
-                "inputFrom": "Evaluator",
-                "outputTo": "User",
-            },
-        }
+        if agents.get("evaluation", {}).get("model") is None:
+            agents = {**agents, "evaluation": {**agents["evaluation"], "model": rubric_model}}
+        return agents
     except Exception as e:
         logger.error("Failed to load agents configuration: %s", e)
         raise HTTPException(status_code=500, detail="Failed to load agents configuration") from e
@@ -99,7 +69,7 @@ async def get_agents():
 async def get_prompt(prompt_name: str):
     """Get an agent prompt file content."""
     # Validate prompt name to prevent path traversal
-    allowed_prompts = ["normalizer", "extracter", "verifier", "generator", "latexifier", "evaluator"]
+    allowed_prompts = _promptable_agents()
     if prompt_name not in allowed_prompts:
         raise HTTPException(status_code=404, detail="Prompt not found")
 

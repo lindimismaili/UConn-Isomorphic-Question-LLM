@@ -19,6 +19,7 @@ import BatchEvalModal from "./components/modals/BatchEvalModal.jsx";
 
 import { useWorkflow } from "./hooks/useWorkflow.js";
 import { useAgents } from "./hooks/useAgents.js";
+import { getDerivedRegistry } from "./hooks/useAgentRegistry.js";
 import { useCreateData } from "./hooks/useCreateData.js";
 import { useBatchEval } from "./hooks/useBatchEval.js";
 import { generateId } from "./utils/ids.js";
@@ -27,143 +28,27 @@ import { generateId } from "./utils/ids.js";
 // Initial State
 // =============================================================================
 
-/**
- * Baseline agent/runtime metadata rendered before the backend loads config.
- */
-const INITIAL_AGENTS = {
-  setup: {
-    name: "Starter",
-    description: "Prepares the shared workflow runtime",
-    model: "OpenAI Runtime",
-    reasoningLevel: "Unavailable",
-    kind: "runtime",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "User",
-    outputTo: "Normalizer",
-    inputText: "",
-    outputText: "",
-  },
-  normalizer: {
-    name: "Unavailable",
-    description: "Unavailable",
-    model: "Unavailable",
-    reasoningLevel: "Unavailable",
-    kind: "agent",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "User",
-    outputTo: "Extracter",
-    inputText: "",
-    outputText: "",
-  },
-  extracter: {
-    name: "Unavailable",
-    description: "Unavailable",
-    model: "Unavailable",
-    reasoningLevel: "Unavailable",
-    kind: "agent",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "Normalizer",
-    outputTo: "Verifier",
-    inputText: "",
-    outputText: "",
-  },
-  verifier: {
-    name: "Unavailable",
-    description: "Unavailable",
-    model: "Unavailable",
-    reasoningLevel: "Unavailable",
-    kind: "agent",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "Extracter",
-    outputTo: "Generator",
-    inputText: "",
-    outputText: "",
-  },
-  generator: {
-    name: "Unavailable",
-    description: "Unavailable",
-    model: "Unavailable",
-    reasoningLevel: "Unavailable",
-    kind: "agent",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "Verifier",
-    outputTo: "Latexifier",
-    inputText: "",
-    outputText: "",
-  },
-  latexifier: {
-    name: "Unavailable",
-    description: "Unavailable",
-    model: "Unavailable",
-    reasoningLevel: "Unavailable",
-    kind: "agent",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "Generator",
-    outputTo: "Evaluator",
-    inputText: "",
-    outputText: "",
-  },
-  evaluation: {
-    name: "Evaluator",
-    description: "Scores generated outputs and writes evaluation artifacts",
-    model: "Unavailable",
-    reasoningLevel: "low",
-    kind: "agent",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "Latexifier",
-    outputTo: "Output",
-    inputText: "",
-    outputText: "",
-  },
-  output: {
-    name: "Output",
-    description: "Finalizes workflow files and result metadata",
-    model: "Workflow Runtime",
-    reasoningLevel: "Unavailable",
-    kind: "runtime",
-    status: "inactive",
-    startTime: null,
-    endTime: null,
-    executionTime: null,
-    inputFrom: "Evaluator",
-    outputTo: "User",
-    inputText: "",
-    outputText: "",
-  },
-};
-
 /** Maximum number of log entries retained in memory and rendered. */
 const MAX_LOGS = 250;
-const NEXT_AGENT_BY_KEY = {
-  setup: "normalizer",
-  normalizer: "extracter",
-  extracter: "verifier",
-  verifier: "generator",
-  generator: "latexifier",
-  latexifier: "evaluation",
-  evaluation: "output",
-};
+
+/** Build empty workflow state for a single agent key. */
+function _emptyAgentState() {
+  return {
+    name: "Unavailable",
+    description: "",
+    model: "Unavailable",
+    reasoningLevel: "Unavailable",
+    kind: "agent",
+    status: "inactive",
+    startTime: null,
+    endTime: null,
+    executionTime: null,
+    inputFrom: "",
+    outputTo: "",
+    inputText: "",
+    outputText: "",
+  };
+}
 
 /**
  * Returns the first value in the list that is neither empty nor nullish.
@@ -195,7 +80,7 @@ function makeLog(message, level) {
 
 const INITIAL_STATE = {
   files: [],
-  agents: { ...INITIAL_AGENTS },
+  agents: {},
   isRunning: false,
   workflowId: null,
   logs: [makeLog("User connection established.", "info")],
@@ -283,32 +168,23 @@ function reducer(state, action) {
     case "AGENTS_LOADED": {
       const updatedAgents = { ...state.agents };
       for (const [key, config] of Object.entries(action.config)) {
-        if (updatedAgents[key]) {
-          const reasoningLevel = firstDefined(
-            config.reasoning,
-            config.reasoningLevel,
-            config.reasoning_level,
-            updatedAgents[key].reasoningLevel,
-          );
-          updatedAgents[key] = {
-            ...updatedAgents[key],
-            name: firstDefined(config.name, updatedAgents[key].name),
-            model: firstDefined(config.model, updatedAgents[key].model),
-            reasoningLevel,
-            description: firstDefined(
-              config.description,
-              updatedAgents[key].description,
-            ),
-            inputFrom: firstDefined(config.inputFrom, updatedAgents[key].inputFrom),
-            outputTo: firstDefined(config.outputTo, updatedAgents[key].outputTo),
-            kind: firstDefined(
-              config.kind,
-              config.type,
-              config.nodeKind,
-              updatedAgents[key].kind,
-            ),
-          };
-        }
+        const existing = updatedAgents[key] || _emptyAgentState();
+        const reasoningLevel = firstDefined(
+          config.reasoning,
+          config.reasoningLevel,
+          config.reasoning_level,
+          existing.reasoningLevel,
+        );
+        updatedAgents[key] = {
+          ...existing,
+          name: firstDefined(config.name, existing.name) || key,
+          model: firstDefined(config.model, existing.model) || "Unavailable",
+          reasoningLevel: reasoningLevel || "none",
+          description: firstDefined(config.description, existing.description) || "",
+          inputFrom: firstDefined(config.inputFrom, existing.inputFrom) || "",
+          outputTo: firstDefined(config.outputTo, existing.outputTo) || "",
+          kind: firstDefined(config.kind, config.type, config.nodeKind, existing.kind) || "agent",
+        };
       }
       return { ...state, agents: updatedAgents };
     }
@@ -331,7 +207,6 @@ function reducer(state, action) {
         files: [],
         logs: [
           ...state.logs,
-          makeLog("------------------------------", "info"),
           makeLog("Process starting...", "info"),
           makeLog("Starter started", "info"),
         ].slice(-MAX_LOGS),
@@ -395,7 +270,7 @@ function reducer(state, action) {
         [action.agentKey]: { ...agent, ...patch, status: nextStatus },
       };
       if (nextStatus === "completed") {
-        const nextKey = NEXT_AGENT_BY_KEY[action.agentKey];
+        const nextKey = (getDerivedRegistry()?.nextAgentByKey ?? {})[action.agentKey];
         const nextAgent = nextKey ? nextAgents[nextKey] : null;
         if (
           nextAgent &&
@@ -420,9 +295,19 @@ function reducer(state, action) {
         typeof action.elapsedTimeSeconds === "number"
           ? ` in ${action.elapsedTimeSeconds.toFixed(2)}s`
           : "";
+      const now = new Date();
+      const agents = Object.fromEntries(
+        Object.entries(state.agents).map(([key, agent]) => [
+          key,
+          agent.status === "thinking"
+            ? { ...agent, status: "completed", endTime: agent.endTime ?? now }
+            : agent,
+        ]),
+      );
       return {
         ...state,
         isRunning: false,
+        agents,
         result: action.result,
         error: null,
         logs: [
@@ -717,6 +602,7 @@ export default function App() {
                   <AgentPipeline
                     agents={state.agents}
                     onCardClick={handleAgentCardClick}
+                    isRunning={state.isRunning}
                   />
                 </div>
               </div>

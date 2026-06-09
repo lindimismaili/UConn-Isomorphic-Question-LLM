@@ -91,7 +91,7 @@ export default function DeveloperToolsPanel({
           </button>
         </div>
         <div className="developer-log-area">
-          <LogPanel logs={logs} />
+          <LogPanel logs={logs} embedded />
         </div>
       </div>
     </section>

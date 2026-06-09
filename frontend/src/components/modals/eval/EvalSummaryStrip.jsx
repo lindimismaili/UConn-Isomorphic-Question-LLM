@@ -1,16 +1,18 @@
+import { IconDownload } from '../../Icons.jsx';
 import { formatScore } from './evalData.js';
 
 /**
- * Top strip of the Evaluator Results modal: status, overall score, and counts.
+ * Top strip of the Evaluator Results modal: status, overall score, item count, and rubric.
  *
  * @param {object} props
  * @param {object} props.report - Evaluation report payload.
  * @param {number} props.itemCount - Number of normalized detail rows.
- * @param {number} props.totalPassed
- * @param {number} props.totalFailed
+ * @param {Array<object>} props.rubricFiles - Normalized rubric file references.
+ * @param {(name: string) => void} [props.onDownload]
  */
-export default function EvalSummaryStrip({ report, itemCount, totalPassed, totalFailed }) {
+export default function EvalSummaryStrip({ report, itemCount, rubricFiles, onDownload }) {
   const reportStatus = report?.status || 'unknown';
+  const primaryRubric = rubricFiles?.[0];
   return (
     <div className="eval-summary-strip">
       <div>
@@ -25,9 +27,26 @@ export default function EvalSummaryStrip({ report, itemCount, totalPassed, total
         <span className="eval-summary-label">Items</span>
         <strong>{report?.items_evaluated ?? itemCount}</strong>
       </div>
-      <div>
-        <span className="eval-summary-label">Question Results</span>
-        <strong>{totalPassed} pass / {totalFailed} fail</strong>
+      <div className="eval-summary-rubric-panel">
+        <span className="eval-summary-label">Rubric</span>
+        {primaryRubric ? (
+          <div className="eval-summary-rubric-body">
+            <span className="eval-summary-rubric-name">{primaryRubric.label}</span>
+            <div className="eval-summary-rubric-path">{primaryRubric.displayPath || primaryRubric.name}</div>
+            {onDownload && primaryRubric.name && (
+              <button
+                className="btn btn-secondary eval-summary-rubric-btn"
+                onClick={() => onDownload(primaryRubric.name)}
+                type="button"
+              >
+                <IconDownload className="btn-icon" />
+                Download
+              </button>
+            )}
+          </div>
+        ) : (
+          <span className="eval-summary-rubric-empty">—</span>
+        )}
       </div>
     </div>
   );

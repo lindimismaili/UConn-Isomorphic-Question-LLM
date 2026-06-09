@@ -51,7 +51,7 @@ function formatClock(value) {
  * @param {{agentKey: string, agent: object, onClick: Function}} props
  */
 export default function AgentCard({ agentKey, agent, onClick }) {
-  const nodeKind = agent.kind || agent.nodeKind || (agentKey === 'setup' || agentKey === 'output' ? 'runtime' : 'agent');
+  const nodeKind = agent.kind || agent.nodeKind || 'agent';
   const isRuntime = nodeKind === 'runtime';
   const statusColor = STATUS_COLORS[agent.status] || STATUS_COLORS.inactive;
   const statusLabel = agent.status.charAt(0).toUpperCase() + agent.status.slice(1);

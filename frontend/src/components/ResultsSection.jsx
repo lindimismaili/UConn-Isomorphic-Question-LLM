@@ -8,6 +8,12 @@ import {
 } from './Icons.jsx';
 import PdfPreviewModal from './modals/PdfPreviewModal.jsx';
 import EvalResultsModal from './modals/EvalResultsModal.jsx';
+import TexViewerModal from './modals/TexViewerModal.jsx';
+import CsvViewerModal from './modals/CsvViewerModal.jsx';
+import AgentMetadataModal from './modals/AgentMetadataModal.jsx';
+import AgentArtifactModal from './modals/AgentArtifactModal.jsx';
+import EvalDatasetModal from './modals/EvalDatasetModal.jsx';
+import FinalResultModal from './modals/FinalResultModal.jsx';
 
 /** Preferred ordering for artifact groups in the download list. */
 const AGENT_ORDER = [
@@ -98,6 +104,25 @@ function isPdfFile(fileName) {
 
 function isTexFile(fileName) {
   return typeof fileName === 'string' && fileName.toLowerCase().endsWith('.tex');
+}
+
+/**
+ * Returns the viewer modal type for a given file, or null if no viewer exists.
+ *
+ * @param {string} fileName
+ * @returns {string | null}
+ */
+function getViewerType(fileName) {
+  if (!fileName) return null;
+  const base = baseName(fileName);
+  if (base === 'final_result.json') return 'final-result';
+  if (base === 'evaluation_spreadsheet.csv') return 'csv';
+  if (isTexFile(fileName)) return 'tex';
+  if (base === 'agent_metadata_output.json') return 'agent-metadata';
+  if (/^evaluation_outputs\/evaluation_dataset\.jsonl$/.test(fileName)) return 'eval-dataset';
+  if (/^evaluation_outputs\/evaluation_agents\.jsonl$/.test(fileName)) return 'eval-results';
+  if (/^agent_outputs\/[^/]+\/agent_(input|output)\.jsonl$/i.test(fileName)) return 'agent-artifact';
+  return null;
 }
 
 function findFileName(files, preferredName) {
@@ -200,6 +225,8 @@ export default function ResultsSection({ result }) {
   const [previewFile, setPreviewFile] = useState('');
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [evalModalOpen, setEvalModalOpen] = useState(false);
+  const [viewerFile, setViewerFile] = useState('');
+  const [viewerType, setViewerType] = useState(null);
 
   useEffect(() => {
     if (result && sectionRef.current) {
@@ -269,14 +296,33 @@ export default function ResultsSection({ result }) {
     setEvalModalOpen(false);
   };
 
+  const handleViewOpen = (fileName) => {
+    const type = getViewerType(fileName);
+    if (type === 'eval-results') {
+      setEvalModalOpen(true);
+      return;
+    }
+    if (type) {
+      setViewerFile(fileName);
+      setViewerType(type);
+    }
+  };
+
+  const handleViewClose = () => {
+    setViewerFile('');
+    setViewerType(null);
+  };
+
   const previewUrl = previewFile ? getFileUrl(previewFile, true) : '';
   const evalItemsUrl = evalItemsFileName ? getFileUrl(evalItemsFileName, true) : '';
+  const viewerUrl = viewerFile ? getFileUrl(viewerFile, true) : '';
 
   const renderFileRow = (file) => {
     const fileName = file.name;
     const displayName = baseName(fileName);
     const pdfFile = isPdfFile(fileName);
     const evalReportFile = fileName === evalReportFileName;
+    const viewerTypeForFile = !pdfFile && !evalReportFile ? getViewerType(fileName) : null;
     return (
       <div key={fileName} className="download-item">
         <span className="download-item-name" title={fileName}>
@@ -303,6 +349,16 @@ export default function ResultsSection({ result }) {
               View
             </button>
           )}
+          {viewerTypeForFile && (
+            <button
+              className="btn btn-primary btn-preview"
+              onClick={() => handleViewOpen(fileName)}
+              type="button"
+            >
+              <IconMonitor className="btn-icon" />
+              View
+            </button>
+          )}
           <button
             className="btn btn-secondary btn-download"
             onClick={() => handleDownload(fileName)}
@@ -317,16 +373,29 @@ export default function ResultsSection({ result }) {
   };
 
   const renderAgentArtifactButton = (fileName, label, artifactLabel) => (
-    <button
-      className="btn btn-secondary btn-download agent-output-download"
-      disabled={!fileName}
-      onClick={() => handleDownload(fileName)}
-      title={fileName || `${artifactLabel} artifact unavailable`}
-      type="button"
-    >
-      <IconDownload className="btn-icon" />
-      {label}
-    </button>
+    <div className="agent-artifact-btn-group">
+      {fileName && (
+        <button
+          className="btn btn-secondary btn-sm agent-output-view"
+          onClick={() => handleViewOpen(fileName)}
+          title={`View ${artifactLabel} artifact`}
+          type="button"
+        >
+          <IconMonitor className="btn-icon" />
+          View
+        </button>
+      )}
+      <button
+        className="btn btn-secondary btn-download agent-output-download"
+        disabled={!fileName}
+        onClick={() => handleDownload(fileName)}
+        title={fileName || `${artifactLabel} artifact unavailable`}
+        type="button"
+      >
+        <IconDownload className="btn-icon" />
+        {label}
+      </button>
+    </div>
   );
 
   return (
@@ -337,6 +406,13 @@ export default function ResultsSection({ result }) {
             <div className="completed-header-left">
               <IconCheckCircle className="completed-icon" />
               <h2>Completed!</h2>
+              <span className="completed-title-sep" aria-hidden="true" />
+              <h4 className="downloads-inline-label">
+                Download Files{' '}
+                <span className="download-count">
+                  {fileCount} file{fileCount !== 1 ? 's' : ''}
+                </span>
+              </h4>
             </div>
             <div className="completed-elapsed-time">
               {elapsedText ? `Elapsed Time: ${elapsedText}` : ''}
@@ -345,14 +421,6 @@ export default function ResultsSection({ result }) {
         </div>
         <div className="card-body">
           <div className="downloads-section">
-            <div className="downloads-header">
-              <h4>
-                Download Files{' '}
-                <span className="download-count">
-                  {fileCount} file{fileCount !== 1 ? 's' : ''}
-                </span>
-              </h4>
-            </div>
             <div className="downloads-columns">
               {[
                 { title: 'Main', files: mainFiles, empty: 'No main output files.' },
@@ -425,6 +493,48 @@ export default function ResultsSection({ result }) {
         itemsUrl={evalItemsUrl}
         itemsFileName={evalItemsFileName}
         reportFileName={evalReportFileName}
+        onDownload={handleDownload}
+      />
+      <TexViewerModal
+        isOpen={viewerType === 'tex'}
+        onClose={handleViewClose}
+        fileName={viewerFile}
+        url={viewerUrl}
+        onDownload={handleDownload}
+      />
+      <CsvViewerModal
+        isOpen={viewerType === 'csv'}
+        onClose={handleViewClose}
+        fileName={viewerFile}
+        url={viewerUrl}
+        onDownload={handleDownload}
+      />
+      <AgentMetadataModal
+        isOpen={viewerType === 'agent-metadata'}
+        onClose={handleViewClose}
+        fileName={viewerFile}
+        url={viewerUrl}
+        onDownload={handleDownload}
+      />
+      <AgentArtifactModal
+        isOpen={viewerType === 'agent-artifact'}
+        onClose={handleViewClose}
+        fileName={viewerFile}
+        url={viewerUrl}
+        onDownload={handleDownload}
+      />
+      <EvalDatasetModal
+        isOpen={viewerType === 'eval-dataset'}
+        onClose={handleViewClose}
+        fileName={viewerFile}
+        url={viewerUrl}
+        onDownload={handleDownload}
+      />
+      <FinalResultModal
+        isOpen={viewerType === 'final-result'}
+        onClose={handleViewClose}
+        fileName={viewerFile}
+        url={viewerUrl}
         onDownload={handleDownload}
       />
     </>

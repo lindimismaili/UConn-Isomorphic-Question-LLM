@@ -146,18 +146,20 @@ function coercePassed(value) {
 }
 
 /**
- * Pulls score and pass maps from a single eval record payload.
+ * Pulls score, pass, and raw sample maps from a single eval record payload.
  *
  * @param {object} record
- * @returns {{grades: object, passes: object}}
+ * @returns {{grades: object, passes: object, samplesByKey: object}}
  */
 function extractResultMaps(record) {
   const grades = { ...asObject(record.grades) };
   const passes = { ...asObject(record.passes) };
+  const samplesByKey = {};
 
   for (const result of Array.isArray(record.results) ? record.results : []) {
     const name = result?.name || result?.criterion || result?.criterion_name;
     if (!name) continue;
+    const normalizedName = normalizeCriterionName(name);
     if (grades[name] === undefined && typeof result.score === 'number') {
       grades[name] = result.score;
     }
@@ -167,9 +169,40 @@ function extractResultMaps(record) {
     if (passes[name] === undefined && passed !== null) {
       passes[name] = passed;
     }
+    if (result.sample && !samplesByKey[normalizedName]) {
+      samplesByKey[normalizedName] = result.sample;
+    }
   }
 
-  return { grades, passes };
+  return { grades, passes, samplesByKey };
+}
+
+/**
+ * Parses grader reasoning steps from a sample payload.
+ * Sample shape: { output: [{role, content: JSON string}], model, ... }
+ *
+ * @param {object} sample
+ * @returns {Array<{conclusion: string, description: string}>}
+ */
+export function parseSampleSteps(sample) {
+  const outputs = Array.isArray(sample?.output) ? sample.output : [];
+  const outputContent = outputs.find((o) => typeof o?.content === 'string')?.content;
+  if (!outputContent) return [];
+
+  try {
+    const parsed = JSON.parse(outputContent);
+    if (Array.isArray(parsed.steps)) {
+      return parsed.steps.map((s) => ({
+        conclusion: String(s.conclusion || ''),
+        description: String(s.description || ''),
+      }));
+    }
+  } catch {
+    // non-JSON content — return as single description
+    return [{ conclusion: '', description: outputContent }];
+  }
+
+  return [];
 }
 
 /**
@@ -179,24 +212,13 @@ function extractResultMaps(record) {
  * @returns {string}
  */
 function extractSampleNote(sample) {
-  const outputs = Array.isArray(sample?.outputs) ? sample.outputs : [];
-  const outputContent = outputs.find((output) => typeof output?.content === 'string')?.content;
-  if (!outputContent) return '';
-
-  try {
-    const parsed = JSON.parse(outputContent);
-    if (Array.isArray(parsed.steps)) {
-      return parsed.steps
-        .map((step) => step.conclusion || step.description)
-        .filter(Boolean)
-        .join(' ');
-    }
-    if (parsed.reason) return String(parsed.reason);
-  } catch {
-    return outputContent;
+  const steps = parseSampleSteps(sample);
+  if (steps.length > 0) {
+    return steps
+      .map((s) => [s.conclusion, s.description].filter(Boolean).join(': '))
+      .join(' ');
   }
-
-  return outputContent;
+  return '';
 }
 
 /**
@@ -232,17 +254,18 @@ export function normalizeEvalRecord(record, index, rubricByName, threshold) {
     record.input ||
     record.sample?.input,
   );
-  const { grades, passes } = extractResultMaps(record);
-  const samples = asObject(record.grader_samples);
+  const { grades, passes, samplesByKey } = extractResultMaps(record);
   const keys = [
     ...new Set([
       ...Object.keys(grades),
       ...Object.keys(passes),
-      ...Object.keys(samples),
+      ...Object.keys(samplesByKey),
     ]),
   ];
 
   const evaluations = keys.map((key) => {
+    const normalizedKey = normalizeCriterionName(key);
+    const sample = samplesByKey[normalizedKey] || samplesByKey[key];
     const score = typeof grades[key] === 'number' ? grades[key] : null;
     const explicitPassed = coercePassed(passes[key]);
     const passed = explicitPassed ?? (score !== null ? score >= threshold : null);
@@ -252,8 +275,9 @@ export function normalizeEvalRecord(record, index, rubricByName, threshold) {
       label: formatCriterionLabel(key, rubricByName),
       score,
       passed,
-      note: extractSampleNote(samples[key]),
-      model: samples[key]?.sampled_model_name || '',
+      note: extractSampleNote(sample),
+      steps: parseSampleSteps(sample),
+      graderModel: sample?.model || '',
     };
   });
 

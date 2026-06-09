@@ -35,6 +35,8 @@ from backend.src.paths import (
     OUTPUTS_DIR,
     QUESTION_DATA_DIR,
 )
+from backend.src.registry import llm_agents as _llm_agents
+from backend.src.registry import source_file_agents as _source_file_agents
 from backend.src.safety import create_unique_run_dir
 from backend.src.schemas import WorkflowInput, WorkflowResult
 from backend.src.workflow import run_workflow_async
@@ -122,9 +124,6 @@ async def run_workflow(
     return result
 
 
-_LLM_AGENTS = ("normalizer", "extracter", "verifier", "generator", "latexifier")
-
-
 def main() -> None:
     """Command-line entry point."""
     parser = argparse.ArgumentParser(
@@ -149,12 +148,12 @@ def main() -> None:
     parser.add_argument(
         "--from-agent",
         dest="from_agent",
-        choices=list(_LLM_AGENTS),
+        choices=list(_llm_agents()),
         default="normalizer",
         metavar="AGENT",
         help=(
             "Start the pipeline from this agent using --agent-input. "
-            "Choices: " + ", ".join(_LLM_AGENTS)
+            "Choices: " + ", ".join(_llm_agents())
         ),
     )
     parser.add_argument(
@@ -168,11 +167,11 @@ def main() -> None:
     parser.add_argument(
         "--stop-after",
         dest="stop_after",
-        choices=list(_LLM_AGENTS),
+        choices=list(_llm_agents()),
         default=None,
         metavar="AGENT",
         help="Stop the pipeline after this agent completes. "
-             "Choices: " + ", ".join(_LLM_AGENTS),
+             "Choices: " + ", ".join(_llm_agents()),
     )
     parser.add_argument(
         "--no-eval",
@@ -197,7 +196,7 @@ def main() -> None:
 
     # Require files only when starting from normalizer/extracter
     from_agent = args.from_agent
-    if from_agent in ("normalizer", "extracter") and not agent_input_data:
+    if from_agent in _source_file_agents() and not agent_input_data:
         if not args.files:
             default_file = QUESTION_DATA_DIR / "PDF" / "Quiz_Compilation.pdf"
             if default_file.exists():

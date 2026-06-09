@@ -1,19 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile, IconUpload } from '../Icons.jsx';
-
-/** Agent stages that can receive an uploaded start file. */
-const INPUT_AGENT_KEYS = [
-  'normalizer',
-  'extracter',
-  'verifier',
-  'generator',
-  'latexifier',
-  'evaluation',
-];
-
-/** Stages that need a source document rather than a saved JSON input artifact. */
-const SOURCE_FILE_AGENT_KEYS = new Set(['normalizer', 'extracter']);
+import { useAgentRegistry } from '../../hooks/useAgentRegistry';
 
 /**
  * Lets developers upload an agent input artifact and resume from that stage.
@@ -28,24 +16,29 @@ export default function InputToAgentModal({
   serviceInactive,
   onRun,
 }) {
-  const [selectedAgent, setSelectedAgent] = useState(INPUT_AGENT_KEYS[0]);
+  const registryData = useAgentRegistry();
+  const inputAgentKeys = registryData?.inputAgentKeys ?? [];
+  const sourceFileAgentKeys = registryData?.sourceFileAgentKeys ?? new Set();
+
+  const [selectedAgent, setSelectedAgent] = useState('');
+  const resolvedAgent = selectedAgent || inputAgentKeys[0] || '';
   const [inputFile, setInputFile] = useState(null);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
-  const needsSourceFile = SOURCE_FILE_AGENT_KEYS.has(selectedAgent);
+  const needsSourceFile = sourceFileAgentKeys.has(resolvedAgent);
   const acceptedFileTypes = needsSourceFile
     ? '.pdf,.docx,.doc,.txt'
     : '.json,.jsonl,.txt';
 
   const agentOptions = useMemo(() => (
-    INPUT_AGENT_KEYS.map((key) => ({
+    inputAgentKeys.map((key) => ({
       key,
       label: agents?.[key]?.name && agents[key].name !== 'Unavailable'
         ? agents[key].name
         : key,
       description: agents?.[key]?.description || '',
     }))
-  ), [agents]);
+  ), [agents, inputAgentKeys]);
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0] || null;
@@ -72,7 +65,7 @@ export default function InputToAgentModal({
       return;
     }
     setError('');
-    onRun(selectedAgent, inputFile, {
+    onRun(resolvedAgent, inputFile, {
       onStarted: () => {
         resetLocalState();
         onClose();
@@ -117,7 +110,7 @@ export default function InputToAgentModal({
           <select
             id="input-to-agent-select"
             className="input-to-agent-select"
-            value={selectedAgent}
+            value={resolvedAgent}
             onChange={(event) => {
               setSelectedAgent(event.target.value);
               resetLocalState();

@@ -3,22 +3,7 @@ import Modal from './Modal.jsx';
 import PromptViewerModal from './PromptViewerModal.jsx';
 import RubricViewerModal from './RubricViewerModal.jsx';
 import { IconFile } from '../Icons.jsx';
-
-const AGENT_PROMPT_MAP = {
-  normalizer: 'normalizer',
-  extracter: 'extracter',
-  verifier: 'verifier',
-  generator: 'generator',
-  latexifier: 'latexifier',
-};
-
-const AGENT_PROMPT_TITLES = {
-  normalizer: 'Normalizer',
-  extracter: 'Extracter',
-  verifier: 'Verifier',
-  generator: 'Generator',
-  latexifier: 'Latexifier',
-};
+import { getDerivedRegistry } from '../../hooks/useAgentRegistry';
 
 const DEFAULT_TIME_ZONE = 'America/New_York';
 
@@ -103,14 +88,15 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
 
   // Do NOT early-return null here. The Modal must always be mounted so the
   // CSS opacity/transform transitions can fire when isOpen flips to true.
-  const promptName = agentKey ? (AGENT_PROMPT_MAP[agentKey] || '') : '';
-  const isEvaluation = agentKey === 'evaluation';
+  const registryEntry = agentKey ? getDerivedRegistry()?.registry?.[agentKey] : null;
+  const promptName = registryEntry?.promptName || (registryEntry?.hasPrompt ? agentKey : '') || '';
+  const isEvaluation = Boolean(registryEntry && !registryEntry.isStoppable && registryEntry.isLLM);
   const canOpenReference = Boolean(promptName || isEvaluation);
-  const promptTitle = agentKey ? (AGENT_PROMPT_TITLES[agentKey] || agentKey) : '';
+  const promptTitle = agentKey ? (registryEntry?.name || agentKey) : '';
   const statusLabel = agent?.status
     ? agent.status.charAt(0).toUpperCase() + agent.status.slice(1)
     : 'Unavailable';
-  const nodeKind = agent?.kind || agent?.nodeKind || (agentKey === 'setup' || agentKey === 'output' ? 'runtime' : 'agent');
+  const nodeKind = agent?.kind || agent?.nodeKind || registryEntry?.kind || 'agent';
   const isRuntime = nodeKind === 'runtime';
   const details = agent
     ? [
