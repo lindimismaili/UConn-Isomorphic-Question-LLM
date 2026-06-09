@@ -35,6 +35,7 @@ from backend.src.paths import (
     OUTPUTS_DIR,
     QUESTION_DATA_DIR,
 )
+from backend.src.registry import default_from_agent as _default_from_agent
 from backend.src.registry import llm_agents as _llm_agents
 from backend.src.registry import source_file_agents as _source_file_agents
 from backend.src.safety import create_unique_run_dir
@@ -82,7 +83,7 @@ async def _to_thread(func, /, *args, **kwargs):
 async def run_workflow(
     workflow_input: WorkflowInput,
     *,
-    from_agent: str = "normalizer",
+    from_agent: str | None = None,
     agent_input: dict[str, Any] | None = None,
     stop_after: str | None = None,
     run_evaluation: bool = True,
@@ -93,6 +94,7 @@ async def run_workflow(
     using a saved JSON artifact (e.g. an output from a previous run).
     ``stop_after`` stops the pipeline after the named agent completes.
     """
+    from_agent = from_agent or _default_from_agent()
     client = get_cli_openai_client()
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     run_label = f"cli-{timestamp}"
@@ -126,8 +128,9 @@ async def run_workflow(
 
 def main() -> None:
     """Command-line entry point."""
+    from backend.src.registry import api_description as _api_description
     parser = argparse.ArgumentParser(
-        description="Generate isomorphic physics questions from PDF/DOCX files"
+        description=_api_description()
     )
     parser.add_argument(
         "files",
@@ -149,7 +152,7 @@ def main() -> None:
         "--from-agent",
         dest="from_agent",
         choices=list(_llm_agents()),
-        default="normalizer",
+        default=_default_from_agent(),
         metavar="AGENT",
         help=(
             "Start the pipeline from this agent using --agent-input. "

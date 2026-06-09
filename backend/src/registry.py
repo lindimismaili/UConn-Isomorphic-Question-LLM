@@ -133,3 +133,58 @@ def wrapped_record_marker_keys() -> frozenset[str]:
     """Set of wrapped record marker keys. Replaces _WRAPPED_RECORD_MARKER_KEYS."""
     config = _load_raw().get("_config", {})
     return frozenset(config.get("wrappedRecordMarkerKeys", []))
+
+
+# ── Setup / container accessors ──────────────────────────────────────────────
+
+def setup_bootstrap_model() -> str:
+    """Model used for container bootstrap shell tasks. Replaces DEFAULT_BOOTSTRAP_MODEL."""
+    return agent_entry("setup").get("bootstrapModel", "gpt-5.5")
+
+
+def setup_allowed_domains() -> list[str]:
+    """Default container network allowlist. Replaces DEFAULT_ALLOWED_DOMAINS."""
+    return list(agent_entry("setup").get("allowedDomains", []))
+
+
+def setup_container_packages() -> list[str]:
+    """Python packages installed inside the container. Replaces CONTAINER_PYTHON_PACKAGES."""
+    return list(agent_entry("setup").get("containerPythonPackages", []))
+
+
+# ── Evaluation accessor ───────────────────────────────────────────────────────
+
+def evaluation_model() -> str:
+    """Model used for evaluation/grading. Authoritative source for the eval agent."""
+    return agent_entry("evaluation").get("model", "gpt-5.5")
+
+
+# ── Config/schema accessors ───────────────────────────────────────────────────
+
+def valid_themes() -> frozenset[str]:
+    """Allowed question theme values. Replaces VALID_THEMES in helpers.py."""
+    config = _load_raw().get("_config", {})
+    return frozenset(config.get("validThemes", []))
+
+
+def api_title() -> str:
+    """FastAPI application title."""
+    return _load_raw().get("_config", {}).get("apiTitle", "Isomorphic Question Generator API")
+
+
+def api_description() -> str:
+    """FastAPI application description."""
+    return _load_raw().get("_config", {}).get("apiDescription", "Generate isomorphic physics questions using AI agents")
+
+
+def default_from_agent() -> str:
+    """Default starting agent for CLI --from-agent. Returns the first stoppable agent."""
+    stoppable = stoppable_agents()
+    return stoppable[0] if stoppable else "normalizer"
+
+
+def agent_result_field(key: str) -> str | None:
+    """Return the WorkflowResult field name for a stoppable agent's primary output, or None."""
+    raw = _load_raw()
+    entry = {k: v for k, v in raw.items() if not k.startswith("_")}.get(key, {})
+    return entry.get("resultField")

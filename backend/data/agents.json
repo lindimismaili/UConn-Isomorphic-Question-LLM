@@ -24,13 +24,17 @@
       "input_metadata",
       "output_metadata"
     ],
-    "wrappedRecordMarkerKeys": ["recorded_at", "agent_key", "attempt"]
+    "wrappedRecordMarkerKeys": ["recorded_at", "agent_key", "attempt"],
+    "validThemes": ["life_science", "engineering", "everyday_activity", "physics_abstract"],
+    "apiTitle": "Isomorphic Question Generator API",
+    "apiDescription": "Generate isomorphic physics questions using AI agents"
   },
   "setup": {
     "sequence": 0,
     "name": "Starter",
     "description": "Prepares the shared workflow runtime",
     "model": "OpenAI Runtime",
+    "bootstrapModel": "gpt-5.5",
     "reasoning": "none",
     "kind": "runtime",
     "isLLM": false,
@@ -42,7 +46,22 @@
     "aliases": [],
     "inputFrom": "User",
     "outputTo": "Normalizer",
-    "cliDescription": "Bootstrap the shared container and upload source files"
+    "cliDescription": "Bootstrap the shared container and upload source files",
+    "allowedDomains": [
+      "archive.ubuntu.com",
+      "security.ubuntu.com",
+      "deb.debian.org",
+      "security.debian.org",
+      "pypi.org",
+      "files.pythonhosted.org"
+    ],
+    "containerPythonPackages": [
+      "pymupdf",
+      "pdf2image",
+      "pdfplumber",
+      "PyPDF2",
+      "python-docx"
+    ]
   },
   "normalizer": {
     "sequence": 1,
@@ -60,7 +79,8 @@
     "aliases": [],
     "inputFrom": "User",
     "outputTo": "Extracter",
-    "cliDescription": "Parse user instructions into generation config (new_questions_per_question, difficulty, theme)"
+    "cliDescription": "Parse user instructions into generation config (new_questions_per_question, difficulty, theme)",
+    "resultField": "config"
   },
   "extracter": {
     "sequence": 2,
@@ -78,7 +98,8 @@
     "aliases": ["extractor"],
     "inputFrom": "Normalizer",
     "outputTo": "Verifier",
-    "cliDescription": "Extract source questions from uploaded PDF/DOCX files"
+    "cliDescription": "Extract source questions from uploaded PDF/DOCX files",
+    "resultField": "source_questions"
   },
   "verifier": {
     "sequence": 3,
@@ -96,7 +117,8 @@
     "aliases": [],
     "inputFrom": "Extracter",
     "outputTo": "Generator",
-    "cliDescription": "Validate extracted questions; fill answers/explanations; label distractor logic"
+    "cliDescription": "Validate extracted questions; fill answers/explanations; label distractor logic",
+    "resultField": "verified_questions"
   },
   "generator": {
     "sequence": 4,
@@ -114,7 +136,8 @@
     "aliases": [],
     "inputFrom": "Verifier",
     "outputTo": "Latexifier",
-    "cliDescription": "Generate isomorphic questions; run style review; validate contract"
+    "cliDescription": "Generate isomorphic questions; run style review; validate contract",
+    "resultField": "generated_questions"
   },
   "latexifier": {
     "sequence": 5,
@@ -132,13 +155,14 @@
     "aliases": ["latex", "latex_formatter", "latexformatter"],
     "inputFrom": "Generator",
     "outputTo": "Evaluator",
-    "cliDescription": "Format questions to LaTeX; compile PDF"
+    "cliDescription": "Format questions to LaTeX; compile PDF",
+    "resultField": "latex_file"
   },
   "evaluation": {
     "sequence": 6,
     "name": "Evaluator",
     "description": "Scores generated outputs and writes evaluator artifacts",
-    "model": null,
+    "model": "gpt-5.5",
     "reasoning": "low",
     "kind": "agent",
     "isLLM": true,

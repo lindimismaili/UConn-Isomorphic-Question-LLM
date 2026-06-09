@@ -32,6 +32,8 @@ from backend.src.api.files import router as files_router
 from backend.src.api.health import router as health_router
 from backend.src.api.workflows import router as workflows_router
 from backend.src.paths import DIST_DIR
+from backend.src.registry import api_description as _api_description
+from backend.src.registry import api_title as _api_title
 
 
 @asynccontextmanager
@@ -49,8 +51,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Isomorphic Question Generator API",
-    description="Generate isomorphic physics questions using AI agents",
+    title=_api_title(),
+    description=_api_description(),
     version="1.0.0",
     lifespan=lifespan,
 )

@@ -9,14 +9,10 @@ from typing import Any, Optional
 
 from openai import OpenAI
 
+from .registry import valid_themes as _valid_themes
 from .schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
 
-VALID_THEMES = {
-    "life_science",
-    "engineering",
-    "everyday_activity",
-    "physics_abstract",
-}
+VALID_THEMES: frozenset[str] = _valid_themes()
 
 
 def load_agents_config(config_path: Path, logger: Any) -> dict[str, Any]:

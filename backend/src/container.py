@@ -13,29 +13,22 @@ from typing import Any
 from agents import function_tool
 from openai import OpenAI
 
-DEFAULT_BOOTSTRAP_MODEL = os.getenv("OPENAI_CONTAINER_BOOTSTRAP_MODEL", "gpt-5.5")
-DEFAULT_ALLOWED_DOMAINS = [
-    "archive.ubuntu.com",
-    "security.ubuntu.com",
-    "deb.debian.org",
-    "security.debian.org",
-    "pypi.org",
-    "files.pythonhosted.org",
-]
-CONTAINER_PYTHON_PACKAGES = [
-    "pymupdf",
-    "pdf2image",
-    "pdfplumber",
-    "PyPDF2",
-    "python-docx",
-]
+from .registry import (
+    setup_allowed_domains as _registry_allowed_domains,
+)
+from .registry import (
+    setup_bootstrap_model as _registry_bootstrap_model,
+)
+from .registry import (
+    setup_container_packages as _registry_packages,
+)
 
 
 def allowed_domains_from_env() -> list[str]:
     """Return the container network allowlist from environment configuration."""
     raw = os.getenv("OPENAI_CONTAINER_ALLOWED_DOMAINS", "")
     if not raw.strip():
-        return DEFAULT_ALLOWED_DOMAINS
+        return _registry_allowed_domains()
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
@@ -146,13 +139,13 @@ class SharedWorkflowRuntime:
         client: OpenAI,
         container_id: str,
         output_dir: Path,
-        model: str = DEFAULT_BOOTSTRAP_MODEL,
+        model: str | None = None,
         allowed_domains: list[str] | None = None,
     ) -> None:
         self.client = client
         self.container_id = container_id
         self.output_dir = output_dir
-        self.model = model
+        self.model = model or _registry_bootstrap_model()
         self.allowed_domains = allowed_domains or allowed_domains_from_env()
         self.bootstrapped = False
         self.bootstrap_response_id: str | None = None
@@ -186,7 +179,7 @@ Network note:
    python3-pip
 4. Run `python3 -m pip install --upgrade pip`.
     5. Install these Python document helpers:
-       {" ".join(CONTAINER_PYTHON_PACKAGES)}
+       {" ".join(_registry_packages())}
     6. Verify with:
        `pdflatex --version`
        `python3 -c "import fitz, pdf2image, pdfplumber, PyPDF2, docx; print('document-python-deps-ok')"`
@@ -196,7 +189,7 @@ Network note:
         bootstrap_prompt = bootstrap_prompt.replace(
             "python3 -m pip install --upgrade pip",
             "python3 -m pip install --upgrade pip && python3 -m pip install "
-            + " ".join(CONTAINER_PYTHON_PACKAGES),
+            + " ".join(_registry_packages()),
         )
 
         response = _run_shell_task(

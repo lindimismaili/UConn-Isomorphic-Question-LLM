@@ -19,6 +19,7 @@ from openai import OpenAI
 
 from .artifacts import to_jsonable
 from .paths import EVALUATION_FIXTURES_DIR, EVALUATOR_PROMPT_PATH, REPO_ROOT, RUBRIC_PATH
+from .registry import evaluation_model as _evaluation_model
 from .safety import utc_now_iso
 
 logger = logging.getLogger(__name__)
@@ -42,18 +43,20 @@ def general_grader_instructions() -> str:
 
 @lru_cache(maxsize=1)
 def _rubric_config() -> dict[str, Any]:
-    """Rubric criteria + grader model + reasoning level, loaded on first call."""
+    """Rubric criteria + grader model + reasoning level, loaded on first call.
+
+    Model is sourced from agents.json (evaluation.model); rubric.json provides
+    criteria and optional reasoning override only.
+    """
     if not RUBRIC_PATH.exists():
         raise FileNotFoundError(f"Rubric file not found: {RUBRIC_PATH}")
     data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError(f"Rubric file {RUBRIC_PATH} must be a JSON object")
     criteria = data.get("criteria")
-    model = data.get("model")
     if not isinstance(criteria, list) or not criteria:
         raise ValueError(f"Rubric file {RUBRIC_PATH} must define a non-empty 'criteria' list")
-    if not isinstance(model, str) or not model:
-        raise ValueError(f"Rubric file {RUBRIC_PATH} must define a non-empty 'model' string")
+    model = _evaluation_model()
     reasoning = data.get("reasoning") or "low"
     return {"criteria": criteria, "model": model, "reasoning": reasoning}
 
@@ -84,14 +87,17 @@ def question_level_criteria() -> list[dict[str, Any]]:
 
 @lru_cache(maxsize=1)
 def rubric_payload() -> dict[str, Any]:
-    """Return the full rubric.json contents (or a minimal stub if absent)."""
+    """Return the full rubric.json contents with model from agents.json (or a stub if absent)."""
+    model = _evaluation_model()
     if not RUBRIC_PATH.exists():
-        return {"model": "gpt-5.5", "criteria": []}
+        return {"model": model, "criteria": []}
     try:
         data = json.loads(RUBRIC_PATH.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {"model": "gpt-5.5", "criteria": []}
+        if not isinstance(data, dict):
+            return {"model": model, "criteria": []}
+        return {**data, "model": model}
     except Exception:
-        return {"model": "gpt-5.5", "criteria": []}
+        return {"model": model, "criteria": []}
 
 
 def _to_jsonl(items: list[dict[str, Any]]) -> str:

@@ -12,7 +12,6 @@ from fastapi.responses import PlainTextResponse
 from backend.src.api.state import (
     _list_evaluation_source_files,
 )
-from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.helpers import resolve_prompt_path
 from backend.src.paths import (
     DROPDOWN_PATH,
@@ -56,11 +55,7 @@ async def get_rubric():
 async def get_agents():
     """Get the agents configuration for the frontend."""
     try:
-        agents = _all_agents()
-        rubric_model = _load_rubric_model()
-        if agents.get("evaluation", {}).get("model") is None:
-            agents = {**agents, "evaluation": {**agents["evaluation"], "model": rubric_model}}
-        return agents
+        return _all_agents()
     except Exception as e:
         logger.error("Failed to load agents configuration: %s", e)
         raise HTTPException(status_code=500, detail="Failed to load agents configuration") from e
