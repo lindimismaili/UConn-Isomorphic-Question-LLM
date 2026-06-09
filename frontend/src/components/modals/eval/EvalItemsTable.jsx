@@ -5,8 +5,9 @@ import { formatScore } from './evalData.js';
  *
  * @param {object} props
  * @param {Array<object>} props.rows - Normalized eval records.
+ * @param {Function} [props.onCriterionClick] - Called with the evaluation object when a chip is clicked.
  */
-export default function EvalItemsTable({ rows }) {
+export default function EvalItemsTable({ rows, onCriterionClick }) {
   return (
     <div className="eval-table-shell">
       <table className="eval-table">
@@ -16,7 +17,7 @@ export default function EvalItemsTable({ rows }) {
             <th>Result</th>
             <th>Input</th>
             <th>Output</th>
-            <th>Evals</th>
+            <th>Evaluations</th>
           </tr>
         </thead>
         <tbody>
@@ -40,20 +41,22 @@ export default function EvalItemsTable({ rows }) {
               <td>
                 <div className="eval-chip-grid">
                   {row.evaluations.map((evaluation) => (
-                    <span
+                    <button
                       className={`eval-score-chip ${
                         evaluation.passed === false
                           ? 'is-fail'
                           : evaluation.passed === true
                             ? 'is-pass'
                             : 'is-neutral'
-                      }`}
+                      }${onCriterionClick ? ' is-clickable' : ''}`}
                       key={evaluation.key}
-                      title={evaluation.label}
+                      onClick={onCriterionClick ? () => onCriterionClick(evaluation) : undefined}
+                      title={onCriterionClick ? `View reasoning for ${evaluation.label}` : evaluation.label}
+                      type="button"
                     >
                       <span>{evaluation.label}</span>
                       <strong>{formatScore(evaluation.score)}</strong>
-                    </span>
+                    </button>
                   ))}
                 </div>
                 {row.evaluations.some((evaluation) => evaluation.note) && (

@@ -1,10 +1,36 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from '../Icons.jsx';
 
 let openModalCount = 0;
 let lockedScrollX = 0;
 let lockedScrollY = 0;
+
+// ---------------------------------------------------------------------------
+// Modal stack — tracks which modal is topmost so only it shows its backdrop.
+// ---------------------------------------------------------------------------
+let _modalStack = [];
+const _stackListeners = new Set();
+
+function _notifyStack() {
+  const snapshot = [..._modalStack];
+  _stackListeners.forEach((fn) => fn(snapshot));
+}
+
+function pushModalId(id) {
+  _modalStack = [..._modalStack, id];
+  _notifyStack();
+}
+
+function popModalId(id) {
+  _modalStack = _modalStack.filter((m) => m !== id);
+  _notifyStack();
+}
+
+function subscribeStack(fn) {
+  _stackListeners.add(fn);
+  return () => _stackListeners.delete(fn);
+}
 
 const SCROLL_KEYS = new Set([
   'ArrowUp',
@@ -125,6 +151,27 @@ export default function Modal({
   const titleId = useId();
   const contentRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const [isTopModal, setIsTopModal] = useState(false);
+
+  // Track this modal in the global stack so only the topmost backdrop shows.
+  useEffect(() => {
+    if (!isOpen) {
+      setIsTopModal(false);
+      return;
+    }
+
+    pushModalId(titleId);
+    setIsTopModal(_modalStack.at(-1) === titleId);
+
+    const unsubscribe = subscribeStack((stack) => {
+      setIsTopModal(stack.at(-1) === titleId);
+    });
+
+    return () => {
+      popModalId(titleId);
+      unsubscribe();
+    };
+  }, [isOpen, titleId]);
 
   // Lock body scroll and add modal-open class when open
   useEffect(() => {
@@ -202,7 +249,10 @@ export default function Modal({
       aria-hidden={isOpen ? undefined : 'true'}
       aria-labelledby={titleId}
     >
-      <div className="modal-backdrop" onClick={isOpen ? onClose : undefined} />
+      <div
+        className={`modal-backdrop${isTopModal ? '' : ' is-inactive'}`}
+        onClick={isOpen && isTopModal ? onClose : undefined}
+      />
       <div
         className={`modal-content${modalSizeClass}${contentClassName ? ` ${contentClassName}` : ''}`}
         ref={contentRef}

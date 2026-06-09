@@ -183,8 +183,9 @@ class EvaluationContractTests(unittest.TestCase):
         agents = json.loads((repo_root / "backend/data/agents.json").read_text(encoding="utf-8"))
         rubric = json.loads((repo_root / "backend/data/rubric.json").read_text(encoding="utf-8"))
 
-        self.assertGreater(len(agents), 0)
-        for config in agents.values():
+        llm_agents = {k: v for k, v in agents.items() if isinstance(v, dict) and v.get("isLLM") and v.get("model") is not None}
+        self.assertGreater(len(llm_agents), 0)
+        for config in llm_agents.values():
             self.assertEqual(config.get("model"), "gpt-5.5")
 
         self.assertEqual(rubric.get("model"), "gpt-5.5")

@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
+import CriterionReasoningModal from './eval/CriterionReasoningModal.jsx';
 import {
   DEFAULT_PASSING_THRESHOLD,
   buildAggregateRows,
@@ -76,6 +77,8 @@ export default function EvalResultsModal({
     return [];
   }, [report]);
 
+  const [criterionDetail, setCriterionDetail] = useState(null);
+
   const spreadsheetFileName =
     typeof report?.spreadsheet_file === 'string' ? report.spreadsheet_file : '';
   const rows = useMemo(
@@ -84,8 +87,13 @@ export default function EvalResultsModal({
   );
   const aggregateRows = useMemo(() => buildAggregateRows(report), [report]);
 
-  const totalPassed = rows.filter((row) => row.status === 'passed').length;
-  const totalFailed = rows.filter((row) => row.status === 'failed').length;
+  const combinedFiles = useMemo(
+    () => [
+      ...runInputFiles.map((f) => ({ ...f, label: `Input File: ${f.label}` })),
+      ...testingFiles,
+    ],
+    [runInputFiles, testingFiles],
+  );
 
   const downloadButton = (fileName, label) => (
     <button className="btn btn-secondary" onClick={() => onDownload(fileName)} type="button">
@@ -115,26 +123,15 @@ export default function EvalResultsModal({
       <EvalSummaryStrip
         report={report}
         itemCount={rows.length}
-        totalPassed={totalPassed}
-        totalFailed={totalFailed}
+        rubricFiles={rubricFiles}
+        onDownload={onDownload}
       />
 
       <div className="eval-reference-grid">
         <EvalReferencePanel
-          title="Run Inputs"
-          files={runInputFiles}
-          emptyText="No input files recorded for this run."
-        />
-        <EvalReferencePanel
-          title="Testing Files"
-          files={testingFiles}
-          emptyText="No testing artifacts were recorded."
-          onDownload={onDownload}
-        />
-        <EvalReferencePanel
-          title="Rubric"
-          files={rubricFiles}
-          emptyText="No rubric file metadata is available."
+          title="Files"
+          files={combinedFiles}
+          emptyText="No files recorded for this run."
           onDownload={onDownload}
         />
       </div>
@@ -149,11 +146,17 @@ export default function EvalResultsModal({
         </div>
       )}
 
-      {rows.length > 0 && <EvalItemsTable rows={rows} />}
+      {rows.length > 0 && <EvalItemsTable rows={rows} onCriterionClick={setCriterionDetail} />}
 
       {rows.length === 0 && aggregateRows.length > 0 && loadState !== 'loading' && (
         <EvalAggregateTable rows={aggregateRows} />
       )}
+
+      <CriterionReasoningModal
+        isOpen={!!criterionDetail}
+        criterion={criterionDetail}
+        onClose={() => setCriterionDetail(null)}
+      />
     </Modal>
   );
 }

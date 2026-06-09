@@ -175,7 +175,7 @@ async def rerun_workflow_from_agent(
     source_dir = _resolve_output_folder_label(sourceOutputFolder)
     source_label = _relative_output_folder(source_dir)
     file_paths = load_source_file_paths(source_dir)
-    if start_agent in {"normalizer", "extracter"} and not file_paths:
+    if start_agent in SOURCE_FILE_INPUT_AGENTS and not file_paths:
         raise HTTPException(
             status_code=400,
             detail=(

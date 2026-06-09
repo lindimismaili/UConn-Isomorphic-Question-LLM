@@ -2,24 +2,7 @@ import { useRef, useCallback } from 'react';
 
 import { abortableSleep } from '../utils/abortableSleep';
 import { fetchWithAbort, readErrorDetail } from '../utils/api';
-
-/** Human-readable labels for workflow log messages. */
-const AGENT_LABELS = {
-  normalizer: 'Normalizer',
-  extracter: 'Extracter',
-  verifier: 'Verifier',
-  generator: 'Generator',
-  latexifier: 'Latexifier',
-  evaluation: 'Evaluator',
-  output: 'Output',
-};
-
-/** Stages that emit question-count logs when they complete. */
-const AGENT_COUNT_LOGS = {
-  extracter: 'Extracted',
-  verifier: 'Verified',
-  generator: 'Generated',
-};
+import { getDerivedRegistry } from './useAgentRegistry';
 /** Polling interval used while waiting for workflow status updates. */
 const STATUS_POLL_INTERVAL_MS = 150;
 
@@ -135,7 +118,7 @@ export function useWorkflow(dispatch) {
    * @param {AbortSignal} signal - Abort signal for this run.
    */
   const pollWorkflow = useCallback(async (workflowId, setupElapsedSeconds, signal, runId) => {
-    const agentKeys = ['normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
+    const agentKeys = getDerivedRegistry()?.pipelineKeys.slice(1) ?? ['normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
     const statusByAgent = {};
 
     while (true) {
@@ -166,7 +149,7 @@ export function useWorkflow(dispatch) {
           const nextStatus = agentStatus.status;
 
           if (prevStatus !== nextStatus) {
-            const label = AGENT_LABELS[key] || key;
+            const label = (getDerivedRegistry()?.agentLabels ?? {})[key] || key;
             if (nextStatus === 'thinking') {
               dispatch({ type: 'LOG', message: `${label} started`, level: 'info' });
             } else if (nextStatus === 'completed') {
@@ -174,7 +157,7 @@ export function useWorkflow(dispatch) {
               const timeSuffix = elapsed ? ` in ${elapsed}` : '';
               dispatch({ type: 'LOG', message: `${label} completed${timeSuffix}`, level: 'success' });
 
-              const countLabel = AGENT_COUNT_LOGS[key];
+              const countLabel = (getDerivedRegistry()?.countLabels ?? {})[key];
               const count = getQuestionCount(key, data.output);
               if (countLabel && typeof count === 'number') {
                 dispatch({ type: 'LOG', message: `${countLabel}: ${count} questions`, level: 'info' });
@@ -356,7 +339,7 @@ export function useWorkflow(dispatch) {
     dispatch({ type: 'WORKFLOW_START' });
 
     try {
-      dispatch({ type: 'LOG', message: `Uploading input for ${AGENT_LABELS[startAgent] || startAgent}...`, level: 'info' });
+      dispatch({ type: 'LOG', message: `Uploading input for ${(getDerivedRegistry()?.agentLabels ?? {})[startAgent] || startAgent}...`, level: 'info' });
       const startForm = new FormData();
       startForm.append('startAgent', startAgent);
       startForm.append('prompt', prompt);
@@ -380,7 +363,7 @@ export function useWorkflow(dispatch) {
       dispatch({ type: 'WORKFLOW_REGISTERED', workflowId });
       dispatch({
         type: 'LOG',
-        message: `Workflow started from ${AGENT_LABELS[startAgent] || startAgent} (${workflowId})`,
+        message: `Workflow started from ${(getDerivedRegistry()?.agentLabels ?? {})[startAgent] || startAgent} (${workflowId})`,
         level: 'info',
       });
       options.onStarted?.(workflowId);

@@ -37,23 +37,14 @@ from backend.src.bootstrap import load_dotenv as _load_dotenv
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
 from backend.src.paths import ENV_PATH, OUTPUTS_DIR
+from backend.src.registry import cli_descriptions as _cli_descriptions
+from backend.src.registry import llm_agents as _llm_agents
 from backend.src.safety import create_unique_run_dir
 from backend.src.schemas import AGENT_INPUT_TYPES, WorkflowResult
 from backend.src.workflow import run_workflow_async
 
 _load_dotenv(ENV_PATH)
 
-_AGENT_DESCRIPTIONS = {
-    "normalizer": "Parse user instructions into generation config (new_questions_per_question, difficulty, theme)",
-    "extracter": "Extract source questions from uploaded PDF/DOCX files",
-    "verifier": "Validate extracted questions; fill answers/explanations; label distractor logic",
-    "generator": "Generate isomorphic questions; run style review; validate contract",
-    "latexifier": "Format questions to LaTeX; compile PDF",
-    "evaluation": "Run 9-criterion evaluation rubric on generated output (OpenAI Evals)",
-    "output": "Finalize workflow files and write final_result.json",
-}
-
-_LLM_AGENTS = ("normalizer", "extracter", "verifier", "generator", "latexifier")
 
 _cli_client: OpenAI | None = None
 
@@ -106,8 +97,8 @@ def cmd_list(_args: argparse.Namespace) -> None:
     print("Agents (in pipeline order):\n")
     for key in WORKFLOW_AGENT_SEQUENCE:
         name = AGENT_DISPLAY_NAMES.get(key, key.title())
-        desc = _AGENT_DESCRIPTIONS.get(key, "")
-        marker = "  " if key not in _LLM_AGENTS else "* "
+        desc = _cli_descriptions().get(key, "")
+        marker = "  " if key not in _llm_agents() else "* "
         print(f"  {marker}{key:<14} {name:<14} {desc}")
     print("\n  * = LLM agent (requires OPENAI_API_KEY to run)")
     print("\nUse  `schema <agent>`  to see the expected input JSON structure.")
@@ -290,12 +281,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "run",
         help="Start pipeline from <agent> using a saved input JSON; continues to end unless --stop-after",
     )
-    p_run.add_argument("agent", choices=list(_LLM_AGENTS), help="Agent to start from")
+    p_run.add_argument("agent", choices=list(_llm_agents()), help="Agent to start from")
     p_run.add_argument("--input", required=True, metavar="FILE", help="Path to input JSON")
     p_run.add_argument(
         "--stop-after",
         dest="stop_after",
-        choices=list(_LLM_AGENTS),
+        choices=list(_llm_agents()),
         default=None,
         metavar="AGENT",
         help="Stop the pipeline after this agent (must be at or after <agent>)",
@@ -318,7 +309,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "run-one",
         help="Run exactly one agent and print/save its output (equivalent to run --stop-after <agent>)",
     )
-    p_one.add_argument("agent", choices=list(_LLM_AGENTS), help="Agent to run")
+    p_one.add_argument("agent", choices=list(_llm_agents()), help="Agent to run")
     p_one.add_argument("--input", required=True, metavar="FILE", help="Path to input JSON")
     p_one.add_argument(
         "--output",

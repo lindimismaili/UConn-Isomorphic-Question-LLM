@@ -9,6 +9,7 @@ itself stays independent of HTTP and CLI concerns.
 from __future__ import annotations
 
 import asyncio
+import json
 import mimetypes
 import shutil
 import time
@@ -51,6 +52,7 @@ from ..pipeline_validation import (
     validate_generator_output,
     validate_verifier_output,
 )
+from ..registry import stoppable_agents as _registry_stoppable_agents
 from ..safety import (
     LATEX_SUFFIXES,
     PDF_SUFFIXES,
@@ -451,7 +453,7 @@ async def run_workflow_async(
     with trace("Isomorphic Question Generation Workflow"):
         if resume_from_agent not in WORKFLOW_AGENT_SEQUENCE:
             raise ValueError(f"Unknown resume_from_agent: {resume_from_agent}")
-        _stoppable_agents = ("normalizer", "extracter", "verifier", "generator", "latexifier")
+        _stoppable_agents = _registry_stoppable_agents()
         if stop_after_agent is not None and stop_after_agent not in _stoppable_agents:
             raise ValueError(
                 f"stop_after_agent must be one of {_stoppable_agents}, got: {stop_after_agent!r}"
@@ -1150,6 +1152,7 @@ async def run_workflow_async(
             )
 
         # ---- Evaluation ----
+        input_name_map: dict[str, str] = {}
         if should_run_evaluation:
             workflow["agents"]["evaluation"]["status"] = "thinking"
             workflow["agents"]["evaluation"]["data"]["startTime"] = datetime.now().isoformat()
@@ -1190,6 +1193,26 @@ async def run_workflow_async(
             workflow["agents"]["evaluation"]["data"]["output"] = "Running evaluation..."
             touch_workflow(workflow)
 
+            # Copy source PDFs into the output folder before evaluation so the
+            # report's run_inputs can reference downloadable relative paths.
+            input_files_dir = outputs_dir / "input_files"
+            for raw_fp in file_paths:
+                src = Path(raw_fp)
+                if not src.is_file():
+                    continue
+                try:
+                    input_files_dir.mkdir(parents=True, exist_ok=True)
+                    dest_name = safe_filename(
+                        src.name, fallback="input.pdf",
+                        allowed_suffixes={".pdf", ".txt", ".docx"},
+                    )
+                    dest = input_files_dir / dest_name
+                    if not dest.exists():
+                        shutil.copy2(src, dest)
+                    input_name_map[src.name] = f"input_files/{dest_name}"
+                except Exception:
+                    pass
+
             evaluation_report = await asyncio.to_thread(
                 run_openai_output_evaluation,
                 client=client,
@@ -1199,6 +1222,21 @@ async def run_workflow_async(
                 contract_report=contract_report,
             )
             evaluation_elapsed = time.time() - evaluation_stage_start
+
+            # Update run_inputs names to downloadable relative paths and re-save.
+            if input_name_map and isinstance(evaluation_report.get("run_inputs"), list):
+                for entry in evaluation_report["run_inputs"]:
+                    bare = Path(entry.get("name", "")).name
+                    if bare in input_name_map:
+                        entry["name"] = input_name_map[bare]
+                eval_report_path_on_disk = (
+                    outputs_dir / EVALUATION_OUTPUTS_DIRNAME / EVALUATION_REPORT_FILENAME
+                )
+                if eval_report_path_on_disk.exists():
+                    eval_report_path_on_disk.write_text(
+                        json.dumps(evaluation_report, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
 
             workflow["agents"]["evaluation"]["status"] = "completed"
             workflow["agents"]["evaluation"]["data"]["endTime"] = datetime.now().isoformat()
@@ -1312,6 +1350,10 @@ async def run_workflow_async(
             files_metadata.append(file_metadata(f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_SPREADSHEET_FILENAME}", eval_spreadsheet_path))
         if eval_rubric_path.exists():
             files_metadata.append(file_metadata(f"{EVALUATION_OUTPUTS_DIRNAME}/{EVALUATION_RUBRIC_FILENAME}", eval_rubric_path))
+        for relative_name in input_name_map.values():
+            dest = outputs_dir / relative_name
+            if dest.exists():
+                files_metadata.append(file_metadata(relative_name, dest))
 
         output_input_artifact = "agent_outputs/output/agent_input.jsonl"
         output_output_artifact = "agent_outputs/output/agent_output.jsonl"

@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AgentCard from './AgentCard.jsx';
 import { IconBrain } from './Icons.jsx';
+import { useAgentRegistry } from '../hooks/useAgentRegistry';
 
-/** Fixed stage order used to lay out the workflow graph. */
-const PIPELINE_KEYS = ['setup', 'normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
 const PLACEHOLDER_BRAINS = [0, 1, 2, 3, 4, 5];
-/** Static connector map used to draw the pipeline SVG paths. */
-const CONNECTIONS = PIPELINE_KEYS.slice(0, -1).map((from, index) => {
-  const to = PIPELINE_KEYS[index + 1];
-  return { id: `${from}-${to}`, from, to };
-});
+
+const CARD_WIDTH = 220;
+const CARD_GAP = 72;
+const SCROLL_PADDING_X = 88; // 44px per side
 
 /**
  * Returns true once the connector should be visible.
@@ -33,24 +31,30 @@ function isRevealedStatus(status) {
 }
 
 /**
- * Renders one horizontal row of pipeline nodes.
+ * Renders one horizontal row of pipeline nodes plus ghost brain placeholders.
  *
- * @param {{keys: string[], agents: object, onCardClick: Function, onNodeRef: Function}} props
+ * @param {{keys: string[], agents: object, onCardClick: Function, onNodeRef: Function, ghostBrainCount: number}} props
  */
-function AgentRow({ keys, agents, onCardClick, onNodeRef }) {
+function AgentRow({ keys, agents, onCardClick, onNodeRef, ghostBrainCount }) {
   return (
     <div className="agents-row">
-      {keys.map((key) => {
-        return (
-          <div
-            key={key}
-            className="agent-node is-revealed"
-            ref={(node) => onNodeRef(key, node)}
-          >
-            <AgentCard agentKey={key} agent={agents[key]} onClick={onCardClick} />
-          </div>
-        );
-      })}
+      {keys.map((key) => (
+        <div
+          key={key}
+          className="agent-node is-revealed"
+          ref={(node) => onNodeRef(key, node)}
+        >
+          <AgentCard agentKey={key} agent={agents[key]} onClick={onCardClick} />
+        </div>
+      ))}
+      {Array.from({ length: ghostBrainCount }, (_, i) => (
+        <div key={`ghost-${i}`} className="agent-node-ghost">
+          <IconBrain
+            className="agent-ghost-brain-icon"
+            style={{ animationDelay: `${i * 200}ms` }}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -76,26 +80,49 @@ function BrainPlaceholder({ isHidden }) {
 /**
  * Renders the workflow graph and SVG connectors between agents.
  *
- * @param {{agents: object, onCardClick: Function}} props
+ * @param {{agents: object, onCardClick: Function, isRunning: boolean}} props
  */
-export default function AgentPipeline({ agents, onCardClick }) {
+export default function AgentPipeline({ agents, onCardClick, isRunning }) {
   const scrollRef = useRef(null);
   const trackRef = useRef(null);
   const nodeRefs = useRef({});
   const [connector, setConnector] = useState({ width: 1, height: 1, paths: {} });
+  const [scrollContainerWidth, setScrollContainerWidth] = useState(0);
+
+  const registryData = useAgentRegistry();
+  const pipelineKeys = registryData?.pipelineKeys ?? [];
+  const connections = useMemo(
+    () => pipelineKeys.slice(0, -1).map((from, index) => ({
+      id: `${from}-${pipelineKeys[index + 1]}`, from, to: pipelineKeys[index + 1],
+    })),
+    [pipelineKeys],
+  );
+
   const visibleKeys = useMemo(() => (
-    PIPELINE_KEYS.filter((key) => isRevealedStatus(agents?.[key]?.status))
-  ), [agents]);
+    pipelineKeys.filter((key) => isRevealedStatus(agents?.[key]?.status))
+  ), [agents, pipelineKeys]);
   const revealedNodes = useMemo(() => new Set(visibleKeys), [visibleKeys]);
   const isWorkflowVisible = revealedNodes.size > 0;
   const visibleConnections = useMemo(() => (
     Object.fromEntries(
-      CONNECTIONS.map((connection) => {
+      connections.map((connection) => {
         const sourceStatus = agents?.[connection.from]?.status || 'inactive';
         return [connection.id, isConnectorVisible(sourceStatus, revealedNodes.has(connection.to))];
       })
     )
-  ), [agents, revealedNodes]);
+  ), [agents, connections, revealedNodes]);
+
+  // Calculate how many agent slots fit before horizontal scrolling begins.
+  const slotsBeforeScroll = scrollContainerWidth > 0
+    ? Math.max(1, Math.floor((Math.max(0, scrollContainerWidth - SCROLL_PADDING_X) + CARD_GAP) / (CARD_WIDTH + CARD_GAP)))
+    : 0;
+
+  // Show ghost brain placeholders while running if there is room in the viewport.
+  const workflowIsActive = isRunning && visibleKeys.length > 0;
+  const remainingPipelineSlots = pipelineKeys.length - visibleKeys.length;
+  const ghostBrainCount = workflowIsActive
+    ? Math.max(0, Math.min(slotsBeforeScroll - visibleKeys.length, remainingPipelineSlots))
+    : 0;
 
   const updateConnector = useCallback(() => {
     const track = trackRef.current;
@@ -109,7 +136,7 @@ export default function AgentPipeline({ agents, onCardClick }) {
     const height = Math.max(1, track.scrollHeight, trackRect.height);
     const paths = {};
 
-    for (const connection of CONNECTIONS) {
+    for (const connection of connections) {
       if (!visibleConnections[connection.id]) continue;
       const fromNode = nodeRefs.current[connection.from];
       const toNode = nodeRefs.current[connection.to];
@@ -151,6 +178,18 @@ export default function AgentPipeline({ agents, onCardClick }) {
     };
   }, [updateConnector, agents, visibleKeys]);
 
+  // Track scroll container width to compute ghost brain count.
+  useEffect(() => {
+    const scrollNode = scrollRef.current;
+    if (!scrollNode) return;
+    const update = () => setScrollContainerWidth(scrollNode.offsetWidth);
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const obs = new ResizeObserver(update);
+    obs.observe(scrollNode);
+    return () => obs.disconnect();
+  }, []);
+
   useEffect(() => {
     const scrollNode = scrollRef.current;
     if (!scrollNode || visibleKeys.length === 0) return;
@@ -178,7 +217,7 @@ export default function AgentPipeline({ agents, onCardClick }) {
             viewBox={`0 0 ${connector.width} ${connector.height}`}
             preserveAspectRatio="none"
           >
-            {CONNECTIONS.map(({ id }) => (
+            {connections.map(({ id }) => (
               connector.paths[id]
                 ? (
                   <path
@@ -192,7 +231,13 @@ export default function AgentPipeline({ agents, onCardClick }) {
                 : null
             ))}
           </svg>
-          <AgentRow keys={visibleKeys} agents={agents} onCardClick={onCardClick} onNodeRef={setNodeRef} />
+          <AgentRow
+            keys={visibleKeys}
+            agents={agents}
+            onCardClick={onCardClick}
+            onNodeRef={setNodeRef}
+            ghostBrainCount={ghostBrainCount}
+          />
         </div>
       </div>
     </div>

@@ -181,31 +181,11 @@ export default function PromptInput({
 
       <div className="card-body">
         <div className="prompt-layout">
-          <div className="prompt-theme-row">
-            <label className="prompt-dropdown-label" htmlFor="theme-prompt-select">
-              Theme Prompt
-            </label>
-            <select
-              id="theme-prompt-select"
-              className="prompt-dropdown-select"
-              value={dropdownSelectValue}
-              onChange={handleDropdownChange}
-              disabled={isRunning || serviceInactive || dropdownItems.length === 0}
-            >
-              <option value="">Choose a theme...</option>
-              {dropdownItems.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <textarea
             id="prompt-input"
             name="prompt"
             className="prompt-input"
-            placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'"
+            placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'. If no prompt is given, internal prompt will try and generate questions using default parameters."
             value={prompt}
             onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -213,46 +193,63 @@ export default function PromptInput({
           />
 
           <div className="prompt-actions-row">
-            <button
-              className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
-              onClick={() => {
-                if (limitReached) {
-                  handleUploadWarning();
-                  return;
-                }
-                fileInputRef.current?.click();
-              }}
-              disabled={isRunning || serviceInactive}
-              title="Upload up to 5 files (.txt, .pdf, images, .md, .tex, .latex, .docx, .doc)"
+            <select
+              id="theme-prompt-select"
+              className="prompt-dropdown-select prompt-theme-select"
+              value={dropdownSelectValue}
+              onChange={handleDropdownChange}
+              disabled={isRunning || serviceInactive || dropdownItems.length === 0}
             >
-              <IconUpload className="btn-icon" />
-              <span className="btn-label">
-                {uploadWarning
-                  ? 'Unsupported or too many files!'
-                  : files.length > 0
-                    ? `Upload Files - ${files.length}`
-                    : 'Upload Files'}
-              </span>
-            </button>
-            <input
-              ref={fileInputRef}
-              id="source-files-input"
-              name="source_files"
-              type="file"
-              multiple
-              accept=".txt,.pdf,image/*,.md,.markdown,.tex,.latex,.docx,.doc"
-              hidden
-              onChange={handleFileSelect}
-            />
+              <option value="">Select a theme...</option>
+              {dropdownItems.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
 
-            <button
-              className={`btn ${isRunning ? 'btn-danger' : 'btn-primary'} send-action${resetFeedback ? ' btn-feedback' : ''}`}
-              onClick={handleSend}
-              disabled={resetFeedback || (!isRunning && serviceInactive)}
-            >
-              {isRunning ? <IconTrash className="btn-icon" /> : <IconSend className="btn-icon" />}
-              <span>{isRunning ? 'Stop' : 'Send'}</span>
-            </button>
+            <div className="prompt-actions-right">
+              <button
+                className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
+                onClick={() => {
+                  if (limitReached) {
+                    handleUploadWarning();
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
+                disabled={isRunning || serviceInactive}
+                title="Upload up to 5 files (.txt, .pdf, images, .md, .tex, .latex, .docx, .doc)"
+              >
+                <IconUpload className="btn-icon" />
+                <span className="btn-label">
+                  {uploadWarning
+                    ? 'Unsupported or too many files!'
+                    : files.length > 0
+                      ? `Upload Files - ${files.length}`
+                      : 'Upload Files'}
+                </span>
+              </button>
+              <input
+                ref={fileInputRef}
+                id="source-files-input"
+                name="source_files"
+                type="file"
+                multiple
+                accept=".txt,.pdf,image/*,.md,.markdown,.tex,.latex,.docx,.doc"
+                hidden
+                onChange={handleFileSelect}
+              />
+
+              <button
+                className={`btn ${isRunning ? 'btn-danger' : 'btn-primary'} send-action${resetFeedback ? ' btn-feedback' : ''}`}
+                onClick={handleSend}
+                disabled={resetFeedback || (!isRunning && serviceInactive)}
+              >
+                {isRunning ? <IconTrash className="btn-icon" /> : <IconSend className="btn-icon" />}
+                <span>{isRunning ? 'Stop' : 'Send'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -35,6 +35,15 @@ from backend.src.paths import (
 from backend.src.paths import (
     EVALUATION_FIXTURES_DIR as EVALUATION_DIR,
 )
+from backend.src.registry import (
+    aliases_map as _aliases_map,
+)
+from backend.src.registry import (
+    input_to_agent_sequence as _input_to_agent_sequence,
+)
+from backend.src.registry import (
+    source_file_agents as _source_file_agents,
+)
 from backend.src.safety import (
     create_unique_run_dir,
     ensure_child_path,
@@ -80,10 +89,10 @@ ALLOWED_UPLOAD_EXTENSIONS = {
 
 ALLOWED_AGENT_INPUT_EXTENSIONS = {".json", ".jsonl", ".txt"}
 
-SOURCE_FILE_INPUT_AGENTS = {"normalizer", "extracter"}
+SOURCE_FILE_INPUT_AGENTS: frozenset[str] = _source_file_agents()
 
 # Every runnable stage (the canonical sequence minus the terminal "output" node).
-INPUT_TO_AGENT_SEQUENCE = list(WORKFLOW_AGENT_SEQUENCE[:-1])
+INPUT_TO_AGENT_SEQUENCE: list[str] = _input_to_agent_sequence()
 
 MAX_UPLOAD_FILES = 5
 
@@ -799,11 +808,7 @@ def _normalize_agent_key(value: str) -> str:
         if 0 <= index < len(runnable_sequence):
             return runnable_sequence[index]
     normalized = raw.replace(" ", "_").replace("-", "_")
-    aliases = {
-        "latex_formatter": "latexifier",
-        "latex": "latexifier",
-        "eval": "evaluation",
-    }
+    aliases = _aliases_map()
     return aliases.get(normalized, normalized)
 
 def _resolve_output_folder_label(label: str) -> Path:
