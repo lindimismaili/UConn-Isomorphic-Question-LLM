@@ -138,8 +138,8 @@ def wrapped_record_marker_keys() -> frozenset[str]:
 # ── Setup / container accessors ──────────────────────────────────────────────
 
 def setup_bootstrap_model() -> str:
-    """Model used for container bootstrap shell tasks. Replaces DEFAULT_BOOTSTRAP_MODEL."""
-    return agent_entry("setup").get("bootstrapModel", "gpt-5.5")
+    """Model used for container bootstrap shell tasks."""
+    return agent_entry("setup").get("model", "gpt-5.5")
 
 
 def setup_allowed_domains() -> list[str]:
