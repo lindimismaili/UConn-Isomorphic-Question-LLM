@@ -31,9 +31,9 @@ http://isomorphic.local
 
 It warns if `.env` is missing or does not contain `OPENAI_API_KEY`.
 
-After local verification, the script asks whether to attempt Cloudflare hosting. Press Enter to continue, or any other key to skip. If continued, it installs `cloudflared`, runs `cloudflared tunnel login`, creates or reuses a tunnel, copies tunnel credentials into `/etc/cloudflared`, writes the tunnel config, routes DNS, and starts `cloudflared.service`.
+After local verification, the script asks whether to attempt Cloudflare hosting. Press Enter to continue, or any other key to skip. If continued, it installs `cloudflared`, runs `cloudflared tunnel login`, discovers active tunnels in the Cloudflare account, reuses the saved tunnel from `.deploy.env` when it still exists, or automatically uses the only active tunnel found. If several active tunnels exist, the script lists them and prompts for the tunnel name, defaulting to the first existing tunnel. It then copies tunnel credentials into `/etc/cloudflared`, writes the tunnel config, routes DNS, and starts `cloudflared.service`.
 
-The default tunnel name is:
+If no active tunnel is found, the default tunnel name is:
 
 ```text
 uconn_isomorphic

@@ -542,41 +542,126 @@ install_cloudflared() {
 }
 
 ensure_cloudflare_authenticated() {
-  if [[ -f "${CLOUDFLARED_USER_DIR}/cert.pem" ]] || [[ -f "${CLOUDFLARED_SYSTEM_DIR}/cert.pem" ]]; then
+  if [[ -r "${CLOUDFLARED_USER_DIR}/cert.pem" ]] || [[ -r "${CLOUDFLARED_SYSTEM_DIR}/cert.pem" ]]; then
     info "Cloudflare credentials already exist."
     return
+  fi
+
+  if [[ -f "${CLOUDFLARED_SYSTEM_DIR}/cert.pem" ]]; then
+    warn "${CLOUDFLARED_SYSTEM_DIR}/cert.pem exists but is not readable by this user."
+    warn "Logging in again will create ${CLOUDFLARED_USER_DIR}/cert.pem for tunnel management."
   fi
 
   warn "Cloudflare login is required. A browser URL will be shown."
   cloudflared tunnel login
 
-  if [[ ! -f "${CLOUDFLARED_USER_DIR}/cert.pem" ]]; then
+  if [[ ! -r "${CLOUDFLARED_USER_DIR}/cert.pem" ]]; then
     err "Cloudflare login did not create ${CLOUDFLARED_USER_DIR}/cert.pem."
     exit 1
   fi
+}
+
+cloudflared_origin_cert_file() {
+  if [[ -r "${CLOUDFLARED_USER_DIR}/cert.pem" ]]; then
+    printf '%s\n' "${CLOUDFLARED_USER_DIR}/cert.pem"
+  elif [[ -r "${CLOUDFLARED_SYSTEM_DIR}/cert.pem" ]]; then
+    printf '%s\n' "${CLOUDFLARED_SYSTEM_DIR}/cert.pem"
+  fi
+}
+
+cloudflared_with_cert() {
+  local cert_file
+  cert_file="$(cloudflared_origin_cert_file)"
+
+  if [[ -n "${cert_file}" ]]; then
+    TUNNEL_ORIGIN_CERT="${cert_file}" cloudflared "$@"
+  else
+    cloudflared "$@"
+  fi
+}
+
+list_active_tunnels() {
+  if cloudflared_with_cert tunnel list -o json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    tunnels = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for tunnel in tunnels:
+    if tunnel.get("deleted_at"):
+        continue
+    tunnel_id = tunnel.get("id") or tunnel.get("uuid") or ""
+    tunnel_name = tunnel.get("name") or ""
+    if tunnel_id and tunnel_name:
+        print(f"{tunnel_id}\t{tunnel_name}")
+' 2>/dev/null; then
+    return
+  fi
+
+  cloudflared_with_cert tunnel list 2>/dev/null | awk 'NR > 1 && $1 ~ /^[[:xdigit:]-]+$/ && $2 != "" { print $1 "\t" $2 }' || true
+}
+
+print_existing_tunnels() {
+  local tunnels="$1"
+  local tunnel_uuid tunnel_name
+
+  info "Existing Cloudflare tunnels found:"
+  while IFS=$'\t' read -r tunnel_uuid tunnel_name; do
+    if [[ -n "${tunnel_uuid}" ]] && [[ -n "${tunnel_name}" ]]; then
+      printf '  - %s (%s)\n' "${tunnel_name}" "${tunnel_uuid}"
+    fi
+  done <<< "${tunnels}"
 }
 
 find_tunnel_uuid() {
   local tunnel_name="$1"
   local uuid=""
 
-  uuid="$(cloudflared tunnel list -o json 2>/dev/null | python3 -c "
-import json, sys
-try:
-    tunnels = json.load(sys.stdin)
-except Exception:
-    tunnels = []
-for tunnel in tunnels:
-    if tunnel.get('name') == '${tunnel_name}' and not tunnel.get('deleted_at'):
-        print(tunnel.get('id', ''))
-        break
-" 2>/dev/null || true)"
-
-  if [[ -z "${uuid}" ]]; then
-    uuid="$(cloudflared tunnel list 2>/dev/null | awk -v name="${tunnel_name}" '$2 == name { print $1; exit }' || true)"
-  fi
+  uuid="$(list_active_tunnels | awk -F '\t' -v name="${tunnel_name}" '$2 == name { print $1; exit }')"
 
   printf '%s\n' "${uuid}"
+}
+
+select_cloudflare_tunnel_name() {
+  local configured_name="${TUNNEL_NAME:-}"
+  local tunnels matching_uuid tunnel_count first_tunnel_name selected_name
+
+  tunnels="$(list_active_tunnels || true)"
+
+  if [[ -n "${configured_name}" ]]; then
+    if [[ -n "${tunnels}" ]]; then
+      matching_uuid="$(awk -F '\t' -v name="${configured_name}" '$2 == name { print $1; exit }' <<< "${tunnels}")"
+      if [[ -n "${matching_uuid}" ]]; then
+        info "Using configured existing Cloudflare tunnel ${configured_name} (${matching_uuid})."
+        TUNNEL_NAME="${configured_name}"
+        return
+      fi
+
+      warn "Configured Cloudflare tunnel ${configured_name} was not found in this account."
+    else
+      info "Using configured Cloudflare tunnel name ${configured_name}; it will be created if needed."
+      TUNNEL_NAME="${configured_name}"
+      return
+    fi
+  fi
+
+  if [[ -z "${tunnels}" ]]; then
+    TUNNEL_NAME="$(prompt_with_default "Cloudflare tunnel name" "${configured_name:-uconn_isomorphic}")"
+    return
+  fi
+
+  print_existing_tunnels "${tunnels}"
+  tunnel_count="$(awk 'END { print NR + 0 }' <<< "${tunnels}")"
+  first_tunnel_name="$(awk -F '\t' 'NR == 1 { print $2; exit }' <<< "${tunnels}")"
+
+  if [[ "${tunnel_count}" -eq 1 ]]; then
+    info "Using existing Cloudflare tunnel ${first_tunnel_name}."
+    TUNNEL_NAME="${first_tunnel_name}"
+    return
+  fi
+
+  selected_name="$(prompt_with_default "Cloudflare tunnel name" "${first_tunnel_name}")"
+  TUNNEL_NAME="${selected_name}"
 }
 
 ensure_cloudflare_tunnel() {
@@ -592,7 +677,18 @@ ensure_cloudflare_tunnel() {
   fi
 
   info "Creating Cloudflare tunnel ${tunnel_name}."
-  cloudflared tunnel create "${tunnel_name}"
+  if ! cloudflared_with_cert tunnel create "${tunnel_name}"; then
+    uuid="$(find_tunnel_uuid "${tunnel_name}")"
+    if [[ -n "${uuid}" ]]; then
+      info "Tunnel ${tunnel_name} already exists; using existing Cloudflare tunnel (${uuid})."
+      TUNNEL_UUID="${uuid}"
+      return
+    fi
+
+    err "Could not create Cloudflare tunnel ${tunnel_name}."
+    exit 1
+  fi
+
   uuid="$(find_tunnel_uuid "${tunnel_name}")"
 
   if [[ -z "${uuid}" ]]; then
@@ -612,7 +708,8 @@ copy_cloudflare_credentials() {
     sudo chmod 600 "${CLOUDFLARED_SYSTEM_DIR}/${TUNNEL_UUID}.json"
   elif [[ ! -f "${CLOUDFLARED_SYSTEM_DIR}/${TUNNEL_UUID}.json" ]]; then
     err "Missing tunnel credential file for ${TUNNEL_UUID}."
-    err "Expected ${CLOUDFLARED_USER_DIR}/${TUNNEL_UUID}.json."
+    err "Expected ${CLOUDFLARED_USER_DIR}/${TUNNEL_UUID}.json or ${CLOUDFLARED_SYSTEM_DIR}/${TUNNEL_UUID}.json."
+    err "If this tunnel was created on another machine, copy that JSON credential file here or choose a new tunnel name."
     exit 1
   fi
 
@@ -626,9 +723,10 @@ copy_cloudflare_credentials() {
 write_cloudflare_config() {
   local tunnel_name="$1"
   local public_hostname="$2"
+  local tunnel_ref="${TUNNEL_UUID:-$tunnel_name}"
 
   sudo tee "${CLOUDFLARED_SYSTEM_DIR}/config.yml" >/dev/null <<EOF
-tunnel: ${tunnel_name}
+tunnel: ${tunnel_ref}
 credentials-file: ${CLOUDFLARED_SYSTEM_DIR}/${TUNNEL_UUID}.json
 
 ingress:
@@ -643,14 +741,15 @@ EOF
 route_cloudflare_dns() {
   local tunnel_name="$1"
   local public_hostname="$2"
+  local tunnel_ref="${TUNNEL_UUID:-$tunnel_name}"
 
   info "Creating Cloudflare DNS route for ${public_hostname}."
-  if cloudflared tunnel route dns "${tunnel_name}" "${public_hostname}"; then
+  if cloudflared_with_cert tunnel route dns "${tunnel_ref}" "${public_hostname}"; then
     return
   fi
 
   warn "DNS route already exists or could not be created normally. Trying overwrite."
-  cloudflared tunnel route dns --overwrite-dns "${tunnel_name}" "${public_hostname}"
+  cloudflared_with_cert tunnel route dns --overwrite-dns "${tunnel_ref}" "${public_hostname}"
 }
 
 install_cloudflared_service() {
@@ -682,8 +781,12 @@ EOF
 setup_cloudflare() {
   banner "Cloudflare Tunnel"
 
-  local tunnel_name public_hostname
-  tunnel_name="$(prompt_with_default "Cloudflare tunnel name" "${TUNNEL_NAME:-uconn_isomorphic}")"
+  local public_hostname
+
+  install_cloudflared
+  ensure_cloudflare_authenticated
+  select_cloudflare_tunnel_name
+
   public_hostname="$(prompt_with_default "Cloudflare hostname to route to this Pi, for example uconn.example.com" "${PUBLIC_HOSTNAME:-}")"
 
   if [[ -z "${public_hostname}" ]]; then
@@ -691,11 +794,8 @@ setup_cloudflare() {
     exit 1
   fi
 
-  TUNNEL_NAME="${tunnel_name}"
   PUBLIC_HOSTNAME="${public_hostname}"
 
-  install_cloudflared
-  ensure_cloudflare_authenticated
   ensure_cloudflare_tunnel "${TUNNEL_NAME}"
   copy_cloudflare_credentials
   write_cloudflare_config "${TUNNEL_NAME}" "${PUBLIC_HOSTNAME}"
