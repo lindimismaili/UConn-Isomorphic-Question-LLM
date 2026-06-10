@@ -1,5 +1,6 @@
 import Modal from "./Modal.jsx";
 import { IconFile, IconFolder, IconZap } from "../Icons.jsx";
+import { useAgentRegistry } from "../../hooks/useAgentRegistry";
 
 /**
  * Normalizes the batch output folder label for display.
@@ -51,6 +52,15 @@ export default function CreateDataModal({
   onRun,
   onStop,
 }) {
+  const registryData = useAgentRegistry();
+  // Fallback chip shown before the backend reports a step: first pipeline
+  // stage out of the full agents.json sequence.
+  const fallbackStepLabel = registryData
+    ? `1/${registryData.pipelineKeys.length}`
+    : "";
+  const fallbackAgentName = registryData
+    ? registryData.agentLabels[registryData.pipelineKeys[0]]
+    : "";
   const isActive = createData.isStarting || createData.isRunning;
   const progressText =
     createData.totalFiles > 0
@@ -137,7 +147,7 @@ export default function CreateDataModal({
                   </div>
                   <div className="create-data-item-tracking">
                     <span className="create-data-step-chip">
-                      {`${entry.stepLabel || "1/6"} ${entry.currentAgentName || "Normalizer"}`}
+                      {`${entry.stepLabel || fallbackStepLabel} ${entry.currentAgentName || fallbackAgentName}`.trim()}
                     </span>
                     <span className={`create-data-pill is-${entry.status}`}>
                       {getStatusLabel(entry.status)}

@@ -39,6 +39,9 @@ function _computeDerived(registry) {
     countLabels: Object.fromEntries(
       entries.filter(([, v]) => v.countLabel).map(([k, v]) => [k, v.countLabel]),
     ),
+    countFields: Object.fromEntries(
+      entries.filter(([, v]) => v.countField).map(([k, v]) => [k, v.countField]),
+    ),
     aliasesMap: Object.fromEntries(
       entries.flatMap(([k, v]) => (v.aliases || []).map((a) => [a, k])),
     ),
@@ -52,6 +55,7 @@ function _computeDerived(registry) {
     sourceFileAgentKeys: new Set(
       entries.filter(([, v]) => v.acceptsSourceFiles).map(([k]) => k),
     ),
+    runtimeAgentKeys: entries.filter(([, v]) => v.kind === 'runtime').map(([k]) => k),
   };
 }
 
@@ -82,6 +86,9 @@ export async function loadAgentRegistry() {
       return _registry;
     } catch {
       return null;
+    } finally {
+      // Allow later calls to retry if this fetch failed.
+      if (!_registry) _promise = null;
     }
   })();
 

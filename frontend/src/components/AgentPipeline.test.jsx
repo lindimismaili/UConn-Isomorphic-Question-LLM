@@ -4,10 +4,22 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AgentPipeline from './AgentPipeline.jsx';
+import { loadAgentRegistry } from '../hooks/useAgentRegistry';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const PIPELINE_KEYS = ['setup', 'normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
+
+const REGISTRY_PAYLOAD = Object.fromEntries(
+  PIPELINE_KEYS.map((key, index) => [
+    key,
+    {
+      sequence: index,
+      name: key,
+      kind: key === 'setup' || key === 'output' ? 'runtime' : 'agent',
+    },
+  ]),
+);
 
 let root;
 let container;
@@ -58,7 +70,13 @@ async function flushFrame() {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    json: async () => REGISTRY_PAYLOAD,
+  })));
+  await loadAgentRegistry();
+
   originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
     if (this.classList?.contains('agents-track')) {
@@ -87,6 +105,7 @@ afterEach(() => {
   root = null;
   container = null;
   Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 

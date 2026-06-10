@@ -21,7 +21,6 @@ TESTING_DIR = DATA_DIR / "testing"
 
 AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 RUBRIC_PATH = DATA_DIR / "rubric.json"
-DROPDOWN_PATH = DATA_DIR / "dropdown.json"
 EVALUATOR_PROMPT_PATH = PROMPTS_DIR / "evaluator.txt"
 LATEX_TEMPLATE_PATH = DATA_DIR / "template.tex"
 

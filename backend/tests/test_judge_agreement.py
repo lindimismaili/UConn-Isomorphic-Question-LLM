@@ -10,6 +10,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import pytest  # noqa: E402
+from openpyxl import Workbook  # noqa: E402
+
 from backend.src.tools.judge_agreement import (  # noqa: E402
     cohen_kappa,
     compare_grids,
@@ -17,7 +19,6 @@ from backend.src.tools.judge_agreement import (  # noqa: E402
     write_disagreements_csv,
     write_report_json,
 )
-from openpyxl import Workbook  # noqa: E402
 
 CRITERIA = [
     {"name": "preserve_physical_content", "question": "Q1?"},

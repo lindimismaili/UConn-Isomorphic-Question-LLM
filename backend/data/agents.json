@@ -1,31 +1,31 @@
 {
   "_config": {
-    "metadataKeys": [
-      "agent_key",
-      "agent_name",
-      "workflow_id",
-      "model",
-      "reasoning_level",
-      "execution_time_seconds",
-      "received_from_node",
-      "sent_to_node",
-      "agent_received_from",
-      "agent_sent_to",
-      "input_summary",
-      "questions_count",
-      "filename",
-      "pdf_filename",
-      "status",
-      "started_at",
-      "ended_at",
-      "reused_from_output_folder",
-      "output_folder",
-      "files",
-      "input_metadata",
-      "output_metadata"
-    ],
-    "wrappedRecordMarkerKeys": ["recorded_at", "agent_key", "attempt"],
-    "validThemes": ["life_science", "engineering", "everyday_activity", "physics_abstract"],
+    "themes": {
+      "biology": {
+        "label": "Biology",
+        "prompt": "Tailor the generated questions around biology contexts, such as cells, ecosystems, anatomy, genetics, lab measurements, or organism behavior, while preserving the original concept, difficulty, answer structure, and solution logic."
+      },
+      "physics": {
+        "label": "Physics",
+        "prompt": "Tailor the generated questions around physics contexts, such as motion, forces, energy, waves, circuits, fields, or measurement scenarios, while preserving the original concept, difficulty, answer structure, and solution logic."
+      },
+      "quantum": {
+        "label": "Quantum",
+        "prompt": "Tailor the generated questions around quantum contexts, such as particles, energy levels, probability amplitudes, uncertainty, spin, tunneling, or quantum measurement, while preserving the original concept, difficulty, answer structure, and solution logic."
+      },
+      "historical": {
+        "label": "Historical",
+        "prompt": "Tailor the generated questions around historical contexts, such as ancient engineering, exploration, archaeology, trade routes, inventions, or documented events, while preserving the original concept, difficulty, answer structure, and solution logic."
+      },
+      "astronomy": {
+        "label": "Astronomy",
+        "prompt": "Tailor the generated questions around astronomy contexts, such as planets, stars, moons, telescopes, orbits, galaxies, or space missions, while preserving the original concept, difficulty, answer structure, and solution logic."
+      },
+      "video_games": {
+        "label": "Video Games",
+        "prompt": "Tailor the generated questions around video game contexts, such as player movement, inventory systems, level design, game economies, physics engines, or combat mechanics, while preserving the original concept, difficulty, answer structure, and solution logic."
+      }
+    },
     "apiTitle": "Isomorphic Question Generator API",
     "apiDescription": "Generate isomorphic physics questions using AI agents"
   },
@@ -94,6 +94,7 @@
     "isStoppable": true,
     "useCodeInterpreter": true,
     "countLabel": "Extracted",
+    "countField": "questions",
     "aliases": [],
     "inputFrom": "Normalizer",
     "outputTo": "Verifier",
@@ -113,6 +114,7 @@
     "isStoppable": true,
     "useCodeInterpreter": true,
     "countLabel": "Verified",
+    "countField": "questions",
     "aliases": [],
     "inputFrom": "Extracter",
     "outputTo": "Generator",
@@ -132,6 +134,7 @@
     "isStoppable": true,
     "useCodeInterpreter": true,
     "countLabel": "Generated",
+    "countField": "isomorphic_questions",
     "aliases": [],
     "inputFrom": "Verifier",
     "outputTo": "Latexifier",
@@ -174,7 +177,8 @@
     "aliases": [],
     "inputFrom": "Latexifier",
     "outputTo": "Output",
-    "cliDescription": "Run 9-criterion evaluation rubric on generated output (OpenAI Evals)"
+    "cliDescription": "Run 9-criterion evaluation rubric on generated output (OpenAI Evals)",
+    "resultField": "evaluation"
   },
   "output": {
     "sequence": 7,

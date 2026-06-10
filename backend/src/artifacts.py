@@ -6,29 +6,26 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .registry import (
-    agent_sequence as _agent_sequence,
-)
-from .registry import (
-    display_names as _display_names,
-)
-from .registry import (
-    metadata_keys as _metadata_keys,
-)
-from .registry import (
-    wrapped_record_marker_keys as _wrapped_record_marker_keys,
-)
+from .registry import agent_sequence as _agent_sequence
+from .registry import display_names as _display_names
 from .safety import utc_now_iso
 
 AGENT_ARTIFACTS_DIRNAME = "agent_outputs"
 AGENT_METADATA_FILENAME = "agent_metadata_output.json"
 AGENT_METADATA_RELATIVE_PATH = f"{AGENT_ARTIFACTS_DIRNAME}/{AGENT_METADATA_FILENAME}"
 
-# Derived from agents.json via registry — do not hardcode here.
 WORKFLOW_AGENT_SEQUENCE: list[str] = _agent_sequence()
 AGENT_DISPLAY_NAMES: dict[str, str] = _display_names()
-_METADATA_KEYS: frozenset[str] = _metadata_keys()
-_WRAPPED_RECORD_MARKER_KEYS: frozenset[str] = _wrapped_record_marker_keys()
+
+_METADATA_KEYS: frozenset[str] = frozenset({
+    "agent_key", "agent_name", "workflow_id", "model", "reasoning_level",
+    "execution_time_seconds", "received_from_node", "sent_to_node",
+    "agent_received_from", "agent_sent_to", "input_summary", "questions_count",
+    "filename", "pdf_filename", "status", "started_at", "ended_at",
+    "reused_from_output_folder", "output_folder", "files",
+    "input_metadata", "output_metadata",
+})
+_WRAPPED_RECORD_MARKER_KEYS: frozenset[str] = frozenset({"recorded_at", "agent_key", "attempt"})
 
 
 def utc_timestamp() -> str:

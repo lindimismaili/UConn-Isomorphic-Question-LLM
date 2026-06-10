@@ -23,11 +23,7 @@ Rules:
   or relative difficulty change. If the user does not mention difficulty, keep it empty.
 - Do not infer `difficulty`, `theme`, or `title` from uploaded files; the extracter handles
   source metadata after reading the files.
-- If user asks for a theme family, map to one of:
-  - `life_science`
-  - `engineering`
-  - `everyday_activity`
-  - `physics_abstract`
+- If the user requests a theme not in the theme selector, express it as 1-3 snake_case words (e.g., `space_exploration`, `video_games`, `ancient_history`, `biology`). Do not use a fixed list — derive a natural label from what the user said.
 - If no theme is requested, keep `theme` as an empty string.
 - If no output title is requested, keep `title` as an empty string.
 - Set `show_answers` to `false` when the user explicitly requests a student/no-answer

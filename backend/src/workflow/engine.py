@@ -52,6 +52,8 @@ from ..pipeline_validation import (
     validate_generator_output,
     validate_verifier_output,
 )
+from ..registry import agent_entry as _agent_entry
+from ..registry import default_from_agent as _registry_default_from_agent
 from ..registry import stoppable_agents as _registry_stoppable_agents
 from ..safety import (
     LATEX_SUFFIXES,
@@ -93,6 +95,20 @@ from .resume import (
     runner_input_from_upload,
     should_run_agent,
 )
+
+# ── Agent metadata derived from agents.json ──────────────────────────────────
+_KEY_BY_NAME: dict[str, str] = {v: k for k, v in AGENT_DISPLAY_NAMES.items()}
+_KEY_BY_NAME["User"] = "user"
+
+_AGENT_FLOW: dict[str, tuple[str, str]] = {
+    key: (
+        _KEY_BY_NAME.get(_agent_entry(key).get("inputFrom", ""), _agent_entry(key).get("inputFrom", "").lower()),
+        _KEY_BY_NAME.get(_agent_entry(key).get("outputTo", ""), _agent_entry(key).get("outputTo", "").lower()),
+    )
+    for key in WORKFLOW_AGENT_SEQUENCE
+}
+_EVAL_REASONING: str = _agent_entry("evaluation").get("reasoning", "low")
+_DEFAULT_RESUME_AGENT: str = _registry_default_from_agent()
 
 ToThread = Callable[..., Awaitable[Any]]
 TouchWorkflow = Callable[[dict[str, Any]], None]
@@ -435,7 +451,7 @@ async def run_workflow_async(
     to_thread: ToThread,
     load_rubric_model: LoadRubricModel,
     load_rubric_payload: LoadRubricPayload,
-    resume_from_agent: str = "normalizer",
+    resume_from_agent: str = _DEFAULT_RESUME_AGENT,
     resume_source_dir: Optional[Path] = None,
     resume_source_label: str = "",
     agent_input_override: Any = None,
@@ -596,8 +612,8 @@ async def run_workflow_async(
             normalizer_input = build_json_message(normalizer_input_payload)
             if has_uploaded_agent_input and resume_from_agent == "normalizer":
                 normalizer_input = uploaded_agent_input
-            workflow["agents"]["normalizer"]["data"]["receivedFrom"] = "user"
-            workflow["agents"]["normalizer"]["data"]["sentTo"] = "extracter"
+            workflow["agents"]["normalizer"]["data"]["receivedFrom"] = _AGENT_FLOW["normalizer"][0]
+            workflow["agents"]["normalizer"]["data"]["sentTo"] = _AGENT_FLOW["normalizer"][1]
             workflow["agents"]["normalizer"]["data"]["input"] = (
                 uploaded_agent_payload
                 if has_uploaded_agent_input and resume_from_agent == "normalizer" and uploaded_agent_payload
@@ -619,7 +635,7 @@ async def run_workflow_async(
                 agent_metadata_records=agent_metadata_records,
                 touch_workflow=touch_workflow,
                 agent_key="normalizer",
-                agent_name="Normalizer",
+                agent_name=AGENT_DISPLAY_NAMES["normalizer"],
                 elapsed=elapsed,
                 input_payload=normalizer_input,
                 output_payload=normalizer_output,
@@ -627,8 +643,8 @@ async def run_workflow_async(
                     "model": agents["normalizer"].model,
                     "reasoning_level": agent_reasoning_level(agents["normalizer"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": "user",
-                    "sent_to_node": "extracter",
+                    "received_from_node": _AGENT_FLOW["normalizer"][0],
+                    "sent_to_node": _AGENT_FLOW["normalizer"][1],
                     "input_summary": f"{len(normalizer_input)} message(s)",
                 },
             )
@@ -667,8 +683,8 @@ async def run_workflow_async(
                 if has_uploaded_agent_input and resume_from_agent == "extracter"
                 else build_json_message(extracter_input_payload, file_refs=file_refs)
             )
-            workflow["agents"]["extracter"]["data"]["receivedFrom"] = "normalizer"
-            workflow["agents"]["extracter"]["data"]["sentTo"] = "verifier"
+            workflow["agents"]["extracter"]["data"]["receivedFrom"] = _AGENT_FLOW["extracter"][0]
+            workflow["agents"]["extracter"]["data"]["sentTo"] = _AGENT_FLOW["extracter"][1]
             workflow["agents"]["extracter"]["data"]["input"] = (
                 uploaded_agent_payload
                 if has_uploaded_agent_input and resume_from_agent == "extracter" and uploaded_agent_payload
@@ -713,7 +729,7 @@ async def run_workflow_async(
                 agent_metadata_records=agent_metadata_records,
                 touch_workflow=touch_workflow,
                 agent_key="extracter",
-                agent_name="Extracter",
+                agent_name=AGENT_DISPLAY_NAMES["extracter"],
                 elapsed=elapsed,
                 input_payload=extracter_input,
                 output_payload=extracter_output,
@@ -721,8 +737,8 @@ async def run_workflow_async(
                     "model": agents["extracter"].model,
                     "reasoning_level": agent_reasoning_level(agents["extracter"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": "normalizer",
-                    "sent_to_node": "verifier",
+                    "received_from_node": _AGENT_FLOW["extracter"][0],
+                    "sent_to_node": _AGENT_FLOW["extracter"][1],
                     "input_summary": f"{len(extracter_input)} message(s)",
                     "questions_count": len(extracter_output.questions),
                 },
@@ -768,8 +784,8 @@ async def run_workflow_async(
             verifier_input = build_json_message(verifier_input_payload)
             if has_uploaded_agent_input and resume_from_agent == "verifier":
                 verifier_input = uploaded_agent_input
-            workflow["agents"]["verifier"]["data"]["receivedFrom"] = "extracter"
-            workflow["agents"]["verifier"]["data"]["sentTo"] = "generator"
+            workflow["agents"]["verifier"]["data"]["receivedFrom"] = _AGENT_FLOW["verifier"][0]
+            workflow["agents"]["verifier"]["data"]["sentTo"] = _AGENT_FLOW["verifier"][1]
             workflow["agents"]["verifier"]["data"]["input"] = (
                 uploaded_agent_payload
                 if has_uploaded_agent_input and resume_from_agent == "verifier" and uploaded_agent_payload
@@ -821,7 +837,7 @@ async def run_workflow_async(
                 agent_metadata_records=agent_metadata_records,
                 touch_workflow=touch_workflow,
                 agent_key="verifier",
-                agent_name="Verifier",
+                agent_name=AGENT_DISPLAY_NAMES["verifier"],
                 elapsed=elapsed,
                 input_payload=verifier_input,
                 output_payload=verifier_output,
@@ -829,8 +845,8 @@ async def run_workflow_async(
                     "model": agents["verifier"].model,
                     "reasoning_level": agent_reasoning_level(agents["verifier"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": "extracter",
-                    "sent_to_node": "generator",
+                    "received_from_node": _AGENT_FLOW["verifier"][0],
+                    "sent_to_node": _AGENT_FLOW["verifier"][1],
                     "input_summary": f"{len(verifier_input)} message(s)",
                     "questions_count": len(verifier_output.questions),
                 },
@@ -890,8 +906,8 @@ async def run_workflow_async(
                 uploaded_requirements.setdefault("do_not_add_padding_to_concise_sources", True)
                 uploaded_requirements.setdefault("self_review_style_before_return", True)
                 generator_input = build_json_message(generator_input_payload)
-            workflow["agents"]["generator"]["data"]["receivedFrom"] = "verifier"
-            workflow["agents"]["generator"]["data"]["sentTo"] = "latexifier"
+            workflow["agents"]["generator"]["data"]["receivedFrom"] = _AGENT_FLOW["generator"][0]
+            workflow["agents"]["generator"]["data"]["sentTo"] = _AGENT_FLOW["generator"][1]
             workflow["agents"]["generator"]["data"]["input"] = generator_input_payload
             touch_workflow(workflow)
 
@@ -953,7 +969,7 @@ async def run_workflow_async(
                 agent_metadata_records=agent_metadata_records,
                 touch_workflow=touch_workflow,
                 agent_key="generator",
-                agent_name="Generator",
+                agent_name=AGENT_DISPLAY_NAMES["generator"],
                 elapsed=elapsed,
                 input_payload=generator_input,
                 output_payload=generator_output,
@@ -961,8 +977,8 @@ async def run_workflow_async(
                     "model": agents["generator"].model,
                     "reasoning_level": agent_reasoning_level(agents["generator"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": "verifier",
-                    "sent_to_node": "latexifier",
+                    "received_from_node": _AGENT_FLOW["generator"][0],
+                    "sent_to_node": _AGENT_FLOW["generator"][1],
                     "input_summary": f"{len(generator_input)} message(s)",
                     "questions_count": len(generator_output.isomorphic_questions),
                 },
@@ -1025,7 +1041,7 @@ async def run_workflow_async(
             latex_input = build_json_message(latex_input_payload)
             if has_uploaded_agent_input and resume_from_agent == "latexifier":
                 latex_input = uploaded_agent_input
-            workflow["agents"]["latexifier"]["data"]["receivedFrom"] = "generator"
+            workflow["agents"]["latexifier"]["data"]["receivedFrom"] = _AGENT_FLOW["latexifier"][0]
             workflow["agents"]["latexifier"]["data"]["sentTo"] = (
                 "evaluation" if should_run_evaluation else "output"
             )

@@ -13,25 +13,22 @@ from backend.src.api.state import (
     _list_evaluation_source_files,
 )
 from backend.src.helpers import resolve_prompt_path
+from backend.src.paths import EVALUATION_FIXTURES_DIR as EVALUATION_DIR
 from backend.src.paths import (
-    DROPDOWN_PATH,
     PROMPTS_DIR,
     RUBRIC_PATH,
 )
-from backend.src.paths import EVALUATION_FIXTURES_DIR as EVALUATION_DIR
 from backend.src.registry import all_agents as _all_agents
 from backend.src.registry import promptable_agents as _promptable_agents
+from backend.src.registry import themes as _themes
 
 router = APIRouter()
 
 @router.get("/api/dropdown")
 async def get_dropdown():
     """Get the prompt dropdown configuration for the frontend."""
-    if not DROPDOWN_PATH.exists():
-        raise HTTPException(status_code=404, detail="Dropdown configuration not found")
-
     try:
-        return json.loads(DROPDOWN_PATH.read_text(encoding="utf-8"))
+        return {"items": _themes()}
     except Exception as e:
         logger.error("Failed to load dropdown configuration: %s", e)
         raise HTTPException(status_code=500, detail="Failed to load dropdown configuration") from e
