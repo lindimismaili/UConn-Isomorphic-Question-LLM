@@ -80,3 +80,18 @@ sudo systemctl status cloudflared
 sudo journalctl -u uconn-isomorphic -f
 sudo journalctl -u cloudflared -f
 ```
+
+If the backend fails with `error while attempting to bind on address`, check
+what is already listening on the deploy backend port:
+
+```bash
+sudo ss -ltnp 'sport = :3002'
+```
+
+The deploy script stops stale `uconn-isomorphic` backend processes automatically,
+but it will not kill an unrelated process. Stop the conflicting process or run
+the installer with a different backend port, for example:
+
+```bash
+BACKEND_PORT=3003 bash deploy/deploy.sh
+```
