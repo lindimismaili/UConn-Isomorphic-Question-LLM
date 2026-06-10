@@ -169,6 +169,11 @@ validate_deploy_settings() {
     warn "Ignoring invalid saved TUNNEL_UUID=${TUNNEL_UUID}."
     unset TUNNEL_UUID
   fi
+
+  if [[ -n "${TUNNEL_UUID:-}" ]] && ! tunnel_credential_exists "${TUNNEL_UUID}"; then
+    warn "Ignoring tunnel UUID ${TUNNEL_UUID}; no local credential JSON exists for it."
+    unset TUNNEL_UUID
+  fi
 }
 
 select_platform() {
@@ -943,6 +948,12 @@ is_tunnel_uuid() {
   [[ "$1" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]]
 }
 
+tunnel_credential_exists() {
+  local uuid="$1"
+
+  [[ -f "${CLOUDFLARED_USER_DIR}/${uuid}.json" ]] || [[ -f "${CLOUDFLARED_SYSTEM_DIR}/${uuid}.json" ]]
+}
+
 find_tunnel_uuid_from_info() {
   local tunnel_name="$1"
   local info_output uuid
@@ -1140,6 +1151,33 @@ find_tunnel_uuid() {
   printf '%s\n' "${uuid}"
 }
 
+create_cloudflare_tunnel_named() {
+  local tunnel_name="$1"
+  local create_output uuid
+
+  info "Creating Cloudflare tunnel ${tunnel_name}."
+  if ! create_output="$(cloudflared_with_cert tunnel create "${tunnel_name}" 2>&1)"; then
+    printf '%s\n' "${create_output}"
+    return 1
+  fi
+
+  printf '%s\n' "${create_output}"
+  uuid="$(printf '%s\n' "${create_output}" | extract_tunnel_uuid)"
+
+  if [[ -z "${uuid}" ]]; then
+    uuid="$(find_tunnel_uuid "${tunnel_name}")"
+  fi
+
+  if [[ -z "${uuid}" ]] || ! is_tunnel_uuid "${uuid}"; then
+    err "Could not determine the Cloudflare tunnel UUID for ${tunnel_name}."
+    return 1
+  fi
+
+  TUNNEL_NAME="${tunnel_name}"
+  TUNNEL_UUID="${uuid}"
+  return 0
+}
+
 select_cloudflare_tunnel_name() {
   local configured_name="${TUNNEL_NAME:-}"
   local tunnels matching_uuid tunnel_count first_tunnel_name selected_name
@@ -1184,11 +1222,16 @@ select_cloudflare_tunnel_name() {
 
 ensure_cloudflare_tunnel() {
   local tunnel_name="$1"
-  local create_output uuid
+  local replacement_name uuid
 
   if [[ -n "${TUNNEL_UUID:-}" ]] && is_tunnel_uuid "${TUNNEL_UUID}"; then
-    info "Using configured Cloudflare tunnel ${tunnel_name} (${TUNNEL_UUID})."
-    return
+    if tunnel_credential_exists "${TUNNEL_UUID}"; then
+      info "Using configured Cloudflare tunnel ${tunnel_name} (${TUNNEL_UUID})."
+      return
+    fi
+
+    warn "Configured tunnel ${TUNNEL_UUID} has no local credential JSON; creating a replacement tunnel."
+    unset TUNNEL_UUID
   fi
 
   uuid="$(find_tunnel_uuid "${tunnel_name}")"
@@ -1197,47 +1240,33 @@ ensure_cloudflare_tunnel() {
   fi
 
   if [[ -n "${uuid}" ]]; then
-    info "Using existing Cloudflare tunnel ${tunnel_name} (${uuid})."
-    TUNNEL_UUID="${uuid}"
-    return
-  fi
-
-  info "Creating Cloudflare tunnel ${tunnel_name}."
-  if ! create_output="$(cloudflared_with_cert tunnel create "${tunnel_name}" 2>&1)"; then
-    printf '%s\n' "${create_output}"
-    uuid="$(find_tunnel_uuid "${tunnel_name}")"
-    if [[ -z "${uuid}" ]]; then
-      uuid="$(find_tunnel_uuid_from_hostname_configs)"
-    fi
-    if [[ -z "${uuid}" ]] && [[ "${create_output}" == *"tunnel with name already exists"* ]]; then
-      uuid="$(find_single_local_tunnel_credential_uuid)"
-    fi
-    if [[ -z "${uuid}" ]] && [[ "${create_output}" == *"tunnel with name already exists"* ]]; then
-      uuid="$(find_newest_local_tunnel_credential_uuid)"
-    fi
-    if [[ -n "${uuid}" ]]; then
-      info "Tunnel ${tunnel_name} already exists; using existing Cloudflare tunnel (${uuid})."
+    if tunnel_credential_exists "${uuid}"; then
+      info "Using existing Cloudflare tunnel ${tunnel_name} (${uuid})."
       TUNNEL_UUID="${uuid}"
       return
     fi
 
-    err "Could not create Cloudflare tunnel ${tunnel_name}."
-    exit 1
+    warn "Existing Cloudflare tunnel ${tunnel_name} (${uuid}) has no local credential JSON; creating a replacement tunnel."
   fi
 
-  printf '%s\n' "${create_output}"
-  uuid="$(printf '%s\n' "${create_output}" | extract_tunnel_uuid)"
-
-  if [[ -z "${uuid}" ]]; then
-    uuid="$(find_tunnel_uuid "${tunnel_name}")"
+  if create_cloudflare_tunnel_named "${tunnel_name}"; then
+    return
   fi
 
-  if [[ -z "${uuid}" ]]; then
-    err "Could not determine the new Cloudflare tunnel UUID."
-    exit 1
+  replacement_name="${tunnel_name}-${LOCAL_HOSTNAME}"
+  warn "Tunnel name ${tunnel_name} is unavailable or unusable locally. Trying ${replacement_name}."
+  if create_cloudflare_tunnel_named "${replacement_name}"; then
+    return
   fi
 
-  TUNNEL_UUID="${uuid}"
+  replacement_name="${tunnel_name}-${LOCAL_HOSTNAME}-$(date -u +%Y%m%d%H%M%S)"
+  warn "Tunnel name ${replacement_name%-*} is unavailable. Trying ${replacement_name}."
+  if create_cloudflare_tunnel_named "${replacement_name}"; then
+    return
+  fi
+
+  err "Could not create a usable Cloudflare tunnel."
+  exit 1
 }
 
 copy_cloudflare_credentials() {
