@@ -65,16 +65,15 @@ function AgentCard({ agent, onViewFile, onOpenPrompt }) {
     || agent.agent_name
     || capitalize(agent.agent_key);
 
-  const fileChip = (label, path) => (
+  const fileButton = (label, path) => (
     <button
-      className="workflow-agent-file"
+      className="btn btn-secondary btn-sm"
       onClick={() => onViewFile(path)}
       title={`View ${path}`}
       type="button"
     >
       <IconMonitor className="btn-icon" />
-      <span className="workflow-agent-file-label">{label}</span>
-      <span className="workflow-agent-file-path">{path.split('/').pop()}</span>
+      {label}
     </button>
   );
 
@@ -103,16 +102,16 @@ function AgentCard({ agent, onViewFile, onOpenPrompt }) {
       </div>
 
       <div className="workflow-agent-files">
-        {agent.input_artifact && fileChip('Input', agent.input_artifact)}
-        {agent.output_artifact && fileChip('Output', agent.output_artifact)}
+        {agent.input_artifact && fileButton('Input', agent.input_artifact)}
+        {agent.output_artifact && fileButton('Output', agent.output_artifact)}
         {prompt && (
           <button
-            className="workflow-agent-file workflow-agent-prompt"
+            className="btn btn-secondary btn-sm workflow-agent-prompt"
             onClick={() => onOpenPrompt(prompt)}
             type="button"
           >
             <IconFile className="btn-icon" />
-            <span className="workflow-agent-file-label">Prompt</span>
+            Prompt
           </button>
         )}
       </div>

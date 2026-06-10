@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
+import { DEFAULT_PASSING_THRESHOLD } from './eval/evalData.js';
 
 const TABS = ['Config', 'Source Questions', 'Generated Questions', 'Evaluation'];
 
@@ -94,6 +95,9 @@ function EvaluationTab({ evaluation, onViewInDepth }) {
 
   const criterionScores = evaluation.criterion_scores || {};
   const hasScore = typeof evaluation.overall_score === 'number';
+  const threshold = typeof evaluation.passing_score_threshold === 'number'
+    ? evaluation.passing_score_threshold
+    : DEFAULT_PASSING_THRESHOLD;
 
   return (
     <div className="viewer-body-stack">
@@ -111,17 +115,32 @@ function EvaluationTab({ evaluation, onViewInDepth }) {
             </thead>
             <tbody>
               {Object.entries(criterionScores).map(([name, data]) => {
-                const passed = data?.passed;
+                const score = typeof data?.score === 'number' ? data.score : null;
+                // The report stores per-criterion pass_rate/items_passed rather
+                // than a boolean; a criterion passes when its score clears the
+                // run's passing threshold.
+                const passed = typeof data?.passed === 'boolean'
+                  ? data.passed
+                  : score !== null ? score >= threshold : null;
+                const itemsPassed = typeof data?.items_passed === 'number' ? data.items_passed : null;
+                const itemsScored = typeof data?.items_scored === 'number' ? data.items_scored : null;
                 const pillClass = passed === true ? 'viewer-pill-pass' : passed === false ? 'viewer-pill-fail' : 'viewer-pill-neutral';
                 return (
                   <tr key={name}>
                     <td>{name.replaceAll('_', ' ').toUpperCase()}</td>
                     <td><span className="viewer-cell-muted">{data?.category || '—'}</span></td>
-                    <td className="viewer-cell-num">{typeof data?.score === 'number' ? data.score.toFixed(2) : '—'}</td>
-                    <td className="viewer-cell-num">{data?.items_scored ?? '—'}</td>
+                    <td className="viewer-cell-num">{score !== null ? score.toFixed(2) : '—'}</td>
+                    <td className="viewer-cell-num">{itemsScored ?? '—'}</td>
                     <td className="viewer-cell-num">
-                      {passed !== undefined && passed !== null
-                        ? <span className={`viewer-pill ${pillClass}`}>{passed ? 'Pass' : 'Fail'}</span>
+                      {passed !== null
+                        ? (
+                          <span className="viewer-passed-cell">
+                            <span className={`viewer-pill ${pillClass}`}>{passed ? 'Pass' : 'Fail'}</span>
+                            {itemsPassed !== null && itemsScored !== null && (
+                              <span className="viewer-cell-muted">{itemsPassed}/{itemsScored}</span>
+                            )}
+                          </span>
+                        )
                         : <span className="viewer-cell-muted">—</span>}
                     </td>
                   </tr>

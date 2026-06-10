@@ -59,25 +59,6 @@ export default function EvalItemsTable({ rows, onCriterionClick }) {
                     </button>
                   ))}
                 </div>
-                {row.evaluations.some((evaluation) => evaluation.note) && (
-                  <details className="eval-notes">
-                    <summary>Grader notes</summary>
-                    <div className="eval-notes-list">
-                      {row.evaluations
-                        .filter((evaluation) => evaluation.note)
-                        .map((evaluation) => (
-                          <div className="eval-note" key={`${evaluation.key}-note`}>
-                            <div className="eval-note-title">
-                              <span>{evaluation.label}</span>
-                              <span>{formatScore(evaluation.score)}</span>
-                            </div>
-                            <p>{evaluation.note}</p>
-                            {evaluation.model && <small>{evaluation.model}</small>}
-                          </div>
-                        ))}
-                    </div>
-                  </details>
-                )}
               </td>
             </tr>
           ))}
