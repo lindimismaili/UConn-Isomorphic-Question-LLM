@@ -557,9 +557,6 @@ install_backend_service() {
     allowed_origins="${allowed_origins},https://${PUBLIC_HOSTNAME},http://${PUBLIC_HOSTNAME}"
   fi
 
-  stop_existing_backend_service
-  ensure_backend_port_available
-
   sudo tee "${service_file}" >/dev/null <<EOF
 [Unit]
 Description=UConn Isomorphic Question LLM
@@ -591,7 +588,24 @@ EOF
   sudo chmod 644 "${service_file}"
   sudo systemctl daemon-reload
   sudo systemctl enable "${SERVICE_NAME}"
+
+  stop_existing_backend_service
+  ensure_backend_port_available
+
   sudo systemctl restart "${SERVICE_NAME}"
+  sleep 2
+  if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
+    err "${SERVICE_NAME} did not stay running after restart."
+    err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
+    exit 1
+  fi
+
+  if ! curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/health" >/dev/null; then
+    err "${SERVICE_NAME} restarted but did not pass health check on port ${BACKEND_PORT}."
+    err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
+    exit 1
+  fi
+
   info "Backend service ${SERVICE_NAME} is installed."
 }
 
