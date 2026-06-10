@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from '../Icons.jsx';
 
@@ -7,14 +7,15 @@ let lockedScrollX = 0;
 let lockedScrollY = 0;
 
 // ---------------------------------------------------------------------------
-// Modal stack — tracks which modal is topmost so only it shows its backdrop.
+// Modal stack — tracks stacking order so each open modal layers above the one
+// it was opened from. The first (bottom) modal darkens + blurs the page; every
+// stacked modal above it only blurs what is beneath it.
 // ---------------------------------------------------------------------------
 let _modalStack = [];
 const _stackListeners = new Set();
 
 function _notifyStack() {
-  const snapshot = [..._modalStack];
-  _stackListeners.forEach((fn) => fn(snapshot));
+  _stackListeners.forEach((fn) => fn());
 }
 
 function pushModalId(id) {
@@ -30,6 +31,26 @@ function popModalId(id) {
 function subscribeStack(fn) {
   _stackListeners.add(fn);
   return () => _stackListeners.delete(fn);
+}
+
+function getStackSnapshot() {
+  return _modalStack;
+}
+
+const _lastLayerById = new Map();
+
+/**
+ * Stacking depth for a modal id. While the modal is open this is its position
+ * in the stack; after it closes the last known depth is kept so the closing
+ * transition plays at the old layer instead of dropping behind the stack.
+ *
+ * @param {string} id
+ * @returns {number}
+ */
+function getModalLayer(id) {
+  const index = _modalStack.indexOf(id);
+  if (index >= 0) _lastLayerById.set(id, index);
+  return _lastLayerById.get(id) ?? 0;
 }
 
 const SCROLL_KEYS = new Set([
@@ -151,27 +172,18 @@ export default function Modal({
   const titleId = useId();
   const contentRef = useRef(null);
   const previousFocusRef = useRef(null);
-  const [isTopModal, setIsTopModal] = useState(false);
 
-  // Track this modal in the global stack so only the topmost backdrop shows.
+  // Register this modal in the global stack so it layers above the modal it
+  // was opened from.
   useEffect(() => {
-    if (!isOpen) {
-      setIsTopModal(false);
-      return;
-    }
-
+    if (!isOpen) return undefined;
     pushModalId(titleId);
-    setIsTopModal(_modalStack.at(-1) === titleId);
-
-    const unsubscribe = subscribeStack((stack) => {
-      setIsTopModal(stack.at(-1) === titleId);
-    });
-
-    return () => {
-      popModalId(titleId);
-      unsubscribe();
-    };
+    return () => popModalId(titleId);
   }, [isOpen, titleId]);
+
+  const stack = useSyncExternalStore(subscribeStack, getStackSnapshot);
+  const stackIndex = useSyncExternalStore(subscribeStack, () => getModalLayer(titleId));
+  const isTopModal = isOpen && stack.at(-1) === titleId;
 
   // Lock body scroll and add modal-open class when open
   useEffect(() => {
@@ -248,9 +260,10 @@ export default function Modal({
       aria-modal={isOpen ? 'true' : undefined}
       aria-hidden={isOpen ? undefined : 'true'}
       aria-labelledby={titleId}
+      style={{ zIndex: 1000 + stackIndex }}
     >
       <div
-        className={`modal-backdrop${isTopModal ? '' : ' is-inactive'}`}
+        className={`modal-backdrop${stackIndex > 0 ? ' is-stacked' : ''}`}
         onClick={isOpen && isTopModal ? onClose : undefined}
       />
       <div

@@ -1072,7 +1072,7 @@ async def run_workflow_async(
                 agent_metadata_records=agent_metadata_records,
                 touch_workflow=touch_workflow,
                 agent_key="latexifier",
-                agent_name="Latexifier",
+                agent_name=AGENT_DISPLAY_NAMES["latexifier"],
                 elapsed=elapsed,
                 input_payload=latex_input,
                 output_payload=latex_output,

@@ -1,34 +1,102 @@
 import Modal from './Modal.jsx';
+import useFileViewer from './useFileViewer.jsx';
+import { IconDownload, IconMonitor } from '../Icons.jsx';
+import { baseName, collectResultFiles } from '../../utils/files.js';
 
 /**
- * Explains the final runtime step that publishes completed artifacts.
+ * Details for the final runtime step that publishes completed artifacts: the
+ * inputs the run started with and every output file with view/download.
  *
  * @param {object} props
+ * @param {boolean} props.isOpen
+ * @param {Function} props.onClose
+ * @param {object | null} props.result - Completed workflow result payload.
+ * @param {{prompt: string, files: string[], startAgent: string} | null} props.runInputs
  */
-export default function OutputModal({ isOpen, onClose }) {
+export default function OutputModal({ isOpen, onClose, result, runInputs }) {
+  const { openFile, downloadFile, viewerModals } = useFileViewer(result?.workflowId);
+
+  const outputFiles = result ? collectResultFiles(result) : [];
+  const inputFiles = runInputs?.files || [];
+  const promptText = runInputs?.prompt || '';
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Workflow Runtime"
-      footer={
-        <button className="btn btn-primary" onClick={onClose}>Close</button>
-      }
-    >
-      <div className="setup-modal-body modal-body-stack">
-        <p>
-          <strong>Workflow Runtime</strong> is not an agent. It represents the
-          final workflow step after <strong>Evaluator</strong>, when the system
-          writes and exposes the completed output artifacts.
-        </p>
-        <h4>What it does</h4>
-        <ul>
-          <li>Finalize the workflow result payload</li>
-          <li>Write the final result JSON, LaTeX, and PDF files</li>
-          <li>Collect evaluator and agent artifact download metadata</li>
-          <li>Make the completed files available in the download panel</li>
-        </ul>
-      </div>
-    </Modal>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Ending Runtime"
+        large
+        footer={
+          <button className="btn btn-primary" onClick={onClose}>Close</button>
+        }
+      >
+        <div className="setup-modal-body modal-body-stack">
+          <p>
+            <strong>Ending Runtime</strong> is not an agent. It is the final
+            workflow step after <strong>Evaluator</strong>, when the system
+            writes the completed output artifacts and makes them available for
+            download.
+          </p>
+
+          <h4>Input Files</h4>
+          {inputFiles.length > 0 ? (
+            <ul className="viewer-source-files">
+              {inputFiles.map((name) => (
+                <li className="viewer-source-file" key={name}>{name}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="runtime-empty-note">
+              {runInputs ? 'No files were attached to this run.' : 'Run a workflow to see its inputs here.'}
+            </p>
+          )}
+
+          {promptText && (
+            <>
+              <h4>Input Text</h4>
+              <pre className="detail-text-box runtime-input-text">{promptText}</pre>
+            </>
+          )}
+
+          <h4>Output Files</h4>
+          {outputFiles.length > 0 ? (
+            <div className="runtime-output-list">
+              {outputFiles.map((file) => (
+                <div className="download-item" key={file.name}>
+                  <span className="download-item-name" title={file.name}>
+                    {baseName(file.name)}
+                  </span>
+                  <div className="download-item-actions">
+                    <button
+                      className="btn btn-primary btn-preview"
+                      onClick={() => openFile(file.name)}
+                      type="button"
+                    >
+                      <IconMonitor className="btn-icon" />
+                      View
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-download"
+                      onClick={() => downloadFile(file.name)}
+                      type="button"
+                    >
+                      <IconDownload className="btn-icon" />
+                      Download
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="runtime-empty-note">
+              Outputs appear here once the workflow completes.
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      {viewerModals}
+    </>
   );
 }

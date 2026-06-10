@@ -14,34 +14,20 @@ function stripLatex(text) {
     .replace(/\$/g, '');
 }
 
-function TabBar({ active, onChange }) {
-  return (
-    <div className="viewer-tab-bar">
-      {TABS.map((tab) => (
-        <button
-          className={`viewer-tab${active === tab ? ' is-active' : ''}`}
-          key={tab}
-          onClick={() => onChange(tab)}
-          type="button"
-        >
-          {tab}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function ConfigTab({ config }) {
   if (!config) return <div className="modal-empty-state">No config data.</div>;
   const entries = Object.entries(config);
   return (
     <div className="viewer-kv-table">
-      {entries.map(([k, v]) => (
-        <div className="viewer-kv-row" key={k}>
-          <span className="viewer-kv-key">{k.replaceAll('_', ' ')}</span>
-          <span className="viewer-kv-value">{String(v ?? '—')}</span>
-        </div>
-      ))}
+      {entries.map(([k, v]) => {
+        const isEmpty = v === null || v === undefined || v === '';
+        return (
+          <div className="viewer-kv-row" key={k}>
+            <span className="viewer-kv-key">{k.replaceAll('_', ' ')}</span>
+            <span className="viewer-kv-value">{isEmpty ? 'None' : String(v)}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -58,6 +44,20 @@ function OptionRow({ option, showMarker }) {
       <div className="viewer-option-body">
         <span className="viewer-option-key">{option.key}.</span>
         <span className="viewer-option-text">{stripLatex(option.text)}</span>
+        {option.distractor_logic && (
+          <span className="viewer-option-distractor">
+            <span className="viewer-option-note-label">Distractor logic:</span>{' '}
+            {stripLatex(option.distractor_logic)}
+          </span>
+        )}
+        {option.explanation && (
+          <span className="viewer-option-explanation">
+            <span className="viewer-option-note-label">
+              {option.is_correct ? 'Why correct:' : 'Why wrong:'}
+            </span>{' '}
+            {stripLatex(option.explanation)}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -89,34 +89,24 @@ function QuestionCard({ question, showSourceBadge, showMarkers }) {
   );
 }
 
-function EvaluationTab({ evaluation }) {
+function EvaluationTab({ evaluation, onViewInDepth }) {
   if (!evaluation) return <div className="modal-empty-state">No evaluation data.</div>;
 
-  const status = evaluation.status || evaluation.overall_status || '';
-  const statusClass = status === 'passed' ? 'viewer-pill-pass' : status === 'failed' ? 'viewer-pill-fail' : 'viewer-pill-neutral';
   const criterionScores = evaluation.criterion_scores || {};
+  const hasScore = typeof evaluation.overall_score === 'number';
 
   return (
     <div className="viewer-body-stack">
-      {status && (
-        <div className="viewer-eval-header">
-          <span className="viewer-eval-status-label">Overall</span>
-          <span className={`viewer-pill ${statusClass}`}>{status}</span>
-          {typeof evaluation.overall_score === 'number' && (
-            <span className="viewer-eval-score">{(evaluation.overall_score * 100).toFixed(0)}%</span>
-          )}
-        </div>
-      )}
       {Object.keys(criterionScores).length > 0 && (
         <div className="file-viewer-table-shell">
-          <table className="file-viewer-table">
+          <table className="file-viewer-table eval-summary-table">
             <thead>
               <tr>
                 <th>Criterion</th>
                 <th>Category</th>
-                <th>Score</th>
-                <th>Items</th>
-                <th>Passed</th>
+                <th className="viewer-th-num">Score</th>
+                <th className="viewer-th-num">Items</th>
+                <th className="viewer-th-num">Passed</th>
               </tr>
             </thead>
             <tbody>
@@ -125,11 +115,11 @@ function EvaluationTab({ evaluation }) {
                 const pillClass = passed === true ? 'viewer-pill-pass' : passed === false ? 'viewer-pill-fail' : 'viewer-pill-neutral';
                 return (
                   <tr key={name}>
-                    <td>{name.replaceAll('_', ' ')}</td>
+                    <td>{name.replaceAll('_', ' ').toUpperCase()}</td>
                     <td><span className="viewer-cell-muted">{data?.category || '—'}</span></td>
-                    <td className="viewer-cell-score">{typeof data?.score === 'number' ? data.score.toFixed(2) : '—'}</td>
-                    <td className="viewer-cell-score">{data?.items_scored ?? '—'}</td>
-                    <td>
+                    <td className="viewer-cell-num">{typeof data?.score === 'number' ? data.score.toFixed(2) : '—'}</td>
+                    <td className="viewer-cell-num">{data?.items_scored ?? '—'}</td>
+                    <td className="viewer-cell-num">
                       {passed !== undefined && passed !== null
                         ? <span className={`viewer-pill ${pillClass}`}>{passed ? 'Pass' : 'Fail'}</span>
                         : <span className="viewer-cell-muted">—</span>}
@@ -141,11 +131,21 @@ function EvaluationTab({ evaluation }) {
           </table>
         </div>
       )}
+      <div className="viewer-eval-footer">
+        {onViewInDepth && (
+          <button className="btn btn-secondary" onClick={onViewInDepth} type="button">
+            View In-Depth
+          </button>
+        )}
+        {hasScore && (
+          <span className="viewer-eval-score">{(evaluation.overall_score * 100).toFixed(0)}%</span>
+        )}
+      </div>
     </div>
   );
 }
 
-export default function FinalResultModal({ isOpen, onClose, fileName, url, onDownload }) {
+export default function FinalResultModal({ isOpen, onClose, fileName, url, onDownload, onViewInDepth }) {
   const { text, loading, error } = useFileContent(url, isOpen);
   const [activeTab, setActiveTab] = useState(TABS[0]);
 
@@ -154,18 +154,24 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
     try { data = JSON.parse(text); } catch { /* ignore */ }
   }
 
-  const sourceCount = data?.source_questions?.length ?? 0;
+  // Verified questions are the source questions after the Verifier fills in
+  // the correct answer, per-option explanations, and distractor logic; the raw
+  // extracter output leaves those fields empty.
+  const sourceQuestions = data?.verified_questions?.length
+    ? data.verified_questions
+    : data?.source_questions || [];
+  const sourceCount = sourceQuestions.length;
   const generatedCount = data?.generated_questions?.length ?? 0;
 
   function renderTab() {
     if (!data) return null;
     if (activeTab === 'Config') return <ConfigTab config={data.config} />;
     if (activeTab === 'Source Questions') {
-      const questions = data.source_questions || [];
+      const questions = sourceQuestions;
       if (questions.length === 0) return <div className="modal-empty-state">No source questions.</div>;
       return (
         <div className="viewer-question-list">
-          {questions.map((q) => <QuestionCard key={q.source_id} question={q} showSourceBadge={false} showMarkers={false} />)}
+          {questions.map((q) => <QuestionCard key={q.source_id} question={q} showSourceBadge={false} showMarkers />)}
         </div>
       );
     }
@@ -178,7 +184,7 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
         </div>
       );
     }
-    if (activeTab === 'Evaluation') return <EvaluationTab evaluation={data.evaluation} />;
+    if (activeTab === 'Evaluation') return <EvaluationTab evaluation={data.evaluation} onViewInDepth={onViewInDepth} />;
     return null;
   }
 
@@ -193,7 +199,7 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Final Result"
+      title="Results"
       contentClassName="final-result-modal" size="full"
       modalBodyClassName="final-result-modal-body"
       footer={(

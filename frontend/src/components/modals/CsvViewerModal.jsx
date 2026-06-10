@@ -4,61 +4,84 @@ import useFileContent from '../../hooks/useFileContent.js';
 
 /**
  * Parses a CSV string into a 2D array of strings.
- * Handles RFC-4180 quoted fields.
+ *
+ * A single character state-machine over the whole document, so RFC-4180 quoted
+ * fields containing commas or newlines stay inside their cell — rows only break
+ * on unquoted line breaks.
+ *
+ * @param {string} text
+ * @returns {Array<Array<string>>}
  */
 function parseCsv(text) {
   const rows = [];
-  const lines = text.split(/\r?\n/);
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    const fields = [];
-    let i = 0;
-    while (i < line.length) {
-      if (line[i] === '"') {
-        let value = '';
-        i++; // skip opening quote
-        while (i < line.length) {
-          if (line[i] === '"' && line[i + 1] === '"') {
-            value += '"';
-            i += 2;
-          } else if (line[i] === '"') {
-            i++; // skip closing quote
-            break;
-          } else {
-            value += line[i++];
-          }
-        }
-        fields.push(value);
-        if (line[i] === ',') i++;
-      } else {
-        const end = line.indexOf(',', i);
-        if (end === -1) {
-          fields.push(line.slice(i));
-          break;
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  let started = false; // whether the current row has any content
+
+  const pushField = () => {
+    row.push(field);
+    field = '';
+  };
+  const pushRow = () => {
+    pushField();
+    // Skip blank trailing rows produced by a final newline.
+    if (!(row.length === 1 && row[0] === '')) rows.push(row);
+    row = [];
+    started = false;
+  };
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++; // consume the escaped quote
         } else {
-          fields.push(line.slice(i, end));
-          i = end + 1;
+          inQuotes = false;
         }
+      } else {
+        field += ch;
       }
+      continue;
     }
-    rows.push(fields);
+
+    if (ch === '"') {
+      inQuotes = true;
+      started = true;
+    } else if (ch === ',') {
+      pushField();
+      started = true;
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++; // CRLF
+      if (started || field) pushRow();
+    } else {
+      field += ch;
+      started = true;
+    }
   }
+
+  if (started || field) pushRow();
   return rows;
 }
 
-const PASS_FAIL_COLS = new Set(['status', 'preserve_physical_content_passed', 'scenario_variation_passed',
-  'numerical_variation_passed', 'physics_correctness_passed', 'numeric_reasonableness_passed',
-  'distractor_structure_preservation_passed', 'clerical_quality_passed', 'solvable_and_specified_passed']);
+/** Pass/fail columns: the status column plus any rubric `*_passed` column. */
+function isPassFailColumn(header) {
+  const h = header?.toLowerCase() || '';
+  return h === 'status' || h.endsWith('_passed');
+}
 
-const SCORE_COLS = new Set(['preserve_physical_content_score', 'scenario_variation_score',
-  'numerical_variation_score', 'physics_correctness_score', 'numeric_reasonableness_score',
-  'distractor_structure_preservation_score', 'clerical_quality_score', 'solvable_and_specified_score']);
+/** Numeric rubric `*_score` columns. */
+function isScoreColumn(header) {
+  return (header?.toLowerCase() || '').endsWith('_score');
+}
 
 function CellValue({ header, value }) {
-  const h = header?.toLowerCase() || '';
   const v = value || '';
 
-  if (h === 'status' || h.endsWith('_passed')) {
+  if (isPassFailColumn(header)) {
     const isPass = v === 'passed' || v.toUpperCase() === 'TRUE' || v === '1';
     const isFail = v === 'failed' || v.toUpperCase() === 'FALSE' || v === '0';
     if (isPass) return <span className="viewer-pill viewer-pill-pass">Pass</span>;
@@ -66,11 +89,13 @@ function CellValue({ header, value }) {
     if (!v) return <span className="viewer-cell-muted">—</span>;
   }
 
-  if (SCORE_COLS.has(h)) {
+  if (isScoreColumn(header)) {
     if (!v) return <span className="viewer-cell-muted">—</span>;
     const num = parseFloat(v);
     return <span className="viewer-cell-score">{isNaN(num) ? v : num.toFixed(1)}</span>;
   }
+
+  const h = header?.toLowerCase() || '';
 
   if (h === 'source_question_text' || h === 'generated_question_text' || h === 'failed_criteria') {
     return <span className="viewer-cell-text" title={v}>{v || <span className="viewer-cell-muted">—</span>}</span>;
@@ -111,7 +136,7 @@ export default function CsvViewerModal({ isOpen, onClose, fileName, url, onDownl
             <thead>
               <tr>
                 {headers.map((h, i) => (
-                  <th key={i} className={PASS_FAIL_COLS.has(h) || SCORE_COLS.has(h) ? 'viewer-th-narrow' : ''}>
+                  <th key={i} className={isPassFailColumn(h) || isScoreColumn(h) ? 'viewer-th-narrow' : ''}>
                     {h.replaceAll('_', ' ')}
                   </th>
                 ))}

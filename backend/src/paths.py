@@ -22,7 +22,7 @@ TESTING_DIR = DATA_DIR / "testing"
 AGENTS_CONFIG_PATH = DATA_DIR / "agents.json"
 RUBRIC_PATH = DATA_DIR / "rubric.json"
 EVALUATOR_PROMPT_PATH = PROMPTS_DIR / "evaluator.txt"
-LATEX_TEMPLATE_PATH = DATA_DIR / "template.tex"
+LATEX_TEMPLATE_PATH = DATA_DIR / "latex_template.tex"
 
 OUTPUTS_DIR = BACKEND_ROOT / "outputs"
 UPLOADS_DIR = BACKEND_ROOT / "uploads"
