@@ -11,8 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from agents import function_tool
+from agents.logger import logger
 from openai import OpenAI
 
+from .helpers import render_prompt
+from .paths import PROMPTS_DIR
 from .registry import (
     setup_allowed_domains as _registry_allowed_domains,
 )
@@ -159,37 +162,12 @@ class SharedWorkflowRuntime:
         if self.bootstrapped:
             return self.bootstrap_response_id or ""
 
-        domains_json = json.dumps(self.allowed_domains)
-        bootstrap_prompt = f"""
-Use the hosted shell container and run the setup exactly as a shell session.
-
-Network note:
-- This workflow expects package/network access only for these dependency domains: {domains_json}
-- If the environment enforces an allowlist, stay within those domains.
-
-1. Run `set -euxo pipefail`.
-2. Run `apt-get update`.
-3. Install these packages with apt:
-   texlive-latex-base
-   texlive-latex-recommended
-   texlive-fonts-recommended
-   texlive-latex-extra
-   ghostscript
-   poppler-utils
-   python3-pip
-4. Run `python3 -m pip install --upgrade pip`.
-    5. Install these Python document helpers:
-       {" ".join(_registry_packages())}
-    6. Verify with:
-       `pdflatex --version`
-       `python3 -c "import fitz, pdf2image, pdfplumber, PyPDF2, docx; print('document-python-deps-ok')"`
-7. Finish with a short summary.
-""".strip()
-
-        bootstrap_prompt = bootstrap_prompt.replace(
-            "python3 -m pip install --upgrade pip",
-            "python3 -m pip install --upgrade pip && python3 -m pip install "
-            + " ".join(_registry_packages()),
+        bootstrap_prompt = render_prompt(
+            PROMPTS_DIR,
+            logger,
+            "bootstrap",
+            domains_json=json.dumps(self.allowed_domains),
+            packages=" ".join(_registry_packages()),
         )
 
         response = _run_shell_task(
@@ -214,18 +192,13 @@ Network note:
             suffix=".tex",
         )
 
-        compile_prompt = f"""
-Use the hosted shell container and run the following work exactly.
-
-1. Run `set -euxo pipefail`.
-2. Create `/mnt/data/out`.
-3. Copy `{tex_path}` to `/mnt/data/out/{basename}.tex`.
-4. Change to `/mnt/data/out`.
-5. Run `pdflatex -interaction=nonstopmode -halt-on-error {basename}.tex`.
-6. Run `pdflatex -interaction=nonstopmode -halt-on-error {basename}.tex` a second time.
-7. Confirm that `/mnt/data/out/{basename}.pdf` exists.
-8. Finish with a short summary and mention the PDF path.
-""".strip()
+        compile_prompt = render_prompt(
+            PROMPTS_DIR,
+            logger,
+            "bootstrapCompile",
+            tex_path=tex_path,
+            basename=basename,
+        )
 
         response = _run_shell_task(
             self.client,
