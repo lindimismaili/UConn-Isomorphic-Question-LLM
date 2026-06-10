@@ -723,6 +723,62 @@ extract_tunnel_uuid() {
     | tail -n 1
 }
 
+is_tunnel_uuid() {
+  [[ "$1" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]]
+}
+
+find_tunnel_uuid_from_info() {
+  local tunnel_name="$1"
+  local info_output uuid
+
+  if info_output="$(cloudflared_with_cert tunnel info "${tunnel_name}" -o json 2>/dev/null)"; then
+    uuid="$(printf '%s\n' "${info_output}" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for key in ("id", "uuid", "ID", "TunnelID"):
+    value = data.get(key)
+    if value:
+        print(value)
+        break
+' 2>/dev/null || true)"
+    if is_tunnel_uuid "${uuid}"; then
+      printf '%s\n' "${uuid}"
+      return
+    fi
+  fi
+
+  info_output="$(cloudflared_with_cert tunnel info "${tunnel_name}" 2>/dev/null || true)"
+  printf '%s\n' "${info_output}" | extract_tunnel_uuid
+}
+
+find_single_local_tunnel_credential_uuid() {
+  local credential_file credential_name
+  local credential_uuids=()
+
+  for credential_file in "${CLOUDFLARED_USER_DIR}"/*.json "${CLOUDFLARED_SYSTEM_DIR}"/*.json; do
+    if [[ ! -f "${credential_file}" ]]; then
+      continue
+    fi
+
+    credential_name="$(basename "${credential_file}" .json)"
+    if is_tunnel_uuid "${credential_name}"; then
+      credential_uuids+=("${credential_name}")
+    fi
+  done
+
+  if [[ "${#credential_uuids[@]}" -eq 0 ]]; then
+    return
+  fi
+
+  mapfile -t credential_uuids < <(printf '%s\n' "${credential_uuids[@]}" | sort -u)
+  if [[ "${#credential_uuids[@]}" -eq 1 ]]; then
+    printf '%s\n' "${credential_uuids[0]}"
+  fi
+}
+
 print_existing_tunnels() {
   local tunnels="$1"
   local tunnel_uuid tunnel_name
@@ -740,6 +796,9 @@ find_tunnel_uuid() {
   local uuid=""
 
   uuid="$(list_active_tunnels | awk -F '\t' -v name="${tunnel_name}" '$2 == name { print $1; exit }')"
+  if [[ -z "${uuid}" ]]; then
+    uuid="$(find_tunnel_uuid_from_info "${tunnel_name}")"
+  fi
 
   printf '%s\n' "${uuid}"
 }
@@ -790,6 +849,11 @@ ensure_cloudflare_tunnel() {
   local tunnel_name="$1"
   local create_output uuid
 
+  if [[ -n "${TUNNEL_UUID:-}" ]] && is_tunnel_uuid "${TUNNEL_UUID}"; then
+    info "Using configured Cloudflare tunnel ${tunnel_name} (${TUNNEL_UUID})."
+    return
+  fi
+
   uuid="$(find_tunnel_uuid "${tunnel_name}")"
 
   if [[ -n "${uuid}" ]]; then
@@ -802,6 +866,9 @@ ensure_cloudflare_tunnel() {
   if ! create_output="$(cloudflared_with_cert tunnel create "${tunnel_name}" 2>&1)"; then
     printf '%s\n' "${create_output}"
     uuid="$(find_tunnel_uuid "${tunnel_name}")"
+    if [[ -z "${uuid}" ]] && [[ "${create_output}" == *"tunnel with name already exists"* ]]; then
+      uuid="$(find_single_local_tunnel_credential_uuid)"
+    fi
     if [[ -n "${uuid}" ]]; then
       info "Tunnel ${tunnel_name} already exists; using existing Cloudflare tunnel (${uuid})."
       TUNNEL_UUID="${uuid}"
