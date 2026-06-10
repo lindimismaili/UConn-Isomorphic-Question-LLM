@@ -209,6 +209,7 @@ install_system_packages() {
   apt_install_if_missing nginx
   apt_install_if_missing curl
   apt_install_if_missing ca-certificates update-ca-certificates
+  apt_install_if_missing iproute2 ss
   apt_install_if_missing avahi-daemon avahi-daemon
   apt_install_if_missing python3
   apt_install_if_missing python3-venv
@@ -368,6 +369,78 @@ write_version() {
 EOF
 }
 
+backend_port_pids() {
+  if command -v ss >/dev/null 2>&1; then
+    sudo ss -H -ltnp "sport = :${BACKEND_PORT}" 2>/dev/null \
+      | sed -nE 's/.*pid=([0-9]+).*/\1/p' \
+      | sort -u
+  elif command -v lsof >/dev/null 2>&1; then
+    sudo lsof -tiTCP:"${BACKEND_PORT}" -sTCP:LISTEN 2>/dev/null | sort -u
+  fi
+}
+
+pid_is_this_backend() {
+  local pid="$1"
+  local args
+
+  args="$(ps -p "${pid}" -o args= 2>/dev/null || true)"
+  [[ "${args}" == *"backend.src.server:app"* ]] || [[ "${args}" == *"${DEPLOY_DIR}/.venv/bin/uvicorn"* ]]
+}
+
+stop_existing_backend_service() {
+  if systemctl cat "${SERVICE_NAME}" >/dev/null 2>&1; then
+    info "Stopping any existing ${SERVICE_NAME} service before restart."
+    sudo systemctl stop "${SERVICE_NAME}" || true
+    sudo systemctl reset-failed "${SERVICE_NAME}" || true
+  fi
+}
+
+ensure_backend_port_available() {
+  local pids pid
+
+  mapfile -t pids < <(backend_port_pids)
+  if [[ "${#pids[@]}" -eq 0 ]]; then
+    return
+  fi
+
+  for pid in "${pids[@]}"; do
+    if [[ -z "${pid}" ]]; then
+      continue
+    fi
+
+    if pid_is_this_backend "${pid}"; then
+      warn "Stopping stale backend process ${pid} on port ${BACKEND_PORT}."
+      sudo kill "${pid}" 2>/dev/null || true
+    else
+      err "Port ${BACKEND_PORT} is already in use by a non-deploy process:"
+      sudo ss -ltnp "sport = :${BACKEND_PORT}" || true
+      err "Stop that process or rerun with BACKEND_PORT=<free-port> bash deploy/deploy.sh."
+      exit 1
+    fi
+  done
+
+  sleep 1
+  mapfile -t pids < <(backend_port_pids)
+  if [[ "${#pids[@]}" -eq 0 ]]; then
+    return
+  fi
+
+  for pid in "${pids[@]}"; do
+    if [[ -n "${pid}" ]] && pid_is_this_backend "${pid}"; then
+      warn "Force-stopping stale backend process ${pid} on port ${BACKEND_PORT}."
+      sudo kill -9 "${pid}" 2>/dev/null || true
+    fi
+  done
+
+  sleep 1
+  mapfile -t pids < <(backend_port_pids)
+  if [[ "${#pids[@]}" -gt 0 ]]; then
+    err "Port ${BACKEND_PORT} is still busy:"
+    sudo ss -ltnp "sport = :${BACKEND_PORT}" || true
+    exit 1
+  fi
+}
+
 install_backend_service() {
   banner "Backend Service"
 
@@ -376,6 +449,9 @@ install_backend_service() {
   if [[ -n "${PUBLIC_HOSTNAME:-}" ]]; then
     allowed_origins="${allowed_origins},https://${PUBLIC_HOSTNAME},http://${PUBLIC_HOSTNAME}"
   fi
+
+  stop_existing_backend_service
+  ensure_backend_port_available
 
   sudo tee "${service_file}" >/dev/null <<EOF
 [Unit]
@@ -392,7 +468,7 @@ Environment=HOST=127.0.0.1
 Environment=PORT=${BACKEND_PORT}
 Environment=ALLOWED_ORIGINS=${allowed_origins}
 EnvironmentFile=-${DEPLOY_DIR}/.env
-ExecStart=${DEPLOY_DIR}/.venv/bin/uvicorn backend.src.server:app --host \${HOST} --port \${PORT}
+ExecStart=${DEPLOY_DIR}/.venv/bin/uvicorn backend.src.server:app --host 127.0.0.1 --port ${BACKEND_PORT}
 Restart=on-failure
 RestartSec=3
 SyslogIdentifier=${SERVICE_NAME}
