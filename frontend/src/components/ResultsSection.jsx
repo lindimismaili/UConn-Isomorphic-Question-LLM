@@ -184,6 +184,16 @@ export default function ResultsSection({ result }) {
     setEvalModalOpen(true);
   };
 
+  // The backend zips the whole output folder on first request and reuses the
+  // archive afterwards, so this is a plain navigation download.
+  const handleZipDownload = () => {
+    if (!result.workflowId) return;
+    const link = document.createElement('a');
+    link.href = `/api/download-zip/${result.workflowId}`;
+    link.download = '';
+    link.click();
+  };
+
   const evalItemsUrl = evalItemsFileName ? getFileUrl(evalItemsFileName, true) : '';
   const finalResultUrl = finalResultFileName ? getFileUrl(finalResultFileName, true) : '';
   const agentMetadataUrl = agentMetadataFileName ? getFileUrl(agentMetadataFileName, true) : '';
@@ -286,6 +296,15 @@ export default function ResultsSection({ result }) {
                 >
                   <IconBrain className="btn-icon" />
                   View Agents
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  disabled={!result.workflowId}
+                  onClick={handleZipDownload}
+                  type="button"
+                >
+                  <IconDownload className="btn-icon" />
+                  Download .ZIP
                 </button>
               </div>
             </div>

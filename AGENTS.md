@@ -314,6 +314,8 @@ Routes live in `backend/src/api/` (registered on the app in `server.py`):
 - `GET /api/workflow/{workflow_id}/result`
 - `GET /api/workflow/{workflow_id}/stream` (SSE; current frontend polls instead)
 - `GET /api/download/{workflow_id}/{file_path}`
+- `GET /api/download-zip/{workflow_id}` (zips the whole output folder once,
+  reuses the archive on later requests)
 - `POST /api/create-data/start`, `POST /api/create-data/{batch_id}/stop`
 - `GET /api/create-data/{batch_id}/status`
 - `GET /api/create-data/{batch_id}/result`

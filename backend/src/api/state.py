@@ -13,6 +13,7 @@ import re
 import shutil
 import time
 import uuid
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -186,6 +187,22 @@ def _is_under_directory(path: Path, root: Path) -> bool:
         return True
     except Exception:
         return False
+
+def _build_workflow_zip(output_dir: Path, zip_path: Path) -> None:
+    """
+    Zip every file in a workflow output folder into `zip_path`.
+
+    Existing archives (and the in-progress temp file) are excluded so a rebuilt
+    zip never nests an older one. The archive is written to a temp name and
+    renamed into place so a concurrent download can't see a partial file.
+    """
+    tmp_path = zip_path.with_name(zip_path.name + ".tmp")
+    with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(output_dir.rglob("*")):
+            if not path.is_file() or path.suffix == ".zip" or path == tmp_path:
+                continue
+            archive.write(path, path.relative_to(output_dir).as_posix())
+    tmp_path.replace(zip_path)
 
 workflows: dict[str, dict] = {}
 
