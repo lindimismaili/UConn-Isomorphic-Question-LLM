@@ -1,0 +1,23 @@
+Use the hosted shell container and run the setup exactly as a shell session.
+
+Network note:
+- This workflow expects package/network access only for these dependency domains: {domains_json}
+- If the environment enforces an allowlist, stay within those domains.
+
+1. Run `set -euxo pipefail`.
+2. Run `apt-get update`.
+3. Install these packages with apt:
+   texlive-latex-base
+   texlive-latex-recommended
+   texlive-fonts-recommended
+   texlive-latex-extra
+   ghostscript
+   poppler-utils
+   python3-pip
+4. Run `python3 -m pip install --upgrade pip`.
+5. Install these Python document helpers:
+   {packages}
+6. Verify with:
+   `pdflatex --version`
+   `python3 -c "import fitz, pdf2image, pdfplumber, PyPDF2, docx; print('document-python-deps-ok')"`
+7. Finish with a short summary.

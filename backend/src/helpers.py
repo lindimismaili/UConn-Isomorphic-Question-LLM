@@ -64,6 +64,23 @@ def load_prompt(prompts_dir: Path, logger: Any, name: str) -> str:
         return ""
 
 
+def render_prompt(prompts_dir: Path, logger: Any, name: str, **variables: Any) -> str:
+    """Load a prompt template and substitute its `{key}` placeholders.
+
+    Plain string replacement (not str.format) so braces in prompt prose,
+    shell snippets, or LaTeX never need escaping. Unknown placeholders are
+    left as-is and logged so a typo in a template is visible.
+    """
+    template = load_prompt(prompts_dir, logger, name)
+    rendered = template
+    for key, value in variables.items():
+        rendered = rendered.replace("{" + key + "}", str(value))
+    leftover = re.findall(r"{[a-z_][a-z0-9_]*}", rendered)
+    if leftover:
+        logger.warning("Prompt %s has unsubstituted placeholders: %s", name, sorted(set(leftover)))
+    return rendered.strip()
+
+
 def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:
     """Upload a local file for later attachment to OpenAI tool calls.
 
