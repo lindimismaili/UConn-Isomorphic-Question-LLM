@@ -64,7 +64,16 @@ prompt_with_default() {
   local value=""
 
   read -rp "${prompt} [${default_value}]: " value
+  value="$(trim_value "${value}")"
   printf '%s\n' "${value:-$default_value}"
+}
+
+trim_value() {
+  local value="$1"
+
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s\n' "${value}"
 }
 
 is_valid_port() {
@@ -617,6 +626,7 @@ install_nginx_config() {
     default_link_target="$(readlink "${default_link}")"
   fi
 
+  disable_conflicting_nginx_sites
   sudo rm -f "${default_link}"
 
   # Serve as the default vhost so requests addressed by IP or localhost (for
@@ -698,6 +708,25 @@ EOF
   sudo systemctl enable --now nginx
   sudo systemctl reload nginx
   info "Nginx is serving http://${LOCAL_DOMAIN}."
+}
+
+disable_conflicting_nginx_sites() {
+  local site
+
+  if [[ -z "${PUBLIC_HOSTNAME:-}" ]]; then
+    return
+  fi
+
+  for site in /etc/nginx/sites-enabled/*; do
+    if [[ ! -e "${site}" ]] || [[ "${site}" == "${NGINX_LINK}" ]]; then
+      continue
+    fi
+
+    if sudo grep -Fq "${PUBLIC_HOSTNAME}" "${site}" 2>/dev/null; then
+      warn "Disabling existing nginx site $(basename "${site}") because it already claims ${PUBLIC_HOSTNAME}."
+      sudo rm -f "${site}"
+    fi
+  done
 }
 
 verify_local_site() {
@@ -872,6 +901,8 @@ extract_tunnel_uuid() {
   sed -nE \
     -e 's/.*Created tunnel .* with id ([[:xdigit:]-]{36}).*/\1/p' \
     -e 's|.*Tunnel credentials written to .*/([[:xdigit:]-]{36})\.json.*|\1|p' \
+    -e 's/^[[:space:]]*(ID|id|Tunnel ID|TunnelID)[^[:xdigit:]]*([[:xdigit:]-]{36}).*/\2/p' \
+    -e 's/.*"([[:xdigit:]-]{36})".*/\1/p' \
     | tail -n 1
 }
 
@@ -931,6 +962,124 @@ find_single_local_tunnel_credential_uuid() {
   fi
 }
 
+find_newest_local_tunnel_credential_uuid() {
+  local credential_file credential_name
+
+  credential_file="$(
+    {
+      find "${CLOUDFLARED_USER_DIR}" -maxdepth 1 -type f -name '*.json' -printf '%T@ %p\n' 2>/dev/null || true
+      sudo find "${CLOUDFLARED_SYSTEM_DIR}" -maxdepth 1 -type f -name '*.json' -printf '%T@ %p\n' 2>/dev/null || true
+    } | sort -nr | awk 'NR == 1 { $1=""; sub(/^ /, ""); print }'
+  )"
+
+  if [[ -z "${credential_file}" ]]; then
+    return
+  fi
+
+  credential_name="$(basename "${credential_file}" .json)"
+  if is_tunnel_uuid "${credential_name}"; then
+    printf '%s\n' "${credential_name}"
+  fi
+}
+
+extract_tunnel_uuid_from_config() {
+  local config_file="$1"
+  local uuid=""
+
+  uuid="$(sudo sed -nE 's/^[[:space:]]*tunnel:[[:space:]]*([[:xdigit:]-]{36})[[:space:]]*$/\1/p' "${config_file}" 2>/dev/null | head -1)"
+  if is_tunnel_uuid "${uuid}"; then
+    printf '%s\n' "${uuid}"
+    return
+  fi
+
+  uuid="$(sudo sed -nE 's|^[[:space:]]*credentials-file:[[:space:]]*.*/([[:xdigit:]-]{36})\.json[[:space:]]*$|\1|p' "${config_file}" 2>/dev/null | head -1)"
+  if is_tunnel_uuid "${uuid}"; then
+    printf '%s\n' "${uuid}"
+  fi
+}
+
+find_tunnel_uuid_from_hostname_configs() {
+  local config_file uuid
+
+  if [[ -z "${PUBLIC_HOSTNAME:-}" ]]; then
+    return
+  fi
+
+  for config_file in "${CLOUDFLARED_CONFIG_FILE}" "${CLOUDFLARED_SYSTEM_DIR}"/*.yml "${CLOUDFLARED_SYSTEM_DIR}"/config.yaml "${CLOUDFLARED_SYSTEM_DIR}"/config.yml "${CLOUDFLARED_USER_DIR}"/*.yml "${CLOUDFLARED_USER_DIR}"/config.yaml "${CLOUDFLARED_USER_DIR}"/config.yml; do
+    if [[ ! -f "${config_file}" ]]; then
+      continue
+    fi
+
+    if sudo grep -Fq "${PUBLIC_HOSTNAME}" "${config_file}" 2>/dev/null; then
+      uuid="$(extract_tunnel_uuid_from_config "${config_file}")"
+      if is_tunnel_uuid "${uuid}"; then
+        printf '%s\n' "${uuid}"
+        return
+      fi
+    fi
+  done
+}
+
+cloudflared_service_units() {
+  (systemctl list-unit-files --type=service --no-legend '*cloudflared*.service' 2>/dev/null || true) \
+    | awk '{ print $1 }' \
+    | sort -u
+}
+
+cloudflared_service_config_paths() {
+  local unit="$1"
+
+  systemctl cat "${unit}" 2>/dev/null \
+    | sed -nE 's/.*--config[= ]([^ ]+).*/\1/p' \
+    | sort -u
+}
+
+cloudflared_service_conflicts_with_target() {
+  local unit="$1"
+  local config_file
+
+  if systemctl cat "${unit}" 2>/dev/null | grep -Fq "${PUBLIC_HOSTNAME:-__missing_public_hostname__}"; then
+    return 0
+  fi
+
+  if [[ -n "${TUNNEL_UUID:-}" ]] && systemctl cat "${unit}" 2>/dev/null | grep -Fq "${TUNNEL_UUID}"; then
+    return 0
+  fi
+
+  while IFS= read -r config_file; do
+    if [[ -z "${config_file}" ]] || [[ ! -f "${config_file}" ]]; then
+      continue
+    fi
+
+    if [[ -n "${PUBLIC_HOSTNAME:-}" ]] && sudo grep -Fq "${PUBLIC_HOSTNAME}" "${config_file}" 2>/dev/null; then
+      return 0
+    fi
+
+    if [[ -n "${TUNNEL_UUID:-}" ]] && sudo grep -Fq "${TUNNEL_UUID}" "${config_file}" 2>/dev/null; then
+      return 0
+    fi
+  done < <(cloudflared_service_config_paths "${unit}")
+
+  return 1
+}
+
+stop_conflicting_cloudflared_services() {
+  local unit
+
+  while IFS= read -r unit; do
+    if [[ -z "${unit}" ]] || [[ "${unit}" == "${CLOUDFLARED_SERVICE_NAME}.service" ]]; then
+      continue
+    fi
+
+    if cloudflared_service_conflicts_with_target "${unit}"; then
+      warn "Stopping ${unit}; it already manages ${PUBLIC_HOSTNAME:-${TUNNEL_UUID}}."
+      sudo systemctl stop "${unit}" || true
+      sudo systemctl disable "${unit}" || true
+      sudo systemctl reset-failed "${unit}" || true
+    fi
+  done < <(cloudflared_service_units)
+}
+
 print_existing_tunnels() {
   local tunnels="$1"
   local tunnel_uuid tunnel_name
@@ -948,6 +1097,9 @@ find_tunnel_uuid() {
   local uuid=""
 
   uuid="$(list_active_tunnels | awk -F '\t' -v name="${tunnel_name}" '$2 == name { print $1; exit }')"
+  if [[ -z "${uuid}" ]]; then
+    uuid="$(cloudflared_with_cert tunnel list --name "${tunnel_name}" 2>/dev/null | awk -v name="${tunnel_name}" '$1 ~ /^[[:xdigit:]-]{36}$/ && $0 ~ name { print $1; exit }' || true)"
+  fi
   if [[ -z "${uuid}" ]]; then
     uuid="$(find_tunnel_uuid_from_info "${tunnel_name}")"
   fi
@@ -1007,6 +1159,9 @@ ensure_cloudflare_tunnel() {
   fi
 
   uuid="$(find_tunnel_uuid "${tunnel_name}")"
+  if [[ -z "${uuid}" ]]; then
+    uuid="$(find_tunnel_uuid_from_hostname_configs)"
+  fi
 
   if [[ -n "${uuid}" ]]; then
     info "Using existing Cloudflare tunnel ${tunnel_name} (${uuid})."
@@ -1018,8 +1173,14 @@ ensure_cloudflare_tunnel() {
   if ! create_output="$(cloudflared_with_cert tunnel create "${tunnel_name}" 2>&1)"; then
     printf '%s\n' "${create_output}"
     uuid="$(find_tunnel_uuid "${tunnel_name}")"
+    if [[ -z "${uuid}" ]]; then
+      uuid="$(find_tunnel_uuid_from_hostname_configs)"
+    fi
     if [[ -z "${uuid}" ]] && [[ "${create_output}" == *"tunnel with name already exists"* ]]; then
       uuid="$(find_single_local_tunnel_credential_uuid)"
+    fi
+    if [[ -z "${uuid}" ]] && [[ "${create_output}" == *"tunnel with name already exists"* ]]; then
+      uuid="$(find_newest_local_tunnel_credential_uuid)"
     fi
     if [[ -n "${uuid}" ]]; then
       info "Tunnel ${tunnel_name} already exists; using existing Cloudflare tunnel (${uuid})."
@@ -1139,6 +1300,7 @@ install_cloudflared_service() {
   cloudflared_bin="$(command -v cloudflared)"
 
   stop_legacy_cloudflared_service_if_ours
+  stop_conflicting_cloudflared_services
 
   sudo tee "${service_file}" >/dev/null <<EOF
 [Unit]

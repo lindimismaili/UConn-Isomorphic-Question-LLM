@@ -33,6 +33,12 @@ It warns if `.env` is missing or does not contain `OPENAI_API_KEY`.
 
 After local verification, the script asks whether to attempt Cloudflare hosting. Press Enter to continue, or any other key to skip. If continued, it installs `cloudflared`, runs `cloudflared tunnel login`, discovers active tunnels in the Cloudflare account, reuses the saved tunnel from `.deploy.env` when it still exists, or automatically uses the only active tunnel found. If several active tunnels exist, the script lists them and prompts for the tunnel name, defaulting to the first existing tunnel. It then copies tunnel credentials into `/etc/cloudflared`, writes an app-scoped tunnel config, routes DNS, and starts `uconn-isomorphic-cloudflared.service` by default.
 
+When Cloudflare hosting is enabled for a hostname, the installer treats that
+hostname as belonging to this app. It disables enabled nginx sites and
+cloudflared services/configs that already claim the same hostname or tunnel
+UUID, then rewrites DNS with `cloudflared tunnel route dns --overwrite-dns` if
+needed.
+
 If no active tunnel is found, the default tunnel name is:
 
 ```text
