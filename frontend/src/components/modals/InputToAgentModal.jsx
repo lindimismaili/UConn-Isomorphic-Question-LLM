@@ -19,6 +19,12 @@ export default function InputToAgentModal({
   const registryData = useAgentRegistry();
   const inputAgentKeys = registryData?.inputAgentKeys ?? [];
   const sourceFileAgentKeys = registryData?.sourceFileAgentKeys ?? new Set();
+  const agentLabels = registryData?.agentLabels ?? {};
+  const runtimeAgentKeys = registryData?.runtimeAgentKeys ?? [];
+  const runtimeNames = runtimeAgentKeys.map((key) => agentLabels[key] || key);
+  const sourceFileNames = (registryData?.pipelineKeys ?? [])
+    .filter((key) => sourceFileAgentKeys.has(key))
+    .map((key) => agentLabels[key] || key);
 
   const [selectedAgent, setSelectedAgent] = useState('');
   const resolvedAgent = selectedAgent || inputAgentKeys[0] || '';
@@ -99,10 +105,10 @@ export default function InputToAgentModal({
     >
       <div className="modal-body-stack input-to-agent-modal">
         <p className="modal-supporting-text">
-          Starter and Output always run. Choose any agent between them, upload a
-          source document for Normalizer or Extracter, or a saved agent input
-          file for later stages. Saved agent inputs must match that agent's
-          input schema.
+          {runtimeNames.join(' and ')} always run. Choose any agent between
+          them, upload a source document for {sourceFileNames.join(' or ')}, or
+          a saved agent input file for later stages. Saved agent inputs must
+          match that agent's input schema.
         </p>
 
         <label className="input-to-agent-field" htmlFor="input-to-agent-select">

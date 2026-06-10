@@ -3,7 +3,13 @@ from __future__ import annotations
 import unittest
 
 from backend.src.pipeline_validation import validate_generator_output, validate_verifier_output
-from backend.src.schemas import GeneratorOutput, NewQuestionItem, OptionItem, SourceQuestionItem, VerifierOutput
+from backend.src.schemas import (
+    GeneratorOutput,
+    NewQuestionItem,
+    OptionItem,
+    SourceQuestionItem,
+    VerifierOutput,
+)
 
 
 def option(

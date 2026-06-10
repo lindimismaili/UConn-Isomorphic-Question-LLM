@@ -121,20 +121,6 @@ def count_labels() -> dict[str, str]:
     }
 
 
-# ── Schema constants ─────────────────────────────────────────────────────────
-
-def metadata_keys() -> frozenset[str]:
-    """Set of allowed workflow metadata field names. Replaces _METADATA_KEYS."""
-    config = _load_raw().get("_config", {})
-    return frozenset(config.get("metadataKeys", []))
-
-
-def wrapped_record_marker_keys() -> frozenset[str]:
-    """Set of wrapped record marker keys. Replaces _WRAPPED_RECORD_MARKER_KEYS."""
-    config = _load_raw().get("_config", {})
-    return frozenset(config.get("wrappedRecordMarkerKeys", []))
-
-
 # ── Setup / container accessors ──────────────────────────────────────────────
 
 def setup_bootstrap_model() -> str:
@@ -161,10 +147,10 @@ def evaluation_model() -> str:
 
 # ── Config/schema accessors ───────────────────────────────────────────────────
 
-def valid_themes() -> frozenset[str]:
-    """Allowed question theme values. Replaces VALID_THEMES in helpers.py."""
+def themes() -> list[dict]:
+    """UI dropdown themes as ordered list of {label, prompt} dicts."""
     config = _load_raw().get("_config", {})
-    return frozenset(config.get("validThemes", []))
+    return list(config.get("themes", {}).values())
 
 
 def api_title() -> str:

@@ -2,7 +2,7 @@ import { useRef, useCallback } from 'react';
 
 import { abortableSleep } from '../utils/abortableSleep';
 import { fetchWithAbort, readErrorDetail } from '../utils/api';
-import { getDerivedRegistry } from './useAgentRegistry';
+import { getDerivedRegistry, loadAgentRegistry } from './useAgentRegistry';
 /** Polling interval used while waiting for workflow status updates. */
 const STATUS_POLL_INTERVAL_MS = 150;
 
@@ -18,7 +18,8 @@ function formatSeconds(seconds) {
 }
 
 /**
- * Extracts question counts from agent outputs for selected stages.
+ * Extracts question counts from agent outputs using the registry's per-agent
+ * `countField` (the output array holding that stage's questions).
  *
  * @param {string} agentKey - Workflow stage key.
  * @param {object} output - Agent output payload.
@@ -26,13 +27,9 @@ function formatSeconds(seconds) {
  */
 function getQuestionCount(agentKey, output) {
   if (!output || typeof output !== 'object') return null;
-  if (agentKey === 'extracter' || agentKey === 'verifier') {
-    return Array.isArray(output.questions) ? output.questions.length : null;
-  }
-  if (agentKey === 'generator') {
-    return Array.isArray(output.isomorphic_questions) ? output.isomorphic_questions.length : null;
-  }
-  return null;
+  const countField = (getDerivedRegistry()?.countFields ?? {})[agentKey];
+  if (!countField) return null;
+  return Array.isArray(output[countField]) ? output[countField].length : null;
 }
 
 /**
@@ -118,7 +115,11 @@ export function useWorkflow(dispatch) {
    * @param {AbortSignal} signal - Abort signal for this run.
    */
   const pollWorkflow = useCallback(async (workflowId, setupElapsedSeconds, signal, runId) => {
-    const agentKeys = getDerivedRegistry()?.pipelineKeys.slice(1) ?? ['normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
+    // The first pipeline node (runtime setup) is simulated locally, so polling
+    // tracks every stage after it. If the registry fetch failed earlier, fall
+    // back to the stage keys reported by the status payload itself.
+    await loadAgentRegistry();
+    let agentKeys = getDerivedRegistry()?.pipelineKeys.slice(1) ?? null;
     const statusByAgent = {};
 
     while (true) {
@@ -129,6 +130,7 @@ export function useWorkflow(dispatch) {
         throw new Error(await readErrorDetail(statusRes, 'Failed to get workflow status'));
       }
       const status = await statusRes.json();
+      if (!agentKeys) agentKeys = Object.keys(status.agents ?? {});
 
       // The Starter node represents backend runtime setup (file upload + OpenAI
       // container bootstrap). Keep it "thinking" until a real agent actually

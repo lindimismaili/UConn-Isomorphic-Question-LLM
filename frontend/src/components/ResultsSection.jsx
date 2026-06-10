@@ -14,28 +14,7 @@ import AgentMetadataModal from './modals/AgentMetadataModal.jsx';
 import AgentArtifactModal from './modals/AgentArtifactModal.jsx';
 import EvalDatasetModal from './modals/EvalDatasetModal.jsx';
 import FinalResultModal from './modals/FinalResultModal.jsx';
-
-/** Preferred ordering for artifact groups in the download list. */
-const AGENT_ORDER = [
-  'normalizer',
-  'extracter',
-  'verifier',
-  'generator',
-  'latexifier',
-  'evaluation',
-  'output',
-];
-
-/** Human-readable labels for artifact group headings. */
-const AGENT_LABELS = {
-  normalizer: 'Normalizer',
-  extracter: 'Extracter',
-  verifier: 'Verifier',
-  generator: 'Generator',
-  latexifier: 'Latexifier',
-  evaluation: 'Evaluator',
-  output: 'Output',
-};
+import { useAgentRegistry } from '../hooks/useAgentRegistry';
 
 /**
  * Normalizes the result output-folder label shown to the user.
@@ -134,8 +113,8 @@ function findFileName(files, preferredName) {
   );
 }
 
-function formatAgentLabel(agentKey) {
-  return AGENT_LABELS[agentKey] || agentKey.replace(/_/g, ' ');
+function formatAgentLabel(agentKey, agentLabels) {
+  return agentLabels?.[agentKey] || agentKey.replace(/_/g, ' ');
 }
 
 function parseAgentArtifact(fileName) {
@@ -147,7 +126,8 @@ function parseAgentArtifact(fileName) {
   };
 }
 
-function buildAgentOutputSections(agentFiles) {
+function buildAgentOutputSections(agentFiles, registryData) {
+  const agentOrder = registryData?.pipelineKeys ?? [];
   const metadataFiles = agentFiles.filter(
     (file) => file.name === 'agent_outputs/agent_metadata_output.json',
   );
@@ -160,7 +140,7 @@ function buildAgentOutputSections(agentFiles) {
     if (!groupsByAgent.has(parsed.agentKey)) {
       groupsByAgent.set(parsed.agentKey, {
         key: parsed.agentKey,
-        label: formatAgentLabel(parsed.agentKey),
+        label: formatAgentLabel(parsed.agentKey, registryData?.agentLabels),
         inputFile: '',
         outputFile: '',
       });
@@ -175,10 +155,10 @@ function buildAgentOutputSections(agentFiles) {
   });
 
   const agentGroups = Array.from(groupsByAgent.values()).sort((a, b) => {
-    const aIndex = AGENT_ORDER.indexOf(a.key);
-    const bIndex = AGENT_ORDER.indexOf(b.key);
-    const normalizedAIndex = aIndex === -1 ? AGENT_ORDER.length : aIndex;
-    const normalizedBIndex = bIndex === -1 ? AGENT_ORDER.length : bIndex;
+    const aIndex = agentOrder.indexOf(a.key);
+    const bIndex = agentOrder.indexOf(b.key);
+    const normalizedAIndex = aIndex === -1 ? agentOrder.length : aIndex;
+    const normalizedBIndex = bIndex === -1 ? agentOrder.length : bIndex;
     return normalizedAIndex - normalizedBIndex || a.label.localeCompare(b.label);
   });
 
@@ -222,6 +202,7 @@ function splitDownloadFiles(files) {
 export default function ResultsSection({ result }) {
   const sectionRef = useRef(null);
   const previewCloseTimerRef = useRef(null);
+  const registryData = useAgentRegistry();
   const [previewFile, setPreviewFile] = useState('');
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [evalModalOpen, setEvalModalOpen] = useState(false);
@@ -242,7 +223,7 @@ export default function ResultsSection({ result }) {
 
   const files = collectResultFiles(result);
   const { mainFiles, evaluationFiles, agentFiles } = splitDownloadFiles(files);
-  const { metadataFiles, agentGroups } = buildAgentOutputSections(agentFiles);
+  const { metadataFiles, agentGroups } = buildAgentOutputSections(agentFiles, registryData);
   const folderPath = formatOutputFolderPath(result.outputFolder);
   const fileCount = files.length;
   const elapsedText = formatElapsed(result.elapsedTimeSeconds);

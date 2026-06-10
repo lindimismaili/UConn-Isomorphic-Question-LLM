@@ -17,7 +17,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.src.schemas import (
     ExtracterOutput,
@@ -31,7 +31,6 @@ from backend.src.schemas import (
     WorkflowResult,
 )
 from backend.src.workflow import engine
-
 
 # ---------- test data ----------
 

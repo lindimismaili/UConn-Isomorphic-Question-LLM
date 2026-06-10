@@ -191,11 +191,20 @@ function reducer(state, action) {
 
     case "WORKFLOW_START": {
       const agents = resetAgents(state.agents);
-      const withSetup = {
-        ...agents,
-        setup: { ...agents.setup, status: "thinking", startTime: new Date() },
-      };
-      const queued = queueAgents(withSetup, ["setup"]);
+      // The first pipeline node (runtime setup) is simulated locally while the
+      // backend bootstraps; agent state preserves agents.json sequence order.
+      const [setupKey] = Object.keys(agents);
+      const withSetup = setupKey
+        ? {
+            ...agents,
+            [setupKey]: { ...agents[setupKey], status: "thinking", startTime: new Date() },
+          }
+        : agents;
+      const queued = queueAgents(withSetup, setupKey ? [setupKey] : []);
+      const startLogs = [makeLog("Process starting...", "info")];
+      if (setupKey) {
+        startLogs.push(makeLog(`${agents[setupKey].name || setupKey} started`, "info"));
+      }
       return {
         ...state,
         agents: queued,
@@ -205,11 +214,7 @@ function reducer(state, action) {
         error: null,
         errorFolder: "",
         files: [],
-        logs: [
-          ...state.logs,
-          makeLog("Process starting...", "info"),
-          makeLog("Starter started", "info"),
-        ].slice(-MAX_LOGS),
+        logs: [...state.logs, ...startLogs].slice(-MAX_LOGS),
       };
     }
 
@@ -221,8 +226,10 @@ function reducer(state, action) {
     case "SETUP_COMPLETE": {
       // Fired once the backend reports the first real agent has started (or the
       // run finished). Idempotent so repeated polls don't re-log or re-complete.
-      const setup = state.agents.setup;
-      if (setup.status !== "thinking") return state;
+      const [setupKey] = Object.keys(state.agents);
+      const setup = setupKey ? state.agents[setupKey] : null;
+      if (!setup || setup.status !== "thinking") return state;
+      const setupLabel = setup.name || setupKey;
       const setupStart = setup.startTime
         ? new Date(setup.startTime).getTime()
         : null;
@@ -231,13 +238,13 @@ function reducer(state, action) {
         setupStart !== null ? (setupEnd - setupStart) / 1000 : null;
       const setupMessage =
         setupSeconds !== null
-          ? `Starter completed in ${setupSeconds.toFixed(2)}s`
-          : "Starter completed";
+          ? `${setupLabel} completed in ${setupSeconds.toFixed(2)}s`
+          : `${setupLabel} completed`;
       return {
         ...state,
         agents: {
           ...state.agents,
-          setup: {
+          [setupKey]: {
             ...setup,
             status: "completed",
             endTime: new Date(setupEnd),
@@ -497,8 +504,12 @@ export default function App() {
   };
 
   const handleAgentCardClick = (agentKey) => {
-    const modal =
-      agentKey === "setup" ? "setup" : agentKey === "output" ? "output" : "agent";
+    // Runtime nodes (kind: "runtime" in agents.json) get their dedicated
+    // modals, keyed by agent key; LLM agents share the generic detail modal.
+    const kind =
+      state.agents[agentKey]?.kind ??
+      getDerivedRegistry()?.registry?.[agentKey]?.kind;
+    const modal = kind === "runtime" ? agentKey : "agent";
     dispatch({ type: "OPEN_MODAL", modal, agentKey });
   };
 

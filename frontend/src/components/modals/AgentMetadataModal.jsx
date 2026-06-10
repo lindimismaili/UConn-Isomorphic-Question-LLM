@@ -1,15 +1,14 @@
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
+import { useAgentRegistry } from '../../hooks/useAgentRegistry';
 
-const PIPELINE_ORDER = ['normalizer', 'extracter', 'verifier', 'generator', 'latexifier', 'evaluation', 'output'];
-
-function sortAgents(agents) {
+function sortAgents(agents, pipelineOrder) {
   return [...agents].sort((a, b) => {
-    const ai = PIPELINE_ORDER.indexOf(a.agent_key);
-    const bi = PIPELINE_ORDER.indexOf(b.agent_key);
-    const na = ai === -1 ? PIPELINE_ORDER.length : ai;
-    const nb = bi === -1 ? PIPELINE_ORDER.length : bi;
+    const ai = pipelineOrder.indexOf(a.agent_key);
+    const bi = pipelineOrder.indexOf(b.agent_key);
+    const na = ai === -1 ? pipelineOrder.length : ai;
+    const nb = bi === -1 ? pipelineOrder.length : bi;
     return na - nb || (a.agent_name || '').localeCompare(b.agent_name || '');
   });
 }
@@ -57,13 +56,16 @@ function AgentCard({ agent }) {
 
 export default function AgentMetadataModal({ isOpen, onClose, fileName, url, onDownload }) {
   const { text, loading, error } = useFileContent(url, isOpen);
+  const pipelineOrder = useAgentRegistry()?.pipelineKeys ?? [];
 
   let data = null;
   if (text) {
     try { data = JSON.parse(text); } catch { /* ignore */ }
   }
 
-  const agents = data ? sortAgents(Array.isArray(data.agents) ? data.agents : []) : [];
+  const agents = data
+    ? sortAgents(Array.isArray(data.agents) ? data.agents : [], pipelineOrder)
+    : [];
   const sourceFiles = Array.isArray(data?.source_files) ? data.source_files : [];
   const generatedAt = data?.generated_at || '';
   const workflowId = data?.workflow_id || '';

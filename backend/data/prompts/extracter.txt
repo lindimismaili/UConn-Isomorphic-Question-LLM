@@ -101,11 +101,6 @@ Explicit answer detection:
 - For figure questions (`has_figure=true`): always set `has_explicit_answer=false`.
 
 Theme labeling:
-- Set `theme` for every question to exactly one of:
-  - `life_science` (organisms/biology contexts)
-  - `engineering` (machines/tools/industrial systems)
-  - `everyday_activity` (sports/play/common daily scenarios)
-  - `physics_abstract` (generic objects/particles/rods/blocks/etc.)
-- Prefer `physics_abstract` when uncertain.
-- Set top-level `theme` to the most common valid question theme. If tied, use the theme
-  of the earliest tied question.
+- Set `theme` for every question to a 1-3 word snake_case string that best describes the real-world context of that question (e.g., `projectile_motion`, `fluid_dynamics`, `biology`, `everyday_activity`, `engineering`, `physics_abstract`).
+- Choose the most specific term that fits the question's subject matter; prefer concrete descriptors over vague labels.
+- Set top-level `theme` to the most common question theme. If tied, use the theme of the earliest tied question.
