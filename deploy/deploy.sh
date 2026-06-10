@@ -10,8 +10,6 @@ DEPLOY_CONFIG_FILE="${REPO_DIR}/.deploy.env"
 DEPLOY_DIR="${DEPLOY_DIR:-/var/www/uconn-isomorphic}"
 SERVICE_NAME="${SERVICE_NAME:-uconn-isomorphic}"
 BACKEND_PORT="${BACKEND_PORT:-3002}"
-NGINX_CONF="/etc/nginx/sites-available/${SERVICE_NAME}"
-NGINX_LINK="/etc/nginx/sites-enabled/${SERVICE_NAME}"
 CLOUDFLARED_SYSTEM_DIR="/etc/cloudflared"
 CLOUDFLARED_USER_DIR="${HOME}/.cloudflared"
 NODE_LTS_VERSION="22.x"
@@ -21,6 +19,11 @@ if [[ -f "${DEPLOY_CONFIG_FILE}" ]]; then
   # shellcheck source=/dev/null
   source "${DEPLOY_CONFIG_FILE}"
 fi
+
+NGINX_CONF="/etc/nginx/sites-available/${SERVICE_NAME}"
+NGINX_LINK="/etc/nginx/sites-enabled/${SERVICE_NAME}"
+CLOUDFLARED_SERVICE_NAME="${CLOUDFLARED_SERVICE_NAME:-${SERVICE_NAME}-cloudflared}"
+CLOUDFLARED_CONFIG_FILE="${CLOUDFLARED_CONFIG_FILE:-${CLOUDFLARED_SYSTEM_DIR}/${SERVICE_NAME}.yml}"
 
 DEVICE_HOSTNAME="$(hostname -s 2>/dev/null || hostname 2>/dev/null || true)"
 DEVICE_HOSTNAME="${DEVICE_HOSTNAME%%.*}"
@@ -62,6 +65,101 @@ prompt_with_default() {
 
   read -rp "${prompt} [${default_value}]: " value
   printf '%s\n' "${value:-$default_value}"
+}
+
+is_valid_port() {
+  [[ "$1" =~ ^[0-9]+$ ]] && (( $1 >= 1 && $1 <= 65535 ))
+}
+
+is_valid_service_name() {
+  [[ "$1" =~ ^[A-Za-z0-9_.@-]+$ ]]
+}
+
+is_valid_short_hostname() {
+  [[ "$1" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]
+}
+
+normalize_hostname_input() {
+  local hostname="$1"
+
+  hostname="${hostname#http://}"
+  hostname="${hostname#https://}"
+  hostname="${hostname%%/*}"
+  hostname="${hostname%%:*}"
+  hostname="${hostname%.}"
+  printf '%s\n' "${hostname}"
+}
+
+is_valid_dns_hostname() {
+  local hostname="$1"
+  local label
+  local labels=()
+
+  [[ -n "${hostname}" ]] || return 1
+  [[ "${hostname}" != *" "* ]] || return 1
+  [[ "${hostname}" == *.* ]] || return 1
+  [[ "${#hostname}" -le 253 ]] || return 1
+
+  IFS='.' read -ra labels <<< "${hostname}"
+  for label in "${labels[@]}"; do
+    [[ "${label}" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]] || return 1
+  done
+}
+
+validate_deploy_settings() {
+  if ! is_valid_port "${BACKEND_PORT}"; then
+    err "BACKEND_PORT must be an integer from 1 to 65535; got ${BACKEND_PORT}."
+    exit 1
+  fi
+
+  if ! is_valid_service_name "${SERVICE_NAME}"; then
+    err "SERVICE_NAME contains unsafe characters: ${SERVICE_NAME}"
+    exit 1
+  fi
+
+  if ! is_valid_service_name "${CLOUDFLARED_SERVICE_NAME}"; then
+    err "CLOUDFLARED_SERVICE_NAME contains unsafe characters: ${CLOUDFLARED_SERVICE_NAME}"
+    exit 1
+  fi
+
+  if ! is_valid_short_hostname "${LOCAL_HOSTNAME}"; then
+    err "Device hostname is not safe for local DNS/server_name: ${LOCAL_HOSTNAME}"
+    exit 1
+  fi
+
+  if [[ "${DEPLOY_DIR}" != /* ]]; then
+    err "DEPLOY_DIR must be an absolute path; got ${DEPLOY_DIR}."
+    exit 1
+  fi
+
+  if [[ "${DEPLOY_DIR}" == *[[:space:]]* ]]; then
+    err "DEPLOY_DIR cannot contain whitespace because systemd/nginx paths are generated from it: ${DEPLOY_DIR}"
+    exit 1
+  fi
+
+  if [[ "${CLOUDFLARED_CONFIG_FILE}" != "${CLOUDFLARED_SYSTEM_DIR}/"* ]] || [[ "${CLOUDFLARED_CONFIG_FILE}" == *[[:space:]]* ]]; then
+    err "CLOUDFLARED_CONFIG_FILE must live under ${CLOUDFLARED_SYSTEM_DIR} and contain no whitespace."
+    exit 1
+  fi
+
+  if [[ "${DEPLOY_DIR}" == "/" ]] || [[ "${DEPLOY_DIR}" == "${REPO_DIR}" ]] || [[ "${DEPLOY_DIR}" == "${REPO_DIR}/"* ]]; then
+    err "Refusing unsafe DEPLOY_DIR=${DEPLOY_DIR}."
+    err "Use a dedicated directory outside the git checkout, for example /var/www/uconn-isomorphic."
+    exit 1
+  fi
+
+  if [[ -n "${PUBLIC_HOSTNAME:-}" ]]; then
+    PUBLIC_HOSTNAME="$(normalize_hostname_input "${PUBLIC_HOSTNAME}")"
+    if ! is_valid_dns_hostname "${PUBLIC_HOSTNAME}"; then
+      err "PUBLIC_HOSTNAME must be a DNS hostname without a path or port; got ${PUBLIC_HOSTNAME}."
+      exit 1
+    fi
+  fi
+
+  if [[ -n "${TUNNEL_UUID:-}" ]] && ! is_tunnel_uuid "${TUNNEL_UUID}"; then
+    warn "Ignoring invalid saved TUNNEL_UUID=${TUNNEL_UUID}."
+    unset TUNNEL_UUID
+  fi
 }
 
 select_platform() {
@@ -464,10 +562,10 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=${DEPLOY_DIR}
+EnvironmentFile=-${DEPLOY_DIR}/.env
 Environment=HOST=127.0.0.1
 Environment=PORT=${BACKEND_PORT}
 Environment=ALLOWED_ORIGINS=${allowed_origins}
-EnvironmentFile=-${DEPLOY_DIR}/.env
 ExecStart=${DEPLOY_DIR}/.venv/bin/uvicorn backend.src.server:app --host 127.0.0.1 --port ${BACKEND_PORT}
 Restart=on-failure
 RestartSec=3
@@ -492,11 +590,34 @@ install_nginx_config() {
   banner "Nginx"
 
   local server_names="${LOCAL_DOMAIN} ${LOCAL_HOSTNAME}"
+  local had_conf=0
+  local had_link=0
+  local conf_backup=""
+  local link_target=""
+  local default_link="/etc/nginx/sites-enabled/default"
+  local had_default_link=0
+  local default_link_target=""
   if [[ -n "${PUBLIC_HOSTNAME:-}" ]]; then
     server_names="${server_names} ${PUBLIC_HOSTNAME}"
   fi
 
-  sudo rm -f /etc/nginx/sites-enabled/default
+  if [[ -f "${NGINX_CONF}" ]]; then
+    had_conf=1
+    conf_backup="$(mktemp)"
+    sudo cp "${NGINX_CONF}" "${conf_backup}"
+  fi
+
+  if [[ -L "${NGINX_LINK}" ]]; then
+    had_link=1
+    link_target="$(readlink "${NGINX_LINK}")"
+  fi
+
+  if [[ -L "${default_link}" ]]; then
+    had_default_link=1
+    default_link_target="$(readlink "${default_link}")"
+  fi
+
+  sudo rm -f "${default_link}"
 
   # Serve as the default vhost so requests addressed by IP or localhost (for
   # example the local health check) reach this site instead of whichever
@@ -550,7 +671,30 @@ EOF
   sudo chmod 644 "${NGINX_CONF}"
   sudo ln -sf "${NGINX_CONF}" "${NGINX_LINK}"
 
-  sudo nginx -t
+  if ! sudo nginx -t; then
+    err "Generated nginx config failed validation; restoring the previous ${SERVICE_NAME} config."
+    if [[ "${had_conf}" -eq 1 ]]; then
+      sudo cp "${conf_backup}" "${NGINX_CONF}"
+      sudo chmod 644 "${NGINX_CONF}"
+    else
+      sudo rm -f "${NGINX_CONF}"
+    fi
+
+    if [[ "${had_link}" -eq 1 ]]; then
+      sudo ln -sf "${link_target}" "${NGINX_LINK}"
+    else
+      sudo rm -f "${NGINX_LINK}"
+    fi
+
+    if [[ "${had_default_link}" -eq 1 ]]; then
+      sudo ln -sf "${default_link_target}" "${default_link}"
+    fi
+
+    rm -f "${conf_backup}"
+    exit 1
+  fi
+
+  rm -f "${conf_backup}"
   sudo systemctl enable --now nginx
   sudo systemctl reload nginx
   info "Nginx is serving http://${LOCAL_DOMAIN}."
@@ -591,23 +735,31 @@ verify_local_site() {
 }
 
 save_deploy_config() {
-  cat > "${DEPLOY_CONFIG_FILE}" <<EOF
-LOCAL_HOSTNAME=${LOCAL_HOSTNAME}
-LOCAL_DOMAIN=${LOCAL_DOMAIN}
-DEPLOY_DIR=${DEPLOY_DIR}
-SERVICE_NAME=${SERVICE_NAME}
-BACKEND_PORT=${BACKEND_PORT}
-EOF
+  : > "${DEPLOY_CONFIG_FILE}"
+  save_config_var "LOCAL_HOSTNAME" "${LOCAL_HOSTNAME}"
+  save_config_var "LOCAL_DOMAIN" "${LOCAL_DOMAIN}"
+  save_config_var "DEPLOY_DIR" "${DEPLOY_DIR}"
+  save_config_var "SERVICE_NAME" "${SERVICE_NAME}"
+  save_config_var "BACKEND_PORT" "${BACKEND_PORT}"
+  save_config_var "CLOUDFLARED_SERVICE_NAME" "${CLOUDFLARED_SERVICE_NAME}"
+  save_config_var "CLOUDFLARED_CONFIG_FILE" "${CLOUDFLARED_CONFIG_FILE}"
   if [[ -n "${TUNNEL_NAME:-}" ]]; then
-    echo "TUNNEL_NAME=${TUNNEL_NAME}" >> "${DEPLOY_CONFIG_FILE}"
+    save_config_var "TUNNEL_NAME" "${TUNNEL_NAME}"
   fi
   if [[ -n "${PUBLIC_HOSTNAME:-}" ]]; then
-    echo "PUBLIC_HOSTNAME=${PUBLIC_HOSTNAME}" >> "${DEPLOY_CONFIG_FILE}"
+    save_config_var "PUBLIC_HOSTNAME" "${PUBLIC_HOSTNAME}"
   fi
   if [[ -n "${TUNNEL_UUID:-}" ]]; then
-    echo "TUNNEL_UUID=${TUNNEL_UUID}" >> "${DEPLOY_CONFIG_FILE}"
+    save_config_var "TUNNEL_UUID" "${TUNNEL_UUID}"
   fi
   chmod 600 "${DEPLOY_CONFIG_FILE}"
+}
+
+save_config_var() {
+  local name="$1"
+  local value="$2"
+
+  printf '%s=%q\n' "${name}" "${value}" >> "${DEPLOY_CONFIG_FILE}"
 }
 
 install_cloudflared() {
@@ -920,7 +1072,12 @@ write_cloudflare_config() {
   local public_hostname="$2"
   local tunnel_ref="${TUNNEL_UUID:-$tunnel_name}"
 
-  sudo tee "${CLOUDFLARED_SYSTEM_DIR}/config.yml" >/dev/null <<EOF
+  if ! is_tunnel_uuid "${TUNNEL_UUID:-}"; then
+    err "Cannot write cloudflared config without a valid tunnel UUID."
+    exit 1
+  fi
+
+  sudo tee "${CLOUDFLARED_CONFIG_FILE}" >/dev/null <<EOF
 tunnel: ${tunnel_ref}
 credentials-file: ${CLOUDFLARED_SYSTEM_DIR}/${TUNNEL_UUID}.json
 
@@ -930,36 +1087,68 @@ ingress:
   - service: http_status:404
 EOF
 
-  sudo chmod 644 "${CLOUDFLARED_SYSTEM_DIR}/config.yml"
+  sudo chmod 644 "${CLOUDFLARED_CONFIG_FILE}"
 }
 
 route_cloudflare_dns() {
   local tunnel_name="$1"
   local public_hostname="$2"
   local tunnel_ref="${TUNNEL_UUID:-$tunnel_name}"
+  local route_output
 
   info "Creating Cloudflare DNS route for ${public_hostname}."
-  if cloudflared_with_cert tunnel route dns "${tunnel_ref}" "${public_hostname}"; then
+  if route_output="$(cloudflared_with_cert tunnel route dns "${tunnel_ref}" "${public_hostname}" 2>&1)"; then
+    printf '%s\n' "${route_output}"
     return
   fi
 
+  printf '%s\n' "${route_output}"
   warn "DNS route already exists or could not be created normally. Trying overwrite."
-  cloudflared_with_cert tunnel route dns --overwrite-dns "${tunnel_ref}" "${public_hostname}"
+  if route_output="$(cloudflared_with_cert tunnel route dns --overwrite-dns "${tunnel_ref}" "${public_hostname}" 2>&1)"; then
+    printf '%s\n' "${route_output}"
+    return
+  fi
+
+  printf '%s\n' "${route_output}"
+  err "Cloudflare DNS route could not be created for ${public_hostname}."
+  err "Check that the hostname is in your Cloudflare account and the login has DNS edit permission."
+  exit 1
+}
+
+stop_legacy_cloudflared_service_if_ours() {
+  if [[ "${CLOUDFLARED_SERVICE_NAME}" == "cloudflared" ]]; then
+    return
+  fi
+
+  if ! systemctl cat cloudflared >/dev/null 2>&1; then
+    return
+  fi
+
+  if [[ -f "${CLOUDFLARED_SYSTEM_DIR}/config.yml" ]] \
+    && sudo grep -q "${TUNNEL_UUID}" "${CLOUDFLARED_SYSTEM_DIR}/config.yml"; then
+    warn "Stopping legacy cloudflared.service for this tunnel; ${CLOUDFLARED_SERVICE_NAME}.service will manage it."
+    sudo systemctl stop cloudflared || true
+    sudo systemctl disable cloudflared || true
+    sudo systemctl reset-failed cloudflared || true
+  fi
 }
 
 install_cloudflared_service() {
   local cloudflared_bin
+  local service_file="/etc/systemd/system/${CLOUDFLARED_SERVICE_NAME}.service"
   cloudflared_bin="$(command -v cloudflared)"
 
-  sudo tee /etc/systemd/system/cloudflared.service >/dev/null <<EOF
+  stop_legacy_cloudflared_service_if_ours
+
+  sudo tee "${service_file}" >/dev/null <<EOF
 [Unit]
-Description=cloudflared tunnel
+Description=cloudflared tunnel for ${SERVICE_NAME}
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=notify
-ExecStart=${cloudflared_bin} --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
+ExecStart=${cloudflared_bin} --no-autoupdate --config ${CLOUDFLARED_CONFIG_FILE} tunnel run
 Restart=on-failure
 RestartSec=5s
 
@@ -967,10 +1156,17 @@ RestartSec=5s
 WantedBy=multi-user.target
 EOF
 
-  sudo chmod 644 /etc/systemd/system/cloudflared.service
+  sudo chmod 644 "${service_file}"
   sudo systemctl daemon-reload
-  sudo systemctl enable --now cloudflared
-  sudo systemctl restart cloudflared
+  sudo systemctl enable --now "${CLOUDFLARED_SERVICE_NAME}"
+  sudo systemctl restart "${CLOUDFLARED_SERVICE_NAME}"
+
+  sleep 2
+  if ! systemctl is-active --quiet "${CLOUDFLARED_SERVICE_NAME}"; then
+    err "${CLOUDFLARED_SERVICE_NAME}.service did not stay running."
+    err "Check: sudo journalctl -u ${CLOUDFLARED_SERVICE_NAME} -n 50"
+    exit 1
+  fi
 }
 
 setup_cloudflare() {
@@ -983,9 +1179,15 @@ setup_cloudflare() {
   select_cloudflare_tunnel_name
 
   public_hostname="$(prompt_with_default "Cloudflare hostname to route to this Pi, for example uconn.example.com" "${PUBLIC_HOSTNAME:-}")"
+  public_hostname="$(normalize_hostname_input "${public_hostname}")"
 
   if [[ -z "${public_hostname}" ]]; then
     err "A public hostname is required for Cloudflare tunnel routing."
+    exit 1
+  fi
+
+  if ! is_valid_dns_hostname "${public_hostname}"; then
+    err "Cloudflare hostname must be a DNS hostname without a path or port; got ${public_hostname}."
     exit 1
   fi
 
@@ -995,6 +1197,7 @@ setup_cloudflare() {
   copy_cloudflare_credentials
   write_cloudflare_config "${TUNNEL_NAME}" "${PUBLIC_HOSTNAME}"
   route_cloudflare_dns "${TUNNEL_NAME}" "${PUBLIC_HOSTNAME}"
+  install_backend_service
   install_nginx_config
   install_cloudflared_service
   save_deploy_config
@@ -1017,6 +1220,7 @@ main() {
 
   require_linux
   require_repo
+  validate_deploy_settings
   require_sudo
   save_deploy_config
   install_system_packages
