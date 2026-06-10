@@ -19,20 +19,15 @@ Every Markdown doc tracked in the repo:
 FastAPI + React app that generates isomorphic physics multiple-choice questions
 from uploaded source documents using the OpenAI Agents SDK.
 
-User-facing pipeline:
+Full runtime pipeline (8 stages):
 
-`Normalizer -> Extracter -> Verifier -> Generator -> LaTeX Formatter`
+`setup → normalizer → extracter → verifier → generator → latexifier → evaluation → output`
 
-Actual runtime pipeline:
-
-`setup -> normalizer -> extracter -> verifier -> generator -> latex -> evaluation -> output`
-
-Distinction:
-
-- `backend/data/agents.json` defines only the 5 OpenAI agents.
-- `setup`, `evaluation`, and `output` are orchestrated by the shared workflow
-  engine (`backend/src/workflow/engine.py`), which both the server and CLI call.
-- The frontend displays a 6-stage visible pipeline ending in `evaluation`.
+- `backend/data/agents.json` is the **single source of truth** for all 8 agents plus
+  global constants (`_config`). Python reads through `backend/src/registry.py`;
+  the frontend derives from `GET /api/agents` via `frontend/src/hooks/useAgentRegistry.js`.
+- `setup` and `output` are `kind: "runtime"` nodes; the other six are `kind: "agent"` LLM calls.
+- Both the FastAPI server and the CLI call the same workflow engine.
 
 ## Source-Of-Truth Paths
 
@@ -52,11 +47,19 @@ Backend:
 - `backend/src/pipeline_validation.py` — deterministic generator/verifier
   contract checks, incl. `validate_distractor_logic_preservation`
 - `backend/src/tools/judge_agreement.py` — judge ↔ professor κ / agreement metrics
+- `backend/src/registry.py` — **lazy-loaded gateway** for all agent constants
+  (`@lru_cache`); import from here instead of hardcoding names anywhere in Python
 - `backend/src/schemas.py`, `backend/src/helpers.py`, `backend/src/safety.py`,
   `backend/src/paths.py`
-- `backend/data/agents.json` — agent + model + reasoning config
-- `backend/data/prompts/*.txt` — agent instructions
-- `backend/data/rubric.json` — eval rubric (pass/fail scale, grader = gpt-5.5)
+- `backend/data/agents.json` — single source of truth for all 8 agents; every entry
+  carries `sequence`, `model`, `reasoning`, `kind`, `isLLM`, `hasPrompt`, `promptName`,
+  `isStoppable`, `acceptsSourceFiles`, `countLabel`, `resultField`, `aliases`; setup entry
+  also has `allowedDomains` + `containerPythonPackages`; `_config` holds `themes`,
+  `apiTitle`, `apiDescription`, `metadataKeys`, `wrappedRecordMarkerKeys`
+- `backend/data/prompts/*.txt` — agent prompt instructions; `bootstrap.txt` and
+  `bootstrapCompile.txt` are container shell-task templates with `{var}` placeholders
+- `backend/data/rubric.json` — eval rubric criteria only (pass/fail scale, 9 criteria);
+  grader model comes from `agents.json` `evaluation.model`
 - `backend/data/evaluation/**` — bundled source PDFs for the Create Data batch flow
 
 Frontend:
@@ -64,11 +67,15 @@ Frontend:
 - `frontend/DESIGN.md` — UI element mapping (design tokens, button/modal system,
   consistency rules). **Source of truth before adding any UI; reuse, don't invent.**
 - `frontend/src/App.jsx` (state via `useReducer`)
-- `frontend/src/hooks/useWorkflow.js` (status polling), `useAgents.js`
-  (agent config; normalizes `extractor → extracter`), `useCreateData.js`, `useFileUpload.js`
-- `frontend/src/utils/` — shared `api.js` (HTTP client), `abortableSleep.js`, `ids.js`
+- `frontend/src/hooks/useAgentRegistry.js` — **module-level singleton** that fetches
+  `/api/agents` once; exports `useAgentRegistry()` hook (React) and `getDerivedRegistry()`
+  sync accessor (for reducers). All pipeline keys, labels, and routing derive from this.
+- `frontend/src/hooks/useWorkflow.js` (status polling), `useAgents.js` (triggers registry
+  load), `useCreateData.js`, `useFileUpload.js`
+- `frontend/src/utils/` — shared `api.js` (HTTP client), `abortableSleep.js`,
+  `ids.js`, `files.js` (file `getViewerType` dispatch + download URL helpers)
 - `frontend/src/components/modals/` (one `Modal.jsx` shell; `eval/` holds the
-  split Evaluator-results pieces)
+  split Evaluator-results pieces; `useFileViewer.jsx` wires the generic file viewers)
 - `frontend/src/styles/app.css` (design tokens in `:root`)
 
 Tooling / analysis:
@@ -151,7 +158,7 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 - `PRUNE_INTERVAL_SECONDS` (background prune cadence, default 60)
 - `OPENAI_STATUS_TIMEOUT_SECONDS`
 - `BATCH_WORKFLOW_CONCURRENCY` (default 2)
-- `OPENAI_CONTAINER_BOOTSTRAP_MODEL`, `OPENAI_CONTAINER_ALLOWED_DOMAINS`
+- `OPENAI_CONTAINER_ALLOWED_DOMAINS` — overrides `setup.allowedDomains` from `agents.json`
 
 ## Architecture
 
@@ -169,9 +176,11 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 ### OpenAI agent runtime
 
 - One shared Code Interpreter container per workflow; reused across agent calls.
-- Container bootstrap installs LaTeX + PDF tooling (see `backend/src/container.py`).
-- Outbound domain allowlist defaults to PyPI + Linux mirrors;
-  override via `OPENAI_CONTAINER_ALLOWED_DOMAINS`.
+- Container bootstrap installs LaTeX + PDF tooling via `backend/src/container.py`;
+  the shell-task prompts live in `backend/data/prompts/bootstrap.txt` and
+  `bootstrapCompile.txt` with `{var}` placeholders filled by `helpers.render_prompt`.
+- Outbound domain allowlist comes from `agents.json` `setup.allowedDomains`;
+  override at runtime via `OPENAI_CONTAINER_ALLOWED_DOMAINS`.
 - Structured outputs are enforced via Pydantic `output_type=` on each Agent
   (`agents` SDK), not via `response_format`.
 - Reasoning effort is set per-agent in `backend/data/agents.json`
@@ -188,10 +197,35 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   variant system, one `Modal.jsx` shell. Reuse variants and tokens; never add a
   one-off `*-btn` class or hardcode color/size/motion. Buttons in the same group
   share one height tier.
-- Canonical spelling is `extracter` everywhere; `useAgents.js` normalizes
-  `extractor → extracter`.
-- The frontend currently knows about `evaluation` but not the backend-only
-  `output` stage.
+- Canonical spelling is `extracter` everywhere. No aliases exist in `agents.json`;
+  callers must use canonical key names.
+- All pipeline keys, labels, and routing come from `useAgentRegistry()` —
+  never hardcode agent key strings in JS files.
+- The frontend renders all 8 pipeline nodes (including `setup` and `output`)
+  because `AgentPipeline` derives its key list from the registry.
+- **File viewing is generic, not per-file.** Result files are viewed through
+  four viewers dispatched by `getViewerType` (`utils/files.js`): PDF, CSV, `.tex`,
+  and a JSON/plain-text fallback (`JsonTextViewerModal`). Wire them via the
+  `useFileViewer` hook (`modals/useFileViewer.jsx`) — don't add a new modal per
+  file type. Call `useFileViewer(workflowId)` and render `viewerModals` once in
+  the host component's JSX.
+- **Three rich button-opened modals live in `ResultsSection`**, separate from the
+  generic dispatch above:
+  - `FinalResultModal` — tabbed viewer (Config / Source Qs / Generated Qs /
+    Evaluation) for `final_result.json`; uses `useFileContent` hook.
+  - `EvalResultsModal` — full evaluator results; sub-components in `eval/`:
+    `EvalSummaryStrip`, `EvalItemsTable`, `EvalAggregateTable`.
+    Criterion chips in `EvalItemsTable` are `<button>` elements; clicking one
+    opens `CriterionReasoningModal` with the grader's step-by-step reasoning.
+  - `WorkflowAgentsModal` — pipeline agent cards with metadata, flow display,
+    and per-agent artifact viewer buttons.
+- **Grader reasoning lives at `results[].sample`** in the eval JSONL, not at
+  the top-level `grader_samples` key. Use `parseSampleSteps(sample)` (exported
+  from `modals/eval/evalData.js`) to parse `sample.output[0].content` (JSON
+  string: `{result, steps: [{conclusion, description}]}`).
+- **Normalize eval criterion keys** with `normalizeCriterionName`
+  (`modals/eval/evalData.js`) before keying grades/passes/samples. Backend keys
+  carry a UUID suffix; mixing raw and normalized keys renders duplicate chips.
 
 ## Code Conventions
 
@@ -216,13 +250,18 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 - **Tests run from repo root** with absolute imports (`from backend.src.x ...`).
 - **API routers import shared state from `api/state.py`.** Routers hold only
   route handlers; registries, config, helpers, and run wrappers live in `state.py`.
-- **Agent sequence/labels derive from `artifacts.WORKFLOW_AGENT_SEQUENCE` /
-  `AGENT_DISPLAY_NAMES`.** Don't re-declare stage order or display names.
+- **All agent constants come from `registry.py`.** Don't hardcode agent key strings
+  (`"normalizer"`, `"extracter"`, etc.) as literals in Python — import from
+  `backend.src.registry` (`agent_sequence`, `llm_agents`, `stoppable_agents`, etc.).
+  `artifacts.py` re-exports the sequence/names for legacy callers but the source is
+  `registry.py`.
+- **All frontend agent data comes from `useAgentRegistry()` / `getDerivedRegistry()`.** 
+  Don't declare pipeline keys, labels, or routing maps in JS modules.
 - **Frontend follows `frontend/DESIGN.md`** (see the Frontend notes above).
 
 ### Pipeline parallelism
 
-- Within one workflow the 6 stages are sequential (each consumes the previous output).
+- Within one workflow the 8 stages are sequential (each consumes the previous output).
 - Multi-file uploads in one workflow are intentionally combined into one dataset
   (the extracter prompt handles this).
 - The batch endpoint runs workflows concurrently with `Semaphore(BATCH_WORKFLOW_CONCURRENCY=2)`.
@@ -230,18 +269,16 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 
 ## Workflow Stages
 
-Configured agents (`backend/data/agents.json`):
+All 8 stages are defined in `backend/data/agents.json` and driven by the engine:
 
+0. `setup` *(runtime)* — creates the shared OpenAI container; bootstraps LaTeX + Python deps
 1. `normalizer` — parses the user prompt into structured config
 2. `extracter` — reads uploaded files and extracts source questions
 3. `verifier` — validates answers, fills in explanations / `distractor_logic`
 4. `generator` — creates isomorphic questions
-5. `latex` — produces LaTeX and triggers PDF compilation in the container
-
-Runtime-managed by the engine (`backend/src/workflow/engine.py`):
-
+5. `latexifier` — produces LaTeX and triggers PDF compilation in the container
 6. `evaluation` — runs OpenAI Evals; writes the report + spreadsheet + rubric snapshot
-7. `output` — writes `final_result.json`, `agent_outputs/` artifacts, file metadata
+7. `output` *(runtime)* — writes `final_result.json`, `agent_outputs/` artifacts, file metadata
 
 ## API Surface
 
@@ -269,8 +306,9 @@ Lives in `backend/src/evaluation.py`.
 
 Current behavior:
 
-- Rubric: `backend/data/rubric.json` (pass/fail scale, 9 criteria; grader = `gpt-5.5`,
-  reasoning effort `low`).
+- Rubric: `backend/data/rubric.json` (pass/fail scale, 9 criteria). Grader model
+  comes from `agents.json` `evaluation.model` (currently `gpt-5.5`); reasoning
+  effort from rubric `"reasoning"` field (currently `"low"`).
 - Each question-level criterion is scored as 0/1 (or -1 for N/A on criteria
   with `na_allowed: true`).
 - LaTeX criterion is deterministic: checks artifact existence AND scans the
@@ -316,7 +354,10 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 
 | Task | Files |
 |---|---|
-| Change models / reasoning / tool usage | `backend/data/agents.json` |
+| Change models / reasoning / tool usage / themes | `backend/data/agents.json` |
+| Add or rename an agent | `backend/data/agents.json` → `backend/src/registry.py` (new accessor if needed) |
+| Change container packages or domains | `backend/data/agents.json` (`setup.containerPythonPackages`, `setup.allowedDomains`) |
+| Add a registry constant Python needs | `backend/src/registry.py` |
 | Change agent behavior / instructions | `backend/data/prompts/*.txt` |
 | Workflow orchestration | `backend/src/workflow/engine.py`, `backend/src/workflow/payloads.py`, `backend/src/main.py` |
 | API routes / server state | `backend/src/api/**`, `backend/src/server.py` |
@@ -325,6 +366,9 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 | Judge ↔ professor agreement | `backend/src/tools/judge_agreement.py`, `Other/compare_to_professor.py` |
 | Frontend UX / state | `frontend/src/App.jsx`, `frontend/src/hooks/**`, `frontend/src/components/**` |
 | Frontend styling / design system | `frontend/DESIGN.md`, `frontend/src/styles/app.css` |
+| File viewer dispatch | `frontend/src/utils/files.js` (`getViewerType`), `frontend/src/components/modals/useFileViewer.jsx` |
+| Rich result modals | `frontend/src/components/modals/FinalResultModal.jsx`, `EvalResultsModal.jsx`, `WorkflowAgentsModal.jsx` |
+| Eval criterion reasoning | `frontend/src/components/modals/eval/evalData.js` (`parseSampleSteps`), `eval/CriterionReasoningModal.jsx` |
 
 ## Deployment Notes
 
@@ -340,13 +384,17 @@ operational guides, not source of truth for local development.
   that target missing root scripts.
 - `frontend/DESIGN.md` is the real frontend doc (the design system); there is no
   `frontend/README.md`.
-- Canonical spelling is `extracter` everywhere.
-- Frontend pipeline ends at `evaluation`; backend also tracks `output`.
+- Canonical spelling is `extracter` everywhere. There are **no aliases** in
+  `agents.json` — callers must use the exact key name.
+- All 8 stages appear in the frontend pipeline (including `setup` and `output`);
+  the list is driven by `useAgentRegistry()`, not hardcoded.
 - `dist/` is generated by `npm -C frontend run build`; it is gitignored.
 - Workflow state is in-memory plus a SQLite mirror (`backend/runtime/`); active
   in-flight runs do not resume across a restart.
-- Model id `gpt-5.5` is intentional (kept across `agents.json` and
-  `rubric.json`); do not "fix" it.
+- Model id `gpt-5.5` is intentional and lives in `agents.json`; every agent
+  entry including `setup` and `output` carries it. Do not "fix" it.
+- `registry._load_raw` is `@lru_cache`. In tests that swap `AGENTS_CONFIG_PATH`,
+  call `registry._load_raw.cache_clear()` first or the old data is returned.
 
 ## Hard Don'ts
 
@@ -357,10 +405,34 @@ operational guides, not source of truth for local development.
   removed intentionally.
 - Don't mock the database or external state in `pipeline_validation` tests;
   integration tests must exercise the real validator.
+- Don't hardcode agent key strings (`"normalizer"`, `"extracter"`, etc.) as Python
+  literals — import from `backend.src.registry` instead.
+- Don't hardcode pipeline keys, labels, or routing maps in JS — derive from
+  `useAgentRegistry()` / `getDerivedRegistry()`.
+- Don't add aliases back to `agents.json` — use canonical key names everywhere.
+- Don't store agent constants (sequences, names, model ids, theme lists) in
+  Python or JS files — they belong in `agents.json` and `registry.py`.
 
 ## Local Visual Debugging
+
+Quick one-shot screenshot of the built app:
 
 ```bash
 npx playwright install chromium
 npx playwright screenshot --browser=chromium --full-page http://127.0.0.1:8000 /tmp/app.png
 ```
+
+For iterating on CSS/layout, run the Vite dev server (`npm -C frontend run dev:ui`)
+and drive it with the Playwright MCP — `browser_resize` to test the §3 breakpoints
+and `browser_evaluate` with `getBoundingClientRect()`/`getComputedStyle()` to
+*measure* element heights rather than eyeballing screenshots (how the dev-tools
+log-clipping and prompt-row-wrapping bugs were pinned down). Notes:
+
+- The dev server needs the **backend up on `:8000`** for `/api/agents`,
+  `/api/dropdown`, etc.; without it the agent pipeline stays on its empty
+  placeholder (the top panels and dev-tools still render for layout work).
+- Vite auto-picks the next free port if `5173` is taken (another local project may
+  hold it). To verify a hover-only style without a live run, inject a throwaway
+  `.agent-card` into the DOM via `browser_evaluate`, hover it, and read the
+  computed `transform`/`border-color`.
+- Put screenshots in a workspace `tmp/` and delete them when done.
