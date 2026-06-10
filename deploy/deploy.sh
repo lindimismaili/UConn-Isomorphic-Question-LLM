@@ -691,10 +691,18 @@ list_active_tunnels() {
   if cloudflared_with_cert tunnel list -o json 2>/dev/null | python3 -c '
 import json, sys
 try:
-    tunnels = json.load(sys.stdin)
+    data = json.load(sys.stdin)
 except Exception:
     raise SystemExit(1)
+if isinstance(data, dict):
+    tunnels = data.get("result") or data.get("tunnels") or []
+else:
+    tunnels = data
+if not isinstance(tunnels, list):
+    raise SystemExit(1)
 for tunnel in tunnels:
+    if not isinstance(tunnel, dict):
+        continue
     if tunnel.get("deleted_at"):
         continue
     tunnel_id = tunnel.get("id") or tunnel.get("uuid") or ""
@@ -706,6 +714,13 @@ for tunnel in tunnels:
   fi
 
   cloudflared_with_cert tunnel list 2>/dev/null | awk 'NR > 1 && $1 ~ /^[[:xdigit:]-]+$/ && $2 != "" { print $1 "\t" $2 }' || true
+}
+
+extract_tunnel_uuid() {
+  sed -nE \
+    -e 's/.*Created tunnel .* with id ([[:xdigit:]-]{36}).*/\1/p' \
+    -e 's|.*Tunnel credentials written to .*/([[:xdigit:]-]{36})\.json.*|\1|p' \
+    | tail -n 1
 }
 
 print_existing_tunnels() {
@@ -773,7 +788,7 @@ select_cloudflare_tunnel_name() {
 
 ensure_cloudflare_tunnel() {
   local tunnel_name="$1"
-  local uuid
+  local create_output uuid
 
   uuid="$(find_tunnel_uuid "${tunnel_name}")"
 
@@ -784,7 +799,8 @@ ensure_cloudflare_tunnel() {
   fi
 
   info "Creating Cloudflare tunnel ${tunnel_name}."
-  if ! cloudflared_with_cert tunnel create "${tunnel_name}"; then
+  if ! create_output="$(cloudflared_with_cert tunnel create "${tunnel_name}" 2>&1)"; then
+    printf '%s\n' "${create_output}"
     uuid="$(find_tunnel_uuid "${tunnel_name}")"
     if [[ -n "${uuid}" ]]; then
       info "Tunnel ${tunnel_name} already exists; using existing Cloudflare tunnel (${uuid})."
@@ -796,7 +812,12 @@ ensure_cloudflare_tunnel() {
     exit 1
   fi
 
-  uuid="$(find_tunnel_uuid "${tunnel_name}")"
+  printf '%s\n' "${create_output}"
+  uuid="$(printf '%s\n' "${create_output}" | extract_tunnel_uuid)"
+
+  if [[ -z "${uuid}" ]]; then
+    uuid="$(find_tunnel_uuid "${tunnel_name}")"
+  fi
 
   if [[ -z "${uuid}" ]]; then
     err "Could not determine the new Cloudflare tunnel UUID."
