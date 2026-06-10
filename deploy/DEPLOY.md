@@ -31,7 +31,7 @@ http://<hostname>.local
 
 It warns if `.env` is missing or does not contain `OPENAI_API_KEY`.
 
-After local verification, the script asks whether to attempt Cloudflare hosting. Press Enter to continue, or any other key to skip. If continued, it installs `cloudflared`, runs `cloudflared tunnel login`, discovers active tunnels in the Cloudflare account, reuses the saved tunnel from `.deploy.env` when it still exists, or automatically uses the only active tunnel found. If several active tunnels exist, the script lists them and prompts for the tunnel name, defaulting to the first existing tunnel. It then copies tunnel credentials into `/etc/cloudflared`, writes the tunnel config, routes DNS, and starts `cloudflared.service`.
+After local verification, the script asks whether to attempt Cloudflare hosting. Press Enter to continue, or any other key to skip. If continued, it installs `cloudflared`, runs `cloudflared tunnel login`, discovers active tunnels in the Cloudflare account, reuses the saved tunnel from `.deploy.env` when it still exists, or automatically uses the only active tunnel found. If several active tunnels exist, the script lists them and prompts for the tunnel name, defaulting to the first existing tunnel. It then copies tunnel credentials into `/etc/cloudflared`, writes an app-scoped tunnel config, routes DNS, and starts `uconn-isomorphic-cloudflared.service` by default.
 
 If no active tunnel is found, the default tunnel name is:
 
@@ -76,9 +76,9 @@ so it restarts the app's own backend rather than killing an unrelated process.
 ```bash
 sudo systemctl status uconn-isomorphic
 sudo systemctl status nginx
-sudo systemctl status cloudflared
+sudo systemctl status uconn-isomorphic-cloudflared
 sudo journalctl -u uconn-isomorphic -f
-sudo journalctl -u cloudflared -f
+sudo journalctl -u uconn-isomorphic-cloudflared -f
 ```
 
 If the backend fails with `error while attempting to bind on address`, check
