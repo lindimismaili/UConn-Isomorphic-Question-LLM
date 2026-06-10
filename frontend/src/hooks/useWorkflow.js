@@ -250,7 +250,11 @@ export function useWorkflow(dispatch) {
     const { signal } = controller;
     const setupStartMs = Date.now();
 
-    dispatch({ type: 'WORKFLOW_START' });
+    dispatch({
+      type: 'WORKFLOW_START',
+      prompt,
+      fileNames: files.map((f) => f?.name).filter(Boolean),
+    });
 
     try {
       let sessionId = null;
@@ -338,7 +342,12 @@ export function useWorkflow(dispatch) {
     const { signal } = controller;
     const setupStartMs = Date.now();
 
-    dispatch({ type: 'WORKFLOW_START' });
+    dispatch({
+      type: 'WORKFLOW_START',
+      prompt,
+      fileNames: inputFile?.name ? [inputFile.name] : [],
+      startAgent,
+    });
 
     try {
       dispatch({ type: 'LOG', message: `Uploading input for ${(getDerivedRegistry()?.agentLabels ?? {})[startAgent] || startAgent}...`, level: 'info' });

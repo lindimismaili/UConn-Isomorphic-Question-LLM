@@ -143,7 +143,7 @@
   },
   "latexifier": {
     "sequence": 5,
-    "name": "Latexifier",
+    "name": "LaTeXifier",
     "description": "Converts questions to LaTeX format",
     "model": "gpt-5.5",
     "reasoning": "medium",

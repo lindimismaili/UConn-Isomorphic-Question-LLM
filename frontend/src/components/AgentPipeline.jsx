@@ -90,7 +90,10 @@ export default function AgentPipeline({ agents, onCardClick, isRunning }) {
   const [scrollContainerWidth, setScrollContainerWidth] = useState(0);
 
   const registryData = useAgentRegistry();
-  const pipelineKeys = registryData?.pipelineKeys ?? [];
+  const pipelineKeys = useMemo(
+    () => registryData?.pipelineKeys ?? [],
+    [registryData],
+  );
   const connections = useMemo(
     () => pipelineKeys.slice(0, -1).map((from, index) => ({
       id: `${from}-${pipelineKeys[index + 1]}`, from, to: pipelineKeys[index + 1],
@@ -117,11 +120,14 @@ export default function AgentPipeline({ agents, onCardClick, isRunning }) {
     ? Math.max(1, Math.floor((Math.max(0, scrollContainerWidth - SCROLL_PADDING_X) + CARD_GAP) / (CARD_WIDTH + CARD_GAP)))
     : 0;
 
-  // Show ghost brain placeholders while running if there is room in the viewport.
+  // Show ghost brain placeholders while running: enough to fill the visible row
+  // for the current viewport width, plus one extra peeking past the row edge to
+  // hint the next stage. Never exceed the stages still to come, so the skeletons
+  // taper off as the workflow reaches its final agent.
   const workflowIsActive = isRunning && visibleKeys.length > 0;
   const remainingPipelineSlots = pipelineKeys.length - visibleKeys.length;
   const ghostBrainCount = workflowIsActive
-    ? Math.max(0, Math.min(slotsBeforeScroll - visibleKeys.length, remainingPipelineSlots))
+    ? Math.max(0, Math.min(slotsBeforeScroll - visibleKeys.length + 1, remainingPipelineSlots))
     : 0;
 
   const updateConnector = useCallback(() => {
@@ -151,7 +157,7 @@ export default function AgentPipeline({ agents, onCardClick, isRunning }) {
     }
 
     setConnector({ width, height, paths });
-  }, [visibleConnections]);
+  }, [connections, visibleConnections]);
 
   const setNodeRef = useCallback((key, node) => {
     if (node) nodeRefs.current[key] = node;

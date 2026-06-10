@@ -133,7 +133,12 @@ with `#root` and `body` as `flex` columns filling `min-height: 100vh`.
 Primary content grids inside `.content-shell`:
 
 - `.top-panels` — two equal columns (`1fr 1fr`, `--layout-gap`) for the prompt
-  card + developer-tools card. Collapses to one column at **≤1100px**.
+  card + developer-tools card. Collapses to one column at **≤1100px**. The
+  developer-tools card's flex body (`flex: 1 1 0`) gets its height from
+  `align-items: stretch` matching the taller prompt card; **once stacked it has
+  no sibling to stretch against**, so the ≤1100px rules give it a `min-height`
+  floor + content-sized body (`flex: 1 1 auto`) + a log-area `min-height` — without
+  these the body collapses and `overflow: hidden` clips the log entirely.
 - `.pipeline-split` — workflow panel + log panel (`~1.9fr` / `minmax(300px,1fr)`).
   Collapses to one column at **≤1100px**.
 
@@ -142,10 +147,11 @@ which applies `filter: blur(6px)` to `.header`, `.main-content`, and `.footer`
 (transition `--transition-normal`) and locks page scroll (see §8).
 
 **Responsive breakpoints** (mobile-last, `max-width`): `1200` (downloads → one
-column), `1100` (top-panels & pipeline → one column), `900` (prompt actions &
-dev-tools wrap), `820` (eval modal stacks), `768` (header stacks), `700`
-(modal footers, create-data rows, agent modal stack). Reuse these — don't add
-new arbitrary breakpoints.
+column), `1100` (top-panels & pipeline → one column), `900` (dev-tools tiles
+wrap; prompt actions **shrink to stay on one row**, never stack — theme select,
+Upload, and Send share the row at every width), `820` (eval modal stacks),
+`768` (header stacks), `700` (modal footers, create-data rows, agent modal
+stack). Reuse these — don't add new arbitrary breakpoints.
 
 ---
 
@@ -236,7 +242,8 @@ never pushes the track out of the control.
 - `.card` → `--gradient-card`, `--color-border`, `--radius-lg`, `--shadow-md`,
   `--blur-md`; transitions border/shadow/background on `--transition-normal`.
   **Cards do not lift or scale on hover** (`transform: none` is intentional) —
-  only color/shadow may shift.
+  only color/shadow may shift. **One documented exception:** the clickable
+  `.agent-card` (§9) lifts `translateY(-4px)` with a white outline on hover.
 - `.card-header` → header band with bottom border. Title is `h2`
   (`--color-primary`, soft glow); optional `.subtitle` (`--color-text-secondary`)
   and `.card-header-row` / `.header-buttons` for a title + actions row.
@@ -289,6 +296,22 @@ focusable, focus restored to the trigger on close, and **page scroll lock**
 (pins the window, still allows scrolling inside an overflowing `.modal-body`).
 `role="dialog"` / `aria-modal` are set while open.
 
+### Stacking
+
+Modals may open on top of other modals (e.g. a file viewer from inside the
+Agents modal). `Modal.jsx` tracks a global open-modal stack and:
+
+- assigns each open modal `z-index: 1000 + stackIndex`, so a modal always
+  layers **above** the modal it was opened from;
+- darkens + blurs with the standard backdrop only on the **first (bottom)**
+  modal; every stacked modal's backdrop gets `.is-stacked` (transparent,
+  blur-only) so layers don't compound the darkening;
+- only the topmost backdrop handles click-to-close, and a closing modal keeps
+  its depth through the exit transition.
+
+This is automatic — never set z-index on a modal or restyle `.modal-backdrop`
+per component.
+
 ### Width / size variants
 
 | Class | Width |
@@ -305,6 +328,32 @@ Footer actions are `.btn` (typically one `.btn-primary` + one `.btn-secondary`).
 For a split footer (info left, actions right) use `.modal-footer-row` /
 `.agent-modal-footer` + `.modal-footer-actions`.
 
+### File viewers
+
+Workflow output files are viewed through **four generic viewers**, not
+per-file-type bespoke modals. Dispatch is by `getViewerType(fileName)` in
+[`src/utils/files.js`](src/utils/files.js): `.pdf` → `PdfPreviewModal`, `.csv` →
+`CsvViewerModal`, `.tex` → `TexViewerModal`, **everything else** →
+`JsonTextViewerModal` (pretty-printed JSON/JSONL with syntax coloring, plain
+text otherwise). Every file is therefore viewable.
+
+Don't wire viewers by hand — use the
+[`useFileViewer(workflowId)`](src/components/modals/useFileViewer.jsx) hook. It
+owns the open state and returns `openFile`, `downloadFile`, `getFileUrl`, and a
+`viewerModals` element you render once in the host component.
+
+Code-style viewers (`.tex` and JSON) share one line-numbered shell:
+`.tex-pre` → `.tex-line` (`.tex-line-num` + `.tex-line-content`). Token colors:
+`.tex-command` / `.tex-comment` / `.tex-brace` for LaTeX, and
+`.json-key` / `.json-string` / `.json-number` / `.json-bool` / `.json-null` /
+`.json-punct` for JSON. Reuse these classes for any new code/source viewer.
+
+The three **rich domain modals** — `FinalResultModal` ("Final Result"),
+`EvalResultsModal` ("Evaluations"), `WorkflowAgentsModal` ("Agents") — are *not*
+file-type dispatched. They are opened by the explicit View Results / View
+Evaluations / View Agents buttons in `ResultsSection` and rendered alongside
+`viewerModals`. Their full-size variants extend `.modal-full` (§8 width table).
+
 ---
 
 ## 9. Agent pipeline
@@ -315,13 +364,24 @@ SVG connector layer behind them.
 - `.agent-card` — fixed **220×224**, `--gradient-card`; status drives the border
   + glow via `[data-status]` (`queued`/`thinking`/`warning`,
   `completed`/`success`, `errored`/`error`, `cancelled`). Cards reveal with
-  `.is-revealed` (fade + rise + scale).
+  `.is-revealed` (fade + rise + scale). Because cards are clickable they are the
+  one `.card` that **lifts on hover**: `translateY(-4px)` + white outline
+  (`rgba(255,255,255,0.85)`) + `--shadow-lg`. The `-4px` lift stays inside the
+  scroll container's 34px top padding, so it isn't clipped by
+  `.agents-scroll { overflow-y: hidden }`.
 - `.agent-icon` cross-fades four stacked SVGs (default / thinking / success /
   error) by status; the thinking icon pulses (`iconPulse`).
 - `.agent-connector-path` (inside `.agent-turn-connector`) recolors to the
   status color and fades in via `data-visible` / `data-status`.
-- `.agent-placeholder` (with pulsing `.agent-placeholder-brain`s) holds the
-  empty state until the first card reveals (`.is-hidden` fades it out).
+- `.agent-placeholder` (with pulsing `.agent-placeholder-brain`s — **6** of them,
+  matching the visible pipeline length) holds the empty state until the first
+  card reveals (`.is-hidden` fades it out).
+- `.agent-node-ghost` — dashed card-sized skeleton blocks shown *while a run is
+  active*, padding the row ahead of the revealed cards. `AgentPipeline.jsx`
+  computes the count as "fill the visible row for the current viewport width,
+  **plus one** peeking past the edge to hint the next stage," capped at the
+  pipeline stages still to come (`slotsBeforeScroll - visibleKeys.length + 1`,
+  clamped to `remainingPipelineSlots`). They taper to zero at the final agent.
 
 Reuse the `[data-status]` convention for any new pipeline state rather than
 inventing per-state classes.
@@ -381,8 +441,12 @@ Component-level motion rules:
 These are global and themed — don't override per component:
 
 - Custom WebKit scrollbar: 10px, gradient thumb (`--color-primary` →
-  `--color-secondary`), rounded. `html`/`body` also set
-  `scrollbar-color`/`scrollbar-width` for Firefox.
+  `--color-secondary`), rounded. This global `::-webkit-scrollbar` is the
+  **single source of truth** for every scrollbar (page + panels alike).
+  **Don't set `scrollbar-color`/`scrollbar-width` on `body` or any element:**
+  modern Chrome now honors the standard `scrollbar-color`, which overrides the
+  gradient and turns *that* element's scrollbar into a flat color that visibly
+  diverges from the rest. `html` keeps only `scrollbar-gutter: stable`.
 - `::selection` → `--color-primary` background, white text.
 - Global `:focus-visible` → `2px solid var(--color-primary)` outline with
   offset; `.btn` / controls additionally show the 3px `--color-primary-glow`
@@ -397,7 +461,8 @@ These are global and themed — don't override per component:
 3. Inputs/selects use `--control-height` + `--radius-sm` + the standard focus ring.
 4. Boolean settings use `.developer-toggle`, not a raw checkbox.
 5. Modals go through `Modal.jsx`; pick a size variant, don't hand-roll widths.
-6. Panels/cards use `.card` + a documented status variant; no hover lift.
+6. Panels/cards use `.card` + a documented status variant; no hover lift — the
+   clickable `.agent-card` is the one documented exception (§9).
 7. Status uses the semantic color + glow (chips/pills/dots), never a raw hex.
 8. Colors/spacing/radius/motion/layout come from tokens, not literals.
 9. Transitions use the motion tokens and only animate safe properties; reuse the

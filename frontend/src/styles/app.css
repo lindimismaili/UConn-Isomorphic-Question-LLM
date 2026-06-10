@@ -118,8 +118,6 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-primary) transparent;
   overflow-x: hidden;
 }
 
@@ -480,18 +478,24 @@ select option {
   gap: var(--panel-gap);
   align-items: center;
   justify-content: space-between;
+  /* Theme select, Upload, and Send must always share one row — never stack. */
+  flex-wrap: nowrap;
 }
 
 .prompt-actions-right {
   display: flex;
   gap: var(--panel-gap);
   align-items: center;
+  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .prompt-theme-select {
   width: auto;
-  min-width: 210px;
-  flex: 0 0 auto;
+  /* Shrinkable so the three controls stay inline on narrow viewports. */
+  flex: 0 1 210px;
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
@@ -684,12 +688,23 @@ select option {
 }
 
 @media (max-width: 900px) {
-  .prompt-actions-right {
-    flex-wrap: wrap;
+  /* Keep theme select, Upload, and Send on a single row even when cramped:
+     allow the buttons to shrink and ellipsize rather than wrap/stack. */
+  .prompt-actions-right > .btn {
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
-  .prompt-actions-right > .btn {
-    flex: 1 1 auto;
+  .prompt-actions-right > .btn .btn-label,
+  .prompt-actions-right > .btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .send-action {
+    min-width: 0;
   }
 
   .developer-tools-row {
@@ -1301,10 +1316,40 @@ select option {
   animation: agentNodeReveal 300ms ease forwards;
 }
 
-.setup-modal-body ul {
-  margin-top: var(--spacing-sm);
-  margin-left: var(--spacing-md);
-  padding-left: 1.2em;
+/* Runtime modals (Starting Runtime / Ending Runtime) */
+.setup-modal-body h4 {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.runtime-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.runtime-empty-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.runtime-input-text {
+  flex: none;
+  min-height: 0;
+  max-height: 220px;
+}
+
+.runtime-output-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 @media (max-width: 1100px) {
@@ -1318,6 +1363,24 @@ select option {
 
   .log-panel-card .card-body {
     min-height: min(320px, 60vh);
+  }
+
+  /* In the stacked (single-column) layout the Developer Tools card no longer has
+     a tall sibling to stretch against, so its flex card-body collapses and clips
+     the log. Give the card a floor height so the tools + log stay readable. */
+  .developer-tools-card {
+    min-height: 380px;
+  }
+
+  /* Basis 0 (the 2-column stretch behaviour) would cap the body at the floor
+     height and clip the log once the tool buttons wrap. Size it to content so
+     the card grows instead of clipping. */
+  .developer-tools-card .card-body {
+    flex: 1 1 auto;
+  }
+
+  .developer-log-area {
+    min-height: 160px;
   }
 }
 
@@ -1339,18 +1402,23 @@ select option {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
     var(--gradient-card);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .agent-card.clickable {
   cursor: pointer;
 }
 
-.agent-card.clickable:hover {
-  transform: none;
-}
-
+.agent-card.clickable:hover,
 .agent-card:hover {
-  transform: none;
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .agent-card[data-status="inactive"] {
@@ -2050,10 +2118,10 @@ body.modal-open .footer {
   opacity: 1;
 }
 
-.modal-backdrop.is-inactive {
-  opacity: 0;
-  backdrop-filter: none;
-  pointer-events: none;
+/* Stacked modals (opened on top of another modal) only blur what's beneath
+   them; the darkening overlay comes from the first (bottom) modal alone. */
+.modal-backdrop.is-stacked {
+  background: transparent;
 }
 
 .modal-content {
@@ -2198,16 +2266,24 @@ body.modal-open .footer {
 
 .eval-summary-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(100px, 200px));
+  grid-template-columns: repeat(3, minmax(100px, 220px));
   gap: var(--spacing-sm);
 }
 
 .eval-summary-strip > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
   min-width: 0;
-  padding: var(--spacing-sm);
+  padding: 4px var(--spacing-sm);
   background: rgba(12, 20, 36, 0.72);
   border: 1px solid rgba(91, 141, 238, 0.18);
   border-radius: var(--radius-sm);
+}
+
+.eval-summary-strip .eval-summary-label {
+  margin-bottom: 0;
 }
 
 .eval-summary-label {
@@ -3599,20 +3675,15 @@ body.modal-open .footer {
   max-width: min(98vw, 1600px);
   height: min(90vh, 800px);
 }
-.agent-metadata-modal.modal-full {
-  width: min(98vw, 900px);
-  max-width: min(98vw, 900px);
-  height: min(88vh, 780px);
+.json-viewer-modal.modal-full {
+  width: min(98vw, 1100px);
+  max-width: min(98vw, 1100px);
+  height: min(92vh, 900px);
 }
-.agent-artifact-modal.modal-full {
-  width: min(98vw, 1000px);
-  max-width: min(98vw, 1000px);
-  height: min(90vh, 800px);
-}
-.eval-dataset-modal.modal-full {
-  width: min(98vw, 1400px);
-  max-width: min(98vw, 1400px);
-  height: min(90vh, 800px);
+.workflow-agents-modal.modal-full {
+  width: min(98vw, 1100px);
+  max-width: min(98vw, 1100px);
+  height: min(90vh, 820px);
 }
 .tex-viewer-modal.modal-full {
   width: min(98vw, 1100px);
@@ -3627,9 +3698,8 @@ body.modal-open .footer {
 /* Scrollable body for all viewer modals */
 .final-result-modal .modal-body,
 .csv-viewer-modal .modal-body,
-.agent-metadata-modal .modal-body,
-.agent-artifact-modal .modal-body,
-.eval-dataset-modal .modal-body,
+.json-viewer-modal .modal-body,
+.workflow-agents-modal .modal-body,
 .tex-viewer-modal .modal-body,
 .criterion-reasoning-modal .modal-body {
   overflow-y: auto;
@@ -3887,6 +3957,15 @@ body.modal-open .footer {
   padding-left: 1rem;
 }
 
+.viewer-option-note-label {
+  font-weight: 600;
+  font-style: normal;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
 .viewer-generation-notes {
   font-size: 0.82rem;
   color: var(--color-text-secondary);
@@ -3919,6 +3998,31 @@ body.modal-open .footer {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+/* Evaluation summary table: align numeric columns under their headers. */
+.viewer-th-num {
+  text-align: right !important;
+}
+
+.viewer-cell-num {
+  font-family: "Consolas", "Monaco", monospace;
+  text-align: right;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.viewer-eval-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+/* When there is no In-Depth button, keep the score pushed to the right. */
+.viewer-eval-footer > .viewer-eval-score:only-child {
+  margin-left: auto;
 }
 
 /* --- File viewer table (CSV, EvalDataset) --- */
@@ -4053,6 +4157,33 @@ body.modal-open .footer {
   color: #d4a017; /* deep gold */
 }
 
+/* --- JSON syntax colors (JsonTextViewerModal) --- */
+.json-key {
+  color: #93c5fd; /* blue-300 — object keys */
+}
+
+.json-string {
+  color: #86efac; /* green-300 — string values */
+}
+
+.json-number {
+  color: #fca5a5; /* red-300 — numbers */
+}
+
+.json-bool {
+  color: #c4b5fd; /* violet-300 — true/false */
+  font-weight: 600;
+}
+
+.json-null {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.json-punct {
+  color: #d4a017; /* deep gold — braces, brackets, colons, commas */
+}
+
 /* --- Agent Metadata cards --- */
 .viewer-agent-list {
   display: flex;
@@ -4165,6 +4296,169 @@ body.modal-open .footer {
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
+}
+
+/* --- Results section view buttons (View Results / Evaluations / Agents) --- */
+.results-view-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+/* --- Workflow Agents Modal --- */
+.workflow-agents-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.workflow-agents-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px var(--spacing-sm);
+  background: rgba(12, 20, 36, 0.72);
+  border: 1px solid rgba(91, 141, 238, 0.18);
+  border-radius: var(--radius-sm);
+}
+
+.workflow-agents-summary-item label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.workflow-agents-summary-item span {
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.workflow-agents-id {
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 0.8rem !important;
+  word-break: break-all;
+}
+
+.workflow-agents-context {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.workflow-agents-context-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(12, 20, 36, 0.62);
+  border: 1px solid rgba(91, 141, 238, 0.18);
+  border-radius: var(--radius-md);
+}
+
+.workflow-agents-context-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.workflow-agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.workflow-agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(12, 20, 36, 0.62);
+  border: 1px solid rgba(91, 141, 238, 0.18);
+  border-radius: var(--radius-md);
+}
+
+.workflow-agent-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.workflow-agent-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.workflow-agent-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.workflow-agent-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.workflow-agent-meta label {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.workflow-agent-meta span {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  font-family: "Consolas", "Monaco", monospace;
+}
+
+.workflow-agent-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.workflow-agent-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.workflow-agent-file:hover {
+  background: rgba(91, 141, 238, 0.12);
+  border-color: rgba(91, 141, 238, 0.4);
+  color: var(--color-text);
+}
+
+.workflow-agent-file-label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.workflow-agent-file-path {
+  font-family: "Consolas", "Monaco", monospace;
+  opacity: 0.7;
+}
+
+.workflow-agent-prompt {
+  margin-left: auto;
 }
 
 /* --- Criterion Reasoning Modal --- */

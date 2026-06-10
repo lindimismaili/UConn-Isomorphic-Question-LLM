@@ -89,6 +89,9 @@ const INITIAL_STATE = {
   errorFolder: "",
   activeModal: null,
   activeAgentKey: null,
+  // Inputs of the most recent run (prompt + file names), captured at start so
+  // the runtime modals can show them after the upload list is cleared.
+  runInputs: null,
 };
 
 // =============================================================================
@@ -214,6 +217,11 @@ function reducer(state, action) {
         error: null,
         errorFolder: "",
         files: [],
+        runInputs: {
+          prompt: action.prompt || "",
+          files: action.fileNames || [],
+          startAgent: action.startAgent || "",
+        },
         logs: [...state.logs, ...startLogs].slice(-MAX_LOGS),
       };
     }
@@ -674,8 +682,18 @@ export default function App() {
         agentKey={state.activeAgentKey}
         agent={state.activeAgentKey ? state.agents[state.activeAgentKey] : null}
       />
-      <SetupModal isOpen={state.activeModal === "setup"} onClose={closeModal} />
-      <OutputModal isOpen={state.activeModal === "output"} onClose={closeModal} />
+      <SetupModal
+        isOpen={state.activeModal === "setup"}
+        onClose={closeModal}
+        workflowId={state.workflowId}
+        runInputs={state.runInputs}
+      />
+      <OutputModal
+        isOpen={state.activeModal === "output"}
+        onClose={closeModal}
+        result={state.result}
+        runInputs={state.runInputs}
+      />
       <HelpModal isOpen={state.activeModal === "help"} onClose={closeModal} />
       <BatchEvalModal
         isOpen={state.activeModal === "batch-eval"}

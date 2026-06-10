@@ -7,11 +7,9 @@ import {
   buildAggregateRows,
   buildRubricMap,
   normalizeEvalRecord,
-  normalizeFileReference,
 } from './eval/evalData.js';
 import { useEvalItems } from './eval/useEvalItems.js';
 import EvalSummaryStrip from './eval/EvalSummaryStrip.jsx';
-import EvalReferencePanel from './eval/EvalReferencePanel.jsx';
 import EvalItemsTable from './eval/EvalItemsTable.jsx';
 import EvalAggregateTable from './eval/EvalAggregateTable.jsx';
 
@@ -38,44 +36,6 @@ export default function EvalResultsModal({
     ? report.passing_score_threshold
     : DEFAULT_PASSING_THRESHOLD;
   const rubricByName = useMemo(() => buildRubricMap(report), [report]);
-  const runInputFiles = useMemo(
-    () =>
-      (Array.isArray(report?.run_inputs) ? report.run_inputs : [])
-        .map((file) => normalizeFileReference(file))
-        .filter(Boolean),
-    [report],
-  );
-  const testingFiles = useMemo(
-    () =>
-      (Array.isArray(report?.testing_files) ? report.testing_files : [])
-        .map((file) => normalizeFileReference(file))
-        .filter(Boolean),
-    [report],
-  );
-  const rubricFiles = useMemo(() => {
-    const sourcePath =
-      typeof report?.rubric_source_path === 'string' && report.rubric_source_path
-        ? report.rubric_source_path
-        : 'data/rubric.json';
-    if (typeof report?.rubric_file === 'string' && report.rubric_file) {
-      const ref = normalizeFileReference({
-        name: report.rubric_file,
-        label: 'Rubric snapshot',
-        kind: 'rubric',
-        display_path: sourcePath,
-      });
-      return ref ? [ref] : [];
-    }
-    if (Array.isArray(report?.rubric) && report.rubric.length > 0) {
-      const ref = normalizeFileReference({
-        label: 'Rubric config',
-        kind: 'rubric',
-        display_path: sourcePath,
-      });
-      return ref ? [ref] : [];
-    }
-    return [];
-  }, [report]);
 
   const [criterionDetail, setCriterionDetail] = useState(null);
 
@@ -86,14 +46,6 @@ export default function EvalResultsModal({
     [items, rubricByName, threshold],
   );
   const aggregateRows = useMemo(() => buildAggregateRows(report), [report]);
-
-  const combinedFiles = useMemo(
-    () => [
-      ...runInputFiles.map((f) => ({ ...f, label: `Input File: ${f.label}` })),
-      ...testingFiles,
-    ],
-    [runInputFiles, testingFiles],
-  );
 
   const downloadButton = (fileName, label) => (
     <button className="btn btn-secondary" onClick={() => onDownload(fileName)} type="button">
@@ -106,7 +58,7 @@ export default function EvalResultsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Evaluator Results"
+      title="Evaluations"
       size="full"
       contentClassName="eval-results-modal"
       footer={(
@@ -120,21 +72,7 @@ export default function EvalResultsModal({
         </div>
       )}
     >
-      <EvalSummaryStrip
-        report={report}
-        itemCount={rows.length}
-        rubricFiles={rubricFiles}
-        onDownload={onDownload}
-      />
-
-      <div className="eval-reference-grid">
-        <EvalReferencePanel
-          title="Files"
-          files={combinedFiles}
-          emptyText="No files recorded for this run."
-          onDownload={onDownload}
-        />
-      </div>
+      <EvalSummaryStrip report={report} itemCount={rows.length} />
 
       {loadState === 'loading' && (
         <div className="modal-empty-state">Loading detailed eval items...</div>
