@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import mimetypes
 import uuid
 from pathlib import Path
@@ -14,6 +15,7 @@ from backend.src.api.state import (
     ALLOWED_UPLOAD_EXTENSIONS,
     MAX_UPLOAD_BYTES,
     MAX_UPLOAD_FILES,
+    _build_workflow_zip,
     _downloadable_file_names,
     _get_workflow_record,
     _is_under_directory,
@@ -121,6 +123,41 @@ async def upload_files(files: list[UploadFile] = File(...)):
         "sessionId": session_id,
         "files": uploaded_files,
     }
+
+@router.get("/api/download-zip/{workflow_id}")
+async def download_workflow_zip(workflow_id: str):
+    """Download every file from a completed workflow as one zip archive.
+
+    The archive is built once into the workflow's output folder and reused on
+    subsequent requests.
+    """
+    workflow = _get_workflow_record(workflow_id)
+    if workflow is None:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    _touch_workflow(workflow)
+    output_folder = workflow.get("outputFolder")
+    if not output_folder:
+        raise HTTPException(status_code=404, detail="Output folder not found")
+
+    output_dir = (OUTPUTS_DIR / output_folder).resolve()
+    if not _is_under_directory(output_dir, OUTPUTS_DIR) or not output_dir.is_dir():
+        raise HTTPException(status_code=404, detail="Output folder not found")
+
+    zip_name = f"{output_folder}.zip"
+    zip_path = output_dir / zip_name
+    if not zip_path.exists():
+        try:
+            await asyncio.to_thread(_build_workflow_zip, output_dir, zip_path)
+        except Exception as e:
+            logger.error("Failed to build zip for workflow %s: %s", workflow_id, e)
+            raise HTTPException(status_code=500, detail="Failed to build zip archive") from e
+
+    return FileResponse(
+        path=zip_path,
+        filename=zip_name,
+        media_type="application/zip",
+        content_disposition_type="attachment",
+    )
 
 @router.get("/api/download/{workflow_id}/{file_path:path}")
 async def download_file(workflow_id: str, file_path: str, inline: bool = False):
