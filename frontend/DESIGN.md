@@ -427,8 +427,10 @@ The named keyframes already in the system (reuse before adding new ones):
 
 Component-level motion rules:
 
-- Modal: backdrop `opacity`, content `opacity` + `translateY`/`scale`, on
-  `--transition-normal`.
+- Modal: backdrop `opacity` **and** `backdrop-filter` (blur 0 → `--blur-sm`;
+  backdrop-filter does not fade with opacity, so the radius itself is
+  animated to keep the blur in sync with the entrance), content `opacity` +
+  `translateY`/`scale`, all on `--transition-normal`.
 - Buttons / inputs / connectors: `--transition-fast`.
 - Cards & page-blur: `--transition-normal`; cards never transform on hover.
 - Honor reduced-motion intent by keeping animations to opacity/transform/filter

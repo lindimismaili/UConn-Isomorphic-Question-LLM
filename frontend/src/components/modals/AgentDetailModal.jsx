@@ -120,6 +120,7 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
         onClose={onClose}
         title={agent ? `${agent.name} Details` : 'Agent Details'}
         large
+        contentClassName="agent-detail-modal"
         modalBodyClassName="modal-body-flush"
         footer={
           <div className="agent-modal-footer">

@@ -2101,6 +2101,9 @@ body.modal-open .footer {
     visibility 0s;
 }
 
+/* The blur radius is animated alongside opacity because backdrop-filter does
+   not fade with element opacity — without this the blur pops in after the
+   modal finishes its entrance instead of ramping with it. */
 .modal-backdrop {
   position: absolute;
   top: 0;
@@ -2110,12 +2113,18 @@ body.modal-open .footer {
   z-index: 0;
   background: rgba(0, 0, 0, 0.72);
   opacity: 0;
-  backdrop-filter: blur(var(--blur-sm));
-  transition: opacity var(--transition-normal);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition:
+    opacity var(--transition-normal),
+    backdrop-filter var(--transition-normal),
+    -webkit-backdrop-filter var(--transition-normal);
 }
 
 .modal.is-visible .modal-backdrop {
   opacity: 1;
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
 /* Stacked modals (opened on top of another modal) only blur what's beneath
@@ -2793,10 +2802,14 @@ body.modal-open .footer {
 }
 
 /* Agent Details Modal */
+.agent-detail-modal {
+  max-width: min(94vw, 1240px);
+}
+
 .agent-modal-body {
   display: flex;
   gap: var(--panel-gap);
-  max-height: min(72vh, 760px);
+  max-height: min(78vh, 900px);
   min-height: 0;
   overflow-y: scroll;
   padding: var(--panel-padding);
@@ -2804,15 +2817,19 @@ body.modal-open .footer {
 }
 
 .agent-details-sidebar {
-  flex: 0 0 200px;
+  flex: 0 0 260px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  max-height: 400px;
   overflow-y: scroll;
   scrollbar-gutter: stable;
   padding-right: var(--spacing-sm);
   border-right: 1px solid var(--color-border);
+}
+
+.agent-detail-modal .detail-text-box {
+  min-height: 280px;
+  max-height: 60vh;
 }
 
 .agent-details-main {
@@ -3966,6 +3983,12 @@ body.modal-open .footer {
   letter-spacing: 0.04em;
 }
 
+.viewer-passed-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
 .viewer-generation-notes {
   font-size: 0.82rem;
   color: var(--color-text-secondary);
@@ -4425,36 +4448,6 @@ body.modal-open .footer {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-sm);
-}
-
-.workflow-agent-file {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.workflow-agent-file:hover {
-  background: rgba(91, 141, 238, 0.12);
-  border-color: rgba(91, 141, 238, 0.4);
-  color: var(--color-text);
-}
-
-.workflow-agent-file-label {
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.workflow-agent-file-path {
-  font-family: "Consolas", "Monaco", monospace;
-  opacity: 0.7;
 }
 
 .workflow-agent-prompt {

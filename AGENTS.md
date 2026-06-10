@@ -52,10 +52,12 @@ Backend:
 - `backend/src/schemas.py`, `backend/src/helpers.py`, `backend/src/safety.py`,
   `backend/src/paths.py`
 - `backend/data/agents.json` — single source of truth for all 8 agents; every entry
-  carries `sequence`, `model`, `reasoning`, `kind`, `isLLM`, `hasPrompt`, `promptName`,
-  `isStoppable`, `acceptsSourceFiles`, `countLabel`, `resultField`, `aliases`; setup entry
-  also has `allowedDomains` + `containerPythonPackages`; `_config` holds `themes`,
-  `apiTitle`, `apiDescription`, `metadataKeys`, `wrappedRecordMarkerKeys`
+  carries `sequence`, `name`, `description`, `model`, `reasoning`, `kind`, `isLLM`,
+  `hasPrompt`, `acceptsSourceFiles`, `isStoppable`, `useCodeInterpreter`,
+  `countLabel`, `countField` (output array used for question counts), `aliases`,
+  `inputFrom`/`outputTo` (flow display names), `cliDescription`, `resultField`;
+  the evaluation entry adds `promptName`; the setup entry adds `allowedDomains` +
+  `containerPythonPackages`; `_config` holds `themes`, `apiTitle`, `apiDescription`
 - `backend/data/prompts/*.txt` — agent prompt instructions; `bootstrap.txt` and
   `bootstrapCompile.txt` are container shell-task templates with `{var}` placeholders
 - `backend/data/rubric.json` — eval rubric criteria only (pass/fail scale, 9 criteria);
@@ -184,7 +186,7 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 - Structured outputs are enforced via Pydantic `output_type=` on each Agent
   (`agents` SDK), not via `response_format`.
 - Reasoning effort is set per-agent in `backend/data/agents.json`
-  (`Reasoning(effort="medium")` for Verifier/Generator).
+  (currently `medium` for Verifier/Generator/Latexifier).
 
 ### Frontend
 
@@ -209,16 +211,32 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   `useFileViewer` hook (`modals/useFileViewer.jsx`) — don't add a new modal per
   file type. Call `useFileViewer(workflowId)` and render `viewerModals` once in
   the host component's JSX.
-- **Three rich button-opened modals live in `ResultsSection`**, separate from the
-  generic dispatch above:
-  - `FinalResultModal` — tabbed viewer (Config / Source Qs / Generated Qs /
-    Evaluation) for `final_result.json`; uses `useFileContent` hook.
-  - `EvalResultsModal` — full evaluator results; sub-components in `eval/`:
-    `EvalSummaryStrip`, `EvalItemsTable`, `EvalAggregateTable`.
+- **Modals stack.** `Modal.jsx` tracks a global open-modal stack: each open
+  modal gets `z-index: 1000 + depth`, only the bottom modal darkens the page,
+  and stacked backdrops are blur-only (`.is-stacked`). Never set z-index on a
+  modal or restyle `.modal-backdrop` per component (see DESIGN.md §8 Stacking).
+- **Three rich button-opened modals live in `ResultsSection`** (titled
+  Results / Evaluations / Agents), separate from the generic dispatch above:
+  - `FinalResultModal` ("Results") — tabbed viewer (Config / Source Qs /
+    Generated Qs / Evaluation) for `final_result.json`; uses `useFileContent`.
+    The Source Questions tab reads `verified_questions` (the Verifier fills in
+    `is_correct`/`explanation`/`distractor_logic`; raw `source_questions` from
+    the extracter leave them empty). The Evaluation tab derives each
+    criterion's Pass/Fail from `score >= passing_score_threshold` — the report
+    has `pass_rate`/`items_passed`, not a `passed` boolean.
+  - `EvalResultsModal` ("Evaluations") — full evaluator results; sub-components
+    in `eval/`: `EvalSummaryStrip`, `EvalItemsTable`, `EvalAggregateTable`.
     Criterion chips in `EvalItemsTable` are `<button>` elements; clicking one
     opens `CriterionReasoningModal` with the grader's step-by-step reasoning.
-  - `WorkflowAgentsModal` — pipeline agent cards with metadata, flow display,
-    and per-agent artifact viewer buttons.
+  - `WorkflowAgentsModal` ("Agents") — run summary (input files, normalizer
+    config from `final_result.json`, extracted/generated counts), pipeline
+    agent cards with metadata + flow display, per-agent Input/Output/Prompt
+    buttons, and footer links that open the Results / Evaluations modals.
+- **Runtime nodes have dedicated modals**: `SetupModal` ("Starting Runtime" —
+  OpenAI runtime, workflow id, container packages/domains from the registry)
+  and `OutputModal` ("Ending Runtime" — output files with View/Download).
+  Both show the run's inputs from `state.runInputs`, captured by the reducer
+  at `WORKFLOW_START` because the upload list clears when a run starts.
 - **Grader reasoning lives at `results[].sample`** in the eval JSONL, not at
   the top-level `grader_samples` key. Use `parseSampleSteps(sample)` (exported
   from `modals/eval/evalData.js`) to parse `sample.output[0].content` (JSON
@@ -230,8 +248,8 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 ## Code Conventions
 
 - **Data files are hand-curated.** Files under `backend/data/` (`*.json`,
-  `prompts/*.txt`, `template.tex`) are managed by the user. Don't delete, rename,
-  or rewrite them; only edit content when explicitly asked.
+  `prompts/*.txt`, `latex_template.tex`) are managed by the user. Don't delete,
+  rename, or rewrite them; only edit content when explicitly asked.
 - **Agent key is `latexifier`** in all configs and external surfaces (artifact
   filenames, agent dict keys, `agents.json`). Internal Python identifiers may use
   `latex` for brevity — keep it consistent within a file.
@@ -368,7 +386,10 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 | Frontend styling / design system | `frontend/DESIGN.md`, `frontend/src/styles/app.css` |
 | File viewer dispatch | `frontend/src/utils/files.js` (`getViewerType`), `frontend/src/components/modals/useFileViewer.jsx` |
 | Rich result modals | `frontend/src/components/modals/FinalResultModal.jsx`, `EvalResultsModal.jsx`, `WorkflowAgentsModal.jsx` |
+| Runtime node modals | `frontend/src/components/modals/SetupModal.jsx` ("Starting Runtime"), `OutputModal.jsx` ("Ending Runtime") |
+| Modal shell / stacking / backdrop | `frontend/src/components/modals/Modal.jsx`, DESIGN.md §8 |
 | Eval criterion reasoning | `frontend/src/components/modals/eval/evalData.js` (`parseSampleSteps`), `eval/CriterionReasoningModal.jsx` |
+| Add a bundled test PDF for Browse Test Files / Create Data | drop it in `backend/data/evaluation/` (listed dynamically by `GET /api/evaluation/files`) |
 
 ## Deployment Notes
 
@@ -395,6 +416,11 @@ operational guides, not source of truth for local development.
   entry including `setup` and `output` carries it. Do not "fix" it.
 - `registry._load_raw` is `@lru_cache`. In tests that swap `AGENTS_CONFIG_PATH`,
   call `registry._load_raw.cache_clear()` first or the old data is returned.
+  Editing `agents.json` requires a backend restart for the same reason.
+- The frontend caches `/api/agents` at module level in `useAgentRegistry.js`
+  (reload the page after agents.json changes). Vitest tests that render
+  registry-driven components must stub `fetch` and `await loadAgentRegistry()`
+  before rendering — see `AgentPipeline.test.jsx` for the pattern.
 
 ## Hard Don'ts
 

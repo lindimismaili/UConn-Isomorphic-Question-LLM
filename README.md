@@ -34,6 +34,8 @@ The backend creates a shared OpenAI container for each workflow run, uploads sou
 - `backend/src/artifacts.py` workflow and agent artifact writers/readers
 - `backend/src/container.py` shared OpenAI container runtime helpers
 - `backend/data/` prompts, rubric, agents config, and evaluation fixtures
+  (PDFs in `backend/data/evaluation/` are listed dynamically by the UI's
+  Browse Test Files and Create Data flows — drop a file in to add an option)
 - `backend/uploads/` uploaded source files grouped by session
 - `backend/outputs/` timestamped workflow outputs
 - `backend/runtime/` SQLite mirror of workflow/batch state
@@ -163,6 +165,14 @@ If no file is supplied, the CLI falls back to the default evaluation PDF when av
 8. Finalize local output files
 
 The frontend mirrors these stages in the pipeline view, logs, and result panels.
+Clicking a pipeline block opens its detail modal: agents get a wide
+input/output inspector, while the runtime blocks open "Starting Runtime"
+(runtime parameters plus the run's input files/prompt) and "Ending Runtime"
+(inputs plus every output file with view/download). After a run completes, the
+results panel offers three modals — Results (config, verified source
+questions with answers and distractor logic, generated questions, evaluation
+summary), Evaluations (per-item judge results with criterion drill-down), and
+Agents (run summary, per-agent metadata, and artifact viewers).
 
 ## Outputs
 

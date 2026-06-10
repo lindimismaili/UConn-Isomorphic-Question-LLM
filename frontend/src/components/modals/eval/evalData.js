@@ -152,22 +152,32 @@ function coercePassed(value) {
  * @returns {{grades: object, passes: object, samplesByKey: object}}
  */
 function extractResultMaps(record) {
-  const grades = { ...asObject(record.grades) };
-  const passes = { ...asObject(record.passes) };
+  // Canonicalize every key to its UUID-stripped criterion name so the same
+  // criterion never appears under two key variants (which would render a
+  // duplicate, score-less chip alongside the real one).
+  const grades = {};
+  const passes = {};
   const samplesByKey = {};
+
+  for (const [key, value] of Object.entries(asObject(record.grades))) {
+    grades[normalizeCriterionName(key)] = value;
+  }
+  for (const [key, value] of Object.entries(asObject(record.passes))) {
+    passes[normalizeCriterionName(key)] = value;
+  }
 
   for (const result of Array.isArray(record.results) ? record.results : []) {
     const name = result?.name || result?.criterion || result?.criterion_name;
     if (!name) continue;
     const normalizedName = normalizeCriterionName(name);
-    if (grades[name] === undefined && typeof result.score === 'number') {
-      grades[name] = result.score;
+    if (grades[normalizedName] === undefined && typeof result.score === 'number') {
+      grades[normalizedName] = result.score;
     }
     const passed = coercePassed(
       result.passed ?? result.pass ?? result.status ?? result.result,
     );
-    if (passes[name] === undefined && passed !== null) {
-      passes[name] = passed;
+    if (passes[normalizedName] === undefined && passed !== null) {
+      passes[normalizedName] = passed;
     }
     if (result.sample && !samplesByKey[normalizedName]) {
       samplesByKey[normalizedName] = result.sample;
