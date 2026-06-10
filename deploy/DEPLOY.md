@@ -23,10 +23,10 @@ The script first asks which platform you are on:
 
 Choose `3` to continue with the full installer. Mac and Windows selections exit with local development guidance because the deploy path depends on apt, nginx, systemd, and avahi.
 
-The script installs system packages, confirms Python, creates `/var/www/uconn-isomorphic/.venv`, installs backend requirements, confirms or installs Node/npm, builds the Vite site, configures nginx, installs the backend systemd service, and sets the Pi hostname/local address so the site is available at:
+The script installs system packages, confirms Python, creates `/var/www/uconn-isomorphic/.venv`, installs backend requirements, confirms or installs Node/npm, builds the Vite site, configures nginx, and installs the backend systemd service. It does **not** rename the Pi. The local address uses the device's current hostname:
 
 ```text
-http://isomorphic.local
+http://<hostname>.local
 ```
 
 It warns if `.env` is missing or does not contain `OPENAI_API_KEY`.

@@ -7,8 +7,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEPLOY_CONFIG_FILE="${REPO_DIR}/.deploy.env"
 
-LOCAL_HOSTNAME="${LOCAL_HOSTNAME:-isomorphic}"
-LOCAL_DOMAIN="${LOCAL_DOMAIN:-isomorphic.local}"
 DEPLOY_DIR="${DEPLOY_DIR:-/var/www/uconn-isomorphic}"
 SERVICE_NAME="${SERVICE_NAME:-uconn-isomorphic}"
 BACKEND_PORT="${BACKEND_PORT:-3002}"
@@ -23,6 +21,14 @@ if [[ -f "${DEPLOY_CONFIG_FILE}" ]]; then
   # shellcheck source=/dev/null
   source "${DEPLOY_CONFIG_FILE}"
 fi
+
+DEVICE_HOSTNAME="$(hostname -s 2>/dev/null || hostname 2>/dev/null || true)"
+DEVICE_HOSTNAME="${DEVICE_HOSTNAME%%.*}"
+if [[ -z "${DEVICE_HOSTNAME}" ]]; then
+  DEVICE_HOSTNAME="raspberrypi"
+fi
+LOCAL_HOSTNAME="${DEVICE_HOSTNAME}"
+LOCAL_DOMAIN="${LOCAL_HOSTNAME}.local"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -115,6 +121,7 @@ require_sudo() {
   fi
 
   sudo -v
+  sync_etc_hosts
 }
 
 apt_update_once() {
@@ -218,22 +225,24 @@ install_system_packages() {
 configure_local_domain() {
   banner "Local Address"
 
-  local current_hostname
-  current_hostname="$(hostname 2>/dev/null || true)"
-
-  if [[ "${current_hostname}" != "${LOCAL_HOSTNAME}" ]]; then
-    info "Setting Raspberry Pi hostname to ${LOCAL_HOSTNAME} so ${LOCAL_DOMAIN} resolves through mDNS."
-    if command -v hostnamectl >/dev/null 2>&1; then
-      sudo hostnamectl set-hostname "${LOCAL_HOSTNAME}"
-    else
-      printf '%s\n' "${LOCAL_HOSTNAME}" | sudo tee /etc/hostname >/dev/null
-      sudo hostname "${LOCAL_HOSTNAME}"
-    fi
-  else
-    info "Hostname is already ${LOCAL_HOSTNAME}."
-  fi
-
+  info "Using existing device hostname ${LOCAL_HOSTNAME}."
   info "Local site address will be http://${LOCAL_DOMAIN}"
+}
+
+sync_etc_hosts() {
+  # Keep /etc/hosts in step with the current hostname. Without this, sudo can
+  # print "unable to resolve host <name>" when the hostname and hosts file drift.
+  local hosts_line="127.0.1.1	${LOCAL_HOSTNAME} ${LOCAL_DOMAIN}"
+
+  if grep -qE "^127\.0\.1\.1[[:space:]]+${LOCAL_HOSTNAME}([[:space:]]+${LOCAL_DOMAIN})?([[:space:]]|$)" /etc/hosts; then
+    info "/etc/hosts already maps 127.0.1.1 to ${LOCAL_HOSTNAME}."
+  elif grep -qE '^127\.0\.1\.1[[:space:]]' /etc/hosts; then
+    info "Updating the 127.0.1.1 entry in /etc/hosts to ${LOCAL_HOSTNAME}."
+    sudo sed -i -E "s/^127\.0\.1\.1[[:space:]].*/${hosts_line}/" /etc/hosts
+  else
+    info "Adding ${LOCAL_HOSTNAME} to /etc/hosts."
+    printf '%s\n' "${hosts_line}" | sudo tee -a /etc/hosts >/dev/null
+  fi
 }
 
 sync_repo_to_deploy_dir() {
@@ -363,6 +372,10 @@ install_backend_service() {
   banner "Backend Service"
 
   local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+  local allowed_origins="http://${LOCAL_DOMAIN},http://127.0.0.1"
+  if [[ -n "${PUBLIC_HOSTNAME:-}" ]]; then
+    allowed_origins="${allowed_origins},https://${PUBLIC_HOSTNAME},http://${PUBLIC_HOSTNAME}"
+  fi
 
   sudo tee "${service_file}" >/dev/null <<EOF
 [Unit]
@@ -377,7 +390,7 @@ Group=www-data
 WorkingDirectory=${DEPLOY_DIR}
 Environment=HOST=127.0.0.1
 Environment=PORT=${BACKEND_PORT}
-Environment=ALLOWED_ORIGINS=http://${LOCAL_DOMAIN}
+Environment=ALLOWED_ORIGINS=${allowed_origins}
 EnvironmentFile=-${DEPLOY_DIR}/.env
 ExecStart=${DEPLOY_DIR}/.venv/bin/uvicorn backend.src.server:app --host \${HOST} --port \${PORT}
 Restart=on-failure
@@ -407,9 +420,22 @@ install_nginx_config() {
     server_names="${server_names} ${PUBLIC_HOSTNAME}"
   fi
 
+  sudo rm -f /etc/nginx/sites-enabled/default
+
+  # Serve as the default vhost so requests addressed by IP or localhost (for
+  # example the local health check) reach this site instead of whichever
+  # enabled site happens to sort first. Skip the flag if another enabled site
+  # already claims default_server to keep nginx -t passing.
+  local default_server_flag=" default_server"
+  if grep -Rlsq "default_server" /etc/nginx/sites-enabled/ 2>/dev/null \
+    && ! grep -lsq "default_server" "${NGINX_CONF}" 2>/dev/null; then
+    warn "Another nginx site already declares default_server; this site will only answer for: ${server_names}."
+    default_server_flag=""
+  fi
+
   sudo tee "${NGINX_CONF}" >/dev/null <<EOF
 server {
-    listen 80;
+    listen 80${default_server_flag};
     server_name ${server_names};
 
     root ${DEPLOY_DIR}/dist;
@@ -447,7 +473,6 @@ EOF
 
   sudo chmod 644 "${NGINX_CONF}"
   sudo ln -sf "${NGINX_CONF}" "${NGINX_LINK}"
-  sudo rm -f /etc/nginx/sites-enabled/default
 
   sudo nginx -t
   sudo systemctl enable --now nginx
@@ -470,16 +495,22 @@ verify_local_site() {
     exit 1
   fi
 
-  if ! curl -fsS "http://127.0.0.1/api/health" >/dev/null; then
-    err "Local nginx health check failed at http://127.0.0.1/api/health."
+  if ! curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/health" >/dev/null; then
+    err "Backend health check failed at http://127.0.0.1:${BACKEND_PORT}/api/health."
+    err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
     exit 1
   fi
 
-  if curl -fsS "http://${LOCAL_DOMAIN}/api/health" >/dev/null; then
-    info "Site is confirmed to run locally at http://${LOCAL_DOMAIN}"
+  if ! curl -fsS --resolve "${LOCAL_DOMAIN}:80:127.0.0.1" "http://${LOCAL_DOMAIN}/api/health" >/dev/null; then
+    err "Local nginx health check failed for http://${LOCAL_DOMAIN}/api/health."
+    err "Check: sudo nginx -T | grep -A20 'server_name ${LOCAL_DOMAIN}'"
+    exit 1
+  fi
+
+  if curl -fsS "http://127.0.0.1/api/health" >/dev/null; then
+    info "Site is confirmed through localhost and http://${LOCAL_DOMAIN}"
   else
-    warn "The service is healthy through localhost, but ${LOCAL_DOMAIN} did not resolve from this shell yet."
-    warn "If the hostname was just changed, reconnect or reboot the Pi, then open http://${LOCAL_DOMAIN}"
+    warn "The site is healthy for http://${LOCAL_DOMAIN}, but plain http://127.0.0.1 reached another nginx server block."
   fi
 }
 
@@ -812,7 +843,7 @@ main() {
   select_platform
 
   echo "This script will install and create everything necessary to run this site on a Raspberry Pi."
-  echo "It will install system packages, create ${DEPLOY_DIR}, build the frontend, install the backend service, configure nginx, and set up ${LOCAL_DOMAIN}."
+  echo "It will install system packages, create ${DEPLOY_DIR}, build the frontend, install the backend service, configure nginx, and use the existing local address ${LOCAL_DOMAIN}."
   echo ""
 
   if ! ask_to_continue "Continue with Raspberry Pi setup?"; then
