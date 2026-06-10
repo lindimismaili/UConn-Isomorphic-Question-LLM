@@ -548,6 +548,28 @@ ensure_backend_port_available() {
   fi
 }
 
+wait_for_backend_health() {
+  local attempt
+
+  for attempt in $(seq 1 60); do
+    if curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/health" >/dev/null; then
+      return 0
+    fi
+
+    if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
+      err "${SERVICE_NAME} stopped before it became healthy."
+      err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
+      return 1
+    fi
+
+    sleep 1
+  done
+
+  err "${SERVICE_NAME} did not pass health check on port ${BACKEND_PORT} within 60 seconds."
+  err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
+  return 1
+}
+
 install_backend_service() {
   banner "Backend Service"
 
@@ -593,16 +615,13 @@ EOF
   ensure_backend_port_available
 
   sudo systemctl restart "${SERVICE_NAME}"
-  sleep 2
   if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
     err "${SERVICE_NAME} did not stay running after restart."
     err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
     exit 1
   fi
 
-  if ! curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/health" >/dev/null; then
-    err "${SERVICE_NAME} restarted but did not pass health check on port ${BACKEND_PORT}."
-    err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
+  if ! wait_for_backend_health; then
     exit 1
   fi
 
