@@ -68,8 +68,9 @@ If you prefer to keep the backend and frontend dependencies separate, activate t
 
 ## Environment Variables
 
-The backend loads `.env` from the repo root if present. `.env` is gitignored —
-copy [.env.example](.env.example) to `.env` and fill it in.
+The backend loads `.env` from the repo root if present. `.env` is tracked in
+the repo; [.env.example](.env.example) documents every supported variable.
+Local-only overrides belong in `.env.local` / `.env.*.local` (gitignored).
 
 Required:
 

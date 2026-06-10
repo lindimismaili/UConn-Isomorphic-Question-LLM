@@ -48,8 +48,7 @@ baseline-*.png
 Thumbs.db
 Desktop.ini
 
-# Local secrets / configs
-.env
+# Local secrets / configs (.env itself is tracked intentionally)
 .deploy.env
 .env.local
 .env.*.local

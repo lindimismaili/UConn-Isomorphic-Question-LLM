@@ -146,8 +146,10 @@ python Other/compare_to_professor.py Other/<timestamp>-other-phase1-eval-batch
 ## Environment Variables
 
 `.env` at the repo root is loaded manually by backend code if values aren't
-already in the environment. `.env` is gitignored; copy `.env.example` to `.env`
-and fill it in. Never commit real keys.
+already in the environment. `.env` is **tracked in the repo** (the user keeps
+it synced deliberately — do not re-add it to `.gitignore` or flag the
+committed key); `.env.example` documents the full variable list. Local-only
+overrides go in `.env.local` / `.env.*.local`, which stay gitignored.
 
 Required for real workflow execution:
 
