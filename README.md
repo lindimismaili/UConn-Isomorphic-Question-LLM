@@ -154,6 +154,29 @@ CLI flags:
 
 If no file is supplied, the CLI falls back to the default evaluation PDF when available.
 
+## Prompt Versioning
+
+Prompt templates live in `backend/data/prompts/*.txt`. Use Git commits as the
+version history for prompt experiments, and keep prompt changes in dedicated
+prompt-only commits:
+
+```bash
+python scripts/prompt_versions.py status
+python scripts/prompt_versions.py snapshot -m "Tune generator distractor instructions"
+```
+
+Useful rollback and inspection commands:
+
+```bash
+python scripts/prompt_versions.py list
+python scripts/prompt_versions.py show <commit> generator
+python scripts/prompt_versions.py restore <commit> generator
+```
+
+`restore` creates a new prompt-only commit by default so the rollback itself is
+also recorded. Add `--no-commit` only when you need to inspect the restored files
+before committing.
+
 ## Workflow Stages
 
 1. Upload source files to OpenAI
