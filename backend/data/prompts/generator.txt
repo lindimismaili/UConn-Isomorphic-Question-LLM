@@ -22,10 +22,10 @@ Hard constraints:
 
 Generated-question content:
 - Use incrementing identifiers and preserve the exact source identifier for lineage.
-- Include a stem, difficulty, theme, topic tags, and concise generation notes for each generated question.
+- Include a stem, difficulty, tags, and concise generation notes for each generated question.
 - For multiple-choice questions, include labeled options, exactly one correct answer, explanations, and
   distractor-logic notes.
-- For open-ended questions, include a solution answer and no answer options.
+- For open-ended questions, include a concise answer, a supporting explanation, and no answer options.
 - For multi-part questions, include the shared parent stem and the same number of parts as the source.
 - For skipped figure-based questions, leave the question content empty apart from the skip reason.
 
@@ -35,19 +35,29 @@ Generation rules:
    - If no difficulty is requested, leave generated difficulty blank.
    - Do not infer or invent difficulty labels from source questions.
 2. Theme:
-   - Use the requested theme when provided and valid.
-   - Else preserve source theme.
-   - Theme must be one of: `life_science`, `engineering`, `everyday_activity`, `physics_abstract`.
-3. Numerical variation:
+   - The overall exam theme arrives in `configuration.theme`, either as a `Label: guidance`
+     string (a user-selected theme label followed by generation guidance) or as a short label.
+   - When a theme is provided, re-cast EVERY generated question's scenario and context to fit
+     the theme's guidance while preserving the core physics concept, difficulty, answer
+     structure, numeric reasoning, and distractor logic.
+   - If no theme is provided, preserve the source question's real-world context.
+3. Tags:
+   - Give each generated question a `tags` list describing its specific context: topics,
+     actions, physical setting, and goals.
+   - Each tag is 1-3 snake_case words; at most 5 tags per question.
+   - Maintain a running internal list of tags you have used while generating, and REUSE an
+     existing tag when a later question shares the same context instead of inventing a
+     near-duplicate (e.g., do not add `sprinting` if `running` was already used).
+4. Numerical variation:
    - Replace source numeric values with new realistic values.
    - Avoid trivial perturbations.
-4. Option count (multiple-choice only):
+5. Option count (multiple-choice only):
    - Keep the same number of options as source question.
    - Use keys `A`, `B`, `C`, `D`, ... in order.
-5. Correctness (multiple-choice only):
+6. Correctness (multiple-choice only):
    - Exactly one option must be correct.
    - Randomize which option letter is correct across generated items.
-6. Distractor quality (multiple-choice only, critical):
+7. Distractor quality (multiple-choice only, critical):
    - Read each source option's distractor-logic note. It encodes the SPECIFIC solver error or structural role that option was designed to capture.
    - For each generated option, you MUST reproduce the SAME error pattern from the corresponding source role, but applied to the NEW numbers/scenario. Example: if a source distractor uses mass instead of weight, then in the generated question one distractor must be the value you get by using mass instead of weight under the new setup.
    - Preserve the full set of source roles one-to-one: every misconception present in the source must appear in the generated set, and no extra misconceptions should be invented. The correct-answer role (including structural roles like "none of the above") must also be preserved.
@@ -56,17 +66,17 @@ Generation rules:
    - Preserve the same error label or description for the generated option that mirrors that source role, rewritten to reference the new quantities where helpful. This makes the lineage auditable.
    - Do not substitute a generic "plausible wrong number" for a role that originally encoded a specific misconception. That is a failure mode.
    - If the source's distractor logic is missing or empty (older items), infer the misconception from the source option's text and explanation, and record your inferred label.
-7. Explanations (multiple-choice only):
+8. Explanations (multiple-choice only):
    - Correct option: at least 2 sentences with principle + key equation(s) in LaTeX and reasoning path.
    - Distractor explanations: at least 1 sentence naming the specific misconception or error in student-facing language.
-8. Formatting:
+9. Formatting:
    - Use LaTeX for math expressions.
-9. Verbosity:
+10. Verbosity:
    - Keep each generated stem about as verbose as the corresponding source stem.
    - For verbose open-ended sources, do NOT compress the problem into a short one-sentence directive.
    - For concise sources, do NOT add long background stories, extra scaffolding, or unnecessary explanatory text.
    - For multi-part questions, match the source's level of detail in the parent stem and in each corresponding part.
-10. Review mode:
+11. Review mode:
    - If the task is a review or revision pass and draft isomorphic questions are provided, compare each draft question against its source question.
    - Revise any draft that is too compressed, too padded, or stylistically mismatched.
    - Preserve identifiers, source identifiers, question counts, question types, and figure-skip placeholders in review mode unless a change is required to return a valid response.
@@ -74,10 +84,12 @@ Generation rules:
 Open-ended question rules:
 - Mark the generated item as open-ended.
 - Do not include answer options or sub-parts.
-- Do NOT apply rules 4–7.
+- Do NOT apply rules 5–8.
 - Generate a new stem with a different scenario and/or numerical values targeting the same physics concept.
 - Preserve the source's openness and rhetorical style: if the source asks for an explanation or justification in a multi-sentence narrative setup, the generated stem should do the same.
-- Provide a clear, concise solution (2–4 sentences; include key equation(s) in LaTeX).
+- Set `answer` to the concise final result (the value or short statement a grader checks).
+- Set `explanation` to the supporting reasoning/derivation that justifies the answer
+  (2–4 sentences; include key equation(s) in LaTeX).
 - The generated question must be self-contained and answerable without a figure.
 
 Multi-part question rules:
@@ -87,8 +99,9 @@ Multi-part question rules:
 - Include the SAME NUMBER of parts as the source, in the same order:
   - Preserve each part label (a, b, c, ...).
   - Match each part's question type (MC or open-ended).
-  - For MC parts: generate new options with distractors; apply rules 4–7.
-  - For open-ended parts: generate a new sub-question stem and provide a clear solution in LaTeX.
+  - For MC parts: generate new options with distractors; apply rules 5–8.
+  - For open-ended parts: generate a new sub-question stem; set the part's `answer` to the
+    concise final result and its `explanation` to the supporting reasoning/derivation in LaTeX.
 - All parts must reference and be solvable using the new parent stem.
 
 Validation before returning:
