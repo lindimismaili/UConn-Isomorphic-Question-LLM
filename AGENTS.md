@@ -142,6 +142,11 @@ python Other/compare_to_professor.py Other/<timestamp>-other-phase1-eval-batch
   git commit before finalizing. Stage only the changes from that completed work
   and use a concise, descriptive commit message that captures the user-facing
   behavior and major implementation scope.
+- Prompt edits are versioned separately. After any change to
+  `backend/data/prompts/*.txt`, immediately run
+  `python scripts/prompt_versions.py snapshot -m "<short prompt-change summary>"`
+  so prompt experiments are saved as prompt-only commits that can be listed,
+  inspected, or restored later.
 
 ## Environment Variables
 
@@ -252,6 +257,11 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 - **Data files are hand-curated.** Files under `backend/data/` (`*.json`,
   `prompts/*.txt`, `latex_template.tex`) are managed by the user. Don't delete,
   rename, or rewrite them; only edit content when explicitly asked.
+- **Prompt files must stay easy to roll back.** Before prompt experiments, use
+  `python scripts/prompt_versions.py status`; after editing prompts, snapshot
+  them immediately with `python scripts/prompt_versions.py snapshot`. Use
+  `list`, `show <commit> <prompt>`, and `restore <commit> [prompt...]` from the
+  same helper to inspect or switch versions.
 - **Agent key is `latexifier`** in all configs and external surfaces (artifact
   filenames, agent dict keys, `agents.json`). Internal Python identifiers may use
   `latex` for brevity — keep it consistent within a file.
