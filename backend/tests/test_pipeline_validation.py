@@ -37,7 +37,7 @@ def source_question(source_id: str = "q1", *, has_figure: bool = False) -> Sourc
         options=[option("A", "A", correct=True), option("B", "B")],
         has_explicit_answer=True,
         question_type="multiple_choice",
-        topic_tags=[],
+        tags=[],
         has_figure=has_figure,
         answer="A",
     )
@@ -51,7 +51,7 @@ def generated_question(source_id: str = "q1", *, skipped: bool = False) -> NewQu
         options=[] if skipped else [option("A", "A"), option("B", "B", correct=True)],
         generation_notes="notes",
         question_type="multiple_choice",
-        topic_tags=[],
+        tags=[],
         skipped=skipped,
         skip_reason="figure required" if skipped else "",
     )

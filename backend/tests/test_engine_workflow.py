@@ -45,7 +45,7 @@ def _source_question() -> SourceQuestionItem:
         ],
         has_explicit_answer=True,
         question_type="multiple_choice",
-        topic_tags=["arithmetic"],
+        tags=["arithmetic"],
         has_figure=False,
         answer="A",
     )
@@ -60,7 +60,7 @@ def _generated_question() -> NewQuestionItem:
             OptionItem(key="A", text="6", is_correct=True, explanation="3+3=6", distractor_logic="generic_plausible_value"),
             OptionItem(key="B", text="7", is_correct=False, explanation="off by one", distractor_logic="off_by_one"),
         ],
-        topic_tags=["arithmetic"],
+        tags=["arithmetic"],
         generation_notes="varied numbers",
         question_type="multiple_choice",
         answer="A",

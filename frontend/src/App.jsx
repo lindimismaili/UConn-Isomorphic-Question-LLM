@@ -488,7 +488,7 @@ export default function App() {
 
   const serviceInactive = openaiStatus.isDown;
 
-  const handleSend = (prompt, files) => {
+  const handleSend = (prompt, files, theme = "") => {
     if (serviceInactive) {
       dispatch({
         type: "LOG",
@@ -497,7 +497,7 @@ export default function App() {
       });
       return;
     }
-    runWorkflow(prompt, files, { runEvaluations });
+    runWorkflow(prompt, files, { runEvaluations, theme });
   };
 
   const handleClearInputs = () => {

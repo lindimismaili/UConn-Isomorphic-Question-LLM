@@ -78,6 +78,7 @@ async def start_workflow(
     fileIds: str = Form("[]"),
     testFiles: str = Form("[]"),
     runEvaluation: str = Form("false"),
+    theme: str = Form(""),
 ):
     """Start a new workflow and return a stream of status updates."""
     try:
@@ -142,6 +143,7 @@ async def start_workflow(
             prompt,
             file_paths,
             run_evaluation=_parse_form_bool(runEvaluation, default=False),
+            theme=theme,
         ),
     )
 

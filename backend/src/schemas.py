@@ -38,8 +38,7 @@ class SourceQuestionItem(BaseModel):
     has_explicit_answer: bool
     difficulty: str = ""
     question_type: str
-    theme: str = ""
-    topic_tags: list[str]
+    tags: list[str] = []
     has_figure: bool = False
     answer: str = ""
     parts: list[QuestionPart] = []
@@ -54,6 +53,7 @@ class NewQuestionPart(BaseModel):
     question_type: str
     options: list[OptionItem] = []
     answer: str = ""
+    explanation: str = ""
 
 
 class NewQuestionItem(BaseModel):
@@ -64,13 +64,13 @@ class NewQuestionItem(BaseModel):
     stem: str
     options: list[OptionItem]
     difficulty: str = ""
-    theme: str = ""
-    topic_tags: list[str]
+    tags: list[str] = []
     generation_notes: str
     question_type: str = "multiple_choice"
     skipped: bool = False
     skip_reason: str = ""
     answer: str = ""
+    explanation: str = ""
     parts: list[NewQuestionPart] = []
     points: float = 0.0
 
@@ -195,6 +195,7 @@ class LaTeXQuestionInput(BaseModel):
     skipped: bool = False
     skip_reason: str = ""
     answer: str = ""
+    explanation: str = ""
     parts: list[NewQuestionPart] = []
     points: float = 0.0
 

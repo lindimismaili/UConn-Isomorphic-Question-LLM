@@ -32,7 +32,7 @@ def _source_mc(source_id: str, labels: list[str]) -> SourceQuestionItem:
         options=opts,
         has_explicit_answer=True,
         question_type="multiple_choice",
-        topic_tags=[],
+        tags=[],
     )
 
 
@@ -52,7 +52,7 @@ def _generated_mc(source_id: str, labels: list[str]) -> NewQuestionItem:
         source_id=source_id,
         stem="g-stem",
         options=opts,
-        topic_tags=[],
+        tags=[],
         generation_notes="",
         question_type="multiple_choice",
     )

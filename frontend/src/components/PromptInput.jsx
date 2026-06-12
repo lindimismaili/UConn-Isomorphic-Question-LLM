@@ -35,6 +35,16 @@ function normalizeDropdownItems(raw) {
 }
 
 /**
+ * Builds the "Label: Prompt" line injected into the textarea for a theme.
+ *
+ * @param {{label: string, prompt: string} | undefined} item
+ * @returns {string}
+ */
+function themeLine(item) {
+  return item ? `${item.label}: ${item.prompt}` : '';
+}
+
+/**
  * Removes one previously inserted theme line from the prompt textarea.
  *
  * @param {string} text
@@ -124,7 +134,8 @@ export default function PromptInput({
       alert('Please enter a prompt or upload files.');
       return;
     }
-    onSend(prompt, files);
+    const selectedItem = dropdownItems.find((item) => item.value === dropdownSelectValue);
+    onSend(prompt, files, themeLine(selectedItem));
   };
 
   const handleReset = () => {
@@ -146,10 +157,10 @@ export default function PromptInput({
     const nextValue = e.target.value;
     const previousItem = dropdownItems.find((item) => item.value === selectedDropdownValue);
     const nextItem = dropdownItems.find((item) => item.value === nextValue);
-    const cleanedPrompt = removePromptLine(prompt, previousItem?.prompt);
-    const nextPrompt = nextItem?.prompt || '';
-    const mergedPrompt = nextPrompt
-      ? [cleanedPrompt, nextPrompt].filter(Boolean).join('\n\n')
+    const cleanedPrompt = removePromptLine(prompt, themeLine(previousItem));
+    const nextThemeLine = themeLine(nextItem);
+    const mergedPrompt = nextThemeLine
+      ? [cleanedPrompt, nextThemeLine].filter(Boolean).join('\n\n')
       : cleanedPrompt;
 
     setSelectedDropdownValue(nextValue);

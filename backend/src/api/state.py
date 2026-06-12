@@ -1102,6 +1102,7 @@ async def run_workflow_async(
     file_paths: list[str],
     *,
     run_evaluation: bool = True,
+    theme: str = "",
 ):
     """Run the workflow asynchronously."""
     workflow = workflows[workflow_id]
@@ -1114,6 +1115,7 @@ async def run_workflow_async(
         outputs_dir=outputs_dir,
         output_folder_label=output_folder_label,
         run_evaluation=run_evaluation,
+        theme=theme,
     )
 
 async def run_workflow_from_agent_async(
@@ -1188,6 +1190,7 @@ async def _execute_workflow(
     agent_input_filename: str = "",
     input_to_agent_run: bool = False,
     run_evaluation: bool = True,
+    theme: str = "",
 ) -> None:
     """Run the workflow via the shared engine; surface FastAPI cancel/error states."""
     client = get_openai_client()
@@ -1198,6 +1201,7 @@ async def _execute_workflow(
             workflow=workflow,
             prompt=prompt,
             file_paths=file_paths,
+            theme=theme,
             outputs_dir=outputs_dir,
             output_folder_label=output_folder_label,
             touch_workflow=_touch_workflow,

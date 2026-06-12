@@ -4,20 +4,12 @@ from __future__ import annotations
 
 import json
 import re
-from collections import Counter
 from pathlib import Path
 from typing import Any, Optional
 
 from openai import OpenAI
 
 from .schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
-
-# 1-3 lowercase snake_case words as produced by the LLM theme labeler.
-_THEME_RE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z][a-z0-9]*){0,2}$")
-
-
-def _is_valid_theme(value: str) -> bool:
-    return bool(value and _THEME_RE.match(value))
 
 
 def load_agents_config(config_path: Path, logger: Any) -> dict[str, Any]:
@@ -106,19 +98,6 @@ def _clean_metadata_value(value: Any) -> str:
     return str(value).strip()
 
 
-def dominant_question_theme(questions: list[SourceQuestionItem]) -> str:
-    """Return the most common LLM-assigned theme across the extracted questions."""
-    ordered_themes = [
-        q.theme.strip()
-        for q in questions
-        if q.theme and _is_valid_theme(q.theme.strip())
-    ]
-    if not ordered_themes:
-        return ""
-    counts = Counter(ordered_themes)
-    return max(counts, key=lambda theme: (counts[theme], -ordered_themes.index(theme)))
-
-
 def apply_requested_difficulty(
     questions: list[SourceQuestionItem] | list[NewQuestionItem],
     difficulty: str,
@@ -149,8 +128,6 @@ def merge_extracted_metadata_into_config(
         config.title = extracted_title
 
     extracted_theme = _clean_metadata_value(extraction.theme)
-    if not _is_valid_theme(extracted_theme):
-        extracted_theme = dominant_question_theme(extraction.questions)
     if not config.theme and extracted_theme:
         config.theme = extracted_theme
 

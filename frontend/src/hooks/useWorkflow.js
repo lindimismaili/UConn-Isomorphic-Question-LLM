@@ -238,7 +238,7 @@ export function useWorkflow(dispatch) {
    *
    * @param {string} prompt - User prompt forwarded to the backend.
    * @param {Array<object>} files - Selected files from the upload/test-file UI.
-   * @param {{runEvaluations?: boolean}} options - Workflow execution options.
+   * @param {{runEvaluations?: boolean, theme?: string}} options - Workflow execution options.
    */
   const run = useCallback(async (prompt, files, options = {}) => {
     if (inFlightRef.current) return;
@@ -288,6 +288,7 @@ export function useWorkflow(dispatch) {
       startForm.append('prompt', prompt);
       startForm.append('sessionId', sessionId || '');
       startForm.append('runEvaluation', options.runEvaluations ? 'true' : 'false');
+      startForm.append('theme', options.theme || '');
       if (selectedTestFiles.length > 0) {
         startForm.append('testFiles', JSON.stringify(selectedTestFiles));
         dispatch({
