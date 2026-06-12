@@ -72,11 +72,6 @@ Distractor logic requirements (for ALL multiple-choice options, including multi-
 - Keep each distractor-logic note to one short sentence or a labeled phrase. It is reused downstream, not displayed.
 - For open-ended and figure-dependent questions, leave distractor logic empty.
 
-Theme requirements:
-- Every question must include one of:
-  - `life_science`
-  - `engineering`
-  - `everyday_activity`
-  - `physics_abstract`
-- Preserve incoming theme when already valid; otherwise infer best match.
+Tag requirements:
+- Preserve each question's `tags` list exactly as received; do not add, remove, or rewrite tags.
 - Do not infer or fill difficulty labels while verifying answers.

@@ -18,10 +18,11 @@ Rules:
   or relative difficulty change. If the user does not mention difficulty, keep it empty.
 - Do not infer difficulty, theme, or title from uploaded files; the extracter handles
   source metadata after reading the files.
-- If the user requests a theme not in the theme selector, express it as 1-3 snake_case words
-  (e.g., `space_exploration`, `video_games`, `ancient_history`, `biology`). Do not use a
-  fixed list; derive a natural label from what the user said.
-- If no theme is requested, leave the theme blank.
+- If `defaults.theme` is non-empty, it is a user-selected theme in `Label: guidance` form.
+  Copy it into the output theme VERBATIM — do not shorten, reformat, or re-case it.
+- Otherwise, if the user requests a theme in free text, derive a short natural label from
+  what they said (e.g., "Space Exploration", "Video Games"). Do not use a fixed list.
+- If no theme is provided or requested, leave the theme blank.
 - If no title is requested, leave the title blank.
 - Treat requests such as "without answers", "no answer key", "student copy", "hide answers",
   and "don't show answers" as requests for a no-answer student version.

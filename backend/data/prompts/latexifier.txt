@@ -13,153 +13,16 @@ Your response must include:
 4. The document properly closed with \end{document}
 5. A compiled PDF artifact produced by calling the provided compile tool
 
-# Required LaTeX Document Template
+# LaTeX Document Template (strong default)
 
-Use this EXACT preamble and macro structure:
+The preamble and macros below are the house style. Use them as-is for standard
+multiple-choice, open-ended, and multi-part questions — they cover the vast
+majority of documents. Only if a question genuinely does not fit these macros
+may you adapt or extend them, and when you do, preserve the same visual style:
+the AnsRed/WrongBlue/SkipGray colors, the \ifshowreason answer-toggle behavior,
+and the block spacing/divider conventions.
 
-% ===== Document Preamble =====
-\documentclass[11pt]{article}
-\usepackage[margin=0.5in]{geometry}
-\usepackage{amsmath,amssymb}
-\usepackage{xcolor}
-\usepackage{enumitem}
-\usepackage{needspace}
-\usepackage{comment}
-
-% ===== Colors =====
-\definecolor{AnsRed}{RGB}{170,0,0}
-\definecolor{WrongBlue}{RGB}{0,0,160}
-\definecolor{SkipGray}{RGB}{120,120,120}
-
-% ===== Choice list styling (tight, consistent) =====
-\setlist[enumerate]{%
-  leftmargin=1.5em,
-  itemsep=0.25em,
-  topsep=0.25em,
-  label=\textbf{\Alph*.}
-}
-
-% ===== Style Wrappers =====
-\newcommand{\QuestionStyle}[1]{{\large\bfseries\boldmath #1}}
-\newcommand{\AnswerStyle}[1]{{\large\bfseries\boldmath #1}}
-\newcommand{\ReasonStyle}[1]{{\normalsize #1}}
-
-% ===== Show / Hide Reasoning Toggle =====
-\newif\ifshowreason
-\showreasontrue      % Instructor version
-% \showreasonfalse   % Student version
-
-% ===== Choice Item Macros (Answer + Reasoning) =====
-% Usage:
-%   \Correct{Answer}{Reasoning}
-%   \Wrong{Answer}{Reasoning}
-
-\newcommand{\Correct}[2]{%
-  \item \AnswerStyle{\textcolor{AnsRed}{#1}}%
-  \ifshowreason\\[-0.2em]
-    \ReasonStyle{\textcolor{AnsRed}{#2}}%
-  \fi
-}
-
-\newcommand{\Wrong}[2]{%
-  \item \AnswerStyle{\textcolor{WrongBlue}{#1}}%
-  \ifshowreason\\[-0.2em]
-    \ReasonStyle{\textcolor{WrongBlue}{#2}}%
-  \fi
-}
-
-% ===== Multiple-Choice Question Block Macro =====
-% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
-
-\newcommand{\QBlock}[4]{%
-  \Needspace{8\baselineskip}%
-  \noindent
-  \begin{minipage}{\linewidth}
-    \QuestionStyle{#1.~#2}
-
-    \vspace{0.25em}
-    \begin{enumerate}
-      #3
-    \end{enumerate}
-
-    \vspace{0.1em}
-    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
-
-    \vspace{0.25em}
-    \hrule height 0.4pt
-  \end{minipage}
-  \vspace{0.75em}
-}
-
-% ===== Open-Ended Question Block Macro =====
-% Usage: \OEBlock{Q1}{stem...}{answer text}
-
-\newcommand{\OEBlock}[3]{%
-  \Needspace{5\baselineskip}%
-  \noindent
-  \begin{minipage}{\linewidth}
-    \QuestionStyle{#1.~#2}
-
-    \vspace{0.25em}
-    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}
-
-    \vspace{0.25em}
-    \hrule height 0.4pt
-  \end{minipage}
-  \vspace{0.75em}
-}
-
-% ===== Multi-Part Question Block Macro =====
-% Usage: \MPBlock{Q1}{stem...}{<parts>}
-
-\newcommand{\MPBlock}[3]{%
-  \Needspace{8\baselineskip}%
-  \noindent
-  \begin{minipage}{\linewidth}
-    \QuestionStyle{#1.~#2}
-
-    \vspace{0.25em}
-    #3
-
-    \vspace{0.25em}
-    \hrule height 0.4pt
-  \end{minipage}
-  \vspace{0.75em}
-}
-
-% ===== MC Sub-Part Macro =====
-% Usage: \MCPart{a}{stem...}{<items>}{answer key}
-
-\newcommand{\MCPart}[4]{%
-  \par\vspace{0.35em}
-  \noindent\textbf{(#1)}~#2
-  \begin{enumerate}
-    #3
-  \end{enumerate}
-  \vspace{0.1em}
-  \noindent\textit{\textbf{Answer:}~#4}
-  \par
-}
-
-% ===== Open-Ended Sub-Part Macro =====
-% Usage: \OEPart{a}{stem...}{answer text}
-
-\newcommand{\OEPart}[3]{%
-  \par\vspace{0.35em}
-  \noindent\textbf{(#1)}~#2
-  \par\vspace{0.15em}
-  \noindent\textit{\textbf{Answer:}~#3}
-  \par
-}
-
-% ===== Skipped Question Note Macro =====
-% Usage: \SkipBlock{Q1}{reason}
-
-\newcommand{\SkipBlock}[2]{%
-  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
-  \vspace{0.5em}\par
-}
-
+{latex_template}
 
 # Document Structure
 
@@ -174,7 +37,7 @@ After the preamble, structure your document as:
 {\huge \textbf{<TITLE>}}\\[0.25em]
 {\Large <SUBTITLE>}\\[0.25em]
 % Only include the next line for instructor versions with answers shown; omit it entirely for student versions:
-{\large Answer the questions below. Correct answers are in \textcolor{AnsRed}{RED}, while incorrect answers are in \textcolor{WrongBlue}{BLUE}.}
+{\large <COLOR LEGEND>}
 \end{center}
 
 \vspace{0.75em}
@@ -186,10 +49,15 @@ After the preamble, structure your document as:
 
 Header rules — apply in order:
 
+The document theme may arrive as a `Label: guidance` string (a user-selected
+theme label followed by generation guidance). Wherever the header rules below
+use the theme, use ONLY the text before the first colon (the label) — never
+the guidance text after it.
+
 **`<TITLE>`** (the big heading — what TYPE of document this is):
 1. Use the title explicitly requested by the user when one exists.
-2. Otherwise, if a document theme is available, produce: "[Theme] Practice Questions"
-   (e.g. "Physics Practice Questions" for theme "physics_abstract").
+2. Otherwise, if a document theme is available, produce: "[Theme label] Practice Questions"
+   (e.g. theme "Video Games: re-cast each scenario..." → "Video Games Practice Questions").
 3. Otherwise default to: "Isomorphic Practice Questions".
 Do NOT use the source title as the main title; the source title belongs in the subtitle.
 
@@ -198,11 +66,19 @@ Do NOT use the source title as the main title; the source title belongs in the s
 2. Otherwise build from available metadata in priority order:
    - Course code or course name, if available (e.g. "PHYS 1101").
    - Source title, if available (e.g. "Quiz #2").
-   - Theme as a fallback, if available.
+   - Theme label as a fallback, if available.
 3. If nothing is available: omit the subtitle line entirely.
+Keep the subtitle about the SOURCE CONTEXT, never about the question format
+(do not write "Multiple choice questions" or similar as the subtitle).
 
-**Color-coding instruction line** (third line):
-- Include it only for instructor versions with answers shown.
+**`<COLOR LEGEND>`** (third line) — choose it by the question types present in the document:
+- Only multiple-choice questions:
+  `Answer the questions below. Correct answers are in \textcolor{AnsRed}{RED}, while incorrect answers are in \textcolor{WrongBlue}{BLUE}.`
+- Only open-ended and/or multi-part questions:
+  `Answer the questions below. Answers are in \textcolor{AnsRed}{RED}, with explanations in \textcolor{WrongBlue}{BLUE}.`
+- A mix of both:
+  `Answer the questions below. Correct answers are in \textcolor{AnsRed}{RED}, incorrect answers are in \textcolor{WrongBlue}{BLUE}, and explanations for open-ended questions are in \textcolor{WrongBlue}{BLUE}.`
+- Include the legend only for instructor versions with answers shown.
 - Omit it entirely for student versions with answers hidden.
 - When omitted, also set `\showreasonfalse` instead of `\showreasontrue` in the preamble
   so that explanations are hidden throughout the document.
@@ -225,15 +101,18 @@ Apply the following rules in order for each question:
 - `<answer key>`: the letter (e.g., `B`) of the correct option
 
 *Open-ended*:
-- Use `\OEBlock{Q<number>}{<stem>}{<answer>}`
-- `<answer>`: the solution text for that question
+- Use `\OEBlock{Q<number>}{<stem>}{<answer>}{<explanation>}`
+- `<answer>`: the concise final result for that question
+- `<explanation>`: the supporting reasoning/derivation from the question's `explanation`
+  field (LaTeX equations preserved); pass an empty group `{}` if no explanation exists
 
 *Multi-part*:
 - Use `\MPBlock{Q<number>}{<stem>}{<parts>}`
 - `<stem>`: the shared context text
 - `<parts>`: a sequence of `\MCPart` and/or `\OEPart` calls for each sub-part:
   - MC sub-part: `\MCPart{<label>}{<stem>}{<options>}{<answer key>}`
-  - OE sub-part: `\OEPart{<label>}{<stem>}{<answer>}`
+  - OE sub-part: `\OEPart{<label>}{<stem>}{<answer>}{<explanation>}` — same answer/explanation
+    split as `\OEBlock`, using the part's `explanation` field
 
 **Point values** — when a question has a positive point value, append the point value to the stem:
 - Format: `<stem text>\hfill\textit{(\,X\,pts)}`  where X is the numeric value.
@@ -244,6 +123,7 @@ Apply the following rules in order for each question:
 - All math formatted as LaTeX math (`$...$` for inline, `\[...\]` for display).
 - Preserve all mathematical notation exactly.
 - Correct MC answers appear in RED (AnsRed color); incorrect in BLUE (WrongBlue color).
+- Open-ended answers appear in RED; their explanations in BLUE.
 - For student versions with answers hidden, use plain text for all options (no color
   macros). Replace `\Correct{text}{explanation}` with `\item text` and `\Wrong{text}{explanation}`
   with `\item text` — no colors, no explanations, no answer keys in `\QBlock`.
@@ -259,4 +139,4 @@ Apply the following rules in order for each question:
   Never use the same text for both `<TITLE>` and `<SUBTITLE>`.
 - For student versions with answers hidden, set `\showreasonfalse` in the preamble
   (not `\showreasontrue`) and omit all answer keys, color macros, and the color-coding
-  instruction line from the header.
+  legend line from the header.

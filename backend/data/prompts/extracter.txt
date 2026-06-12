@@ -36,7 +36,8 @@ Procedure:
        * If title is "Midterm Exam" and questions cover electricity: subtitle = "Electricity and Magnetism"
        * If no distinct subject context is available: subtitle = "[theme] Concepts"
      Do NOT simply repeat or paraphrase the title as the subtitle. They must convey different information.
-   - Use the dominant theme across the extracted questions as the document theme.
+   - Set the document theme directly from the document's overall subject matter
+     (e.g., `projectile_motion`, `electricity_and_magnetism`, `fluid_dynamics`).
 3. Detect multi-part questions BEFORE extracting individual questions.
 4. Identify every question and classify:
    - Multiple-choice: single question with labeled options.
@@ -101,9 +102,11 @@ Explicit answer detection:
 - If unclear, leave all options unmarked as correct and treat the source as having no explicit answer.
 - For figure-dependent questions, always treat the source as having no explicit answer.
 
-Theme labeling:
-- Label every question with a 1-3 word snake_case theme that best describes its real-world context
-  (e.g., `projectile_motion`, `fluid_dynamics`, `biology`, `everyday_activity`, `engineering`,
-  `physics_abstract`).
-- Choose the most specific term that fits the question's subject matter; prefer concrete descriptors over vague labels.
-- Use the most common question theme as the document theme. If tied, use the theme of the earliest tied question.
+Tag labeling:
+- Label every question with a `tags` list describing its specific context: topics, actions,
+  physical setting, and goals (e.g., `projectile_motion`, `free_fall`, `running`, `circuit_analysis`).
+- Each tag is 1-3 snake_case words; give each question at most 5 tags.
+- Choose the most specific terms that fit the question; prefer concrete descriptors over vague labels.
+- Reuse tags across questions for consistency: before adding a new tag, check the tags you have
+  already assigned and reuse an existing one when it fits (e.g., do not add `sprinting` if an
+  earlier question already used `running` for the same idea).
