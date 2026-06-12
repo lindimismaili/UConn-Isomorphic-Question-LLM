@@ -52,7 +52,7 @@ def _source_q(source_id: str = "S1") -> SourceQuestionItem:
         ],
         has_explicit_answer=True,
         question_type="multiple_choice",
-        topic_tags=["kinematics", "free_fall"],
+        tags=["kinematics", "free_fall"],
         answer="A",
     )
 
@@ -66,7 +66,7 @@ def _generated_q(source_id: str = "S1") -> NewQuestionItem:
             _option("A", "44.1 m", correct=True),
             _option("B", "29.4 m", correct=False, logic="off_by_factor_of_two"),
         ],
-        topic_tags=["kinematics", "free_fall"],
+        tags=["kinematics", "free_fall"],
         generation_notes="changed time from 2s to 3s",
         question_type="multiple_choice",
         answer="A",

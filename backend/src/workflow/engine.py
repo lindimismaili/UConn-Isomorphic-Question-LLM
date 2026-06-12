@@ -448,6 +448,7 @@ async def run_workflow_async(
     outputs_dir: Path,
     output_folder_label: str,
     touch_workflow: TouchWorkflow,
+    theme: str = "",
     to_thread: ToThread,
     load_rubric_model: LoadRubricModel,
     load_rubric_payload: LoadRubricPayload,
@@ -608,7 +609,7 @@ async def run_workflow_async(
             workflow["agents"]["normalizer"]["data"]["startTime"] = datetime.now().isoformat()
             touch_workflow(workflow)
 
-            normalizer_input_payload = build_normalizer_input(prompt_text, file_names)
+            normalizer_input_payload = build_normalizer_input(prompt_text, file_names, theme)
             normalizer_input = build_json_message(normalizer_input_payload)
             if has_uploaded_agent_input and resume_from_agent == "normalizer":
                 normalizer_input = uploaded_agent_input

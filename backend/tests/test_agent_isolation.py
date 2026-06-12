@@ -57,7 +57,7 @@ def _source_q(source_id: str = "S1") -> SourceQuestionItem:
         ],
         has_explicit_answer=True,
         question_type="multiple_choice",
-        topic_tags=["arithmetic"],
+        tags=["arithmetic"],
         answer="A",
     )
 
@@ -71,7 +71,7 @@ def _generated_q(source_id: str = "S1") -> NewQuestionItem:
             _mc_option("A", "4", correct=True),
             _mc_option("B", "5", correct=False),
         ],
-        topic_tags=["arithmetic"],
+        tags=["arithmetic"],
         generation_notes="varied numbers",
         question_type="multiple_choice",
         answer="A",

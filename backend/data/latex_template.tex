@@ -10,6 +10,7 @@
 % ===== Colors =====
 \definecolor{AnsRed}{RGB}{170,0,0}
 \definecolor{WrongBlue}{RGB}{0,0,160}
+\definecolor{SkipGray}{RGB}{120,120,120}
 
 % ===== Choice list styling (tight, consistent) =====
 \setlist[enumerate]{%
@@ -48,10 +49,10 @@
   \fi
 }
 
-% ===== Question Block Macro =====
-% Usage: \QBlock{Q1}{stem...}{<items>}
+% ===== Multiple-Choice Question Block Macro =====
+% Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
 
-\newcommand{\QBlock}[3]{%
+\newcommand{\QBlock}[4]{%
   \Needspace{8\baselineskip}%
   \noindent
   \begin{minipage}{\linewidth}
@@ -62,32 +63,91 @@
       #3
     \end{enumerate}
 
+    \vspace{0.1em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#4}}
+
     \vspace{0.25em}
     \hrule height 0.4pt
   \end{minipage}
   \vspace{0.75em}
 }
 
-% ===== Document Start =====
+% ===== Open-Ended Question Block Macro =====
+% Usage: \OEBlock{Q1}{stem...}{answer text}{explanation text}
+% Answer renders in red; the supporting explanation renders in blue and is
+% hidden when \showreasonfalse is set.
 
-\begin{document}
+\newcommand{\OEBlock}[4]{%
+  \Needspace{5\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
 
-\begin{center}
-{\huge \textbf{<TITLE>}}\\[0.25em]
-{\Large <Subtitle>}\\[0.25em]
-{\large Multiple choice questions generated below. Answers in RED and incorrect answers in BLUE.}
-\end{center}
+    \vspace{0.25em}
+    \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}%
+    \ifshowreason
+      \par\vspace{0.15em}
+      \noindent\ReasonStyle{\textcolor{WrongBlue}{\textit{\textbf{Explanation:}}~#4}}%
+    \fi
 
-\vspace{0.75em}
-
-\QBlock{Q1}{Hello}{
-  \Wrong{test}{This is not a greeting and does not match the prompt.}
-  \Correct{Hey}{This is a valid informal greeting that matches the prompt.}
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
 }
 
-\QBlock{Q2}{Compute $5 + 2\frac{10}{20}$.}{
-  \Wrong{$5$}{This ignores the contribution from the fractional term.}
-  \Correct{$6$}{Since $\frac{10}{20}=\frac{1}{2}$, we have $2\cdot\frac{1}{2}=1$, and thus $5+1=6$.}
+% ===== Multi-Part Question Block Macro =====
+% Usage: \MPBlock{Q1}{stem...}{<parts>}
+
+\newcommand{\MPBlock}[3]{%
+  \Needspace{8\baselineskip}%
+  \noindent
+  \begin{minipage}{\linewidth}
+    \QuestionStyle{#1.~#2}
+
+    \vspace{0.25em}
+    #3
+
+    \vspace{0.25em}
+    \hrule height 0.4pt
+  \end{minipage}
+  \vspace{0.75em}
 }
 
-\end{document}
+% ===== MC Sub-Part Macro =====
+% Usage: \MCPart{a}{stem...}{<items>}{answer key}
+
+\newcommand{\MCPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \begin{enumerate}
+    #3
+  \end{enumerate}
+  \vspace{0.1em}
+  \noindent\textit{\textbf{Answer:}~#4}
+  \par
+}
+
+% ===== Open-Ended Sub-Part Macro =====
+% Usage: \OEPart{a}{stem...}{answer text}{explanation text}
+% Same coloring as \OEBlock: red answer, blue explanation gated by \ifshowreason.
+
+\newcommand{\OEPart}[4]{%
+  \par\vspace{0.35em}
+  \noindent\textbf{(#1)}~#2
+  \par\vspace{0.15em}
+  \noindent\textcolor{AnsRed}{\textit{\textbf{Answer:}~#3}}%
+  \ifshowreason
+    \par\vspace{0.15em}
+    \noindent\ReasonStyle{\textcolor{WrongBlue}{\textit{\textbf{Explanation:}}~#4}}%
+  \fi
+  \par
+}
+
+% ===== Skipped Question Note Macro =====
+% Usage: \SkipBlock{Q1}{reason}
+
+\newcommand{\SkipBlock}[2]{%
+  \noindent\textcolor{SkipGray}{\textit{[#1 omitted: #2]}}%
+  \vspace{0.5em}\par
+}

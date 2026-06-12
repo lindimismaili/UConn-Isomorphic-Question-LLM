@@ -9,9 +9,27 @@ from agents import Agent, CodeInterpreterTool, ModelSettings
 from agents.logger import logger
 from openai.types.shared.reasoning import Reasoning
 
-from ..helpers import load_agents_config, load_prompt
-from ..paths import AGENTS_CONFIG_PATH, PROMPTS_DIR
+from ..helpers import load_agents_config, load_prompt, render_prompt
+from ..paths import AGENTS_CONFIG_PATH, LATEX_TEMPLATE_PATH, PROMPTS_DIR
 from ..schemas import AGENT_OUTPUT_TYPES
+
+
+def _load_latex_template() -> str:
+    """Read the authoritative LaTeX preamble/macros injected into the latexifier prompt."""
+    try:
+        return LATEX_TEMPLATE_PATH.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        logger.warning("Failed to load LaTeX template %s: %s", LATEX_TEMPLATE_PATH, exc)
+        return ""
+
+
+def _agent_instructions(agent_key: str) -> str:
+    """Load an agent's prompt, injecting the LaTeX template for the latexifier."""
+    if agent_key == "latexifier":
+        return render_prompt(
+            PROMPTS_DIR, logger, agent_key, latex_template=_load_latex_template()
+        )
+    return load_prompt(PROMPTS_DIR, logger, agent_key)
 
 
 def create_agents(
@@ -64,7 +82,7 @@ def create_agents(
         )
         agents[agent_key] = Agent(
             name=config.get("name", agent_key.title()),
-            instructions=load_prompt(PROMPTS_DIR, logger, agent_key),
+            instructions=_agent_instructions(agent_key),
             model=config.get("model", "gpt-5.5"),
             tools=tools,
             output_type=output_type,

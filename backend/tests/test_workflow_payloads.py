@@ -16,6 +16,7 @@ from backend.src.workflow.payloads import (
     build_generator_input,
     build_generator_repair_input,
     build_latex_input,
+    build_latex_questions,
     build_normalizer_input,
     build_style_review_input,
     build_verifier_input,
@@ -31,7 +32,7 @@ def _source(source_id: str = "q1") -> SourceQuestionItem:
         options=[],
         has_explicit_answer=False,
         question_type="open_ended",
-        topic_tags=[],
+        tags=[],
     )
 
 
@@ -41,7 +42,7 @@ def _generated(source_id: str = "q1") -> NewQuestionItem:
         source_id=source_id,
         stem="stem",
         options=[],
-        topic_tags=[],
+        tags=[],
         generation_notes="notes",
     )
 
@@ -57,7 +58,14 @@ class WorkflowPayloadsTests(unittest.TestCase):
         self.assertEqual(payload["user_input"]["prompt"], "make 3 questions")
         self.assertEqual(payload["user_input"]["files"], ["a.pdf", "b.pdf"])
         self.assertEqual(payload["defaults"]["new_questions_per_question"], 1)
+        self.assertEqual(payload["defaults"]["theme"], "")
         self.assertIn("difficulty", payload["rules"])
+
+    def test_normalizer_input_copies_selected_theme_verbatim(self) -> None:
+        theme = "Video Games: re-cast each question into a video game scenario."
+        payload = build_normalizer_input("make 3 questions", ["a.pdf"], theme)
+        self.assertEqual(payload["defaults"]["theme"], theme)
+        self.assertIn("verbatim", payload["rules"]["theme"])
 
     def test_extracter_input_includes_normalizer_config(self) -> None:
         payload = build_extracter_input(["a.pdf"], _config())
@@ -126,6 +134,15 @@ class WorkflowPayloadsTests(unittest.TestCase):
         self.assertEqual(
             payload["requirements"]["filename"], "isomorphic_questions.tex"
         )
+
+    def test_latex_questions_carry_answer_and_explanation(self) -> None:
+        question = _generated("q1")
+        question.answer = "42 m"
+        question.explanation = "Apply $d = \\tfrac{1}{2}gt^2$ and substitute."
+        generator = GeneratorOutput(isomorphic_questions=[question])
+        items = build_latex_questions(generator)
+        self.assertEqual(items[0]["answer"], "42 m")
+        self.assertEqual(items[0]["explanation"], "Apply $d = \\tfrac{1}{2}gt^2$ and substitute.")
 
 
 if __name__ == "__main__":

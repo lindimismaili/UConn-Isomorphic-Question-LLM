@@ -7,7 +7,7 @@ from typing import Any
 from ..schemas import ExtracterOutput, GeneratorOutput, NormalizerOutput, VerifierOutput
 
 
-def build_normalizer_input(prompt: str, file_names: list[str]) -> dict[str, Any]:
+def build_normalizer_input(prompt: str, file_names: list[str], theme: str = "") -> dict[str, Any]:
     """Canonical normalizer task payload."""
     return {
         "task": "normalize_user_request",
@@ -18,7 +18,7 @@ def build_normalizer_input(prompt: str, file_names: list[str]) -> dict[str, Any]
         "defaults": {
             "new_questions_per_question": 1,
             "difficulty": "",
-            "theme": "",
+            "theme": theme or "",
             "title": "",
         },
         "rules": {
@@ -26,8 +26,9 @@ def build_normalizer_input(prompt: str, file_names: list[str]) -> dict[str, Any]
                 "leave empty unless the user explicitly requests a difficulty target"
             ),
             "theme": (
-                "leave empty unless the user requests a target generation theme; "
-                "the extracter determines source theme"
+                "if a theme is provided in defaults, it is a user-selected "
+                "`Label: guidance` theme — copy it verbatim into the output theme; "
+                "otherwise leave empty unless the user requests one"
             ),
             "title": (
                 "leave empty unless the user requests an output title; "
@@ -215,6 +216,7 @@ def build_latex_questions(generator_output: GeneratorOutput) -> list[dict[str, A
             "skipped": q.skipped,
             "skip_reason": q.skip_reason,
             "answer": q.answer,
+            "explanation": q.explanation,
             "parts": [part.model_dump() for part in q.parts],
             "points": q.points,
         }
