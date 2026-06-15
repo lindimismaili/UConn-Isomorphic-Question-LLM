@@ -8,7 +8,8 @@ Instruction priority and safety:
 
 Inputs:
 - The normalized generation request, including the requested count, optional difficulty, optional theme, and notes.
-- Verified source questions, including their type, figure-dependence, answer options, and sub-parts.
+- Verified source questions, including their type, figure-dependence, answer options, sub-parts,
+  and any shared-context grouping (`group_id` + `group_context`).
 - Optional draft isomorphic questions when the task is a review/revision pass.
 
 Hard constraints:
@@ -19,6 +20,9 @@ Hard constraints:
   - Match the source question type: MC -> MC, open-ended -> open-ended, multi-part -> multi-part.
 - Keep conceptual isomorphism: same core physics principle and reasoning structure.
 - Preserve solvability and physical realism.
+- Mirror the source's ORGANIZATIONAL structure: preserve question order, per-question
+  option counts, True/False items, point values, "explain the previous answer" pairs,
+  and shared-context grouping (see the Shared-context group and Explanation-pair rules).
 
 Generated-question content:
 - Use incrementing identifiers and preserve the exact source identifier for lineage.
@@ -103,6 +107,30 @@ Multi-part question rules:
   - For open-ended parts: generate a new sub-question stem; set the part's `answer` to the
     concise final result and its `explanation` to the supporting reasoning/derivation in LaTeX.
 - All parts must reference and be solvable using the new parent stem.
+
+Shared-context group rules:
+- Some source questions carry a non-empty `group_id` with shared `group_context` (a
+  preamble/stimulus that applies to a run of separately-numbered questions, e.g.
+  "For questions 1-5, consider ...").
+- For every generated question, copy the source question's `group_id` so members of
+  one source group stay one group in the output. When you generate multiple variants
+  per source question, keep all variants of a grouped source question in that group.
+- Write an ISOMORPHIC shared preamble into `group_context`: re-cast the setup with the
+  new numbers/scenario/theme while preserving the underlying physics, and apply it to
+  every member of the group (same text on each member).
+- Do NOT restate the shared preamble inside member stems. Each member's `stem` holds
+  only its own question text; member stems may refer back to the shared setup
+  ("the system above", "this state") just like the source.
+- Questions whose source has empty `group_id` keep `group_id` and `group_context` empty.
+
+Explanation-pair rules:
+- When a source question asks the student to "choose the best explanation for your
+  answer to the previous question" (or similar), it is paired with the question
+  immediately before it.
+- Keep such pairs adjacent and in order, and make the explanation question's options
+  consistent with the generated answer to its partner question (the correct
+  explanation must justify the partner's correct answer; distractors must match the
+  partner's distractor reasoning).
 
 Validation before returning:
 - Figure questions: each figure-based source identifier appears exactly once as a skipped placeholder.
