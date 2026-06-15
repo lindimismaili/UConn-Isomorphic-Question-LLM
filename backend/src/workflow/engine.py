@@ -918,6 +918,16 @@ async def run_workflow_async(
             )
             generator_output: GeneratorOutput = generator_result.final_output
 
+            # Guard against a flaky empty generation: retry once before the style
+            # pass so a single degenerate response does not sink the whole run.
+            if not generator_output.isomorphic_questions:
+                retry_generator_result = await Runner.run(
+                    agents["generator"], input=generator_input, run_config=run_config
+                )
+                if retry_generator_result.final_output.isomorphic_questions:
+                    generator_output = retry_generator_result.final_output
+
+            pre_review_output = generator_output
             style_review_payload = build_style_review_input(
                 normalizer_output, verifier_output, generator_output
             )
@@ -925,7 +935,16 @@ async def run_workflow_async(
             style_review_result = await Runner.run(
                 agents["generator"], input=style_review_input, run_config=run_config
             )
-            generator_output = style_review_result.final_output
+            reviewed_output = style_review_result.final_output
+            # The style pass only revises wording; it must never drop questions.
+            # If it returns fewer items than it was given (e.g. an empty response),
+            # keep the pre-review generation instead of letting it wipe the set.
+            if len(reviewed_output.isomorphic_questions) >= len(
+                pre_review_output.isomorphic_questions
+            ):
+                generator_output = reviewed_output
+            else:
+                generator_output = pre_review_output
             generator_report = validate_generator_output(
                 verifier_output.questions,
                 generator_output,
