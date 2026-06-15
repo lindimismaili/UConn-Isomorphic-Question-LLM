@@ -11,6 +11,19 @@ Critical requirements:
 - Preserve mathematical meaning and notation fidelity (LaTeX where appropriate).
 - Every question, including multiple-choice, open-ended, and multi-part questions, must be included.
 
+Structure fidelity (general goal):
+- Identify the document's ORGANIZATIONAL structure and represent it faithfully. Do
+  not flatten it or force it into a fixed template. The downstream pipeline mirrors
+  whatever structure you record here.
+- Preserve, as you find them: question order, the per-question option count (2, 3, 4,
+  5, ...), True/False items, "choose the best explanation for the previous question"
+  pairs, point values, and any shared context that spans several questions.
+- The data model gives you three building blocks — standalone questions, multi-part
+  questions (one number with labeled sub-parts a/b/c), and shared-context GROUPS
+  (independently-numbered questions that share one preamble/stimulus). Map the source
+  onto these without distorting it. If a layout genuinely fits none of them, keep the
+  affected questions' `source_raw` complete and faithful so it is not lost.
+
 Multi-file handling:
 - When MULTIPLE files are attached in a single workflow, treat them as ONE combined
   dataset by default. Extract questions from every file in document order and keep
@@ -39,11 +52,15 @@ Procedure:
    - Set the document theme directly from the document's overall subject matter
      (e.g., `projectile_motion`, `electricity_and_magnetism`, `fluid_dynamics`).
 3. Detect multi-part questions BEFORE extracting individual questions.
-4. Identify every question and classify:
+4. Detect shared-context question groups BEFORE extracting individual questions
+   (see Shared-context group rules below).
+5. Identify every question and classify:
    - Multiple-choice: single question with labeled options.
    - Open-ended: single question with no labeled options.
    - Multi-part: a question that has sub-parts labeled (a), (b), (c), etc.
-5. Return one source question per standalone question or multi-part question group, in source order.
+6. Return one source question per standalone question or multi-part question group, in source order.
+   Members of a shared-context group remain SEPARATE questions (keep their own numbers
+   and options); they are linked only through `group_id`/`group_context`.
 
 Question extraction rules:
 - Use the parent question number as the source identifier for multi-part questions
@@ -63,6 +80,26 @@ Question extraction rules:
   - use the shared context/setup text that applies to all parts as the parent stem
   - include each sub-part separately (see Multi-part rules below)
 - At extraction stage, leave explanations empty unless the source explicitly provides them.
+
+Shared-context group rules:
+- A shared-context group is a block where ONE preamble/stimulus applies to a run of
+  SEPARATELY-NUMBERED questions. Detect cues such as:
+    "For questions X-Y, consider ...", "Use the following information/figure/table for
+    questions X-Y", or a setup paragraph followed by several numbered questions that
+    refer back to it ("the system above", "this state", "the particle described above").
+- This is DIFFERENT from a multi-part question: a group has multiple top-level question
+  numbers that each carry their own options; a multi-part question is a single number
+  with labeled sub-parts (a, b, c).
+- When you detect a group:
+  - Capture the shared preamble text ONCE in `group_context`.
+  - Assign every member question the SAME non-empty `group_id` (e.g. "G1", "G2"),
+    and set the same `group_context` on each member.
+  - Keep each member's `stem` limited to ITS OWN question text. Do NOT copy the shared
+    preamble into the member stems — that duplication is exactly what breaks the layout.
+  - Members keep their own source numbering, option sets, and question types.
+- Mid-group context refreshers (e.g. "Once again, we have a particle ...") that merely
+  restate the SAME setup belong to the SAME group; do not start a new group for them.
+- Questions outside any such block leave `group_id` and `group_context` empty.
 
 Multi-part question rules:
 - A question is multi-part when it has labeled sub-questions using patterns like:

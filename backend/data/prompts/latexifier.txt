@@ -16,11 +16,16 @@ Your response must include:
 # LaTeX Document Template (strong default)
 
 The preamble and macros below are the house style. Use them as-is for standard
-multiple-choice, open-ended, and multi-part questions — they cover the vast
-majority of documents. Only if a question genuinely does not fit these macros
-may you adapt or extend them, and when you do, preserve the same visual style:
+multiple-choice, open-ended, multi-part, and shared-context-group questions — they
+cover the vast majority of documents. Only if a question genuinely does not fit these
+macros may you adapt or extend them, and when you do, preserve the same visual style:
 the AnsRed/WrongBlue/SkipGray colors, the \ifshowreason answer-toggle behavior,
 and the block spacing/divider conventions.
+
+Reproduce the source's organizational structure faithfully — its grouping, ordering,
+and any shared preambles. If the source uses a layout the provided macros cannot
+express, define a small additional macro in the same house style to render it rather
+than discarding or flattening the structure.
 
 {latex_template}
 
@@ -86,6 +91,15 @@ Keep the subtitle about the SOURCE CONTEXT, never about the question format
 # Formatting Rules
 
 Number all rendered questions sequentially (Q1, Q2, Q3, ...) regardless of their source identifiers.
+
+**Shared-context groups** — some questions carry a non-empty `group_id` with shared
+`group_context`. Render the shared context with `\GroupPreamble{<group_context>}`
+ONCE, immediately before the first question whose `group_id` differs from the previous
+question's. Every member of the group then renders with its normal question macro
+below the preamble; never repeat the preamble per member. If the shared context names
+a question range, phrase it from the RENDERED sequential numbers (e.g. a group spanning
+the 3rd through 7th rendered questions reads "For questions 3-7, consider ..."), not the
+source numbers. Questions with empty `group_id` get no preamble.
 
 Apply the following rules in order for each question:
 

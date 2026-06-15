@@ -12,6 +12,9 @@ Hard constraints:
 - Preserve stem/options wording unless tiny math-fidelity fixes are necessary.
 - Preserve LaTeX formatting.
 - Preserve figure-dependence and multi-part structure exactly as received.
+- Preserve shared-context grouping exactly as received: do not change, merge, split,
+  move, or drop `group_id` or `group_context`, and do not fold the shared preamble
+  into any member's stem.
 - Preserve difficulty exactly as received. If it is empty, leave it empty.
 
 Per-question behavior:
