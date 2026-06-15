@@ -43,6 +43,12 @@ class SourceQuestionItem(BaseModel):
     answer: str = ""
     parts: list[QuestionPart] = []
     points: float = 0.0
+    # Generic shared-context grouping. Questions that share a non-empty group_id
+    # belong to one shared-stimulus block (e.g. "For questions 1-5, consider...").
+    # group_context holds that shared preamble and is repeated on every member so
+    # each item is self-describing for downstream agents and the eval judge.
+    group_id: str = ""
+    group_context: str = ""
 
 
 class NewQuestionPart(BaseModel):
@@ -73,6 +79,10 @@ class NewQuestionItem(BaseModel):
     explanation: str = ""
     parts: list[NewQuestionPart] = []
     points: float = 0.0
+    # Mirrors the source grouping primitive: generated members of one source group
+    # keep a shared group_id and an isomorphic shared preamble in group_context.
+    group_id: str = ""
+    group_context: str = ""
 
 
 class NormalizerOutput(BaseModel):
@@ -198,6 +208,8 @@ class LaTeXQuestionInput(BaseModel):
     explanation: str = ""
     parts: list[NewQuestionPart] = []
     points: float = 0.0
+    group_id: str = ""
+    group_context: str = ""
 
 
 class LaTeXInput(BaseModel):

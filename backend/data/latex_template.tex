@@ -49,6 +49,18 @@
   \fi
 }
 
+% ===== Shared-Context Group Preamble Macro =====
+% Usage: \GroupPreamble{shared context text}
+% Rendered ONCE before the first question of a shared-context group (e.g.
+% "For questions 3-7, consider ..."). Theme-neutral; reusable for any shared
+% stimulus, passage, table reference, or section intro.
+
+\newcommand{\GroupPreamble}[1]{%
+  \Needspace{4\baselineskip}%
+  \noindent #1\par
+  \vspace{0.5em}
+}
+
 % ===== Multiple-Choice Question Block Macro =====
 % Usage: \QBlock{Q1}{stem...}{<items>}{answer key}
 
