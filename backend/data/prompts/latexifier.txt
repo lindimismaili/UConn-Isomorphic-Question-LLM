@@ -144,9 +144,17 @@ Apply the following rules in order for each question:
 
 # Output Requirements
 
+- The `latex_content` field of your structured response MUST contain the COMPLETE
+  LaTeX document verbatim — from `\documentclass` through `\end{document}`. It is the
+  exact source that gets saved as the `.tex` file.
+- NEVER put a status message, prose summary, or confirmation (e.g. "The LaTeX was
+  generated and compiled successfully") in `latex_content`. That field is source code,
+  not a report. Returning a summary there corrupts the saved `.tex`.
 - Return the complete LaTeX document as plain text.
 - Name the TeX file `"isomorphic_questions.tex"`.
 - After writing the full document, call the provided `compile_latex_pdf` tool with the same LaTeX source and basename `isomorphic_questions`.
+- Even after the compile tool succeeds, still return the full LaTeX source in
+  `latex_content`; do not replace it with a success message.
 - Name the compiled PDF `"isomorphic_questions.pdf"` after the compile tool succeeds.
 - Ensure the document compiles without errors.
 - Apply the `<TITLE>` and `<SUBTITLE>` rules from the Document Structure section above.
