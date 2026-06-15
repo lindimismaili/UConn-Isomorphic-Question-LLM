@@ -219,6 +219,8 @@ def build_latex_questions(generator_output: GeneratorOutput) -> list[dict[str, A
             "explanation": q.explanation,
             "parts": [part.model_dump() for part in q.parts],
             "points": q.points,
+            "group_id": q.group_id,
+            "group_context": q.group_context,
         }
         for q in generator_output.isomorphic_questions
     ]
@@ -251,6 +253,7 @@ def build_latex_input(
                 "\\MCPart",
                 "\\OEPart",
                 "\\SkipBlock",
+                "\\GroupPreamble",
             ],
             "format_all_questions_with_macros": True,
             "proper_math_formatting": True,

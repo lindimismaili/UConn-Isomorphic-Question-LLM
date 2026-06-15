@@ -470,6 +470,11 @@ def _render_question_text(question: dict[str, Any]) -> str:
     skipped = bool(question.get("skipped"))
 
     lines: list[str] = []
+    # Shared-context group preamble: include it so grouped members are judged with
+    # their full context instead of looking incomplete on their own.
+    group_context = str(question.get("group_context", "")).strip()
+    if group_context:
+        lines.append(f"Shared context: {group_context}")
     if stem:
         lines.append(stem)
 

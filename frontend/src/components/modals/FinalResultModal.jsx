@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
@@ -60,6 +60,29 @@ function OptionRow({ option, showMarker }) {
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+// Render a question list, emitting a shared-context preamble once before the first
+// member of each group (questions that share a non-empty group_id).
+function QuestionList({ questions, showSourceBadge, showMarkers }) {
+  return (
+    <div className="viewer-question-list">
+      {questions.map((q, index) => {
+        const groupId = q.group_id || '';
+        const prevGroupId = index > 0 ? (questions[index - 1].group_id || '') : '';
+        const startsGroup = groupId && groupId !== prevGroupId;
+        const key = q.id ?? q.source_id;
+        return (
+          <Fragment key={key}>
+            {startsGroup && q.group_context && (
+              <p className="viewer-group-preamble">{stripLatex(q.group_context)}</p>
+            )}
+            <QuestionCard question={q} showSourceBadge={showSourceBadge} showMarkers={showMarkers} />
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -188,20 +211,12 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
     if (activeTab === 'Source Questions') {
       const questions = sourceQuestions;
       if (questions.length === 0) return <div className="modal-empty-state">No source questions.</div>;
-      return (
-        <div className="viewer-question-list">
-          {questions.map((q) => <QuestionCard key={q.source_id} question={q} showSourceBadge={false} showMarkers />)}
-        </div>
-      );
+      return <QuestionList questions={questions} showSourceBadge={false} showMarkers />;
     }
     if (activeTab === 'Generated Questions') {
       const questions = data.generated_questions || [];
       if (questions.length === 0) return <div className="modal-empty-state">No generated questions.</div>;
-      return (
-        <div className="viewer-question-list">
-          {questions.map((q) => <QuestionCard key={q.id ?? q.source_id} question={q} showSourceBadge showMarkers />)}
-        </div>
-      );
+      return <QuestionList questions={questions} showSourceBadge showMarkers />;
     }
     if (activeTab === 'Evaluation') return <EvaluationTab evaluation={data.evaluation} onViewInDepth={onViewInDepth} />;
     return null;

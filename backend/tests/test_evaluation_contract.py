@@ -65,6 +65,23 @@ class EvaluationContractTests(unittest.TestCase):
         self.assertIn("Part answer: 3 m/s", multipart)
         self.assertIn("A. 10 N [correct] Explanation: F=ma", multipart)
 
+    def test_rendering_includes_group_shared_context(self) -> None:
+        rendered = _render_generated_question_text(
+            {
+                "stem": "What is the maximum measurable energy?",
+                "question_type": "multiple_choice",
+                "answer": "B",
+                "group_id": "G1",
+                "group_context": "For questions 1-3, consider a particle in a box.",
+                "options": [
+                    {"key": "A", "text": "x", "is_correct": False, "explanation": "no"},
+                    {"key": "B", "text": "y", "is_correct": True, "explanation": "yes"},
+                ],
+            }
+        )
+        self.assertIn("Shared context: For questions 1-3, consider a particle in a box.", rendered)
+        self.assertIn("What is the maximum measurable energy?", rendered)
+
     def test_figure_skip_placeholders_are_excluded_from_score_model_dataset(self) -> None:
         final_result = {
             "verified_questions": [

@@ -5,6 +5,7 @@ import unittest
 from backend.src.schemas import (
     ExtracterOutput,
     GeneratorOutput,
+    LaTeXInput,
     NewQuestionItem,
     NormalizerOutput,
     SourceQuestionItem,
@@ -143,6 +144,31 @@ class WorkflowPayloadsTests(unittest.TestCase):
         items = build_latex_questions(generator)
         self.assertEqual(items[0]["answer"], "42 m")
         self.assertEqual(items[0]["explanation"], "Apply $d = \\tfrac{1}{2}gt^2$ and substitute.")
+
+    def test_latex_questions_carry_group_fields(self) -> None:
+        question = _generated("q1")
+        question.group_id = "G1"
+        question.group_context = "For questions 1-3, consider a block on a ramp."
+        generator = GeneratorOutput(isomorphic_questions=[question])
+        items = build_latex_questions(generator)
+        self.assertEqual(items[0]["group_id"], "G1")
+        self.assertEqual(
+            items[0]["group_context"], "For questions 1-3, consider a block on a ramp."
+        )
+
+    def test_latex_input_validates_group_fields_and_macro(self) -> None:
+        # extra="forbid" on LaTeXQuestionInput/LaTeXInput must still accept the
+        # grouping fields, and GroupPreamble must be advertised to the latexifier.
+        question = _generated("q1")
+        question.group_id = "G1"
+        question.group_context = "Shared setup."
+        extraction = ExtracterOutput(questions=[_source("q1")])
+        generator = GeneratorOutput(isomorphic_questions=[question])
+        payload = build_latex_input(_config(), extraction, generator)
+        self.assertIn("\\GroupPreamble", payload["requirements"]["include_macros"])
+        model = LaTeXInput.model_validate(payload)
+        self.assertEqual(model.questions[0].group_id, "G1")
+        self.assertEqual(model.questions[0].group_context, "Shared setup.")
 
 
 if __name__ == "__main__":
