@@ -646,8 +646,58 @@ def _directory_size(path: Path) -> int:
                 continue
     return total
 
+_DATED_DIR_RE = re.compile(r"^\d{2}-\d{2}-\d{4}$")
+
+
+def _owning_run_label(label: str) -> str:
+    """Return the leaf run-folder label that owns an output/upload `label`.
+
+    For the dated layout the run folder is `<mm-dd-yyyy>/<hh-mm-ss>` (the first
+    two segments); batch children add a third segment that we trim off. Legacy
+    flat labels are returned as their first segment.
+    """
+    parts = [part for part in label.split("/") if part]
+    if not parts:
+        return label
+    if _DATED_DIR_RE.match(parts[0]) and len(parts) >= 2:
+        return f"{parts[0]}/{parts[1]}"
+    return parts[0]
+
+
+def _iter_artifact_run_dirs(base: Path) -> list[tuple[Path, str]]:
+    """Return `(run_dir, relative_label)` for the leaf run dirs under `base`.
+
+    Handles the dated layout (`<mm-dd-yyyy>/<run>`) and any legacy or internal
+    flat dirs that live directly under `base` (e.g. `input_to_agent_*`).
+    """
+    runs: list[tuple[Path, str]] = []
+    for child in base.iterdir():
+        if not child.is_dir():
+            continue
+        if _DATED_DIR_RE.match(child.name):
+            for run in child.iterdir():
+                if run.is_dir():
+                    runs.append((run, f"{child.name}/{run.name}"))
+        else:
+            runs.append((child, child.name))
+    return runs
+
+
+def _remove_empty_dated_dirs(base: Path) -> None:
+    """Delete now-empty `<mm-dd-yyyy>` date folders left behind by pruning."""
+    for child in base.iterdir():
+        if not (child.is_dir() and _DATED_DIR_RE.match(child.name)):
+            continue
+        try:
+            next(child.iterdir())
+        except StopIteration:
+            child.rmdir()
+        except OSError:
+            continue
+
+
 def _active_output_labels() -> set[str]:
-    """Return output labels owned by active in-memory or persisted workflows."""
+    """Return run-dir labels owned by active in-memory or persisted workflows."""
     labels: set[str] = set()
     records = list(workflows.items()) + workflow_store.list_records("workflow")
     for _workflow_id, workflow in records:
@@ -655,7 +705,7 @@ def _active_output_labels() -> set[str]:
             continue
         label = workflow.get("outputFolder")
         if isinstance(label, str) and label:
-            labels.add(label.split("/", 1)[0])
+            labels.add(_owning_run_label(label))
     return labels
 
 def _cleanup_artifact_directories() -> None:
@@ -666,11 +716,13 @@ def _cleanup_artifact_directories() -> None:
         return
     _last_artifact_cleanup_ts = now
 
+    # Prune at the leaf run-dir level (the dated layout nests runs one level
+    # below OUTPUTS_DIR/UPLOADS_DIR), then sweep away emptied date folders.
     active_outputs = _active_output_labels()
-    output_dirs = [path for path in OUTPUTS_DIR.iterdir() if path.is_dir()]
-    output_dirs.sort(key=lambda path: path.stat().st_mtime if path.exists() else 0)
-    for path in output_dirs:
-        if path.name in active_outputs:
+    output_runs = _iter_artifact_run_dirs(OUTPUTS_DIR)
+    output_runs.sort(key=lambda item: item[0].stat().st_mtime if item[0].exists() else 0)
+    for path, label in output_runs:
+        if label in active_outputs:
             continue
         try:
             if now - path.stat().st_mtime > OUTPUT_RETENTION_SECONDS:
@@ -678,25 +730,35 @@ def _cleanup_artifact_directories() -> None:
         except OSError:
             continue
 
-    output_dirs = [path for path in OUTPUTS_DIR.iterdir() if path.is_dir() and path.name not in active_outputs]
-    output_dirs.sort(key=lambda path: path.stat().st_mtime if path.exists() else 0)
-    while len(output_dirs) > OUTPUT_MAX_RUNS:
-        shutil.rmtree(output_dirs.pop(0), ignore_errors=True)
-    while sum(_directory_size(path) for path in output_dirs if path.exists()) > OUTPUT_MAX_BYTES and output_dirs:
-        shutil.rmtree(output_dirs.pop(0), ignore_errors=True)
+    output_runs = [
+        item for item in _iter_artifact_run_dirs(OUTPUTS_DIR) if item[1] not in active_outputs
+    ]
+    output_runs.sort(key=lambda item: item[0].stat().st_mtime if item[0].exists() else 0)
+    while len(output_runs) > OUTPUT_MAX_RUNS:
+        shutil.rmtree(output_runs.pop(0)[0], ignore_errors=True)
+    while (
+        sum(_directory_size(item[0]) for item in output_runs if item[0].exists()) > OUTPUT_MAX_BYTES
+        and output_runs
+    ):
+        shutil.rmtree(output_runs.pop(0)[0], ignore_errors=True)
+    _remove_empty_dated_dirs(OUTPUTS_DIR)
 
-    upload_dirs = [path for path in UPLOADS_DIR.iterdir() if path.is_dir()]
-    upload_dirs.sort(key=lambda path: path.stat().st_mtime if path.exists() else 0)
-    for path in list(upload_dirs):
+    upload_runs = _iter_artifact_run_dirs(UPLOADS_DIR)
+    upload_runs.sort(key=lambda item: item[0].stat().st_mtime if item[0].exists() else 0)
+    for path, _label in upload_runs:
         try:
             if now - path.stat().st_mtime > UPLOAD_RETENTION_SECONDS:
                 shutil.rmtree(path, ignore_errors=True)
         except OSError:
             continue
-    upload_dirs = [path for path in UPLOADS_DIR.iterdir() if path.is_dir()]
-    upload_dirs.sort(key=lambda path: path.stat().st_mtime if path.exists() else 0)
-    while sum(_directory_size(path) for path in upload_dirs if path.exists()) > UPLOAD_MAX_BYTES and upload_dirs:
-        shutil.rmtree(upload_dirs.pop(0), ignore_errors=True)
+    upload_runs = _iter_artifact_run_dirs(UPLOADS_DIR)
+    upload_runs.sort(key=lambda item: item[0].stat().st_mtime if item[0].exists() else 0)
+    while (
+        sum(_directory_size(item[0]) for item in upload_runs if item[0].exists()) > UPLOAD_MAX_BYTES
+        and upload_runs
+    ):
+        shutil.rmtree(upload_runs.pop(0)[0], ignore_errors=True)
+    _remove_empty_dated_dirs(UPLOADS_DIR)
 
 def _touch_batch_job(batch: dict[str, Any]) -> None:
     """Update a batch job record's last-modified timestamp."""
@@ -942,10 +1004,17 @@ def _write_upload_manifest(session_dir: Path, manifest: dict[str, Any]) -> None:
 
 def _source_paths_from_session(session_id: str, selected_file_ids: list[str] | None = None) -> list[str]:
     """Resolve upload session file IDs to safe local source paths."""
-    safe_session_id = safe_stem(session_id, fallback="")
-    if not safe_session_id or safe_session_id != session_id:
+    # sessionId is a posix-relative label (e.g. 06-29-2026/14-23-05 for the
+    # dated layout, or a legacy flat token). Validate every part to block
+    # traversal, then resolve under UPLOADS_DIR.
+    rel_path = Path((session_id or "").strip())
+    if (
+        not rel_path.parts
+        or rel_path.is_absolute()
+        or any(part in {"", ".", ".."} or part.startswith(".") for part in rel_path.parts)
+    ):
         raise HTTPException(status_code=400, detail="Invalid sessionId")
-    session_dir = (UPLOADS_DIR / safe_session_id).resolve()
+    session_dir = (UPLOADS_DIR / rel_path).resolve()
     if not _is_under_directory(session_dir, UPLOADS_DIR) or not session_dir.exists():
         return []
 

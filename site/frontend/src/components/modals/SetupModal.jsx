@@ -1,5 +1,6 @@
 import Modal from './Modal.jsx';
 import { useAgentRegistry } from '../../hooks/useAgentRegistry';
+import { Button } from '../ui/index.js';
 
 /**
  * Details for the runtime starter phase shown in the pipeline: the runtime
@@ -40,7 +41,7 @@ export default function SetupModal({ isOpen, onClose, workflowId, runInputs }) {
       title="Starting Runtime"
       large
       footer={
-        <button className="btn btn-primary" onClick={onClose}>Close</button>
+        <Button variant="primary" onClick={onClose}>Close</Button>
       }
     >
       <div className="setup-modal-body modal-body-stack">

@@ -23,12 +23,25 @@ def _load_latex_template() -> str:
         return ""
 
 
+def generation_strategy() -> str:
+    """Return the active generator strategy from GENERATION_STRATEGY.
+
+    "holistic" (default) re-casts each source question in one pass; "decompose"
+    first parses each source question into structured components and generates
+    from that breakdown. Any unrecognized value falls back to "holistic".
+    """
+    raw = (os.getenv("GENERATION_STRATEGY", "holistic") or "").strip().lower()
+    return raw if raw in {"holistic", "decompose"} else "holistic"
+
+
 def _agent_instructions(agent_key: str) -> str:
     """Load an agent's prompt, injecting the LaTeX template for the latexifier."""
     if agent_key == "latexifier":
         return render_prompt(
             PROMPTS_DIR, logger, agent_key, latex_template=_load_latex_template()
         )
+    if agent_key == "generator" and generation_strategy() == "decompose":
+        return load_prompt(PROMPTS_DIR, logger, "generator_decompose")
     return load_prompt(PROMPTS_DIR, logger, agent_key)
 
 

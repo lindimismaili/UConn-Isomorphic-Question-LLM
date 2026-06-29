@@ -1,5 +1,6 @@
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
+import { Button } from '../ui/index.js';
 
 /**
  * Builds an iframe URL that prefers browser-native PDF controls.
@@ -39,22 +40,18 @@ export default function PdfPreviewModal({
       contentClassName="pdf-preview-modal"
       footer={(
         <div className="modal-footer-actions pdf-preview-footer-actions">
-          <button
-            className="btn btn-primary pdf-preview-action"
-            onClick={onClose}
-            type="button"
-          >
+          <Button variant="primary" className="pdf-preview-action" onClick={onClose}>
             Close
-          </button>
-          <button
-            className="btn btn-secondary pdf-preview-action pdf-preview-download"
+          </Button>
+          <Button
+            variant="secondary"
+            className="pdf-preview-action pdf-preview-download"
             onClick={() => onDownload(fileName)}
             disabled={!fileName}
-            type="button"
+            icon={<IconDownload className="btn-icon" />}
           >
-            <IconDownload className="btn-icon" />
             Download PDF
-          </button>
+          </Button>
         </div>
       )}
     >

@@ -3,6 +3,7 @@ import Modal from './Modal.jsx';
 import PromptViewerModal from './PromptViewerModal.jsx';
 import RubricViewerModal from './RubricViewerModal.jsx';
 import { IconFile } from '../Icons.jsx';
+import { Button } from '../ui/index.js';
 import { getDerivedRegistry } from '../../hooks/useAgentRegistry';
 
 const DEFAULT_TIME_ZONE = 'America/New_York';
@@ -132,15 +133,15 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
               </span>
             </div>
             <div className="modal-footer-actions">
-              <button
-                className="btn btn-secondary"
+              <Button
+                variant="secondary"
                 disabled={!canOpenReference}
                 onClick={() => canOpenReference && setViewerOpen(true)}
+                icon={<IconFile className="btn-icon" />}
               >
-                <IconFile className="btn-icon" />
                 <span>Prompt</span>
-              </button>
-              <button className="btn btn-primary" onClick={onClose}>Close</button>
+              </Button>
+              <Button variant="primary" onClick={onClose}>Close</Button>
             </div>
           </div>
         }

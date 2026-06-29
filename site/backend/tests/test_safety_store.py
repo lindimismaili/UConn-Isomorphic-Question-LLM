@@ -37,14 +37,19 @@ class SafetyStoreTests(unittest.TestCase):
     def test_unique_run_dir_handles_identical_timestamps_without_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            with patch("backend.src.safety.utc_run_timestamp", return_value="20260505T120000000000Z"):
+            with patch(
+                "backend.src.safety.local_run_segments",
+                return_value=("06-29-2026", "12-00-00"),
+            ):
                 first_path, first_label = create_unique_run_dir(root, "workflow-id")
                 second_path, second_label = create_unique_run_dir(root, "workflow-id")
             self.assertTrue(first_path.is_dir())
             self.assertTrue(second_path.is_dir())
             self.assertNotEqual(first_label, second_label)
-            self.assertEqual(first_label, "20260505T120000000000Z-workflow-id")
-            self.assertEqual(second_label, "20260505T120000000000Z-workflow-id-1")
+            # Runs are grouped into a per-day folder; same-second runs get -NN.
+            self.assertEqual(first_label, "06-29-2026/12-00-00")
+            self.assertEqual(second_label, "06-29-2026/12-00-00-01")
+            self.assertEqual(first_path, root / "06-29-2026" / "12-00-00")
 
     def test_unique_child_name_handles_duplicate_upload_names(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

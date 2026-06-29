@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
+import { Button, EmptyState } from '../ui/index.js';
 
 /**
  * Loads the rubric JSON from the API first, then the data directory.
@@ -85,20 +86,20 @@ export default function RubricViewerModal({ isOpen, onClose }) {
             </span>
           </div>
           <div className="modal-footer-actions">
-            <button className="btn btn-primary" onClick={onClose} type="button">Close</button>
+            <Button variant="primary" onClick={onClose}>Close</Button>
           </div>
         </div>
       }
     >
       <div className="rubric-viewer-body">
         {error && (
-          <div className="modal-empty-state modal-empty-state-error">
+          <EmptyState variant="modal" error>
             Error loading rubric: {error}
-          </div>
+          </EmptyState>
         )}
 
         {!error && !rubric && (
-          <div className="modal-empty-state">Loading rubric...</div>
+          <EmptyState variant="modal">Loading rubric...</EmptyState>
         )}
 
         {!error && rubric && (

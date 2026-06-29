@@ -28,6 +28,33 @@ class QuestionPart(BaseModel):
     has_explicit_answer: bool = False
 
 
+class QuestionClassification(BaseModel):
+    """Verifier-derived classification of a source question.
+
+    A compact per-question profile downstream agents (generator, evaluator) can
+    key off. Populated by the Verifier; left null on raw extracter output so
+    downstream stays backward-compatible. Controlled-vocabulary fields use the
+    values listed below; concepts/equations/misconceptions are free-form lists.
+    """
+
+    # "single" | "multi_part" | "shared_scenario"
+    structure: str = ""
+    # "concise" (straight-to-the-point) | "narrative" (story-like / content-rich)
+    language: str = ""
+    # "abstract" | "life_sciences" | "engineering" | "regional" | "modern_culture"
+    # | "everyday" | "other"
+    scenario_type: str = ""
+    # "conceptual" | "symbolic" | "numerical"
+    representation: str = ""
+    # Main physics concept(s) the question is built on.
+    concepts: list[str] = []
+    # Fundamental equation(s) in LaTeX.
+    equations: list[str] = []
+    # Suggested misconceptions; for multiple-choice these should align with the
+    # source distractors' distractor_logic.
+    misconceptions: list[str] = []
+
+
 class SourceQuestionItem(BaseModel):
     """A question extracted from source material."""
 
@@ -49,6 +76,8 @@ class SourceQuestionItem(BaseModel):
     # each item is self-describing for downstream agents and the eval judge.
     group_id: str = ""
     group_context: str = ""
+    # Verifier-derived per-question profile (null on raw extracter output).
+    classification: Optional[QuestionClassification] = None
 
 
 class NewQuestionPart(BaseModel):
@@ -60,6 +89,22 @@ class NewQuestionPart(BaseModel):
     options: list[OptionItem] = []
     answer: str = ""
     explanation: str = ""
+
+
+class QuestionDecomposition(BaseModel):
+    """Structured breakdown of a source question's reusable components.
+
+    Populated only by the decompose-then-generate strategy
+    (GENERATION_STRATEGY=decompose); left null under the default holistic
+    strategy so downstream stages stay backward-compatible. Kept for
+    auditability and for comparing the two generation strategies.
+    """
+
+    scenario: str = ""
+    physics_concept: str = ""
+    variables: list[str] = []
+    numbers: list[str] = []
+    distractor_roles: list[str] = []
 
 
 class NewQuestionItem(BaseModel):
@@ -83,6 +128,9 @@ class NewQuestionItem(BaseModel):
     # keep a shared group_id and an isomorphic shared preamble in group_context.
     group_id: str = ""
     group_context: str = ""
+    # Filled only by the decompose-then-generate strategy; null under the
+    # default holistic strategy.
+    decomposition: Optional[QuestionDecomposition] = None
 
 
 class NormalizerOutput(BaseModel):

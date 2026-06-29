@@ -138,7 +138,7 @@ def cmd_validate(args: argparse.Namespace) -> None:
         for error in exc.errors():
             loc = " → ".join(str(p) for p in error["loc"])
             print(f"  [{loc}] {error['msg']}")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
 
 
 async def _run_from_agent(
@@ -336,7 +336,7 @@ def main() -> None:
         raise
     except KeyboardInterrupt:
         print("\nInterrupted.")
-        raise SystemExit(130)
+        raise SystemExit(130) from None
     except Exception as exc:
         logger.error("cli_agents error: %s", exc)
         raise SystemExit(1) from exc

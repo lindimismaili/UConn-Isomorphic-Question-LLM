@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import CriterionReasoningModal from './eval/CriterionReasoningModal.jsx';
+import { Button, EmptyState } from '../ui/index.js';
 import {
   DEFAULT_PASSING_THRESHOLD,
   buildAggregateRows,
@@ -48,10 +49,9 @@ export default function EvalResultsModal({
   const aggregateRows = useMemo(() => buildAggregateRows(report), [report]);
 
   const downloadButton = (fileName, label) => (
-    <button className="btn btn-secondary" onClick={() => onDownload(fileName)} type="button">
-      <IconDownload className="btn-icon" />
+    <Button variant="secondary" onClick={() => onDownload(fileName)} icon={<IconDownload className="btn-icon" />}>
       {label}
-    </button>
+    </Button>
   );
 
   return (
@@ -66,22 +66,22 @@ export default function EvalResultsModal({
           {spreadsheetFileName && downloadButton(spreadsheetFileName, 'Spreadsheet CSV')}
           {itemsFileName && downloadButton(itemsFileName, 'Items JSONL')}
           {reportFileName && downloadButton(reportFileName, 'Report JSON')}
-          <button className="btn btn-primary" onClick={onClose} type="button">
+          <Button variant="primary" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       )}
     >
       <EvalSummaryStrip report={report} itemCount={rows.length} />
 
       {loadState === 'loading' && (
-        <div className="modal-empty-state">Loading detailed eval items...</div>
+        <EmptyState variant="modal">Loading detailed eval items...</EmptyState>
       )}
-      {loadState === 'error' && <div className="modal-empty-state">{error}</div>}
+      {loadState === 'error' && <EmptyState variant="modal">{error}</EmptyState>}
       {loadState === 'unavailable' && aggregateRows.length === 0 && (
-        <div className="modal-empty-state">
+        <EmptyState variant="modal">
           Detailed eval items are not available for this run.
-        </div>
+        </EmptyState>
       )}
 
       {rows.length > 0 && <EvalItemsTable rows={rows} onCriterionClick={setCriterionDetail} />}

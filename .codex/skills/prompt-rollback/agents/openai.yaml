@@ -1,4 +1,0 @@
-interface:
-  display_name: "Prompt Rollback"
-  short_description: "List and restore committed prompt versions"
-  default_prompt: "Use $prompt-rollback to show recent prompt versions and roll back a prompt."

@@ -72,18 +72,37 @@ def unique_child_name(directory: Path, filename: str, used_names: set[str] | Non
     return candidate
 
 
+def local_run_segments() -> tuple[str, str]:
+    """Return `(date, time)` folder segments for the current *local* time.
+
+    The date uses `mm-dd-yyyy` and the time uses `hh-mm-ss` so the archive
+    folders read like the wall-clock day/time the run happened on.
+    """
+    now = datetime.now()
+    return now.strftime("%m-%d-%Y"), now.strftime("%H-%M-%S")
+
+
 def create_unique_run_dir(root: Path, workflow_id: str, *, suffix: str = "") -> tuple[Path, str]:
-    """Create a unique workflow output directory and return `(path, label)`."""
-    safe_id = safe_stem(workflow_id, fallback="workflow", max_length=64)
+    """Create a dated run directory and return `(path, label)`.
+
+    Runs are grouped into a per-day folder and each run is a time-named
+    subfolder, e.g. `root/06-29-2026/14-23-05`. When several runs land in the
+    same second the subfolder gets a zero-padded numeric suffix (`-01`, `-02`,
+    …) so nothing is ever overwritten. `label` is the posix-style path relative
+    to `root` (e.g. `06-29-2026/14-23-05`); `workflow_id` is retained for the
+    call signature but the folder name is derived from the time, not the id.
+    """
+    _ = workflow_id  # identity is recorded inside the run, not in the folder name
+    date_dir, time_name = local_run_segments()
     suffix_part = f"-{safe_stem(suffix, fallback='run', max_length=32)}" if suffix else ""
-    for attempt in range(20):
-        label = f"{utc_run_timestamp()}-{safe_id}{suffix_part}"
-        if attempt:
-            label = f"{label}-{attempt}"
-        path = root / label
+    base_dir = root / date_dir
+    for attempt in range(100):
+        collision_part = f"-{attempt:02d}" if attempt else ""
+        run_name = f"{time_name}{suffix_part}{collision_part}"
+        path = base_dir / run_name
         try:
             path.mkdir(parents=True, exist_ok=False)
-            return path, label
+            return path, f"{date_dir}/{run_name}"
         except FileExistsError:
             continue
     raise FileExistsError("Unable to create a unique workflow output directory")

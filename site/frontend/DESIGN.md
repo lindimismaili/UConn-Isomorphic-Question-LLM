@@ -5,11 +5,19 @@ panel, input, card, badge, toggle, or color, find it here and reuse the
 documented class.** Do not invent new one-off styles; if something genuinely new
 is needed, add it here first so it stays consistent.
 
+**Templates-first (§14).** Feature code composes UI **only** from the reusable
+primitives in [`src/components/ui/`](src/components/ui/) (the "templates") — not
+from raw `<button className="btn …">` / `<input>` / ad-hoc class strings. If a
+genuinely new element is needed, add it as a `ui/` primitive (and to the
+showcase) **first**, then use it. The live catalog of every building block is the
+**design-system showcase** at `design-system.html`
+(`npm -C frontend run dev` → `/design-system.html`).
+
 All values live as CSS custom properties in [`src/styles/app.css`](src/styles/app.css)
 `:root`. Reference the tokens — never hardcode hex, px, rem, or ms.
 
 Repo-level conventions and the wider architecture live in
-[../AGENTS.md](../AGENTS.md) (see its **Frontend** notes). This file is the
+[../../AGENTS.md](../../AGENTS.md) (see its **Frontend** notes). This file is the
 authority for anything visual.
 
 ---
@@ -470,3 +478,49 @@ These are global and themed — don't override per component:
 9. Transitions use the motion tokens and only animate safe properties; reuse the
    named keyframes.
 10. New responsive rules reuse the existing breakpoints (§3).
+11. The element is rendered through a `ui/` primitive (§14) — no raw `.btn` /
+    control / chip class strings in feature code. If it's genuinely new, it was
+    added as a `ui/` primitive and to the showcase first.
+
+---
+
+## 14. Component library (templates-first)
+
+The whole UI is composed from a small set of reusable **primitives** in
+[`src/components/ui/`](src/components/ui/), exported from the barrel
+[`src/components/ui/index.js`](src/components/ui/index.js):
+
+```js
+import { Button, Card, CardHeader, CardBody, TextInput, Select, TextArea,
+         ToggleSwitch, Badge, StatusChip, ScoreChip, Pill, StatusDot, LogItem,
+         LogList, EmptyState, Tabs, DataTable, KeyValueTable, IconButton,
+         SectionHeading, Modal } from './components/ui';
+```
+
+Each primitive is a **thin wrapper that emits the documented classes above** —
+it adds no new CSS. The class contract (this file) is unchanged; primitives just
+make it the only way features build UI, so consistency is enforced by
+construction rather than by review.
+
+| Primitive | Wraps (this doc) | Key props |
+|---|---|---|
+| `Button` | §4 `.btn` + variant | `variant` (`primary\|secondary\|ghost\|danger`), `size` (`sm`), `icon`, `fixedWidth`, `feedbackState` (`success\|error`), `className` (premade sub-variants), `...rest` |
+| `IconButton` | §4 `.btn-icon-only` | `icon`, `aria-label` |
+| `TextInput` / `TextArea` / `Select` | §5 controls | native props; `Select` takes `options`/`placeholder` |
+| `ToggleSwitch` | §6 `.developer-toggle` | `checked`, `onChange`, `label`, `disabled` |
+| `Card` / `CardHeader` / `CardBody` | §7 `.card` | `variant` (`completed\|failed\|main\|developer-tools\|workflow\|log-panel`), `title`, `subtitle`, `actions`, `disclaimer` |
+| `Badge` / `StatusChip` / `ScoreChip` / `Pill` | §10 chips/pills | `kind`/`tone`/`status`/`state` → the documented `is-*` / `eval-*` classes |
+| `StatusDot` / `LogItem` / `LogList` / `EmptyState` | §10 | `status` / `level` / `entries` / `variant`+`error` |
+| `Tabs` | §8 `.viewer-tab-bar` | `value`, `onChange`, `tabs` |
+| `DataTable` / `KeyValueTable` | §8/§10 tables | `variant` (`eval\|file-viewer`) / `rows` |
+| `Modal` | §8 shell | re-exported from `components/modals/Modal.jsx` (unchanged) |
+
+**Adding a new primitive:** add the wrapper + a barrel export in `ui/`, add a
+specimen to the showcase (`src/design-system/sections/Components.jsx`), extend
+`ui/ui.test.jsx` with its class-contract assertion, and add a row to the table
+above. Never introduce new CSS in a primitive — if a class is missing, document
+it in the relevant section first.
+
+**Showcase:** [`design-system.html`](design-system.html) renders the real
+primitives (single source of truth) inside the app scaffold, organized
+Foundations → Components → Patterns. It's a second Vite entry (`/design-system.html`).

@@ -4,6 +4,7 @@ import PromptViewerModal from './PromptViewerModal.jsx';
 import RubricViewerModal from './RubricViewerModal.jsx';
 import { IconDownload, IconFile, IconList, IconMonitor } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
+import { Button, EmptyState } from '../ui/index.js';
 import { useAgentRegistry, getDerivedRegistry } from '../../hooks/useAgentRegistry';
 
 /** Orders metadata agent records by the pipeline sequence. */
@@ -66,15 +67,15 @@ function AgentCard({ agent, onViewFile, onOpenPrompt }) {
     || capitalize(agent.agent_key);
 
   const fileButton = (label, path) => (
-    <button
-      className="btn btn-secondary btn-sm"
+    <Button
+      variant="secondary"
+      size="sm"
       onClick={() => onViewFile(path)}
       title={`View ${path}`}
-      type="button"
+      icon={<IconMonitor className="btn-icon" />}
     >
-      <IconMonitor className="btn-icon" />
       {label}
-    </button>
+    </Button>
   );
 
   return (
@@ -105,14 +106,15 @@ function AgentCard({ agent, onViewFile, onOpenPrompt }) {
         {agent.input_artifact && fileButton('Input', agent.input_artifact)}
         {agent.output_artifact && fileButton('Output', agent.output_artifact)}
         {prompt && (
-          <button
-            className="btn btn-secondary btn-sm workflow-agent-prompt"
+          <Button
+            variant="secondary"
+            size="sm"
+            className="workflow-agent-prompt"
             onClick={() => onOpenPrompt(prompt)}
-            type="button"
+            icon={<IconFile className="btn-icon" />}
           >
-            <IconFile className="btn-icon" />
             Prompt
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -181,29 +183,26 @@ export default function WorkflowAgentsModal({
         footer={(
           <div className="modal-footer-actions">
             {onViewResults && (
-              <button className="btn btn-secondary" onClick={onViewResults} type="button">
-                <IconMonitor className="btn-icon" />
+              <Button variant="secondary" onClick={onViewResults} icon={<IconMonitor className="btn-icon" />}>
                 View Results
-              </button>
+              </Button>
             )}
             {onViewEvaluations && (
-              <button className="btn btn-secondary" onClick={onViewEvaluations} type="button">
-                <IconList className="btn-icon" />
+              <Button variant="secondary" onClick={onViewEvaluations} icon={<IconList className="btn-icon" />}>
                 View Evaluations
-              </button>
+              </Button>
             )}
             {onDownload && fileName && (
-              <button className="btn btn-secondary" onClick={() => onDownload(fileName)} type="button">
-                <IconDownload className="btn-icon" />
+              <Button variant="secondary" onClick={() => onDownload(fileName)} icon={<IconDownload className="btn-icon" />}>
                 Download Metadata
-              </button>
+              </Button>
             )}
-            <button className="btn btn-primary" onClick={onClose} type="button">Close</button>
+            <Button variant="primary" onClick={onClose}>Close</Button>
           </div>
         )}
       >
-        {loading && <div className="modal-empty-state">Loading…</div>}
-        {error && <div className="modal-empty-state modal-empty-state-error">{error}</div>}
+        {loading && <EmptyState variant="modal">Loading…</EmptyState>}
+        {error && <EmptyState variant="modal" error>{error}</EmptyState>}
         {!loading && !error && data && (
           <div className="viewer-body-stack">
             <div className="workflow-agents-summary">
@@ -282,7 +281,7 @@ export default function WorkflowAgentsModal({
                 ))}
               </div>
             ) : (
-              <div className="modal-empty-state">No agent records found.</div>
+              <EmptyState variant="modal">No agent records found.</EmptyState>
             )}
           </div>
         )}

@@ -5,7 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-FRONTEND_DIR="${REPO_DIR}/frontend"
+FRONTEND_DIR="${REPO_DIR}/site/frontend"
 LOCAL_DOMAIN="${LOCAL_DOMAIN:-isomorphic.localhost}"
 MODE="${1:---dev}"
 BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
@@ -96,11 +96,11 @@ ensure_dependencies() {
 
   if ! "${PYTHON_BIN}" -c "import fastapi, uvicorn" >/dev/null 2>&1; then
     info "Installing backend Python dependencies into $(${PYTHON_BIN} -c 'import sys; print(sys.prefix)')"
-    "${PYTHON_BIN}" -m pip install -r "${REPO_DIR}/backend/requirements.txt"
+    "${PYTHON_BIN}" -m pip install -r "${REPO_DIR}/site/backend/requirements.txt"
   fi
 
-  if [[ ! -f "${REPO_DIR}/.env" ]] || ! grep -Eq '^OPENAI_API_KEY=.+$' "${REPO_DIR}/.env"; then
-    warn ".env is missing OPENAI_API_KEY. The site can start, but workflows will fail until it is set."
+  if [[ ! -f "${REPO_DIR}/site/.env" ]] || ! grep -Eq '^OPENAI_API_KEY=.+$' "${REPO_DIR}/site/.env"; then
+    warn "site/.env is missing OPENAI_API_KEY. The site can start, but workflows will fail until it is set."
   fi
 }
 
@@ -269,7 +269,7 @@ start_backend() {
 
   info "Starting backend at http://${LOCAL_DOMAIN}:${BACKEND_PORT}"
   (
-    cd "${REPO_DIR}"
+    cd "${REPO_DIR}/site"
     exec env \
       ALLOWED_ORIGINS="$(preview_allowed_origins)" \
       "${PYTHON_BIN}" -m uvicorn backend.src.server:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --reload
@@ -305,7 +305,7 @@ run_web_preview() {
 
   # Always produce a fresh build so the preview never serves stale assets.
   # `vite build` empties dist first (emptyOutDir), so this is a full rebuild.
-  info "Building frontend into ${REPO_DIR}/dist"
+  info "Building frontend into ${REPO_DIR}/site/dist"
   npm -C "${FRONTEND_DIR}" run build
 
   # Always serve from a fresh backend: select_web_port stops an existing app
@@ -314,7 +314,7 @@ run_web_preview() {
   select_web_port
 
   info "Starting built web preview at http://${LOCAL_DOMAIN}:${WEB_PORT}"
-  cd "${REPO_DIR}"
+  cd "${REPO_DIR}/site"
   exec env \
     HOST="${BACKEND_HOST}" \
     PORT="${WEB_PORT}" \

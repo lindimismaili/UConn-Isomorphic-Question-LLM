@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile, IconUpload } from '../Icons.jsx';
 import { useAgentRegistry } from '../../hooks/useAgentRegistry';
+import { Button, EmptyState, Select } from '../ui/index.js';
 
 /**
  * Lets developers upload an agent input artifact and resume from that stage.
@@ -17,7 +18,7 @@ export default function InputToAgentModal({
   onRun,
 }) {
   const registryData = useAgentRegistry();
-  const inputAgentKeys = registryData?.inputAgentKeys ?? [];
+  const inputAgentKeys = useMemo(() => registryData?.inputAgentKeys ?? [], [registryData]);
   const sourceFileAgentKeys = registryData?.sourceFileAgentKeys ?? new Set();
   const agentLabels = registryData?.agentLabels ?? {};
   const runtimeAgentKeys = registryData?.runtimeAgentKeys ?? [];
@@ -89,17 +90,16 @@ export default function InputToAgentModal({
       title="Input To Agent"
       footer={
         <div className="modal-footer-actions">
-          <button className="btn btn-secondary" onClick={handleClose} type="button">
+          <Button variant="secondary" onClick={handleClose}>
             Cancel
-          </button>
-          <button
-            className="btn btn-primary"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleRun}
             disabled={isRunning || serviceInactive || !inputFile}
-            type="button"
           >
             Start Workflow
-          </button>
+          </Button>
         </div>
       }
     >
@@ -113,7 +113,7 @@ export default function InputToAgentModal({
 
         <label className="input-to-agent-field" htmlFor="input-to-agent-select">
           <span>Agent</span>
-          <select
+          <Select
             id="input-to-agent-select"
             className="input-to-agent-select"
             value={resolvedAgent}
@@ -122,13 +122,8 @@ export default function InputToAgentModal({
               resetLocalState();
             }}
             disabled={isRunning || serviceInactive}
-          >
-            {agentOptions.map((agent) => (
-              <option key={agent.key} value={agent.key}>
-                {agent.label}
-              </option>
-            ))}
-          </select>
+            options={agentOptions.map((agent) => ({ value: agent.key, label: agent.label }))}
+          />
         </label>
 
         <div className="input-to-agent-upload">
@@ -149,15 +144,14 @@ export default function InputToAgentModal({
               </div>
             </div>
           </div>
-          <button
-            className="btn btn-secondary"
+          <Button
+            variant="secondary"
             onClick={() => fileInputRef.current?.click()}
             disabled={isRunning || serviceInactive}
-            type="button"
+            icon={<IconUpload className="btn-icon" />}
           >
-            <IconUpload className="btn-icon" />
             Select Input
-          </button>
+          </Button>
           <input
             ref={fileInputRef}
             type="file"
@@ -167,7 +161,7 @@ export default function InputToAgentModal({
           />
         </div>
 
-        {error && <div className="modal-empty-state modal-empty-state-error">{error}</div>}
+        {error && <EmptyState variant="modal" error>{error}</EmptyState>}
       </div>
     </Modal>
   );

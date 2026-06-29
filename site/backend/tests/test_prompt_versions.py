@@ -23,7 +23,7 @@ def run_prompt_versions(args: list[str], cwd: Path, check: bool = True) -> subpr
 
 def make_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
-    prompts = repo / "backend" / "data" / "prompts"
+    prompts = repo / "site" / "backend" / "data" / "prompts"
     prompts.mkdir(parents=True)
     shutil.copyfile(REPO_ROOT / "backend" / "data" / "prompts" / "generator.txt", prompts / "generator.txt")
     shutil.copyfile(REPO_ROOT / "backend" / "data" / "prompts" / "verifier.txt", prompts / "verifier.txt")
@@ -31,7 +31,7 @@ def make_repo(tmp_path: Path) -> Path:
     run_git(["init"], repo)
     run_git(["config", "user.email", "test@example.com"], repo)
     run_git(["config", "user.name", "Prompt Test"], repo)
-    run_git(["add", "backend/data/prompts"], repo)
+    run_git(["add", "site/backend/data/prompts"], repo)
     run_git(["commit", "-m", "Initial prompts"], repo)
     return repo
 
@@ -42,14 +42,14 @@ def test_snapshot_commits_only_prompt_changes(tmp_path: Path) -> None:
     readme.write_text("unrelated\n")
     run_git(["add", "README.md"], repo)
 
-    generator = repo / "backend" / "data" / "prompts" / "generator.txt"
+    generator = repo / "site" / "backend" / "data" / "prompts" / "generator.txt"
     generator.write_text(generator.read_text() + "\nTest prompt addition.\n")
 
     result = run_prompt_versions(["snapshot", "-m", "Test prompt snapshot"], repo)
 
     assert "Created prompt snapshot commit" in result.stdout
     commit_files = run_git(["show", "--name-only", "--pretty=format:", "HEAD"], repo).stdout.splitlines()
-    assert commit_files == ["backend/data/prompts/generator.txt"]
+    assert commit_files == ["site/backend/data/prompts/generator.txt"]
     staged_files = run_git(["diff", "--cached", "--name-only"], repo).stdout.splitlines()
     assert staged_files == ["README.md"]
 
@@ -58,7 +58,7 @@ def test_restore_commits_prompt_from_previous_version(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     original_commit = run_git(["rev-parse", "--short", "HEAD"], repo).stdout.strip()
 
-    generator = repo / "backend" / "data" / "prompts" / "generator.txt"
+    generator = repo / "site" / "backend" / "data" / "prompts" / "generator.txt"
     original_text = generator.read_text()
     generator.write_text(original_text + "\nExperimental prompt line.\n")
     run_prompt_versions(["snapshot", "-m", "Experimental generator prompt"], repo)
@@ -74,7 +74,7 @@ def test_restore_commits_prompt_from_previous_version(tmp_path: Path) -> None:
 def test_show_prints_prompt_from_commit(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     commit = run_git(["rev-parse", "--short", "HEAD"], repo).stdout.strip()
-    expected_text = (repo / "backend" / "data" / "prompts" / "verifier.txt").read_text()
+    expected_text = (repo / "site" / "backend" / "data" / "prompts" / "verifier.txt").read_text()
 
     result = run_prompt_versions(["show", commit, "verifier"], repo)
 

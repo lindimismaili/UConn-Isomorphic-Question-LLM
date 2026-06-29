@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { IconXCircle, IconFolder } from './Icons.jsx';
+import { Card, CardBody, CardHeader } from './ui/index.js';
 
 /**
  * Expands escaped whitespace and formats JSON-like error payloads for display.
@@ -44,8 +45,8 @@ export default function FailureSection({ error, outputFolder }) {
   const folderPath = formatOutputFolderPath(outputFolder);
 
   return (
-    <section className="card failed-card" ref={sectionRef}>
-      <div className="card-header">
+    <Card variant="failed" ref={sectionRef}>
+      <CardHeader>
         <div className="completed-header failed-header">
           <span className="completed-icon failed-icon"><IconXCircle /></span>
           <h2>Failure!</h2>
@@ -54,8 +55,8 @@ export default function FailureSection({ error, outputFolder }) {
           The workflow stopped before the final agent finished. Review the output
           below and try again.
         </p>
-      </div>
-      <div className="card-body">
+      </CardHeader>
+      <CardBody>
         <div className="output-section">
           <h4>Output Summary</h4>
           <div className="output-text">{formatText(error)}</div>
@@ -66,7 +67,7 @@ export default function FailureSection({ error, outputFolder }) {
             </span>
           </div>
         </div>
-      </div>
-    </section>
+      </CardBody>
+    </Card>
   );
 }

@@ -1,3 +1,4 @@
+import { StatusChip } from '../../ui/index.js';
 import { formatScore } from './evalData.js';
 
 /**
@@ -14,7 +15,7 @@ export default function EvalSummaryStrip({ report, itemCount }) {
     <div className="eval-summary-strip">
       <div>
         <span className="eval-summary-label">Status</span>
-        <span className={`eval-status-chip eval-status-${reportStatus}`}>{statusLabel}</span>
+        <StatusChip status={reportStatus}>{statusLabel}</StatusChip>
       </div>
       <div>
         <span className="eval-summary-label">Overall Score</span>

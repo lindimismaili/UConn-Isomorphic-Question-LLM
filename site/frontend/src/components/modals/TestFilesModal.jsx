@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
 import { generateId } from '../../utils/ids';
+import { Button, EmptyState } from '../ui/index.js';
 
 /** Mirrors the main upload limit for test-file selections. */
 const MAX_FILES = 5;
@@ -84,21 +85,21 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
       onClose={onClose}
       title="Test Files"
       footer={
-        <button className="btn btn-primary" onClick={onClose}>Close</button>
+        <Button variant="primary" onClick={onClose}>Close</Button>
       }
     >
       <div className="modal-body-stack">
         <div className="files-list">
         {loading && (
-          <div className="modal-empty-state">Loading test files...</div>
+          <EmptyState variant="modal">Loading test files...</EmptyState>
         )}
 
         {!loading && error && (
-          <div className="modal-empty-state modal-empty-state-error">{error}</div>
+          <EmptyState variant="modal" error>{error}</EmptyState>
         )}
 
         {!loading && !error && availableFiles.length === 0 && (
-          <div className="modal-empty-state">No test files found in `data/evaluation`.</div>
+          <EmptyState variant="modal">No test files found in `data/evaluation`.</EmptyState>
         )}
 
         {!loading && !error && availableFiles.map((item) => {
@@ -112,13 +113,14 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
                   <div className="file-item-path">{`data/evaluation/${item.relativePath}`}</div>
                 </div>
               </div>
-              <button
-                className={`btn test-file-toggle-btn ${selected ? 'btn-remove' : 'btn-secondary'}`}
+              <Button
+                variant={selected ? null : 'secondary'}
+                className={`test-file-toggle-btn${selected ? ' btn-remove' : ''}`}
                 onClick={() => toggleTestFile(item)}
                 disabled={isRunning}
               >
                 {selected ? 'Unselect' : 'Select'}
-              </button>
+              </Button>
             </div>
           );
         })}

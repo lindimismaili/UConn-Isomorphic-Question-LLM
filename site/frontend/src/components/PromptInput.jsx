@@ -6,6 +6,7 @@ import {
   IconSend,
   IconInfo,
 } from './Icons.jsx';
+import { Button, Card, CardBody, CardHeader, Select, TextArea } from './ui/index.js';
 
 /**
  * Normalizes the theme-prompt payload from `/api/dropdown`.
@@ -168,34 +169,24 @@ export default function PromptInput({
   };
 
   return (
-    <section className="card main-card">
-      <div className="card-header main-card-header">
-        <div className="card-header-row">
-          <h2>Start Here!</h2>
-          <div className="header-buttons">
-            <button
-              className="btn btn-secondary"
-              onClick={onShowHelp}
-            >
-              <IconInfo className="btn-icon" />
-              <span>Summary</span>
-            </button>
-          </div>
-        </div>
-        <p className="disclaimer-text">Disclaimer: All data/files/prompts sent are saved to our servers.</p>
-        <p className="subtitle">
-          Enter a prompt and provide some example questions. You can upload
-          files as well! By default, the generator will create brand new
-          questions with the same concept, difficulty, and logic as the original.
-        </p>
-      </div>
+    <Card variant="main">
+      <CardHeader
+        className="main-card-header"
+        title="Start Here!"
+        actions={
+          <Button variant="secondary" onClick={onShowHelp} icon={<IconInfo className="btn-icon" />}>
+            <span>Summary</span>
+          </Button>
+        }
+        disclaimer="Disclaimer: All data/files/prompts sent are saved to our servers."
+        subtitle="Enter a prompt and provide some example questions. You can upload files as well! By default, the generator will create brand new questions with the same concept, difficulty, and logic as the original."
+      />
 
-      <div className="card-body">
+      <CardBody>
         <div className="prompt-layout">
-          <textarea
+          <TextArea
             id="prompt-input"
             name="prompt"
-            className="prompt-input"
             placeholder="Enter your instructions here... e.g., 'Generate 3 isomorphic questions per source question with medium difficulty'. If no prompt is given, internal prompt will try and generate questions using default parameters."
             value={prompt}
             onChange={(e) => onPromptChange(e.target.value)}
@@ -204,24 +195,20 @@ export default function PromptInput({
           />
 
           <div className="prompt-actions-row">
-            <select
+            <Select
               id="theme-prompt-select"
-              className="prompt-dropdown-select prompt-theme-select"
+              className="prompt-theme-select"
               value={dropdownSelectValue}
               onChange={handleDropdownChange}
               disabled={isRunning || serviceInactive || dropdownItems.length === 0}
-            >
-              <option value="">Select a theme...</option>
-              {dropdownItems.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+              placeholder="Select a theme..."
+              options={dropdownItems}
+            />
 
             <div className="prompt-actions-right">
-              <button
-                className={`btn btn-secondary${uploadWarning ? ' btn-error-feedback' : ''}`}
+              <Button
+                variant="secondary"
+                feedbackState={uploadWarning ? 'error' : undefined}
                 onClick={() => {
                   if (limitReached) {
                     handleUploadWarning();
@@ -231,8 +218,8 @@ export default function PromptInput({
                 }}
                 disabled={isRunning || serviceInactive}
                 title="Upload up to 5 files (.txt, .pdf, images, .md, .tex, .latex, .docx, .doc)"
+                icon={<IconUpload className="btn-icon" />}
               >
-                <IconUpload className="btn-icon" />
                 <span className="btn-label">
                   {uploadWarning
                     ? 'Unsupported or too many files!'
@@ -240,7 +227,7 @@ export default function PromptInput({
                       ? `Upload Files - ${files.length}`
                       : 'Upload Files'}
                 </span>
-              </button>
+              </Button>
               <input
                 ref={fileInputRef}
                 id="source-files-input"
@@ -252,18 +239,20 @@ export default function PromptInput({
                 onChange={handleFileSelect}
               />
 
-              <button
-                className={`btn ${isRunning ? 'btn-danger' : 'btn-primary'} send-action${resetFeedback ? ' btn-feedback' : ''}`}
+              <Button
+                variant={isRunning ? 'danger' : 'primary'}
+                className="send-action"
+                feedbackState={resetFeedback ? 'success' : undefined}
                 onClick={handleSend}
                 disabled={resetFeedback || (!isRunning && serviceInactive)}
+                icon={isRunning ? <IconTrash className="btn-icon" /> : <IconSend className="btn-icon" />}
               >
-                {isRunning ? <IconTrash className="btn-icon" /> : <IconSend className="btn-icon" />}
                 <span>{isRunning ? 'Stop' : 'Send'}</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </CardBody>
+    </Card>
   );
 }

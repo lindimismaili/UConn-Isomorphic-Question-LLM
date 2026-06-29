@@ -219,7 +219,7 @@ require_linux() {
 }
 
 require_repo() {
-  if [[ ! -f "${REPO_DIR}/backend/requirements.txt" ]] || [[ ! -f "${REPO_DIR}/backend/src/server.py" ]] || [[ ! -f "${REPO_DIR}/frontend/package.json" ]]; then
+  if [[ ! -f "${REPO_DIR}/site/backend/requirements.txt" ]] || [[ ! -f "${REPO_DIR}/site/backend/src/server.py" ]] || [[ ! -f "${REPO_DIR}/site/frontend/package.json" ]]; then
     err "Cannot find expected repo files under ${REPO_DIR}."
     err "Run this from the cloned UConn-IsomorphicQuestionLLM repository."
     exit 1
@@ -362,25 +362,25 @@ sync_repo_to_deploy_dir() {
   banner "Deploy Directory"
 
   info "Creating ${DEPLOY_DIR} and syncing the repository."
-  sudo mkdir -p "${DEPLOY_DIR}/backend/outputs" "${DEPLOY_DIR}/backend/uploads"
+  sudo mkdir -p "${DEPLOY_DIR}/site/backend/outputs" "${DEPLOY_DIR}/site/backend/uploads"
 
   sudo rsync -a --delete \
     --exclude ".git/" \
     --exclude ".venv/" \
     --exclude ".env" \
     --exclude "node_modules/" \
-    --exclude "frontend/node_modules/" \
-    --exclude "frontend/.vite/" \
-    --exclude "backend/outputs/" \
-    --exclude "backend/uploads/" \
-    --exclude "backend/runtime/" \
+    --exclude "site/frontend/node_modules/" \
+    --exclude "site/frontend/.vite/" \
+    --exclude "site/backend/outputs/" \
+    --exclude "site/backend/uploads/" \
+    --exclude "site/backend/runtime/" \
     --exclude "__pycache__/" \
     "${REPO_DIR}/" "${DEPLOY_DIR}/"
 
-  if [[ -f "${REPO_DIR}/.env" ]]; then
-    sudo install -m 640 -o www-data -g www-data "${REPO_DIR}/.env" "${DEPLOY_DIR}/.env"
-  elif [[ ! -f "${DEPLOY_DIR}/.env" ]]; then
-    warn "No .env file found. OPENAI_API_KEY is required before workflows can run."
+  if [[ -f "${REPO_DIR}/site/.env" ]]; then
+    sudo install -m 640 -o www-data -g www-data "${REPO_DIR}/site/.env" "${DEPLOY_DIR}/site/.env"
+  elif [[ ! -f "${DEPLOY_DIR}/site/.env" ]]; then
+    warn "No site/.env file found. OPENAI_API_KEY is required before workflows can run."
   fi
 
   sudo chown -R www-data:www-data "${DEPLOY_DIR}"
@@ -388,7 +388,7 @@ sync_repo_to_deploy_dir() {
 }
 
 warn_if_openai_key_missing() {
-  local env_file="${DEPLOY_DIR}/.env"
+  local env_file="${DEPLOY_DIR}/site/.env"
 
   if [[ ! -f "${env_file}" ]]; then
     warn "Missing ${env_file}. Create it with OPENAI_API_KEY=... before running workflows."
@@ -403,7 +403,7 @@ warn_if_openai_key_missing() {
 setup_python_venv() {
   banner "Python Environment"
 
-  local req_file="${DEPLOY_DIR}/backend/requirements.txt"
+  local req_file="${DEPLOY_DIR}/site/backend/requirements.txt"
   local venv_dir="${DEPLOY_DIR}/.venv"
   local pip_bin="${venv_dir}/bin/pip"
 
@@ -431,8 +431,8 @@ setup_python_venv() {
 build_frontend() {
   banner "Frontend Build"
 
-  local frontend_dir="${DEPLOY_DIR}/frontend"
-  local dist_dir="${DEPLOY_DIR}/dist"
+  local frontend_dir="${DEPLOY_DIR}/site/frontend"
+  local dist_dir="${DEPLOY_DIR}/site/dist"
 
   sudo chown -R "$(whoami)" "${frontend_dir}"
   sudo mkdir -p "${dist_dir}"
@@ -457,7 +457,7 @@ build_frontend() {
 }
 
 write_version() {
-  local dist_dir="${DEPLOY_DIR}/dist"
+  local dist_dir="${DEPLOY_DIR}/site/dist"
   local commit_sha="unknown"
   local commit_short="unknown"
   local commit_time="unknown"
@@ -594,8 +594,8 @@ Wants=network-online.target
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=${DEPLOY_DIR}
-EnvironmentFile=-${DEPLOY_DIR}/.env
+WorkingDirectory=${DEPLOY_DIR}/site
+EnvironmentFile=-${DEPLOY_DIR}/site/.env
 Environment=HOST=127.0.0.1
 Environment=PORT=${BACKEND_PORT}
 Environment=ALLOWED_ORIGINS=${allowed_origins}
@@ -683,7 +683,7 @@ server {
     listen 80${default_server_flag};
     server_name ${server_names};
 
-    root ${DEPLOY_DIR}/dist;
+    root ${DEPLOY_DIR}/site/dist;
     index index.html;
 
     client_max_body_size 100m;
@@ -810,6 +810,7 @@ save_deploy_config() {
   save_config_var "BACKEND_PORT" "${BACKEND_PORT}"
   save_config_var "CLOUDFLARED_SERVICE_NAME" "${CLOUDFLARED_SERVICE_NAME}"
   save_config_var "CLOUDFLARED_CONFIG_FILE" "${CLOUDFLARED_CONFIG_FILE}"
+  save_config_var "AUTO_UPDATE" "${AUTO_UPDATE:-0}"
   if [[ -n "${TUNNEL_NAME:-}" ]]; then
     save_config_var "TUNNEL_NAME" "${TUNNEL_NAME}"
   fi
@@ -1429,7 +1430,108 @@ setup_cloudflare() {
   info "Cloudflare tunnel is configured for https://${PUBLIC_HOSTNAME}"
 }
 
+run_auto_update() {
+  # Non-interactive path run by the systemd timer. Tracks origin/main and, when
+  # it moves, force-resets the checkout and redeploys the running site.
+  require_repo
+  validate_deploy_settings
+
+  local repo_owner
+  repo_owner="$(stat -c '%U' "${REPO_DIR}/.git" 2>/dev/null || echo root)"
+
+  # Run git as the repo owner so its SSH key/credentials are used (the timer
+  # runs as root, which has neither) and to avoid "dubious ownership" errors.
+  git_as_owner() { sudo -u "${repo_owner}" git -C "${REPO_DIR}" "$@"; }
+
+  if ! git_as_owner remote get-url origin >/dev/null 2>&1; then
+    warn "No git origin in ${REPO_DIR}; skipping auto-update."
+    return 0
+  fi
+
+  if ! git_as_owner fetch --quiet --force origin main; then
+    warn "git fetch failed (network/auth); will retry next cycle."
+    return 0
+  fi
+
+  local local_sha remote_sha
+  local_sha="$(git_as_owner rev-parse HEAD 2>/dev/null || echo unknown)"
+  remote_sha="$(git_as_owner rev-parse origin/main 2>/dev/null || echo unknown)"
+
+  if [[ "${remote_sha}" == "unknown" ]]; then
+    warn "Could not resolve origin/main; skipping auto-update."
+    return 0
+  fi
+
+  if [[ "${local_sha}" == "${remote_sha}" ]]; then
+    return 0   # Up to date — the common 60s case, no rebuild.
+  fi
+
+  info "New commit ${remote_sha:0:7} on origin/main; force-redeploying."
+  # Force the checkout to exactly match origin/main no matter what was edited
+  # locally on the Pi: discard tracked-file edits and untracked junk.
+  #
+  # Data dirs are NOT touched: `clean -ffd` (no -x) already skips gitignored
+  # paths, so uploads/outputs/runtime contents survive; the explicit excludes
+  # are belt-and-suspenders in case those dirs are ever un-ignored. The live
+  # uploaded/output data lives under DEPLOY_DIR, which git never operates on.
+  git_as_owner checkout -f main
+  git_as_owner reset --hard origin/main
+  git_as_owner clean -ffd \
+    -e "site/backend/uploads" \
+    -e "site/backend/outputs" \
+    -e "site/backend/runtime"
+
+  require_sudo
+  sync_repo_to_deploy_dir
+  setup_python_venv
+  build_frontend
+  install_backend_service   # Rewrites the unit, restarts, waits on /api/health.
+  info "Auto-update to ${remote_sha:0:7} complete."
+}
+
+install_auto_update_units() {
+  banner "Automatic Updates"
+
+  local service_file="/etc/systemd/system/${SERVICE_NAME}-update.service"
+  local timer_file="/etc/systemd/system/${SERVICE_NAME}-update.timer"
+
+  sudo tee "${service_file}" >/dev/null <<EOF
+[Unit]
+Description=Auto-update ${SERVICE_NAME} from origin/main
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash ${REPO_DIR}/deploy/deploy.sh --update
+EOF
+
+  sudo tee "${timer_file}" >/dev/null <<EOF
+[Unit]
+Description=Check origin/main for ${SERVICE_NAME} every 60s
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  sudo chmod 644 "${service_file}" "${timer_file}"
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now "${SERVICE_NAME}-update.timer"
+  info "Auto-update enabled: checks origin/main every 60s and force-redeploys."
+  info "Disable later with: sudo systemctl disable --now ${SERVICE_NAME}-update.timer"
+}
+
 main() {
+  if [[ "${1:-}" == "--update" ]]; then
+    run_auto_update
+    exit 0
+  fi
+
   banner "UConn Isomorphic Question LLM Installer"
   select_platform
 
@@ -1464,10 +1566,24 @@ main() {
     info "Skipped Cloudflare hosting. Local site remains available at http://${LOCAL_DOMAIN}"
   fi
 
+  echo ""
+  if ask_to_continue "Enable automatic updates (check GitHub every 60s and force-redeploy new commits)?"; then
+    install_auto_update_units
+    AUTO_UPDATE=1
+  else
+    sudo systemctl disable --now "${SERVICE_NAME}-update.timer" 2>/dev/null || true
+    AUTO_UPDATE=0
+    info "Automatic updates disabled."
+  fi
+  save_deploy_config
+
   banner "Complete"
   info "Local site: http://${LOCAL_DOMAIN}"
   info "Backend service: sudo systemctl status ${SERVICE_NAME}"
   info "Logs: sudo journalctl -u ${SERVICE_NAME} -f"
+  if [[ "${AUTO_UPDATE:-0}" == "1" ]]; then
+    info "Auto-update: enabled (origin/main every 60s) — sudo systemctl status ${SERVICE_NAME}-update.timer"
+  fi
   warn_if_openai_key_missing
 }
 

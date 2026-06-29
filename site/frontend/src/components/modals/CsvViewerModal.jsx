@@ -1,6 +1,7 @@
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
+import { Button, DataTable, EmptyState } from '../ui/index.js';
 
 /**
  * Parses a CSV string into a 2D array of strings.
@@ -119,20 +120,19 @@ export default function CsvViewerModal({ isOpen, onClose, fileName, url, onDownl
       footer={(
         <div className="modal-footer-actions">
           {onDownload && fileName && (
-            <button className="btn btn-secondary" onClick={() => onDownload(fileName)} type="button">
-              <IconDownload className="btn-icon" />
+            <Button variant="secondary" onClick={() => onDownload(fileName)} icon={<IconDownload className="btn-icon" />}>
               Download
-            </button>
+            </Button>
           )}
-          <button className="btn btn-primary" onClick={onClose} type="button">Close</button>
+          <Button variant="primary" onClick={onClose}>Close</Button>
         </div>
       )}
     >
-      {loading && <div className="modal-empty-state">Loading…</div>}
-      {error && <div className="modal-empty-state modal-empty-state-error">{error}</div>}
+      {loading && <EmptyState variant="modal">Loading…</EmptyState>}
+      {error && <EmptyState variant="modal" error>{error}</EmptyState>}
       {!loading && !error && headers.length > 0 && (
         <div className="file-viewer-table-shell">
-          <table className="file-viewer-table">
+          <DataTable variant="file-viewer">
             <thead>
               <tr>
                 {headers.map((h, i) => (
@@ -153,11 +153,11 @@ export default function CsvViewerModal({ isOpen, onClose, fileName, url, onDownl
                 </tr>
               ))}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       )}
       {!loading && !error && headers.length === 0 && (
-        <div className="modal-empty-state">No data found in file.</div>
+        <EmptyState variant="modal">No data found in file.</EmptyState>
       )}
     </Modal>
   );

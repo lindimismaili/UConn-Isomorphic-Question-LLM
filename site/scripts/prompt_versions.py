@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROMPT_DIR = Path("backend/data/prompts")
+PROMPT_DIR = Path("site/backend/data/prompts")
 PROMPT_SUFFIX = ".txt"
 DEFAULT_LOG_LIMIT = 20
 
@@ -71,7 +71,7 @@ def reject_unmerged_prompts(root: Path) -> None:
 
 def resolve_prompt_path(prompt_name: str) -> Path:
     path = Path(prompt_name)
-    if path.parts[:3] == PROMPT_DIR.parts:
+    if path.parts[: len(PROMPT_DIR.parts)] == PROMPT_DIR.parts:
         relative = path
     else:
         name = path.name
@@ -199,7 +199,7 @@ def print_status(_args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Create and inspect prompt-only Git commits for backend/data/prompts.",
+        description="Create and inspect prompt-only Git commits for site/backend/data/prompts.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

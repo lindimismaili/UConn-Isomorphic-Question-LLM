@@ -18,35 +18,45 @@ architecture, see [AGENTS.md](AGENTS.md).
 
 The repository is split into two runtime surfaces:
 
-- `backend/`: FastAPI API, workflow orchestration, evaluation, data files, and run outputs
-- `frontend/`: React + Vite UI that talks to the backend API
-- `dist/`: built frontend assets served by the backend when present
+- `site/backend/`: FastAPI API, workflow orchestration, evaluation, data files, and run outputs
+- `site/frontend/`: React + Vite UI that talks to the backend API
+- `site/dist/`: built frontend assets served by the backend when present
 
-The backend creates a shared OpenAI container for each workflow run, uploads source files, executes the agent chain, compiles LaTeX to PDF, and writes the final artifacts into a timestamped output folder. Both the server and the CLI drive the same engine in `backend/src/workflow/engine.py`.
+The backend creates a shared OpenAI container for each workflow run, uploads source files, executes the agent chain, compiles LaTeX to PDF, and writes the final artifacts into a timestamped output folder. Both the server and the CLI drive the same engine in `site/backend/src/workflow/engine.py`.
+
+## Documentation
+
+Every Markdown doc in the repo and what it covers:
+
+- [README.md](README.md) — this file: setup, environment, run/CLI/output reference, and troubleshooting.
+- [AGENTS.md](AGENTS.md) — the single source of truth for coding-agent onboarding: repo conventions, full architecture tour, source-of-truth paths, the commands that work, and the data contracts. ([CLAUDE.md](CLAUDE.md) is a pointer to it.)
+- [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend reference: what every file does, the important functions, the 8-stage workflow, the HTTP API routes, the `data/` files, and the tests.
+- [site/frontend/DESIGN.md](site/frontend/DESIGN.md) — frontend design system: tokens, the reusable component primitives, modals/stacking, motion, and the single-page design-system showcase. **Read before any UI change.**
+- [deploy/DEPLOY.md](deploy/DEPLOY.md) — deployment and local-preview scripts (operational guide, not a source of truth).
 
 ## Repository Layout
 
-- `backend/src/main.py` command-line workflow runner
-- `backend/src/server.py` FastAPI app factory (CORS, lifespan, static mount)
-- `backend/src/api/` HTTP routers by domain (health, config, files, workflows, batch) + `state.py`
-- `backend/src/workflow/` shared engine, agent factory, payload builders, resume, SQLite store
-- `backend/src/evaluation.py` OpenAI evals integration
-- `backend/src/artifacts.py` workflow and agent artifact writers/readers
-- `backend/src/container.py` shared OpenAI container runtime helpers
-- `backend/data/` prompts, rubric, agents config, and evaluation fixtures
-  (PDFs in `backend/data/evaluation/` are listed dynamically by the UI's
+- `site/backend/src/main.py` command-line workflow runner
+- `site/backend/src/server.py` FastAPI app factory (CORS, lifespan, static mount)
+- `site/backend/src/api/` HTTP routers by domain (health, config, files, workflows, batch) + `state.py`
+- `site/backend/src/workflow/` shared engine, agent factory, payload builders, resume, SQLite store
+- `site/backend/src/evaluation.py` OpenAI evals integration
+- `site/backend/src/artifacts.py` workflow and agent artifact writers/readers
+- `site/backend/src/container.py` shared OpenAI container runtime helpers
+- `site/backend/data/` prompts, rubric, agents config, and evaluation fixtures
+  (PDFs in `site/backend/data/evaluation/` are listed dynamically by the UI's
   Browse Test Files and Create Data flows — drop a file in to add an option)
-- `backend/uploads/` uploaded source files grouped by session
-- `backend/outputs/` timestamped workflow outputs
-- `backend/runtime/` SQLite mirror of workflow/batch state
-- `frontend/src/` React UI (components, hooks, utils, styles)
-- `frontend/DESIGN.md` UI element mapping (design tokens, button/modal system)
+- `site/backend/uploads/` uploaded source files grouped by session
+- `site/backend/outputs/` timestamped workflow outputs
+- `site/backend/runtime/` SQLite mirror of workflow/batch state
+- `site/frontend/src/` React UI (components, hooks, utils, styles)
+- `site/frontend/DESIGN.md` UI element mapping (design tokens, button/modal system)
 
 ## Prerequisites
 
 - Python 3.10+
 - Node.js 20.19+ within Node 20.x, or Node.js 22.12+ and npm. Node 22 LTS is recommended for Raspberry Pi deploys.
-- `OPENAI_API_KEY` in your environment or a `.env` file at the repo root
+- `OPENAI_API_KEY` in your environment or a `.env` file in `site/`
 
 Notes:
 
@@ -60,16 +70,16 @@ From the repository root:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r backend/requirements.txt
-npm -C frontend install
+pip install -r site/backend/requirements.txt
+npm -C site/frontend install
 ```
 
-If you prefer to keep the backend and frontend dependencies separate, activate the virtual environment before running backend commands and keep the frontend install in `frontend/node_modules/`.
+If you prefer to keep the backend and frontend dependencies separate, activate the virtual environment before running backend commands and keep the frontend install in `site/frontend/node_modules/`.
 
 ## Environment Variables
 
-The backend loads `.env` from the repo root if present. `.env` is tracked in
-the repo; [.env.example](.env.example) documents every supported variable.
+The backend loads `.env` from `site/` (its resolved repo root) if present. `.env`
+is tracked in the repo; [site/.env.example](site/.env.example) documents every supported variable.
 Local-only overrides belong in `.env.local` / `.env.*.local` (gitignored).
 
 Required:
@@ -107,13 +117,13 @@ Open:
 - `http://isomorphic.localhost:5173` for the Vite UI
 - `http://isomorphic.localhost:5173/api/health` for a quick backend check through the dev proxy
 
-To run only the backend API:
+To run only the backend API (`--app-dir site` puts `backend` on the import path):
 
 ```bash
-python -m uvicorn backend.src.server:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn backend.src.server:app --app-dir site --host 0.0.0.0 --port 8000 --reload
 ```
 
-To serve the built frontend from the backend, build `dist/` first:
+To serve the built frontend from the backend, build `site/dist/` first:
 
 ```bash
 bash deploy/preview.sh --web
@@ -124,7 +134,7 @@ bash deploy/preview.sh --web
 Run the Vite dev server in a second terminal:
 
 ```bash
-npm -C frontend run dev:ui
+npm -C site/frontend run dev:ui
 ```
 
 The Vite dev server proxies API requests to the local backend started by `deploy/preview.sh`.
@@ -133,9 +143,9 @@ If your backend is elsewhere, set `VITE_BACKEND_URL` before starting Vite.
 Useful frontend commands:
 
 ```bash
-npm -C frontend run build
-npm -C frontend run lint
-npm -C frontend run preview
+npm -C site/frontend run build
+npm -C site/frontend run lint
+npm -C site/frontend run preview
 ```
 
 ## CLI Usage
@@ -143,7 +153,7 @@ npm -C frontend run preview
 Run the workflow directly from the command line:
 
 ```bash
-python -m backend.src.main "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
+PYTHONPATH=site python -m backend.src.main "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
 ```
 
 CLI flags:
@@ -156,7 +166,7 @@ If no file is supplied, the CLI falls back to the default evaluation PDF when av
 
 ## Prompt Versioning
 
-Prompt templates live in `backend/data/prompts/*.txt`. Use Git commits as the
+Prompt templates live in `site/backend/data/prompts/*.txt`. Use Git commits as the
 version history for prompt experiments, and keep prompt changes in dedicated
 prompt-only commits:
 
@@ -200,7 +210,7 @@ Agents (run summary, per-agent metadata, and artifact viewers).
 
 ## Outputs
 
-Every workflow writes to `backend/outputs/<timestamp>/`.
+Every workflow writes to `site/backend/outputs/<timestamp>/`.
 
 Common files:
 
@@ -220,11 +230,11 @@ Evaluation artifacts:
 - `evaluation_outputs/evaluation_dataset.jsonl`
 - `evaluation_outputs/evaluation_agents.jsonl`
 
-Batch create-data runs also write batch summaries and per-file workflow folders under `backend/outputs/`.
+Batch create-data runs also write batch summaries and per-file workflow folders under `site/backend/outputs/`.
 
 ## Evaluation Artifacts
 
-The evaluation step uses the rubric in `backend/data/rubric.json` and writes scored results into the output folder for the run.
+The evaluation step uses the rubric in `site/backend/data/rubric.json` and writes scored results into the output folder for the run.
 Those files are the primary record of how the generated questions were judged.
 
 ## Project Docs
@@ -233,22 +243,22 @@ Every Markdown doc tracked in the repo:
 
 - [AGENTS.md](AGENTS.md) the single source of truth: architecture, source-of-truth paths, conventions, API surface, gotchas
 - [CLAUDE.md](CLAUDE.md) coding-agent entry point; points straight to AGENTS.md
-- [frontend/DESIGN.md](frontend/DESIGN.md) frontend design system: tokens, layout, buttons, modals, themes, transitions, consistency rules
+- [site/frontend/DESIGN.md](site/frontend/DESIGN.md) frontend design system: tokens, layout, buttons, modals, themes, transitions, consistency rules
 - [deploy/DEPLOY.md](deploy/DEPLOY.md) deployment and local preview scripts
 - [README.md](README.md) this file: setup, environment, run/CLI/output reference
 
 ## Troubleshooting
 
 - `OPENAI_API_KEY` missing: the backend API can start, but workflow execution will fail until the key is set.
-- `dist/index.html` missing: run `npm -C frontend run build`, then restart `python -m backend.src.server`.
+- `site/dist/index.html` missing: run `npm -C site/frontend run build`, then restart the backend.
 - `crypto.hash is not a function` or Vite says Node 20.19+/22.12+ is required: upgrade Node. Node 21 is not in Vite's allowed range. On Raspberry Pi, run `bash deploy/deploy.sh`; the deploy script installs Node 22 from NodeSource when the current Node is missing or too old.
 - Upload rejected: check the file extension and `MAX_UPLOAD_BYTES`.
-- Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `backend/outputs/`.
+- Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `site/backend/outputs/`.
 - Frontend cannot reach the backend in dev mode: run `bash deploy/preview.sh --dev` and open `http://isomorphic.localhost:5173`.
 
 ## Development Notes
 
-- Do not edit files under `backend/outputs/` or `backend/uploads/`; they are generated runtime data.
-- The backend serves the built frontend from `dist/` when available, otherwise it returns a fallback page that points to the dev commands.
+- Do not edit files under `site/backend/outputs/` or `site/backend/uploads/`; they are generated runtime data.
+- The backend serves the built frontend from `site/dist/` when available, otherwise it returns a fallback page that points to the dev commands.
 - The Vite build emits `agents.json` and `data/agents.json` so the UI can load the shared agent config without hard-coding it in the app bundle.
 - The UI talks to `/api/upload`, `/api/workflow/start`, `/api/workflow/{id}/status`, `/api/workflow/{id}/result`, and the related workflow endpoints exposed by FastAPI.
