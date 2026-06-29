@@ -44,6 +44,9 @@ Generation rules:
    - When a theme is provided, re-cast EVERY generated question's scenario and context to fit
      the theme's guidance while preserving the core physics concept, difficulty, answer
      structure, numeric reasoning, and distractor logic.
+   - Respect any scope limits stated in the theme guidance: change only the surface setting,
+     names, and framing, and do NOT escalate the question's conceptual difficulty or introduce
+     domain-specific theory beyond what the original physics requires.
    - If no theme is provided, preserve the source question's real-world context.
 3. Tags:
    - Give each generated question a `tags` list describing its specific context: topics,
