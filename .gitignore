@@ -1,69 +1,62 @@
-# Python bytecode / caches
+# Python
 __pycache__/
 *.py[cod]
 *.pyd
-
-# Virtual environments
 .venv/
 venv/
 env/
-
-# Packaging / build
-build/
-dist/
 *.egg-info/
 .eggs/
 
-# Node.js
+# JavaScript
 node_modules/
-frontend/node_modules/
-**/node_modules/A
-frontend/.vite/
+.vite/
 
-# Test / type / lint caches
+# Generated builds
+build/
+dist/
+
+# Tests, coverage, and tool caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 coverage.xml
-
-# Notebooks
 .ipynb_checkpoints/
 
-# Logs / temp
+# Browser automation
+.playwright-mcp/
+baseline-*.png
+
+# Logs and temporary files
 *.log
 *.tmp
 *old/
 
-# Playwright MCP / local browser-driver output
-.playwright-mcp/
-baseline-*.png
-
-# IDEs / editors
+# Editors
 .idea/
 *.swp
 
-# OS files
+# Operating-system metadata
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# Local secrets / configs (.env itself is tracked intentionally)
+# Local configuration and tool state (.env itself is tracked intentionally)
 .deploy.env
 .env.local
 .env.*.local
-
-# Local upload marker
 .upload
+.remember/
 
 # Runtime artifacts: keep folders, ignore contents
 uploads/*
 !uploads/.gitkeep
 outputs/*
 !outputs/.gitkeep
-backend/uploads/*
-!backend/uploads/.gitkeep
-backend/outputs/*
-!backend/outputs/.gitkeep
-backend/runtime/*
-!backend/runtime/.gitkeep
+site/backend/uploads/*
+!site/backend/uploads/.gitkeep
+site/backend/outputs/*
+!site/backend/outputs/.gitkeep
+site/backend/runtime/*
+!site/backend/runtime/.gitkeep
