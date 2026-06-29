@@ -1,22 +1,14 @@
 import { useEffect, useRef } from 'react';
+import { Card, CardBody, CardHeader, LogList } from './ui/index.js';
 
-function LogEntries({ logs }) {
-  return logs.length > 0 ? (
-    <div className="log-list">
-      {logs.map((entry) => (
-        <div key={entry.id} className={`log-item log-${entry.level}`}>
-          <span className="log-time">[{entry.time}]</span>
-          <span>{entry.message}</span>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <div className="log-empty-state">
-      Logs will appear here when you start a workflow.
-    </div>
-  );
-}
-
+/**
+ * Live workflow log. Renders standalone as a card, or `embedded` as just the
+ * scrolling frame (used inside the developer-tools panel).
+ *
+ * @param {object} props
+ * @param {Array<{id: string|number, level: string, time?: string, message: import('react').ReactNode}>} props.logs
+ * @param {boolean} [props.embedded]
+ */
 export default function LogPanel({ logs, embedded = false }) {
   const frameRef = useRef(null);
 
@@ -26,25 +18,20 @@ export default function LogPanel({ logs, embedded = false }) {
     }
   }, [logs]);
 
+  const frame = (
+    <div className="log-frame" role="log" aria-live="polite" ref={frameRef}>
+      <LogList entries={logs} />
+    </div>
+  );
+
   if (embedded) {
-    return (
-      <div className="log-frame" role="log" aria-live="polite" ref={frameRef}>
-        <LogEntries logs={logs} />
-      </div>
-    );
+    return frame;
   }
 
   return (
-    <section className="card pipeline-panel log-panel log-panel-card">
-      <div className="card-header">
-        <h2>Live Log</h2>
-        <p className="subtitle">Workflow events appear here as the system progresses.</p>
-      </div>
-      <div className="card-body">
-        <div className="log-frame" role="log" aria-live="polite" ref={frameRef}>
-          <LogEntries logs={logs} />
-        </div>
-      </div>
-    </section>
+    <Card variant="log-panel" className="pipeline-panel log-panel">
+      <CardHeader title="Live Log" subtitle="Workflow events appear here as the system progresses." />
+      <CardBody>{frame}</CardBody>
+    </Card>
   );
 }

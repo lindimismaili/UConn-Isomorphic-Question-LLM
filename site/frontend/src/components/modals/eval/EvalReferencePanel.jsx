@@ -1,4 +1,5 @@
 import { IconDownload, IconFile } from '../../Icons.jsx';
+import { Badge, Button } from '../../ui/index.js';
 import { formatFileKind } from './evalData.js';
 
 /**
@@ -37,20 +38,20 @@ export default function EvalReferencePanel({ title, files, emptyText, onDownload
                 <div className="eval-reference-path">{file.displayPath || file.name}</div>
               </div>
               {onDownload ? (
-                <button
-                  className="btn btn-secondary eval-reference-download"
+                <Button
+                  variant="secondary"
+                  className="eval-reference-download"
                   disabled={!file.name}
                   onClick={() => file.name && onDownload(file.name)}
-                  type="button"
+                  icon={<IconDownload className="btn-icon" />}
                 >
-                  <IconDownload className="btn-icon" />
                   Download
-                </button>
+                </Button>
               ) : (
                 file.kind && (
-                  <span className={`eval-reference-kind is-${file.kind}`}>
+                  <Badge kind="reference-kind" tone={file.kind}>
                     {formatFileKind(file.kind)}
-                  </span>
+                  </Badge>
                 )
               )}
             </div>

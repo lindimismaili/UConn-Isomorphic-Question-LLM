@@ -95,6 +95,7 @@ from .resume import (
     runner_input_from_upload,
     should_run_agent,
 )
+from .stage_cache import StageCache, file_content_hash
 
 # ── Agent metadata derived from agents.json ──────────────────────────────────
 _KEY_BY_NAME: dict[str, str] = {v: k for k, v in AGENT_DISPLAY_NAMES.items()}
@@ -494,6 +495,7 @@ async def run_workflow_async(
             }
         )
         agent_metadata_records: list[dict[str, Any]] = []
+        stage_cache = StageCache()
         has_uploaded_agent_input = agent_input_override is not None
         is_input_to_agent_run = input_to_agent_run or has_uploaded_agent_input
         uploaded_agent_input = (
@@ -523,6 +525,7 @@ async def run_workflow_async(
 
         file_ids: list[str] = []
         file_names: list[str] = []
+        file_content_hashes: list[str] = []
         file_paths_to_upload = (
             file_paths if should_run_agent("extracter", resume_from_agent) else []
         )
@@ -538,6 +541,8 @@ async def run_workflow_async(
                 file_id = await to_thread(upload_file_to_openai, client, path, logger)
                 file_ids.append(file_id)
                 file_names.append(path.name)
+                if stage_cache.enabled:
+                    file_content_hashes.append(await to_thread(file_content_hash, path))
         if not file_names:
             file_names = [Path(path).name for path in file_paths]
         if file_paths_to_upload:
@@ -694,26 +699,52 @@ async def run_workflow_async(
             touch_workflow(workflow)
 
             start_time = time.time()
-            extracter_result = await Runner.run(
-                agents["extracter"], input=extracter_input, run_config=run_config
+            extracter_cache_key = (
+                stage_cache.make_key(
+                    "extracter",
+                    extracter_input_payload,
+                    model=agents["extracter"].model,
+                    reasoning=agent_reasoning_level(agents["extracter"]),
+                    instructions=getattr(agents["extracter"], "instructions", ""),
+                    extra="|".join(file_content_hashes),
+                )
+                if stage_cache.enabled
+                else ""
             )
-            extracter_output: ExtracterOutput = extracter_result.final_output
-            if file_ids and not extracter_output.questions:
-                retry_extract_payload = build_extracter_retry_input(file_names, normalizer_output)
-                retry_extract_input = build_json_message(
-                    retry_extract_payload,
-                    file_refs=file_refs,
+            cached_extracter = stage_cache.lookup(extracter_cache_key)
+            extracter_cache_hit = cached_extracter is not None
+            if extracter_cache_hit:
+                extracter_output: ExtracterOutput = ExtracterOutput.model_validate(cached_extracter)
+                logger.info("Workflow %s reused cached Extracter output", workflow_id)
+            else:
+                extracter_result = await Runner.run(
+                    agents["extracter"], input=extracter_input, run_config=run_config
                 )
-                retry_extract_result = await Runner.run(
-                    agents["extracter"], input=retry_extract_input, run_config=run_config
-                )
-                extracter_input = retry_extract_input
-                extracter_input_payload = retry_extract_payload
-                extracter_output = retry_extract_result.final_output
+                extracter_output = extracter_result.final_output
+                if file_ids and not extracter_output.questions:
+                    retry_extract_payload = build_extracter_retry_input(file_names, normalizer_output)
+                    retry_extract_input = build_json_message(
+                        retry_extract_payload,
+                        file_refs=file_refs,
+                    )
+                    retry_extract_result = await Runner.run(
+                        agents["extracter"], input=retry_extract_input, run_config=run_config
+                    )
+                    extracter_input = retry_extract_input
+                    extracter_input_payload = retry_extract_payload
+                    extracter_output = retry_extract_result.final_output
             elapsed = time.time() - start_time
             normalize_question_types(extracter_output.questions)
             if file_ids and not extracter_output.questions:
                 raise ValueError("Extractor returned zero questions after retry.")
+            if not extracter_cache_hit:
+                stage_cache.store(
+                    extracter_cache_key,
+                    agent_key="extracter",
+                    output=extracter_output.model_dump(),
+                    model=agents["extracter"].model,
+                    reasoning=agent_reasoning_level(agents["extracter"]),
+                )
             merge_extracted_metadata_into_config(normalizer_output, extracter_output)
             workflow["agents"]["normalizer"]["data"]["output"] = normalizer_output.model_dump()
             logger.info(
@@ -742,6 +773,7 @@ async def run_workflow_async(
                     "sent_to_node": _AGENT_FLOW["extracter"][1],
                     "input_summary": f"{len(extracter_input)} message(s)",
                     "questions_count": len(extracter_output.questions),
+                    "cache_hit": extracter_cache_hit,
                 },
             )
         else:
@@ -913,74 +945,99 @@ async def run_workflow_async(
             touch_workflow(workflow)
 
             start_time = time.time()
-            generator_result = await Runner.run(
-                agents["generator"], input=generator_input, run_config=run_config
+            generator_cache_key = (
+                stage_cache.make_key(
+                    "generator",
+                    generator_input_payload,
+                    model=agents["generator"].model,
+                    reasoning=agent_reasoning_level(agents["generator"]),
+                    instructions=getattr(agents["generator"], "instructions", ""),
+                )
+                if stage_cache.enabled
+                else ""
             )
-            generator_output: GeneratorOutput = generator_result.final_output
-
-            # Guard against a flaky empty generation: retry once before the style
-            # pass so a single degenerate response does not sink the whole run.
-            if not generator_output.isomorphic_questions:
-                retry_generator_result = await Runner.run(
+            cached_generator = stage_cache.lookup(generator_cache_key)
+            generator_cache_hit = cached_generator is not None
+            if generator_cache_hit:
+                generator_output: GeneratorOutput = GeneratorOutput.model_validate(cached_generator)
+                logger.info("Workflow %s reused cached Generator output", workflow_id)
+            else:
+                generator_result = await Runner.run(
                     agents["generator"], input=generator_input, run_config=run_config
                 )
-                if retry_generator_result.final_output.isomorphic_questions:
-                    generator_output = retry_generator_result.final_output
+                generator_output = generator_result.final_output
 
-            pre_review_output = generator_output
-            style_review_payload = build_style_review_input(
-                normalizer_output, verifier_output, generator_output
-            )
-            style_review_input = build_json_message(style_review_payload)
-            style_review_result = await Runner.run(
-                agents["generator"], input=style_review_input, run_config=run_config
-            )
-            reviewed_output = style_review_result.final_output
-            # The style pass only revises wording; it must never drop questions.
-            # If it returns fewer items than it was given (e.g. an empty response),
-            # keep the pre-review generation instead of letting it wipe the set.
-            if len(reviewed_output.isomorphic_questions) >= len(
-                pre_review_output.isomorphic_questions
-            ):
-                generator_output = reviewed_output
-            else:
-                generator_output = pre_review_output
-            generator_report = validate_generator_output(
-                verifier_output.questions,
-                generator_output,
-                normalizer_output.new_questions_per_question,
-            )
-            if not generator_report.valid:
-                repair_questions = [
-                    q for q in verifier_output.questions
-                    if q.source_id in set(generator_report.repair_source_ids)
-                ]
-                repair_payload = build_generator_repair_input(
-                    normalizer_output,
-                    verifier_output,
-                    generator_output,
-                    repair_questions,
-                    generator_report.summary(),
+                # Guard against a flaky empty generation: retry once before the style
+                # pass so a single degenerate response does not sink the whole run.
+                if not generator_output.isomorphic_questions:
+                    retry_generator_result = await Runner.run(
+                        agents["generator"], input=generator_input, run_config=run_config
+                    )
+                    if retry_generator_result.final_output.isomorphic_questions:
+                        generator_output = retry_generator_result.final_output
+
+                pre_review_output = generator_output
+                style_review_payload = build_style_review_input(
+                    normalizer_output, verifier_output, generator_output
                 )
-                repair_result = await Runner.run(
-                    agents["generator"],
-                    input=build_json_message(repair_payload),
-                    run_config=run_config,
+                style_review_input = build_json_message(style_review_payload)
+                style_review_result = await Runner.run(
+                    agents["generator"], input=style_review_input, run_config=run_config
                 )
-                generator_output = repair_result.final_output
+                reviewed_output = style_review_result.final_output
+                # The style pass only revises wording; it must never drop questions.
+                # If it returns fewer items than it was given (e.g. an empty response),
+                # keep the pre-review generation instead of letting it wipe the set.
+                if len(reviewed_output.isomorphic_questions) >= len(
+                    pre_review_output.isomorphic_questions
+                ):
+                    generator_output = reviewed_output
+                else:
+                    generator_output = pre_review_output
                 generator_report = validate_generator_output(
                     verifier_output.questions,
                     generator_output,
                     normalizer_output.new_questions_per_question,
                 )
-            if not generator_report.valid:
-                raise ValueError(f"Generator output failed validation: {generator_report.summary()}")
+                if not generator_report.valid:
+                    repair_questions = [
+                        q for q in verifier_output.questions
+                        if q.source_id in set(generator_report.repair_source_ids)
+                    ]
+                    repair_payload = build_generator_repair_input(
+                        normalizer_output,
+                        verifier_output,
+                        generator_output,
+                        repair_questions,
+                        generator_report.summary(),
+                    )
+                    repair_result = await Runner.run(
+                        agents["generator"],
+                        input=build_json_message(repair_payload),
+                        run_config=run_config,
+                    )
+                    generator_output = repair_result.final_output
+                    generator_report = validate_generator_output(
+                        verifier_output.questions,
+                        generator_output,
+                        normalizer_output.new_questions_per_question,
+                    )
+                if not generator_report.valid:
+                    raise ValueError(f"Generator output failed validation: {generator_report.summary()}")
 
-            apply_requested_difficulty(
-                generator_output.isomorphic_questions,
-                normalizer_output.difficulty,
-            )
+                apply_requested_difficulty(
+                    generator_output.isomorphic_questions,
+                    normalizer_output.difficulty,
+                )
             elapsed = time.time() - start_time
+            if not generator_cache_hit:
+                stage_cache.store(
+                    generator_cache_key,
+                    agent_key="generator",
+                    output=generator_output.model_dump(),
+                    model=agents["generator"].model,
+                    reasoning=agent_reasoning_level(agents["generator"]),
+                )
 
             finalize_agent_run(
                 workflow=workflow,
@@ -1001,6 +1058,7 @@ async def run_workflow_async(
                     "sent_to_node": _AGENT_FLOW["generator"][1],
                     "input_summary": f"{len(generator_input)} message(s)",
                     "questions_count": len(generator_output.isomorphic_questions),
+                    "cache_hit": generator_cache_hit,
                 },
             )
         else:

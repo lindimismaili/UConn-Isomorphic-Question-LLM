@@ -3,27 +3,35 @@
     "themes": {
       "biology": {
         "label": "Biology",
-        "prompt": "Tailor the generated questions around biology contexts, such as cells, ecosystems, anatomy, genetics, lab measurements, or organism behavior, while preserving the original concept, difficulty, answer structure, and solution logic."
+        "prompt": "Recast each question's scenario into biology contexts such as cells, ecosystems, anatomy, genetics, lab measurements, or organism behavior. Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may reference biological settings and terminology, but do not introduce biology-specific theory or complexity beyond what the original physics requires."
       },
       "physics": {
         "label": "Physics",
-        "prompt": "Tailor the generated questions around physics contexts, such as motion, forces, energy, waves, circuits, fields, or measurement scenarios, while preserving the original concept, difficulty, answer structure, and solution logic."
+        "prompt": "Recast each question's scenario into everyday physics contexts such as motion, forces, energy, waves, circuits, fields, or measurement scenarios. Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may vary the physical setting and terminology, but do not introduce concepts or complexity beyond what the original physics requires."
       },
       "quantum": {
         "label": "Quantum",
-        "prompt": "Tailor the generated questions around quantum contexts, such as particles, energy levels, probability amplitudes, uncertainty, spin, tunneling, or quantum measurement, while preserving the original concept, difficulty, answer structure, and solution logic."
+        "prompt": "Recast each question's scenario into quantum contexts such as particles, energy levels, probability amplitudes, uncertainty, spin, tunneling, or quantum measurement. Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may reference quantum settings and terminology, but do not introduce quantum-specific theory or complexity beyond what the original physics requires."
       },
       "historical": {
         "label": "Historical",
-        "prompt": "Tailor the generated questions around historical contexts, such as ancient engineering, exploration, archaeology, trade routes, inventions, or documented events, while preserving the original concept, difficulty, answer structure, and solution logic."
+        "prompt": "Recast each question's scenario into historical contexts such as ancient engineering, exploration, archaeology, trade routes, inventions, or documented events. Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may reference historical settings and terminology, but do not introduce historical detail or complexity beyond what the original physics requires."
       },
       "astronomy": {
         "label": "Astronomy",
-        "prompt": "Tailor the generated questions around astronomy contexts, such as planets, stars, moons, telescopes, orbits, galaxies, or space missions, while preserving the original concept, difficulty, answer structure, and solution logic."
+        "prompt": "Recast each question's scenario into astronomy contexts such as planets, stars, moons, telescopes, orbits, galaxies, or space missions. Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may reference astronomical settings and terminology, but do not introduce astronomy-specific theory or complexity beyond what the original physics requires."
       },
       "video_games": {
         "label": "Video Games",
-        "prompt": "Tailor the generated questions around video game contexts, such as player movement, inventory systems, level design, game economies, physics engines, or combat mechanics, while preserving the original concept, difficulty, answer structure, and solution logic."
+        "prompt": "Recast each question's scenario into video game contexts such as player movement, inventory systems, level design, game economies, physics engines, or combat mechanics. Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may reference game settings and terminology, but do not introduce game-design complexity beyond what the original physics requires."
+      },
+      "life_sciences": {
+        "label": "Life Sciences",
+        "prompt": "Recast each question's scenario into introductory life-science contexts such as cells, genetics, evolution, organismal biology, ecology, atomic and molecular structure, chemical reactions and stoichiometry, thermodynamics, biomolecules, or enzymes and metabolism. Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may reference introductory biology and chemistry settings and terminology, but do not introduce advanced life-science theory or complexity beyond what the original physics requires."
+      },
+      "engineering": {
+        "label": "Engineering",
+        "prompt": "Recast each question's scenario into engineering-application contexts such as robotics and automation, transportation systems (automobiles, aircraft, rail, electric vehicles), energy systems (power generation, batteries, renewable energy, power grids), infrastructure (bridges, buildings, roads, water systems), electronics and embedded systems (microcontrollers, sensors, consumer electronics), communication and computing systems (wireless networks, IoT devices, cloud and edge computing), or biomedical technologies (medical devices, prosthetics, imaging equipment). Preserve the original physics concept, difficulty, answer structure, numeric reasoning, solution logic, and distractor roles; change only the surface setting, names, and framing. Stay at the source question's conceptual level: you may reference engineering settings and terminology, but do not introduce engineering-specific theory or complexity beyond what the original physics requires."
       }
     },
     "apiTitle": "Isomorphic Question Generator API",
@@ -177,7 +185,7 @@
     "aliases": [],
     "inputFrom": "Latexifier",
     "outputTo": "Output",
-    "cliDescription": "Run 9-criterion evaluation rubric on generated output (OpenAI Evals)",
+    "cliDescription": "Run 8-criterion evaluation rubric on generated output (OpenAI Evals)",
     "resultField": "evaluation"
   },
   "output": {

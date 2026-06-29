@@ -2,6 +2,7 @@ import Modal from './Modal.jsx';
 import useFileViewer from './useFileViewer.jsx';
 import { IconDownload, IconMonitor } from '../Icons.jsx';
 import { baseName, collectResultFiles } from '../../utils/files.js';
+import { Button } from '../ui/index.js';
 
 /**
  * Details for the final runtime step that publishes completed artifacts: the
@@ -28,7 +29,7 @@ export default function OutputModal({ isOpen, onClose, result, runInputs }) {
         title="Ending Runtime"
         large
         footer={
-          <button className="btn btn-primary" onClick={onClose}>Close</button>
+          <Button variant="primary" onClick={onClose}>Close</Button>
         }
       >
         <div className="setup-modal-body modal-body-stack">
@@ -68,22 +69,22 @@ export default function OutputModal({ isOpen, onClose, result, runInputs }) {
                     {baseName(file.name)}
                   </span>
                   <div className="download-item-actions">
-                    <button
-                      className="btn btn-primary btn-preview"
+                    <Button
+                      variant="primary"
+                      className="btn-preview"
                       onClick={() => openFile(file.name)}
-                      type="button"
+                      icon={<IconMonitor className="btn-icon" />}
                     >
-                      <IconMonitor className="btn-icon" />
                       View
-                    </button>
-                    <button
-                      className="btn btn-secondary btn-download"
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="btn-download"
                       onClick={() => downloadFile(file.name)}
-                      type="button"
+                      icon={<IconDownload className="btn-icon" />}
                     >
-                      <IconDownload className="btn-icon" />
                       Download
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}

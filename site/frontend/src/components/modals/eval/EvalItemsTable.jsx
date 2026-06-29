@@ -1,3 +1,4 @@
+import { Badge, StatusChip } from '../../ui/index.js';
 import { formatScore } from './evalData.js';
 
 /**
@@ -24,10 +25,10 @@ export default function EvalItemsTable({ rows, onCriterionClick }) {
           {rows.map((row) => (
             <tr key={row.id}>
               <td>
-                <span className="eval-source-id">{row.sourceId}</span>
+                <Badge kind="source-id">{row.sourceId}</Badge>
               </td>
               <td>
-                <span className={`eval-status-chip eval-status-${row.status}`}>{row.status}</span>
+                <StatusChip status={row.status} />
                 <div className="eval-result-count">
                   {row.passedCount} pass / {row.failedCount} fail
                 </div>

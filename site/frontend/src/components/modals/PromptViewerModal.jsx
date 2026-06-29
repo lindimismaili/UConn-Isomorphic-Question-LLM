@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
+import { Button } from '../ui/index.js';
 
 /**
  * Loads prompt text from the API first, then the bundled data directory.
@@ -72,7 +73,7 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName }
             </span>
           </div>
           <div className="modal-footer-actions">
-            <button className="btn btn-primary" onClick={onClose}>Close</button>
+            <Button variant="primary" onClick={onClose}>Close</Button>
           </div>
         </div>
       }

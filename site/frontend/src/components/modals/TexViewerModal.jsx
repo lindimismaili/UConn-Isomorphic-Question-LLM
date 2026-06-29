@@ -1,6 +1,7 @@
 import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
+import { Button, EmptyState } from '../ui/index.js';
 
 /** Very light LaTeX syntax tokenizer — returns an array of {type, text} tokens. */
 function tokenizeTex(source) {
@@ -49,17 +50,16 @@ export default function TexViewerModal({ isOpen, onClose, fileName, url, onDownl
       footer={(
         <div className="modal-footer-actions">
           {onDownload && fileName && (
-            <button className="btn btn-secondary" onClick={() => onDownload(fileName)} type="button">
-              <IconDownload className="btn-icon" />
+            <Button variant="secondary" onClick={() => onDownload(fileName)} icon={<IconDownload className="btn-icon" />}>
               Download
-            </button>
+            </Button>
           )}
-          <button className="btn btn-primary" onClick={onClose} type="button">Close</button>
+          <Button variant="primary" onClick={onClose}>Close</Button>
         </div>
       )}
     >
-      {loading && <div className="modal-empty-state">Loading…</div>}
-      {error && <div className="modal-empty-state modal-empty-state-error">{error}</div>}
+      {loading && <EmptyState variant="modal">Loading…</EmptyState>}
+      {error && <EmptyState variant="modal" error>{error}</EmptyState>}
       {!loading && !error && lines.length > 0 && (
         <div className="tex-pre">
           {lines.map((lineTokens, i) => (

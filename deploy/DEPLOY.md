@@ -45,6 +45,49 @@ If no active tunnel is found, the default tunnel name is:
 uconn_isomorphic
 ```
 
+## Automatic Updates
+
+After the Cloudflare step, the installer asks whether to enable automatic
+updates. Press Enter to enable, any other key to skip. The choice is saved to
+`.deploy.env` as `AUTO_UPDATE`, and declining on a later run disables it again.
+
+When enabled, the installer creates two systemd units:
+
+- `uconn-isomorphic-update.service` — a `oneshot` that runs
+  `deploy/deploy.sh --update`.
+- `uconn-isomorphic-update.timer` — fires 60s after boot and every 60s after the
+  previous run finishes (a long redeploy can never overlap itself).
+
+Each cycle does a `git fetch` of `origin/main` and compares commits; if nothing
+changed it exits immediately with no rebuild. When `main` has moved it
+**force-redeploys**: the checkout is reset to exactly match `origin/main`
+(`checkout -f` + `reset --hard` + `clean -ffd`, so **any local edits to tracked
+files are discarded**), then it re-syncs to the deploy directory, rebuilds the
+frontend, and restarts the backend (waiting on `/api/health`).
+`dist/version.json` reflects the new short commit SHA once a redeploy completes.
+
+Your data is preserved. `clean` runs without `-x`, so gitignored paths
+(`uploads/`, `outputs/`, `runtime/`) are left alone — and those dirs are also
+listed as explicit `clean` excludes as a safeguard. More importantly, the live
+uploaded/generated data lives under the deploy directory
+(`/var/www/uconn-isomorphic/...`), which git never touches; the redeploy's
+`rsync` already excludes `uploads/`, `outputs/`, and `runtime/` there too.
+
+**Prerequisite:** the timer pulls non-interactively **as the repository owner**
+(not root), so that user must have working git auth for `origin`. With the
+default SSH remote (`git@github.com:...`) that means a passphrase-less deploy key
+on the Pi; alternatively use an HTTPS remote with cached credentials.
+
+Manage it with:
+
+```bash
+systemctl list-timers 'uconn-isomorphic-update*'
+sudo systemctl status uconn-isomorphic-update.timer
+sudo journalctl -u uconn-isomorphic-update.service -f
+sudo systemctl disable --now uconn-isomorphic-update.timer   # turn off
+sudo systemctl start uconn-isomorphic-update.service          # update now, once
+```
+
 ## Local Preview
 
 Hot reload:
@@ -64,7 +107,7 @@ The preview script uses `isomorphic.localhost`, starts the backend, installs mis
 Both modes always rebuild the frontend **and start a fresh backend**, so a
 preview never serves stale assets or stale Python code:
 
-- `--web` runs `vite build` (which empties `dist/` first) on every invocation,
+- `--web` runs `vite build` (which empties `site/dist/` first) on every invocation,
   then starts a brand-new backend. If the app's own backend is already running
   on the web port it is stopped first and relaunched on freshly built assets; an
   unrelated process on that port is left alone and the preview moves to the next
@@ -83,8 +126,10 @@ so it restarts the app's own backend rather than killing an unrelated process.
 sudo systemctl status uconn-isomorphic
 sudo systemctl status nginx
 sudo systemctl status uconn-isomorphic-cloudflared
+sudo systemctl status uconn-isomorphic-update.timer
 sudo journalctl -u uconn-isomorphic -f
 sudo journalctl -u uconn-isomorphic-cloudflared -f
+sudo journalctl -u uconn-isomorphic-update.service -f
 ```
 
 If the backend fails with `error while attempting to bind on address`, check

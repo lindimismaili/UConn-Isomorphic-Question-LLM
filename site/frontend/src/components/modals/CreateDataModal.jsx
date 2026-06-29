@@ -1,6 +1,7 @@
 import Modal from "./Modal.jsx";
 import { IconFile, IconFolder, IconZap } from "../Icons.jsx";
 import { useAgentRegistry } from "../../hooks/useAgentRegistry";
+import { Button, Pill } from "../ui/index.js";
 
 /**
  * Normalizes the batch output folder label for display.
@@ -76,17 +77,16 @@ export default function CreateDataModal({
       large
       footer={
         <div className="create-data-footer-actions">
-          <button
-            className={`btn ${isActive ? "btn-danger" : "btn-primary"}`}
+          <Button
+            variant={isActive ? "danger" : "primary"}
             onClick={isActive ? onStop : onRun}
             disabled={createData.status === "stopping"}
-            type="button"
           >
             {isActive ? "Stop" : "Start"}
-          </button>
-          <button className="btn btn-secondary" onClick={onClose}>
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       }
     >
@@ -103,9 +103,9 @@ export default function CreateDataModal({
             </div>
           </div>
           <div className="create-data-progress">
-            <span className={`create-data-pill is-${createData.status}`}>
+            <Pill state={createData.status}>
               {getStatusLabel(createData.status)}
-            </span>
+            </Pill>
             <strong>{progressText}</strong>
             <span>
               {createData.completedFiles} completed
@@ -149,9 +149,9 @@ export default function CreateDataModal({
                     <span className="create-data-step-chip">
                       {`${entry.stepLabel || fallbackStepLabel} ${entry.currentAgentName || fallbackAgentName}`.trim()}
                     </span>
-                    <span className={`create-data-pill is-${entry.status}`}>
+                    <Pill state={entry.status}>
                       {getStatusLabel(entry.status)}
-                    </span>
+                    </Pill>
                   </div>
                 </div>
                 <div className="create-data-item-meta">

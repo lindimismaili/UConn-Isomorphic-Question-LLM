@@ -9,16 +9,14 @@
       "na_allowed": false,
       "question": "Does the generated question preserve the original physical content?",
       "guidance": [
-        "Reward preservation of the underlying physics concept, law, model, and reasoning path.",
-        "Do not require the same story, object names, answer letters, numerical values, or final numeric answer.",
-        "For an isomorphic variation, changed numbers and changed surface context are expected. Penalize them only when they change the physics task or invalidate the answer logic.",
-        "Preserve required unit-conversion structure when it is part of the original task, such as kg to g, km/h to m/s, cm to m, or any other conversion needed to reach the answer choices.",
-        "If the source question requires converting from one unit system in the stem to another unit system in the answer choices, the generated question should preserve that conversion burden. Skipping the conversion, giving the stem directly in the answer-choice units, or removing the mismatch between stem units and answer units is a preservation error.",
-        "Examples: a cow point-mass idealization can become a runner point-mass idealization; a raven/coordinate-distance problem can become a drone/beacon coordinate-distance problem."
+        "A passing generated question expresses the SAME underlying physics concept, governing law, model, and reasoning path as the source; only the story, names, numbers, and surface context may differ.",
+        "Do not require the same story, object names, answer letters, numerical values, or final numeric answer; for an isomorphic variation these are expected to change.",
+        "When the source's task includes a required unit conversion (the stem units differ from the answer-choice units), a passing question keeps that same conversion burden. Removing the mismatch, stating the stem directly in the answer-choice units, or otherwise skipping the conversion is a preservation failure.",
+        "Penalize a surface or numeric change only when it alters the physics task itself or invalidates the answer logic."
       ],
       "scoring_guide": [
         "Pass (1): same physics concept, same governing law, same reasoning path, and any unit-conversion structure required by the source is preserved.",
-        "Fail (0): different topic, different law, missing/changed required unit conversion, or the generated answer logic cannot be matched to the source."
+        "Fail (0): a different concept, topic, or governing law; a missing or altered required unit conversion; or generated answer logic that cannot be mapped back to the source."
       ]
     },
     {
@@ -27,14 +25,13 @@
       "na_allowed": false,
       "question": "Does the generated question use a different surface scenario while preserving the same underlying physics task?",
       "guidance": [
-        "This criterion rewards appropriate scenario variation. A new object, setting, or story is good when the same physics reasoning is preserved.",
-        "Any genuine surface change in the scenario passes \u2014 e.g., swapping a baseball for an apple, a cow for a runner, a raven for a drone \u2014 provided the underlying physics task is unchanged.",
-        "Do not score low merely because the generated scenario is different from the source. That is the point of this criterion.",
-        "For abstract equation or unit-conversion items with no story, changed quantities, units, coefficients, or objects can count as scenario variation if the same kind of task remains.",
-        "Only fail when the scenario is copied verbatim or token-rewritten with no meaningful contextual change, OR when the new scenario breaks the physics isomorphism."
+        "A passing generated question changes at least one concrete surface element of the scenario - the object, setting, story, or (for abstract items) the quantities and coefficients - while keeping the underlying physics task intact.",
+        "Genuine surface change is the goal of this criterion; never score low merely because the scenario differs from the source.",
+        "For abstract equation or unit-conversion items with no story, changed quantities, units, coefficients, or objects count as scenario variation as long as the same kind of task remains.",
+        "Fail only when the scenario is copied verbatim or merely token-rewritten with no meaningful contextual change, or when the new scenario breaks the physics isomorphism."
       ],
       "scoring_guide": [
-        "Pass (1): at least one concrete surface element of the scenario changed (object, setting, story, or \u2014 for abstract items \u2014 quantities/coefficients) while the physics task remains intact.",
+        "Pass (1): at least one concrete surface element changed (object, setting, story, or - for abstract items - quantities/coefficients) while the physics task remains intact.",
         "Fail (0): the scenario is essentially copied or only superficially rephrased with no real contextual change, or the change broke the physics mapping."
       ]
     },
@@ -44,15 +41,15 @@
       "na_allowed": true,
       "question": "If the original question is numerical, does the generated question appropriately modify numerical values?",
       "guidance": [
-        "If the SOURCE question contains no meaningful numerical content (purely conceptual or purely symbolic with no concrete values to vary), this criterion is Not Applicable \u2014 return -1.",
-        "For numerical source questions, values should usually be changed and all dependent values should be recalculated consistently.",
-        "The generated final answer, answer letter, or scale factor may differ from the source if the new numbers support it.",
-        "Check that units stay dimensionally consistent and that distractors remain plausible for the new values.",
-        "When the original numerical task tests a specific unit conversion, the generated question should keep an equivalent conversion step rather than simplifying the stem into the final answer units."
+        "If the SOURCE question contains no meaningful numerical content (purely conceptual, or purely symbolic with no concrete values to vary), this criterion is Not Applicable - return -1.",
+        "A passing numerical question changes the source values AND recomputes every dependent value (final answers, distractors, derived quantities) consistently with the new numbers.",
+        "The generated final answer, answer letter, or scale factor may differ from the source when the new numbers support it.",
+        "Units must stay dimensionally consistent and distractors must remain plausible for the new values.",
+        "When the source tests a specific unit conversion, a passing question keeps an equivalent conversion step rather than simplifying the stem into the final answer units."
       ],
       "scoring_guide": [
         "N/A (-1): the source question has no meaningful numerical content to vary.",
-        "Pass (1): numerical values are changed and all derived answers/distractors/units are recomputed consistently.",
+        "Pass (1): numerical values are changed and all derived answers, distractors, and units are recomputed consistently.",
         "Fail (0): source numbers are copied when they should vary, or the new numbers leave derived values, units, or distractors inconsistent."
       ]
     },
@@ -62,14 +59,13 @@
       "na_allowed": false,
       "question": "Is the generated question free of physics errors or misconceptions?",
       "guidance": [
-        "Judge the generated question on its own physics correctness.",
-        "Check equations, signs, vectors, units, derivatives, conservation laws, assumptions, and whether the implied correct answer is actually correct.",
-        "Incorrect answer choices may contain misconceptions when they are intentional distractors; the issue is whether the generated question labels or implies the correct choice accurately.",
-        "Do not penalize a different context or different numbers if the physics is internally correct."
+        "A passing generated question is physically sound on its own terms: equations, signs, vectors, units, derivatives, conservation laws, and stated assumptions are all correct, and the marked or implied correct answer is actually correct.",
+        "Judge the generated question independently of the source; a different context or different numbers is fine when the physics is internally correct.",
+        "Incorrect answer choices may legitimately encode misconceptions when they are intentional distractors; what matters is that the question identifies the correct choice accurately and never presents a misconception as correct."
       ],
       "scoring_guide": [
-        "Pass (1): generated question is physically sound and the marked/implied correct answer is actually correct.",
-        "Fail (0): a physics error in the stem, a wrong intended answer, or a misleading misconception presented as correct."
+        "Pass (1): the generated question is physically sound and the marked/implied correct answer is actually correct.",
+        "Fail (0): a physics error in the stem, a wrong intended answer, or a misconception presented as the correct answer."
       ]
     },
     {
@@ -78,11 +74,10 @@
       "na_allowed": true,
       "question": "Do all numerical values have physically reasonable magnitudes and units?",
       "guidance": [
-        "If the SOURCE question contains no meaningful numerical content (purely conceptual or purely symbolic), this criterion is Not Applicable \u2014 return -1.",
-        "Check dimensional consistency in the generated stem and answer choices.",
-        "Values should be plausible for the stated setting unless the source intentionally uses abstract or fictional units.",
-        "A wrong distractor can still be reasonable if it is a plausible wrong value with appropriate units.",
-        "Penalize impossible units, absurd scales, or numerical magnitudes that contradict the setup."
+        "If the SOURCE question contains no meaningful numerical content (purely conceptual or purely symbolic), this criterion is Not Applicable - return -1.",
+        "A passing generated question is dimensionally consistent throughout the stem and answer choices, with magnitudes and units that are plausible for the stated setting (unless the source intentionally uses abstract or fictional units).",
+        "A wrong distractor can still be reasonable: a plausible wrong value with appropriate units passes this criterion.",
+        "Penalize impossible units, absurd scales, or magnitudes that contradict the setup."
       ],
       "scoring_guide": [
         "N/A (-1): the source question has no meaningful numerical content.",
@@ -96,10 +91,11 @@
       "na_allowed": false,
       "question": "Does the generated question preserve the logical structure of the distractors?",
       "guidance": [
-        "PRIMARY EVIDENCE: each source option carries a `distractor_logic` field naming the specific solver error or structural role it encodes (e.g., 'uses mass instead of weight', 'sign flip on recoil term', 'forgets km/h to m/s conversion', 'structural: none_of_the_above', or 'generic_plausible_value'). Grade by checking that every source role is reproduced in the generated option set.",
-        "For each source distractor role, verify the generated set contains a matching distractor that (a) declares the same `distractor_logic` label and (b) numerically/conceptually results from applying that same error to the NEW numbers and scenario. Recompute the expected wrong value yourself to confirm \u2014 a matching label with a value that does not actually follow from that error is a fail.",
+        "A passing generated question reproduces every source distractor role one-to-one in the generated option set, with each role's declared `distractor_logic` label matched and its value recomputed under the new numbers and scenario.",
+        "PRIMARY EVIDENCE: each source option carries a `distractor_logic` field naming the specific solver error or structural role it encodes (for example, using one quantity in place of another, a sign error on a particular term, a forgotten unit conversion, a structural 'none_of_the_above', or 'generic_plausible_value'). Grade by checking that every source role is reproduced.",
+        "For each source distractor role, verify the generated set contains a matching distractor that (a) declares the same `distractor_logic` label and (b) numerically or conceptually results from applying that same error to the NEW numbers and scenario. Recompute the expected wrong value yourself to confirm - a matching label with a value that does not actually follow from that error is a fail.",
         "Compare answer-choice roles and misconception patterns, not option letters. The generated question may reorder choices and move the correct answer.",
-        "Reward one-to-one preservation across the full set: component-vs-magnitude errors, coefficient-vs-derivative errors, sign errors, unit-conversion errors, unit-dimension errors, or overgeneralized modeling assumptions.",
+        "Reward one-to-one preservation across the full set of error types (component-vs-magnitude, coefficient-vs-derivative, sign, unit-conversion, unit-dimension, or overgeneralized modeling assumptions).",
         "Substituting a generic 'plausible wrong number' for a role that originally encoded a specific misconception is a fail, even if the new number looks reasonable. The only exception is when the source's own `distractor_logic` is explicitly `generic_plausible_value`.",
         "If the source uses 'none of the above' or 'all of the above' as a structural role, the generated question must preserve that role with the same correctness condition.",
         "If the source `distractor_logic` field is empty (legacy item), infer the source misconception from the source option text/explanation and grade against that inferred role.",
@@ -117,13 +113,13 @@
       "na_allowed": false,
       "question": "Is the generated question free of clerical errors (e.g., typos, missing symbols, ambiguous wording)?",
       "guidance": [
-        "Check spelling, grammar, missing symbols, broken math notation, duplicated or missing options, and wording that creates ambiguity.",
-        "Do not penalize the presence of explanations, rationales, or answer-key notes attached to answer choices. The generator normally includes explanations for correct and incorrect options, and their presence alone is not a clerical error.",
-        "Do not penalize harmless notation differences, rephrasing, or improved grammar relative to the source."
+        "A passing generated question is free of clerical defects: correct spelling and grammar, intact math notation and symbols, no duplicated or missing options, and wording that is unambiguous.",
+        "Do not penalize the presence of explanations, rationales, or answer-key notes attached to answer choices; the generator normally includes these for both correct and incorrect options, and their presence alone is never a clerical error.",
+        "Do not penalize harmless notation differences, rephrasing, or grammar that is simply improved relative to the source."
       ],
       "scoring_guide": [
-        "Pass (1): clean wording and notation; at most minor clerical issues that do not affect solvability.",
-        "Fail (0): clerical errors (typos, broken math, missing/duplicate options, ambiguous wording) that make the question hard to interpret."
+        "Pass (1): clean wording and notation, with at most minor clerical issues that do not affect solvability.",
+        "Fail (0): clerical errors - typos, broken math, missing or duplicate options, or ambiguous wording - that make the question hard to interpret."
       ]
     },
     {
@@ -132,12 +128,11 @@
       "na_allowed": false,
       "question": "Is the generated question fully specified and solvable as written?",
       "guidance": [
-        "The generated question should provide enough information for a unique intended answer.",
-        "If the original item is solvable only after applying a unit conversion implied by the stem and answer choices, the generated item should remain solvable through the same kind of conversion rather than bypassing it.",
-        "For multiple-choice items, check that exactly one answer is correct unless the stem explicitly asks for multiple answers.",
-        "Do not score lower solely because option choices include explanations or rationales after the answer text; treat those explanations as normal generated answer metadata, not as extra answer choices or ambiguity.",
-        "Statements using words like 'must' need enough assumptions to be logically forced.",
-        "Do not require the generated question to include every source detail if it is independently solvable."
+        "A passing generated question gives enough information for a single intended answer and is solvable exactly as written.",
+        "For multiple-choice items, exactly one option is correct unless the stem explicitly asks for multiple answers.",
+        "If the source is solvable only after a unit conversion implied by the stem and answer choices, a passing question remains solvable through the same kind of conversion rather than bypassing it.",
+        "Statements using words like 'must' need enough stated assumptions to be logically forced.",
+        "Do not lower the score solely because options include explanations or rationales after the answer text; treat those as normal generated metadata, not extra answer choices or ambiguity, and do not require the generated question to repeat every source detail when it is independently solvable."
       ],
       "scoring_guide": [
         "Pass (1): fully specified with exactly one intended correct answer (or the explicitly requested multiple), and any required conversion step is preserved.",

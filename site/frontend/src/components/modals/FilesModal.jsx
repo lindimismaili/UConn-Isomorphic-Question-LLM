@@ -1,5 +1,6 @@
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
+import { Button, EmptyState } from '../ui/index.js';
 
 /**
  * Lists uploaded files and exposes per-file removal actions.
@@ -13,13 +14,13 @@ export default function FilesModal({ isOpen, onClose, files, onRemove }) {
       onClose={onClose}
       title="Uploaded Files"
       footer={
-        <button className="btn btn-primary" onClick={onClose}>Close</button>
+        <Button variant="primary" onClick={onClose}>Close</Button>
       }
     >
       <div className="modal-body-stack">
         <div className="files-list">
         {files.length === 0 ? (
-          <div className="modal-empty-state">No files uploaded.</div>
+          <EmptyState variant="modal">No files uploaded.</EmptyState>
         ) : (
           files.map((file) => (
             <div key={file.id} className="file-item">
@@ -30,12 +31,14 @@ export default function FilesModal({ isOpen, onClose, files, onRemove }) {
                   {file.source === 'test' ? ' (Test File)' : ''}
                 </span>
               </div>
-              <button
-                className="btn btn-remove btn-sm"
+              <Button
+                variant={null}
+                size="sm"
+                className="btn-remove"
                 onClick={() => onRemove(file.id)}
               >
                 Remove
-              </button>
+              </Button>
             </div>
           ))
         )}

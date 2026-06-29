@@ -102,7 +102,7 @@ export function useBatchEval() {
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
     }
-  }, [state.isRunning, state.isStarting]);
+  }, [state.isRunning, state.isStarting, state.availableRuns]);
 
   const stop = useCallback(async () => {
     const batchId = state.batchId;

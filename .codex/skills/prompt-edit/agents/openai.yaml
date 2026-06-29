@@ -1,4 +1,0 @@
-interface:
-  display_name: "Prompt Edit"
-  short_description: "Edit prompts and commit prompt snapshots"
-  default_prompt: "Use $prompt-edit to update the generator prompt and commit the prompt version."

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
-import uuid
 from pathlib import Path
 
 from agents.logger import logger
@@ -27,7 +26,12 @@ from backend.src.paths import (
     OUTPUTS_DIR,
     UPLOADS_DIR,
 )
-from backend.src.safety import safe_filename, stable_short_hash, unique_child_name
+from backend.src.safety import (
+    create_unique_run_dir,
+    safe_filename,
+    stable_short_hash,
+    unique_child_name,
+)
 
 router = APIRouter()
 
@@ -46,10 +50,9 @@ async def upload_files(files: list[UploadFile] = File(...)):
         )
 
     try:
-        # Create a session directory for uploads
-        session_id = uuid.uuid4().hex
-        session_dir = UPLOADS_DIR / session_id
-        session_dir.mkdir(parents=True, exist_ok=True)
+        # Create a dated session directory for uploads: <mm-dd-yyyy>/<hh-mm-ss>.
+        # session_id is the posix-relative label under UPLOADS_DIR.
+        session_dir, session_id = create_unique_run_dir(UPLOADS_DIR, "upload")
         manifest = {"sessionId": session_id, "files": []}
         used_names: set[str] = set()
         logger.info("Created session directory: %s", session_dir)
@@ -143,7 +146,9 @@ async def download_workflow_zip(workflow_id: str):
     if not _is_under_directory(output_dir, OUTPUTS_DIR) or not output_dir.is_dir():
         raise HTTPException(status_code=404, detail="Output folder not found")
 
-    zip_name = f"{output_folder}.zip"
+    # output_folder may be a nested label (e.g. 06-29-2026/14-23-05); the zip
+    # filename must stay a flat basename so it lands inside the run folder.
+    zip_name = f"{Path(output_folder).name}.zip"
     zip_path = output_dir / zip_name
     if not zip_path.exists():
         try:

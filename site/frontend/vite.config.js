@@ -39,5 +39,13 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        // Main app entry.
+        main: path.resolve(process.cwd(), 'index.html'),
+        // Design-system showcase: a living catalog of the UI primitives.
+        designSystem: path.resolve(process.cwd(), 'design-system.html'),
+      },
+    },
   },
 })

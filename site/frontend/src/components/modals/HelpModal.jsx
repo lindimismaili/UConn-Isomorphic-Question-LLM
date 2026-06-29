@@ -1,5 +1,6 @@
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
+import { Button } from '../ui/index.js';
 
 /**
  * Explains the workflow at a high level for the current app session.
@@ -13,7 +14,7 @@ export default function HelpModal({ isOpen, onClose }) {
       onClose={onClose}
       title="Summary"
       footer={
-        <button className="btn btn-primary" onClick={onClose}>Got it!</button>
+        <Button variant="primary" onClick={onClose}>Got it!</Button>
       }
     >
       <div className="help-modal-body modal-body-stack">

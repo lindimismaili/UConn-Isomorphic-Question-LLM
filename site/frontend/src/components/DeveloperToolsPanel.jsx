@@ -1,5 +1,6 @@
 import { IconFile, IconUpload, IconZap } from './Icons.jsx';
 import LogPanel from './LogPanel.jsx';
+import { Button, Card, CardBody, CardHeader, ToggleSwitch } from './ui/index.js';
 
 /**
  * Right-hand panel containing developer / debugging actions.
@@ -20,80 +21,69 @@ export default function DeveloperToolsPanel({
   logs,
 }) {
   return (
-    <section className="card developer-tools-card">
-      <div className="card-header">
-        <div className="card-header-row">
-          <h2>Developer Tools</h2>
-        </div>
-        <p className="subtitle">
-          Run evaluations, create synthetic test data, feed a specific agent, or
-          browse stored fixtures.
-        </p>
-      </div>
+    <Card variant="developer-tools">
+      <CardHeader
+        title="Developer Tools"
+        subtitle="Run evaluations, create synthetic test data, feed a specific agent, or browse stored fixtures."
+      />
 
-      <div className="card-body">
+      <CardBody>
         <div className="developer-tools-row">
-          <label className="developer-toggle">
-            <input
-              type="checkbox"
-              checked={runEvaluations}
-              onChange={(event) => onRunEvaluationsChange(event.target.checked)}
-              disabled={isRunning}
-            />
-            <span className="developer-toggle-track" aria-hidden="true">
-              <span className="developer-toggle-thumb" />
-            </span>
-            <span className="developer-toggle-label">Run Evaluations</span>
-          </label>
+          <ToggleSwitch
+            checked={runEvaluations}
+            onChange={onRunEvaluationsChange}
+            disabled={isRunning}
+            label="Run Evaluations"
+          />
 
-          <button
-            className="btn btn-secondary developer-tool-btn"
+          <Button
+            variant="secondary"
+            className="developer-tool-btn"
             onClick={onCreateData}
             disabled={isRunning || (serviceInactive && !isCreateDataRunning)}
-            type="button"
+            icon={<IconZap className="btn-icon" />}
           >
-            <IconZap className="btn-icon" />
             <span className="btn-label">
               {isCreateDataRunning ? 'Test Data Running...' : 'Create Test Data'}
             </span>
-          </button>
+          </Button>
 
-          <button
-            className="btn btn-secondary developer-tool-btn"
+          <Button
+            variant="secondary"
+            className="developer-tool-btn"
             onClick={onBatchEval}
             disabled={isRunning || (serviceInactive && !isBatchEvalRunning)}
-            type="button"
+            icon={<IconZap className="btn-icon" />}
           >
-            <IconZap className="btn-icon" />
             <span className="btn-label">
               {isBatchEvalRunning ? 'Batch Eval Running...' : 'Batch Eval'}
             </span>
-          </button>
+          </Button>
 
-          <button
-            className="btn btn-secondary developer-tool-btn"
+          <Button
+            variant="secondary"
+            className="developer-tool-btn"
             onClick={onInputToAgent}
             disabled={isRunning || serviceInactive}
-            type="button"
+            icon={<IconUpload className="btn-icon" />}
           >
-            <IconUpload className="btn-icon" />
             <span className="btn-label">Input To Agent</span>
-          </button>
+          </Button>
 
-          <button
-            className="btn btn-secondary developer-tool-btn"
+          <Button
+            variant="secondary"
+            className="developer-tool-btn"
             onClick={onShowTestFiles}
             disabled={serviceInactive || isRunning}
-            type="button"
+            icon={<IconFile className="btn-icon" />}
           >
-            <IconFile className="btn-icon" />
             <span className="btn-label">Browse Test Files</span>
-          </button>
+          </Button>
         </div>
         <div className="developer-log-area">
           <LogPanel logs={logs} embedded />
         </div>
-      </div>
-    </section>
+      </CardBody>
+    </Card>
   );
 }

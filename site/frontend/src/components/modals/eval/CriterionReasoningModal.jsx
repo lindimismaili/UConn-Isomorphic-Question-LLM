@@ -1,4 +1,5 @@
 import Modal from '../Modal.jsx';
+import { EmptyState, ScoreChip } from '../../ui/index.js';
 
 /**
  * Drill-down modal showing a grader's internal reasoning steps for one criterion.
@@ -12,7 +13,7 @@ export default function CriterionReasoningModal({ isOpen, criterion, onClose }) 
   const steps = Array.isArray(criterion?.steps) ? criterion.steps : [];
   const graderModel = criterion?.graderModel || '';
 
-  const statusClass = passed === true ? 'is-pass' : passed === false ? 'is-fail' : 'is-neutral';
+  const statusTone = passed === true ? 'pass' : passed === false ? 'fail' : 'neutral';
   const statusLabel = passed === true ? 'Pass' : passed === false ? 'Fail' : 'N/A';
 
   return (
@@ -23,19 +24,19 @@ export default function CriterionReasoningModal({ isOpen, criterion, onClose }) 
       contentClassName="criterion-reasoning-modal" size="full"
     >
       <div className="reasoning-header-row">
-        <span className={`eval-score-chip ${statusClass} reasoning-status-chip`}>
+        <ScoreChip tone={statusTone} className="reasoning-status-chip">
           <span>{statusLabel}</span>
           {score !== null && score !== undefined && (
             <strong>{typeof score === 'number' ? score.toFixed(1) : score}</strong>
           )}
-        </span>
+        </ScoreChip>
         {graderModel && (
           <span className="reasoning-grader-model">{graderModel}</span>
         )}
       </div>
 
       {steps.length === 0 ? (
-        <div className="modal-empty-state">No reasoning available for this criterion.</div>
+        <EmptyState variant="modal">No reasoning available for this criterion.</EmptyState>
       ) : (
         <div className="reasoning-steps">
           {steps.map((step, i) => {

@@ -11,6 +11,7 @@ import EvalResultsModal from './modals/EvalResultsModal.jsx';
 import WorkflowAgentsModal from './modals/WorkflowAgentsModal.jsx';
 import FinalResultModal from './modals/FinalResultModal.jsx';
 import useFileViewer from './modals/useFileViewer.jsx';
+import { Button, Card, CardBody, CardHeader } from './ui/index.js';
 import { baseName, collectResultFiles, isPdfFile, isTexFile } from '../utils/files.js';
 import { useAgentRegistry } from '../hooks/useAgentRegistry';
 
@@ -207,22 +208,22 @@ export default function ResultsSection({ result }) {
           {displayName}
         </span>
         <div className="download-item-actions">
-          <button
-            className="btn btn-primary btn-preview"
+          <Button
+            variant="primary"
+            className="btn-preview"
             onClick={() => openFile(fileName)}
-            type="button"
+            icon={<IconMonitor className="btn-icon" />}
           >
-            <IconMonitor className="btn-icon" />
             View
-          </button>
-          <button
-            className="btn btn-secondary btn-download"
+          </Button>
+          <Button
+            variant="secondary"
+            className="btn-download"
             onClick={() => downloadFile(fileName)}
-            type="button"
+            icon={<IconDownload className="btn-icon" />}
           >
-            <IconDownload className="btn-icon" />
             Download
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -231,33 +232,33 @@ export default function ResultsSection({ result }) {
   const renderAgentArtifactButton = (fileName, label, artifactLabel) => (
     <div className="agent-artifact-btn-group">
       {fileName && (
-        <button
-          className="btn btn-primary btn-preview agent-output-view"
+        <Button
+          variant="primary"
+          className="btn-preview agent-output-view"
           onClick={() => openFile(fileName)}
           title={`View ${artifactLabel} artifact`}
-          type="button"
+          icon={<IconMonitor className="btn-icon" />}
         >
-          <IconMonitor className="btn-icon" />
           View
-        </button>
+        </Button>
       )}
-      <button
-        className="btn btn-secondary btn-download agent-output-download"
+      <Button
+        variant="secondary"
+        className="btn-download agent-output-download"
         disabled={!fileName}
         onClick={() => downloadFile(fileName)}
         title={fileName || `${artifactLabel} artifact unavailable`}
-        type="button"
+        icon={<IconDownload className="btn-icon" />}
       >
-        <IconDownload className="btn-icon" />
         {label}
-      </button>
+      </Button>
     </div>
   );
 
   return (
     <>
-      <section className="card completed-card" ref={sectionRef}>
-        <div className="card-header">
+      <Card variant="completed" ref={sectionRef}>
+        <CardHeader>
           <div className="completed-header">
             <div className="completed-header-left">
               <IconCheckCircle className="completed-icon" />
@@ -270,50 +271,50 @@ export default function ResultsSection({ result }) {
                 </span>
               </h4>
               <div className="results-view-buttons">
-                <button
-                  className="btn btn-primary btn-sm"
+                <Button
+                  variant="primary"
+                  size="sm"
                   disabled={!finalResultFileName}
                   onClick={() => setFinalResultOpen(true)}
-                  type="button"
+                  icon={<IconMonitor className="btn-icon" />}
                 >
-                  <IconMonitor className="btn-icon" />
                   View Results
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   disabled={!hasEvaluation}
                   onClick={handleEvalModalOpen}
-                  type="button"
+                  icon={<IconList className="btn-icon" />}
                 >
-                  <IconList className="btn-icon" />
                   View Evaluations
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   disabled={!agentMetadataFileName}
                   onClick={() => setAgentsOpen(true)}
-                  type="button"
+                  icon={<IconBrain className="btn-icon" />}
                 >
-                  <IconBrain className="btn-icon" />
                   View Agents
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   disabled={!result.workflowId}
                   onClick={handleZipDownload}
-                  type="button"
+                  icon={<IconDownload className="btn-icon" />}
                 >
-                  <IconDownload className="btn-icon" />
                   Download .ZIP
-                </button>
+                </Button>
               </div>
             </div>
             <div className="completed-elapsed-time">
               {elapsedText ? `Elapsed Time: ${elapsedText}` : ''}
             </div>
           </div>
-        </div>
-        <div className="card-body">
+        </CardHeader>
+        <CardBody>
           <div className="downloads-section">
             <div className="downloads-columns">
               {[
@@ -370,8 +371,8 @@ export default function ResultsSection({ result }) {
               </span>
             </div>
           </div>
-        </div>
-      </section>
+        </CardBody>
+      </Card>
 
       {viewerModals}
       <EvalResultsModal

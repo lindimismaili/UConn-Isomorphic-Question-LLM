@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconZap, IconUpload, IconFile } from '../Icons.jsx';
+import { Button, Pill } from '../ui/index.js';
 
 function ScoreBadge({ score }) {
   if (score == null) return null;
@@ -74,7 +75,7 @@ function EntryRow({ entry }) {
           <div className="create-data-item-tracking">
             {entry.itemsEvaluated > 0 && <span className="create-data-step-chip">{entry.itemsEvaluated} items</span>}
             <ScoreBadge score={entry.score} />
-            <span className={`create-data-pill is-${entry.status}`}>{statusLabel(entry.status)}</span>
+            <Pill state={entry.status}>{statusLabel(entry.status)}</Pill>
           </div>
         </div>
         {entry.outputFolder && <div className="create-data-item-output">{`outputs/${entry.outputFolder}`}</div>}
@@ -98,7 +99,7 @@ export default function BatchEvalModal({ isOpen, onClose, batchEval, loadRuns })
     if (isOpen && tab === 'prior_runs' && batchEval.availableRuns.length === 0 && !batchEval.loadingRuns) {
       loadRuns();
     }
-  }, [isOpen, tab]);
+  }, [isOpen, tab, loadRuns, batchEval.availableRuns.length, batchEval.loadingRuns]);
 
   const handleToggle = (folder) => {
     setSelectedFolders(prev => {
@@ -129,16 +130,16 @@ export default function BatchEvalModal({ isOpen, onClose, batchEval, loadRuns })
       footer={
         <div className="create-data-footer-actions">
           {isIdle && (
-            <button className="btn btn-primary" onClick={handleStart} disabled={!canStart} type="button">
-              <IconZap className="btn-icon" /> Run Batch Eval
-            </button>
+            <Button variant="primary" onClick={handleStart} disabled={!canStart} icon={<IconZap className="btn-icon" />}>
+              Run Batch Eval
+            </Button>
           )}
           {isActive && (
-            <button className="btn btn-danger" onClick={batchEval.stop} disabled={batchEval.status === 'stopping'} type="button">
+            <Button variant="danger" onClick={batchEval.stop} disabled={batchEval.status === 'stopping'}>
               Stop
-            </button>
+            </Button>
           )}
-          <button className="btn btn-secondary" onClick={onClose}>Close</button>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
         </div>
       }
     >
@@ -146,8 +147,8 @@ export default function BatchEvalModal({ isOpen, onClose, batchEval, loadRuns })
         {/* Tabs — only show when idle or no run in progress */}
         {(isIdle || batchEval.status === 'idle') && (
           <div className="batch-eval-tabs">
-            <button className={`btn btn-secondary batch-eval-tab ${tab === 'prior_runs' ? 'is-active' : ''}`} onClick={() => setTab('prior_runs')}>Prior Runs</button>
-            <button className={`btn btn-secondary batch-eval-tab ${tab === 'upload' ? 'is-active' : ''}`} onClick={() => setTab('upload')}>Upload PDFs</button>
+            <Button variant="secondary" className={`batch-eval-tab ${tab === 'prior_runs' ? 'is-active' : ''}`} onClick={() => setTab('prior_runs')}>Prior Runs</Button>
+            <Button variant="secondary" className={`batch-eval-tab ${tab === 'upload' ? 'is-active' : ''}`} onClick={() => setTab('upload')}>Upload PDFs</Button>
           </div>
         )}
 
@@ -164,7 +165,7 @@ export default function BatchEvalModal({ isOpen, onClose, batchEval, loadRuns })
               </div>
             </div>
             <div className="create-data-progress">
-              <span className={`create-data-pill is-${batchEval.status}`}>{statusLabel(batchEval.status)}</span>
+              <Pill state={batchEval.status}>{statusLabel(batchEval.status)}</Pill>
               <strong>{progressText}</strong>
               <span>{batchEval.completedFiles} completed{batchEval.failedFiles > 0 ? `, ${batchEval.failedFiles} failed` : ''}</span>
             </div>

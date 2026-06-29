@@ -3,6 +3,7 @@ import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
 import { DEFAULT_PASSING_THRESHOLD } from './eval/evalData.js';
+import { Button, EmptyState, Tabs } from '../ui/index.js';
 
 const TABS = ['Config', 'Source Questions', 'Generated Questions', 'Evaluation'];
 
@@ -16,7 +17,7 @@ function stripLatex(text) {
 }
 
 function ConfigTab({ config }) {
-  if (!config) return <div className="modal-empty-state">No config data.</div>;
+  if (!config) return <EmptyState variant="modal">No config data.</EmptyState>;
   const entries = Object.entries(config);
   return (
     <div className="viewer-kv-table">
@@ -114,7 +115,7 @@ function QuestionCard({ question, showSourceBadge, showMarkers }) {
 }
 
 function EvaluationTab({ evaluation, onViewInDepth }) {
-  if (!evaluation) return <div className="modal-empty-state">No evaluation data.</div>;
+  if (!evaluation) return <EmptyState variant="modal">No evaluation data.</EmptyState>;
 
   const criterionScores = evaluation.criterion_scores || {};
   const hasScore = typeof evaluation.overall_score === 'number';
@@ -175,9 +176,9 @@ function EvaluationTab({ evaluation, onViewInDepth }) {
       )}
       <div className="viewer-eval-footer">
         {onViewInDepth && (
-          <button className="btn btn-secondary" onClick={onViewInDepth} type="button">
+          <Button variant="secondary" onClick={onViewInDepth}>
             View In-Depth
-          </button>
+          </Button>
         )}
         {hasScore && (
           <span className="viewer-eval-score">{(evaluation.overall_score * 100).toFixed(0)}%</span>
@@ -210,12 +211,12 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
     if (activeTab === 'Config') return <ConfigTab config={data.config} />;
     if (activeTab === 'Source Questions') {
       const questions = sourceQuestions;
-      if (questions.length === 0) return <div className="modal-empty-state">No source questions.</div>;
+      if (questions.length === 0) return <EmptyState variant="modal">No source questions.</EmptyState>;
       return <QuestionList questions={questions} showSourceBadge={false} showMarkers />;
     }
     if (activeTab === 'Generated Questions') {
       const questions = data.generated_questions || [];
-      if (questions.length === 0) return <div className="modal-empty-state">No generated questions.</div>;
+      if (questions.length === 0) return <EmptyState variant="modal">No generated questions.</EmptyState>;
       return <QuestionList questions={questions} showSourceBadge showMarkers />;
     }
     if (activeTab === 'Evaluation') return <EvaluationTab evaluation={data.evaluation} onViewInDepth={onViewInDepth} />;
@@ -239,31 +240,23 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
       footer={(
         <div className="modal-footer-actions">
           {onDownload && fileName && (
-            <button className="btn btn-secondary" onClick={() => onDownload(fileName)} type="button">
-              <IconDownload className="btn-icon" />
+            <Button variant="secondary" onClick={() => onDownload(fileName)} icon={<IconDownload className="btn-icon" />}>
               Download
-            </button>
+            </Button>
           )}
-          <button className="btn btn-primary" onClick={onClose} type="button">Close</button>
+          <Button variant="primary" onClick={onClose}>Close</Button>
         </div>
       )}
     >
-      {loading && <div className="modal-empty-state">Loading…</div>}
-      {error && <div className="modal-empty-state modal-empty-state-error">{error}</div>}
+      {loading && <EmptyState variant="modal">Loading…</EmptyState>}
+      {error && <EmptyState variant="modal" error>{error}</EmptyState>}
       {!loading && !error && data && (
         <>
-          <div className="viewer-tab-bar">
-            {TABS.map((tab, i) => (
-              <button
-                className={`viewer-tab${activeTab === tab ? ' is-active' : ''}`}
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                type="button"
-              >
-                {tabLabels[i]}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            value={activeTab}
+            onChange={setActiveTab}
+            tabs={TABS.map((tab, i) => ({ id: tab, label: tabLabels[i] }))}
+          />
           <div className="viewer-tab-content">
             {renderTab()}
           </div>
