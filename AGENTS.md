@@ -11,7 +11,7 @@ Every Markdown doc tracked in the repo:
 - [README.md](README.md) — human-facing setup, environment, run/CLI/output reference
 - [CLAUDE.md](CLAUDE.md) — Claude Code entry point; a pointer straight to this file
 - [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend reference: what every file does,
-  key functions, the 8-stage workflow, the HTTP API routes, `data/` files, and tests
+  key functions, the 10-node workflow, the HTTP API routes, `data/` files, and tests
 - [site/frontend/DESIGN.md](site/frontend/DESIGN.md) — frontend design system: tokens, layout,
   buttons, modals, themes, transitions, consistency rules (**read before any UI change**)
 - [deploy/DEPLOY.md](deploy/DEPLOY.md) — deployment + local preview scripts (operational, not source of truth)
@@ -21,14 +21,19 @@ Every Markdown doc tracked in the repo:
 FastAPI + React app that generates isomorphic physics multiple-choice questions
 from uploaded source documents using the OpenAI Agents SDK.
 
-Full runtime pipeline (8 stages):
+Full runtime pipeline (10 registry nodes):
 
-`setup → normalizer → extracter → verifier → generator → latexifier → evaluation → output`
+`setup → input_guardrail → normalizer → extracter → content_guardrail → verifier → generator → latexifier → evaluation → output`
 
-- `site/backend/data/agents.json` is the **single source of truth** for all 8 agents plus
+- `site/backend/data/agents.json` is the **single source of truth** for all 10 nodes plus
   global constants (`_config`). Python reads through `site/backend/src/registry.py`;
   the frontend derives from `GET /api/agents` via `site/frontend/src/hooks/useAgentRegistry.js`.
-- `setup` and `output` are `kind: "runtime"` nodes; the other six are `kind: "agent"` LLM calls.
+- `setup` and `output` are `kind: "runtime"` nodes; `input_guardrail` and `content_guardrail`
+  are `kind: "guardrail"` nodes; the other six are `kind: "agent"` LLM calls. So the pipeline
+  is **6 LLM agents + 2 runtime + 2 guardrail**.
+- Guardrail nodes appear (and animate) in the pipeline visual but are **excluded from the
+  runnable/stoppable/LLM sets** — `input_to_agent_sequence()`, `llm_agents()`, and
+  `stoppable_agents()` all skip `kind == "guardrail"`.
 - Both the FastAPI server and the CLI call the same workflow engine.
 
 ## Source-Of-Truth Paths
@@ -41,7 +46,8 @@ Backend:
   `files`, `workflows`, `batch`) plus `state.py` (in-memory registries, config,
   helpers, workflow-runner wrappers, background pruning loop)
 - `site/backend/src/workflow/` — shared engine, agent factory, payload builders,
-  resume/replay helpers, SQLite `store.py` (single source of truth for orchestration)
+  resume/replay helpers, SQLite `store.py` (single source of truth for orchestration),
+  and `guardrails.py` (the three moderation/jailbreak/on-topic guardrails)
 - `site/backend/src/main.py` — CLI workflow orchestration (delegates to the engine)
 - `site/backend/src/container.py` — shared OpenAI container bootstrap + LaTeX compile
 - `site/backend/src/evaluation.py` — OpenAI Evals integration;
@@ -49,33 +55,50 @@ Backend:
 - `site/backend/src/pipeline_validation.py` — deterministic generator/verifier
   contract checks, incl. `validate_distractor_logic_preservation`
 - `site/backend/src/tools/judge_agreement.py` — judge ↔ professor κ / agreement metrics
+- `site/backend/src/tools/meta_evaluator.py` — PROPOSE-ONLY grader self-improvement CLI
+  (mines rationales + `FAILURE_TAGS` + deterministic checks → ranked file-targeted proposals;
+  reward-hacking guard, optional κ-gate, experiment ledger, versioned calibration format)
 - `site/backend/src/registry.py` — **lazy-loaded gateway** for all agent constants
-  (`@lru_cache`); import from here instead of hardcoding names anywhere in Python
+  (`@lru_cache`); import from here instead of hardcoding names anywhere in Python.
+  Guardrail accessors live here too: `guardrails_enabled()`, `guardrail_model()`,
+  `guardrail_moderation_model()`, `guardrail_physics_min_confidence()`,
+  `guardrail_block_off_topic()`, `guardrail_fail_closed()`, `guardrail_max_questions_sampled()`,
+  `guardrail_input_node()`, `guardrail_content_node()`, `guardrail_nodes()`
 - `site/backend/src/schemas.py`, `site/backend/src/helpers.py`, `site/backend/src/safety.py`,
   `site/backend/src/paths.py`
-- `site/backend/data/agents.json` — single source of truth for all 8 agents; every entry
+- `site/backend/data/agents.json` — single source of truth for all 10 nodes; every entry
   carries `sequence`, `name`, `description`, `model`, `reasoning`, `kind`, `isLLM`,
   `hasPrompt`, `acceptsSourceFiles`, `isStoppable`, `useCodeInterpreter`,
   `countLabel`, `countField` (output array used for question counts), `aliases`,
-  `inputFrom`/`outputTo` (flow display names), `cliDescription`, `resultField`;
+  `inputFrom`/`outputTo` (flow display names), `cliDescription`, `resultField`, plus an
+  optional `maxTurns` (per-agent turn cap; default 6, latexifier 12);
   the evaluation entry adds `promptName`; the setup entry adds `allowedDomains` +
-  `containerPythonPackages`; `_config` holds `themes`, `apiTitle`, `apiDescription`
-- `site/backend/data/prompts/*.txt` — agent prompt instructions; `bootstrap.txt` and
+  `containerPythonPackages`; `_config` holds `themes`, `apiTitle`, `apiDescription`, and
+  `guardrails` (`enabled`, `model`, `moderationModel`, `reasoning`, `physicsMinConfidence`,
+  `blockOffTopic`, `failClosed`, `maxQuestionsSampled`, `inputNode`, `contentNode`)
+- `site/backend/data/prompts/*.txt` — agent prompt instructions (including the guardrail
+  classifier prompts `input_guardrail.txt` / `content_guardrail.txt`); `bootstrap.txt` and
   `bootstrapCompile.txt` are container shell-task templates with `{var}` placeholders
-- `site/backend/data/rubric.json` — eval rubric criteria only (pass/fail scale, 9 criteria);
-  grader model comes from `agents.json` `evaluation.model`
+- `site/backend/data/rubric.json` — eval rubric criteria only (pass/fail scale, 8 criteria,
+  each with an optional per-criterion `reasoning` effort); grader model comes from
+  `agents.json` `evaluation.model`
 - `site/backend/data/evaluation/**` — bundled source PDFs for the Create Data batch flow
 
 Frontend:
 
 - `site/frontend/DESIGN.md` — UI element mapping (design tokens, button/modal system,
   consistency rules). **Source of truth before adding any UI; reuse, don't invent.**
-- `site/frontend/src/App.jsx` (state via `useReducer`)
+- `site/frontend/src/App.jsx` (chat conversation + Developer-Tools side panel; state via
+  `useReducer`, reducer extracted to `src/state/reducer.js`)
+- `site/frontend/src/state/reducer.js` — the extracted reducer (adds a `WORKFLOW_BLOCKED`
+  action + `blocked` field); `src/state/transcript.js` projects `state.agents/logs/result/blocked`
+  into chat messages + stepper nodes
 - `site/frontend/src/hooks/useAgentRegistry.js` — **module-level singleton** that fetches
   `/api/agents` once; exports `useAgentRegistry()` hook (React) and `getDerivedRegistry()`
   sync accessor (for reducers). All pipeline keys, labels, and routing derive from this.
-- `site/frontend/src/hooks/useWorkflow.js` (status polling), `useAgents.js` (triggers registry
-  load), `useCreateData.js`, `useFileUpload.js`
+- `site/frontend/src/hooks/useWorkflow.js` (status polling; dispatches `WORKFLOW_BLOCKED`),
+  `useTokenStream.js` (SSE consumer for the cosmetic matrix streaming effect; polling stays
+  authoritative), `useAgents.js` (triggers registry load), `useCreateData.js`, `useFileUpload.js`
 - `site/frontend/src/utils/` — shared `api.js` (HTTP client), `abortableSleep.js`,
   `ids.js`, `files.js` (file `getViewerType` dispatch + download URL helpers)
 - `site/frontend/src/components/modals/` (one `Modal.jsx` shell; `eval/` holds the
@@ -173,11 +196,14 @@ Required for real workflow execution:
 Optional app/runtime vars (see `.env.example` for the full list + defaults):
 
 - `MAX_UPLOAD_BYTES`
+- `MAX_UPLOAD_TOTAL_BYTES` — per-request total-size cap across all uploaded files (default 60 MB)
 - `WORKFLOW_TTL_SECONDS`, `WORKFLOW_MAX_ENTRIES`
 - `PRUNE_INTERVAL_SECONDS` (background prune cadence, default 60)
 - `OPENAI_STATUS_TIMEOUT_SECONDS`
 - `BATCH_WORKFLOW_CONCURRENCY` (default 2)
 - `OPENAI_CONTAINER_ALLOWED_DOMAINS` — overrides `setup.allowedDomains` from `agents.json`
+- `GUARDRAILS_ENABLED` — toggles the three guardrails (overrides `_config.guardrails.enabled`)
+- `GRADER_MODEL_OVERRIDE` — grade with a different model than `agents.json` `evaluation.model`
 - `GENERATION_STRATEGY` — generator strategy: `holistic` (default) or `decompose`
   (decompose-first; uses `prompts/generator_decompose.txt` and fills each generated
   question's `decomposition` field). See `workflow/agents.py::generation_strategy`.
@@ -211,27 +237,64 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   (`agents` SDK), not via `response_format`.
 - Reasoning effort is set per-agent in `site/backend/data/agents.json`
   (currently `medium` for Verifier/Generator/Latexifier).
+- Every stage runs through the engine's `run_llm_stage()` helper: it streams via
+  `Runner.run_streamed` when an `emit_token` callback is passed (server), else
+  `await Runner.run` (CLI/tests), and catches `MaxTurnsExceeded` /
+  `ModelBehaviorError` / `ModelRefusalError` → a clean per-stage `ValueError`.
+  Each stage gets an explicit `max_turns` (optional `agents.json` `maxTurns`;
+  default 6, latexifier 12). A container heartbeat + latexifier recreate-on-expiry
+  keep the shared container alive.
+
+### Guardrails
+
+- `site/backend/src/workflow/guardrails.py` runs three checks: **G1** OpenAI
+  Moderation (`omni-moderation-latest`) on the instruction + extracted text; **G2**
+  a blocking jailbreak/prompt-injection classifier on the raw instruction that runs
+  **before the container is created**; **G3** an academic/physics on-topic +
+  is-a-question classifier on the extracter output.
+- Fail-closed trips a **new terminal workflow status `blocked`** (distinct from
+  `error`): the engine sets `workflow["blocked"] = {category, reason, stage}` and
+  marks the tripped guardrail node `blocked`.
+- Config lives in `agents.json` `_config.guardrails`; classifier prompts are
+  `data/prompts/{input,content}_guardrail.txt`; toggle with env `GUARDRAILS_ENABLED`.
+
+### Token streaming (SSE)
+
+- The engine emits token deltas via `emit_token(agent_key, delta)` → a per-workflow
+  queue in `api/state.py` → the SSE endpoint `GET /api/workflow/{id}/stream`, which
+  emits named events `token` `{agent, delta}`, `status`, and `done`. This powers the
+  frontend "matrix" streaming effect. **Polling `/status` stays authoritative** and its
+  payload now includes a `blocked` field.
 
 ### Frontend
 
-- React 19 + Vite 7; centralized `useReducer` state in `App.jsx`.
-- Progress comes from **polling** `GET /api/workflow/{id}/status` (see
-  `useWorkflow.js`); the SSE `/stream` endpoint is unused.
+- React 19 + Vite 7; centralized `useReducer` state (reducer in `src/state/reducer.js`),
+  wired in `App.jsx`. The primary view is a **chat conversation** with a Developer-Tools
+  side panel; all modals/features are preserved.
+- Progress comes from **polling** `GET /api/workflow/{id}/status` (see `useWorkflow.js`),
+  which stays authoritative. The SSE `/stream` endpoint **is now real**: `useTokenStream.js`
+  consumes it to drive a cosmetic "matrix" token-stream effect only.
 - All HTTP goes through `src/utils/api.js` (`requestJson`, `getJsonOrNull`,
   `fetchWithAbort`) — don't hand-roll `fetch` + error handling in hooks.
 - Styling follows `site/frontend/DESIGN.md`: design tokens in `:root`, one `.btn`
   variant system, one `Modal.jsx` shell. Reuse variants and tokens; never add a
   one-off `*-btn` class or hardcode color/size/motion. Buttons in the same group
   share one height tier.
+- The theme is a bright academic **UConn navy `#000E2F` + blue `#0A5BC4`** look;
+  the accent is tokenized (`--color-primary-rgb` / `color-mix()`), so one accent
+  edit re-themes the whole app. See `site/frontend/DESIGN.md` §2.
 - **Compose from components, not raw elements (templates-first).** Feature code
   builds UI only from the reusable primitives in `site/frontend/src/components/ui/`
   (Button, IconButton, Card, TextInput/TextArea/Select, ToggleSwitch, Badge,
-  StatusChip/ScoreChip/Pill, StatusDot, LogItem/LogList, EmptyState, Tabs,
-  DataTable/KeyValueTable, Modal) — not from raw `<button className="btn …">` /
-  `<input>` / ad-hoc class strings. Primitives are thin wrappers over the
+  StatusChip/ScoreChip/Pill, Chip, StatusDot, LogItem/LogList, EmptyState, Tabs,
+  DataTable/KeyValueTable, Modal, AppShell/PageHeader/Banner/Footer, plus the
+  chat primitives Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer/
+  Stepper/TokenStream) — not from raw `<button className="btn …">` /
+  `<input>` / ad-hoc class strings. An ESLint rule forbids raw `.btn`/`.card`/control
+  class strings in `components/**` outside `ui/`. Primitives are thin wrappers over the
   documented classes (no new CSS). If a genuinely new element is needed, add it
   as a `ui/` primitive (+ a showcase specimen + a `ui/ui.test.jsx` assertion)
-  **first**, then use it. See `site/frontend/DESIGN.md` §14.
+  **first**, then use it. See `site/frontend/DESIGN.md` §14–§15.
 - **Design-system showcase** lives at `site/frontend/design-system.html` (a second
   Vite entry; `npm -C site/frontend run dev` → `/design-system.html`). It renders the
   real `ui/` primitives, organized Foundations → Components → Patterns, and is
@@ -240,8 +303,10 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   callers must use canonical key names.
 - All pipeline keys, labels, and routing come from `useAgentRegistry()` —
   never hardcode agent key strings in JS files.
-- The frontend renders all 8 pipeline nodes (including `setup` and `output`)
-  because `AgentPipeline` derives its key list from the registry.
+- The frontend renders all 10 pipeline nodes (including `setup`, `output`, and the
+  two guardrail nodes) because it derives its key list from the registry. The chat
+  view's `Stepper` renders all 10 nodes (guardrail = shield, runtime = computer, with
+  `blocked` status styling).
 - **File viewing is generic, not per-file.** Result files are viewed through
   four viewers dispatched by `getViewerType` (`utils/files.js`): PDF, CSV, `.tex`,
   and a JSON/plain-text fallback (`JsonTextViewerModal`). Wire them via the
@@ -321,7 +386,7 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 
 ### Pipeline parallelism
 
-- Within one workflow the 8 stages are sequential (each consumes the previous output).
+- Within one workflow the stages are sequential (each consumes the previous output).
 - Multi-file uploads in one workflow are intentionally combined into one dataset
   (the extracter prompt handles this).
 - The batch endpoint runs workflows concurrently with `Semaphore(BATCH_WORKFLOW_CONCURRENCY=2)`.
@@ -329,16 +394,22 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 
 ## Workflow Stages
 
-All 8 stages are defined in `site/backend/data/agents.json` and driven by the engine:
+All 10 nodes are defined in `site/backend/data/agents.json` and driven by the engine
+(6 LLM agents + 2 runtime + 2 guardrail):
 
 0. `setup` *(runtime)* — creates the shared OpenAI container; bootstraps LaTeX + Python deps
+   (the G2 jailbreak guardrail runs **before** the container is created)
+0.5. `input_guardrail` *(guardrail)* — moderation + jailbreak/prompt-injection check on the raw instruction
 1. `normalizer` — parses the user prompt into structured config
 2. `extracter` — reads uploaded files and extracts source questions
+2.5. `content_guardrail` *(guardrail)* — moderation + academic/physics on-topic + is-a-question check on the extracter output
 3. `verifier` — validates answers, fills in explanations / `distractor_logic`
 4. `generator` — creates isomorphic questions
 5. `latexifier` — produces LaTeX and triggers PDF compilation in the container
 6. `evaluation` — runs OpenAI Evals; writes the report + spreadsheet + rubric snapshot
 7. `output` *(runtime)* — writes `final_result.json`, `agent_outputs/` artifacts, file metadata
+
+A tripped guardrail ends the run in the terminal **`blocked`** status (distinct from `error`).
 
 ## API Surface
 
@@ -352,9 +423,11 @@ Routes live in `site/backend/src/api/` (registered on the app in `server.py`):
 - `GET /api/evaluation/files`
 - `POST /api/workflow/start`
 - `POST /api/workflow/rerun-from-agent`, `POST /api/workflow/start-from-agent-input`
-- `GET /api/workflow/{workflow_id}/status`
+- `GET /api/workflow/{workflow_id}/status` (payload includes a `blocked` field;
+  a guardrail-tripped run has terminal status `blocked`)
 - `GET /api/workflow/{workflow_id}/result`
-- `GET /api/workflow/{workflow_id}/stream` (SSE; current frontend polls instead)
+- `GET /api/workflow/{workflow_id}/stream` (SSE; emits named events `token` `{agent,delta}`,
+  `status`, and `done` — powers the frontend token-stream effect; polling `/status` stays authoritative)
 - `GET /api/download/{workflow_id}/{file_path}`
 - `GET /api/download-zip/{workflow_id}` (zips the whole output folder once,
   reuses the archive on later requests)
@@ -368,20 +441,38 @@ Lives in `site/backend/src/evaluation.py`.
 
 Current behavior:
 
-- Rubric: `site/backend/data/rubric.json` (pass/fail scale, 9 criteria). Grader model
-  comes from `agents.json` `evaluation.model` (currently `gpt-5.5`); reasoning
-  effort from rubric `"reasoning"` field (currently `"low"`).
+- Rubric: `site/backend/data/rubric.json` (pass/fail scale, **8 criteria**). Grader model
+  comes from `agents.json` `evaluation.model` (currently `gpt-5.5`), overridable via env
+  `GRADER_MODEL_OVERRIDE`. Reasoning effort is **per-criterion** (rubric.json per-criterion
+  `reasoning`): `physics_correctness` + `distractor_structure_preservation` = high,
+  `preserve_physical_content` + `solvable_and_specified` = medium, the rest inherit `low`.
 - Each question-level criterion is scored as 0/1 (or -1 for N/A on criteria
   with `na_allowed: true`).
-- LaTeX criterion is deterministic: checks artifact existence AND scans the
-  `.log` for fatal markers (`! LaTeX Error`, `Undefined control sequence`,
-  `Emergency stop`, etc.).
+- Reproducibility: every grader is seeded with `GRADER_SEED = 7` (surfaced in the report
+  as `grader_seed`).
+- Source `distractor_logic` labels are now fed to the judge (the item schema gains a
+  `source_distractor_logic` field).
+- A `FAILURE_TAGS` taxonomy: the grader prefixes a `[TAG]` on failing items; the report
+  adds `reasoning_effort_by_criterion` and per-criterion `failure_tag_counts`. The grader
+  system prompt (`evaluator.txt`) carries anti-bias + instruction-hierarchy framing.
+  `parse_sample_steps` is exported for reuse.
 - Aggregation reports `na_count` and `na_rate` per criterion; a
   `coverage_mismatch` is recorded under `deterministic_checks` when the eval
   run returns fewer items than were submitted.
 - `validate_distractor_logic_preservation` (pipeline_validation.py) is a
   deterministic pre-judge check that every source `distractor_logic` label
   appears in the generated option set.
+
+### Meta-evaluator (grader self-improvement)
+
+`site/backend/src/tools/meta_evaluator.py` is a **PROPOSE-ONLY** CLI: it mines grader
+rationales + `FAILURE_TAGS` + deterministic checks and emits ranked, file-targeted
+proposals to improve the grader. It has a reward-hacking guard, an optional labeled
+κ-gate (`--labels` / `--kappa-floor`), an experiment ledger
+(`site/backend/runtime/meta_eval_ledger.jsonl`), and a versioned calibration format
+(`site/backend/data/calibration/*.jsonl`). It **never auto-applies** changes. It is
+wrapped by the `.agents/grader-review/SKILL.md` skill (given grader outputs → recommends
+prompt/schema tweaks).
 
 Per-run artifacts under `site/backend/outputs/<timestamp>/`:
 
@@ -416,17 +507,20 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 
 | Task | Files |
 |---|---|
-| Change models / reasoning / tool usage / themes | `site/backend/data/agents.json` |
+| Change models / reasoning / tool usage / themes / per-agent `maxTurns` | `site/backend/data/agents.json` |
 | Add or rename an agent | `site/backend/data/agents.json` → `site/backend/src/registry.py` (new accessor if needed) |
+| Change guardrail config / behavior | `site/backend/data/agents.json` (`_config.guardrails`), `site/backend/src/workflow/guardrails.py`, `site/backend/data/prompts/{input,content}_guardrail.txt` |
 | Change container packages or domains | `site/backend/data/agents.json` (`setup.containerPythonPackages`, `setup.allowedDomains`) |
 | Add a registry constant Python needs | `site/backend/src/registry.py` |
 | Change agent behavior / instructions | `site/backend/data/prompts/*.txt` |
 | Workflow orchestration | `site/backend/src/workflow/engine.py`, `site/backend/src/workflow/payloads.py`, `site/backend/src/main.py` |
 | API routes / server state | `site/backend/src/api/**`, `site/backend/src/server.py` |
 | Deterministic pipeline validation | `site/backend/src/pipeline_validation.py` |
-| Eval scoring / reporting | `site/backend/src/evaluation.py`, `site/backend/data/rubric.json` |
+| Eval scoring / reporting (seed, per-criterion reasoning, failure tags) | `site/backend/src/evaluation.py`, `site/backend/data/rubric.json` |
+| Grader self-improvement proposals | `site/backend/src/tools/meta_evaluator.py`, `.agents/grader-review/SKILL.md` |
 | Judge ↔ professor agreement | `site/backend/src/tools/judge_agreement.py`, `Other/compare_to_professor.py` |
-| Frontend UX / state | `site/frontend/src/App.jsx`, `site/frontend/src/hooks/**`, `site/frontend/src/components/**` |
+| Frontend UX / state | `site/frontend/src/App.jsx`, `site/frontend/src/state/reducer.js`, `site/frontend/src/state/transcript.js`, `site/frontend/src/hooks/**`, `site/frontend/src/components/**` |
+| Chat surface / token streaming | `site/frontend/src/sections/ChatConversation.jsx`, `site/frontend/src/components/ui/Chat.jsx` (Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer), `site/frontend/src/components/ui/Stepper.jsx`, `site/frontend/src/components/ui/TokenStream.jsx`, `site/frontend/src/hooks/useTokenStream.js` |
 | Frontend styling / design system | `site/frontend/DESIGN.md`, `site/frontend/src/styles/app.css` |
 | Add/extend a UI primitive (template) | `site/frontend/src/components/ui/*` + `ui/index.js`, then `site/frontend/src/design-system/sections/Components.jsx` + `ui/ui.test.jsx` + `site/frontend/DESIGN.md` §14 |
 | Design-system showcase page | `site/frontend/design-system.html`, `site/frontend/src/design-system/**`, `site/frontend/vite.config.js` (multi-page input) |
@@ -453,13 +547,21 @@ operational guides, not source of truth for local development.
   `site/frontend/README.md`.
 - Canonical spelling is `extracter` everywhere. There are **no aliases** in
   `agents.json` — callers must use the exact key name.
-- All 8 stages appear in the frontend pipeline (including `setup` and `output`);
-  the list is driven by `useAgentRegistry()`, not hardcoded.
+- All 10 nodes appear in the frontend pipeline (including `setup`, `output`, and the
+  two `kind: "guardrail"` nodes); the list is driven by `useAgentRegistry()`, not hardcoded.
+  Guardrail nodes are display/animation-only — they're excluded from the runnable/stoppable/LLM
+  sets (`input_to_agent_sequence()`/`llm_agents()`/`stoppable_agents()` skip `kind == "guardrail"`).
+- The SSE `/stream` endpoint is **real and in use** (cosmetic token-stream effect via
+  `useTokenStream.js`); polling `/status` remains the authoritative status source.
+- A guardrail-tripped run ends in the terminal **`blocked`** status (distinct from `error`),
+  surfaced as a top-level `blocked` field on the status payload.
 - `dist/` is generated by `npm -C site/frontend run build`; it is gitignored.
 - Workflow state is in-memory plus a SQLite mirror (`site/backend/runtime/`); active
   in-flight runs do not resume across a restart.
-- Model id `gpt-5.5` is intentional and lives in `agents.json`; every agent
-  entry including `setup` and `output` carries it. Do not "fix" it.
+- Model id `gpt-5.5` is intentional and lives in `agents.json`; every node
+  entry (including `setup`, `output`, and the two guardrail nodes) carries it.
+  Do not "fix" it.
+- The stable pre-overhaul baseline is tagged `stable-20260629`.
 - `registry._load_raw` is `@lru_cache`. In tests that swap `AGENTS_CONFIG_PATH`,
   call `registry._load_raw.cache_clear()` first or the old data is returned.
   Editing `agents.json` requires a backend restart for the same reason.
