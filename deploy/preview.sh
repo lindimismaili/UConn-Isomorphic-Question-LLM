@@ -94,7 +94,7 @@ ensure_dependencies() {
 
   PYTHON_BIN="$(find_python)"
 
-  if ! "${PYTHON_BIN}" -c "import fastapi, uvicorn" >/dev/null 2>&1; then
+  if ! "${PYTHON_BIN}" -c "import fastapi, uvicorn; from agents.exceptions import ModelRefusalError" >/dev/null 2>&1; then
     info "Installing backend Python dependencies into $(${PYTHON_BIN} -c 'import sys; print(sys.prefix)')"
     "${PYTHON_BIN}" -m pip install -r "${REPO_DIR}/site/backend/requirements.txt"
   fi
