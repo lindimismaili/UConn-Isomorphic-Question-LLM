@@ -99,6 +99,18 @@ MAX_UPLOAD_FILES = 5
 
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
 
+# Total bytes accepted across all files in a single /api/upload request. Bounds a
+# request even when it stays under the per-file cap on every file.
+MAX_UPLOAD_TOTAL_BYTES = int(os.getenv("MAX_UPLOAD_TOTAL_BYTES", str(60 * 1024 * 1024)))
+
+# Leading magic bytes required for content-sensitive upload types. A file whose
+# declared extension is one of these must actually start with the signature
+# (checked within the first KiB) — cheap defense against a disguised payload
+# reaching the extracter's code-interpreter container.
+UPLOAD_MAGIC_SIGNATURES: dict[str, tuple[bytes, ...]] = {
+    ".pdf": (b"%PDF",),
+}
+
 WORKFLOW_TTL_SECONDS = int(os.getenv("WORKFLOW_TTL_SECONDS", str(24 * 60 * 60)))
 
 WORKFLOW_MAX_ENTRIES = int(os.getenv("WORKFLOW_MAX_ENTRIES", "200"))
@@ -208,6 +220,23 @@ workflows: dict[str, dict] = {}
 
 workflow_tasks: dict[str, asyncio.Task] = {}
 
+# Per-workflow bounded queues of token deltas the engine emits (via emit_token)
+# for the SSE "matrix" stream endpoint. Purely cosmetic: a full or absent queue
+# just drops tokens; status polling remains the authoritative progress channel.
+workflow_token_queues: dict[str, "asyncio.Queue"] = {}
+
+
+def _make_emit_token(token_queue: "asyncio.Queue"):
+    """Return an ``emit_token(agent_key, delta)`` that feeds the SSE stream queue."""
+
+    def _emit(agent_key: str, delta: str) -> None:
+        try:
+            token_queue.put_nowait({"agent": agent_key, "delta": delta})
+        except asyncio.QueueFull:
+            pass
+
+    return _emit
+
 batch_jobs: dict[str, dict[str, Any]] = {}
 
 batch_tasks: dict[str, asyncio.Task] = {}
@@ -216,7 +245,7 @@ eval_batch_jobs: dict[str, dict[str, Any]] = {}
 
 eval_batch_tasks: dict[str, asyncio.Task] = {}
 
-TERMINAL_STATUSES = {"completed", "errored", "cancelled", "lost"}
+TERMINAL_STATUSES = {"completed", "errored", "cancelled", "lost", "blocked"}
 
 LOST_STATUS = "lost"
 
@@ -841,6 +870,7 @@ def _workflow_status_payload(workflow_id: str, workflow: dict[str, Any]) -> dict
         "outputFolder": workflow.get("outputFolder", ""),
         "error": workflow.get("error", ""),
         "errorStage": workflow.get("errorStage"),
+        "blocked": workflow.get("blocked"),
     }
 
 def _downloadable_file_names(workflow: dict[str, Any]) -> set[str]:
@@ -1263,6 +1293,8 @@ async def _execute_workflow(
 ) -> None:
     """Run the workflow via the shared engine; surface FastAPI cancel/error states."""
     client = get_openai_client()
+    token_queue: asyncio.Queue = asyncio.Queue(maxsize=2000)
+    workflow_token_queues[workflow_id] = token_queue
     try:
         await _engine_run_workflow_async(
             client=client,
@@ -1284,6 +1316,7 @@ async def _execute_workflow(
             agent_input_filename=agent_input_filename,
             input_to_agent_run=input_to_agent_run,
             run_evaluation=run_evaluation,
+            emit_token=_make_emit_token(token_queue),
         )
     except asyncio.CancelledError:
         logger.info("Workflow %s cancelled", workflow_id)
@@ -1293,6 +1326,10 @@ async def _execute_workflow(
         logger.error("Workflow %s failed: %s", workflow_id, e)
         _mark_workflow_error(workflow, str(e))
         raise
+    finally:
+        # Drop the registry reference; an attached SSE stream keeps its own local
+        # reference to drain the tail, then ends on the terminal status.
+        workflow_token_queues.pop(workflow_id, None)
 
 async def run_create_data_batch_async(batch_id: str):
     """Run the workflow against every evaluation file in parallel."""

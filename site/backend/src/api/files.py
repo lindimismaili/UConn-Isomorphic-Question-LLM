@@ -14,6 +14,8 @@ from backend.src.api.state import (
     ALLOWED_UPLOAD_EXTENSIONS,
     MAX_UPLOAD_BYTES,
     MAX_UPLOAD_FILES,
+    MAX_UPLOAD_TOTAL_BYTES,
+    UPLOAD_MAGIC_SIGNATURES,
     _build_workflow_zip,
     _downloadable_file_names,
     _get_workflow_record,
@@ -55,23 +57,29 @@ async def upload_files(files: list[UploadFile] = File(...)):
         session_dir, session_id = create_unique_run_dir(UPLOADS_DIR, "upload")
         manifest = {"sessionId": session_id, "files": []}
         used_names: set[str] = set()
+        request_total = 0
         logger.info("Created session directory: %s", session_dir)
 
         for file in files:
             if file.filename:
                 # Sanitize filename to prevent path traversal
                 original_name = Path(file.filename).name
+                # Reject on the ORIGINAL extension first. safe_filename() would
+                # otherwise silently remap a disallowed suffix to the fallback's
+                # (.txt), making the rejection below unreachable and storing e.g.
+                # an .exe/.zip as .txt instead of refusing it.
+                original_extension = Path(original_name).suffix.lower()
+                if original_extension not in ALLOWED_UPLOAD_EXTENSIONS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Unsupported file type for {original_name}",
+                    )
                 stored_name = safe_filename(
                     original_name,
                     fallback="source.txt",
                     allowed_suffixes=ALLOWED_UPLOAD_EXTENSIONS,
                 )
                 extension = Path(stored_name).suffix.lower()
-                if extension not in ALLOWED_UPLOAD_EXTENSIONS:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Unsupported file type for {original_name}",
-                    )
                 stored_name = unique_child_name(session_dir, stored_name, used_names)
                 file_path = session_dir / stored_name
                 file_id = stable_short_hash(f"{session_id}:{stored_name}:{len(used_names)}", 12)
@@ -79,18 +87,36 @@ async def upload_files(files: list[UploadFile] = File(...)):
 
                 try:
                     total_size = 0
+                    first_bytes = b""
                     with open(file_path, "wb") as f:
                         while True:
                             chunk = await file.read(1024 * 1024)
                             if not chunk:
                                 break
+                            if not first_bytes:
+                                first_bytes = chunk[:1024]
                             total_size += len(chunk)
+                            request_total += len(chunk)
                             if total_size > MAX_UPLOAD_BYTES:
                                 raise HTTPException(
                                     status_code=413,
                                     detail=f"File too large: {original_name}. Max size is {MAX_UPLOAD_BYTES} bytes.",
                                 )
+                            if request_total > MAX_UPLOAD_TOTAL_BYTES:
+                                raise HTTPException(
+                                    status_code=413,
+                                    detail=(
+                                        "Upload exceeds the total request size limit of "
+                                        f"{MAX_UPLOAD_TOTAL_BYTES} bytes."
+                                    ),
+                                )
                             f.write(chunk)
+                    signatures = UPLOAD_MAGIC_SIGNATURES.get(extension)
+                    if signatures and not any(sig in first_bytes for sig in signatures):
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"File {original_name} does not appear to be a valid {extension} file.",
+                        )
                     item = {
                         "fileId": file_id,
                         "originalName": original_name,

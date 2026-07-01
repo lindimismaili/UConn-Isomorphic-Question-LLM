@@ -7,6 +7,7 @@
       "name": "preserve_physical_content",
       "category": "Preservation",
       "na_allowed": false,
+      "reasoning": "medium",
       "question": "Does the generated question preserve the original physical content?",
       "guidance": [
         "A passing generated question expresses the SAME underlying physics concept, governing law, model, and reasoning path as the source; only the story, names, numbers, and surface context may differ.",
@@ -57,6 +58,7 @@
       "name": "physics_correctness",
       "category": "Quality control",
       "na_allowed": false,
+      "reasoning": "high",
       "question": "Is the generated question free of physics errors or misconceptions?",
       "guidance": [
         "A passing generated question is physically sound on its own terms: equations, signs, vectors, units, derivatives, conservation laws, and stated assumptions are all correct, and the marked or implied correct answer is actually correct.",
@@ -89,6 +91,7 @@
       "name": "distractor_structure_preservation",
       "category": "Preservation",
       "na_allowed": false,
+      "reasoning": "high",
       "question": "Does the generated question preserve the logical structure of the distractors?",
       "guidance": [
         "A passing generated question reproduces every source distractor role one-to-one in the generated option set, with each role's declared `distractor_logic` label matched and its value recomputed under the new numbers and scenario.",
@@ -126,6 +129,7 @@
       "name": "solvable_and_specified",
       "category": "Quality control",
       "na_allowed": false,
+      "reasoning": "medium",
       "question": "Is the generated question fully specified and solvable as written?",
       "guidance": [
         "A passing generated question gives enough information for a single intended answer and is solvable exactly as written.",

@@ -9,9 +9,11 @@ from backend.src.evaluation import (
     EVALUATION_DATASET_FILENAME,
     EVALUATION_ITEMS_FILENAME,
     EVALUATION_OUTPUTS_DIRNAME,
+    GRADER_SEED,
     _attach_report_file_metadata,
     _build_testing_criteria,
     _render_generated_question_text,
+    rubric_reasoning_effort,
     run_openai_output_evaluation,
 )
 
@@ -174,15 +176,31 @@ class EvaluationContractTests(unittest.TestCase):
             report["testing_files"],
         )
 
-    def test_score_model_eval_uses_low_reasoning_effort(self) -> None:
+    def test_score_model_eval_uses_per_criterion_reasoning_effort(self) -> None:
+        # Reasoning effort is now resolved per criterion (its own rubric ``reasoning``
+        # field, falling back to the global default), not a single global value.
         criteria = _build_testing_criteria(model="test-model")
 
         self.assertGreater(len(criteria), 0)
+        by_name = {criterion["name"]: criterion for criterion in criteria}
+        # Hard criteria are raised above the global default.
+        self.assertEqual(
+            by_name["physics_correctness"]["sampling_params"]["reasoning_effort"],
+            "high",
+        )
+        self.assertEqual(
+            by_name["distractor_structure_preservation"]["sampling_params"]["reasoning_effort"],
+            "high",
+        )
+        # Unset criteria inherit the global rubric default.
+        global_effort = rubric_reasoning_effort()
+        self.assertEqual(
+            by_name["scenario_variation"]["sampling_params"]["reasoning_effort"],
+            global_effort,
+        )
+        # Every grader is seeded for reproducibility.
         for criterion in criteria:
-            self.assertEqual(
-                criterion.get("sampling_params", {}).get("reasoning_effort"),
-                "low",
-            )
+            self.assertEqual(criterion["sampling_params"].get("seed"), GRADER_SEED)
 
     def test_score_model_uses_pass_fail_range(self) -> None:
         criteria = _build_testing_criteria(model="test-model")

@@ -38,6 +38,7 @@ from backend.src.api.state import (
     run_workflow_async,
     run_workflow_from_agent_async,
     run_workflow_from_agent_input_async,
+    workflow_token_queues,
     workflows,
 )
 from backend.src.artifacts import WORKFLOW_AGENT_SEQUENCE, load_source_file_paths
@@ -297,30 +298,59 @@ async def start_workflow_from_agent_input(
 
 @router.get("/api/workflow/{workflow_id}/stream")
 async def stream_workflow(workflow_id: str):
-    """Stream workflow status updates using SSE."""
+    """Stream live token deltas + status updates for a workflow over SSE.
+
+    Emits three named event types:
+      - ``token``  data ``{"agent": "<registry key>", "delta": "<text chunk>"}``
+        — the live "matrix" text effect the frontend renders on the active node.
+      - ``status`` data = the same payload as ``GET /status`` (sent on change).
+      - ``done``   data ``{}`` — once the workflow reaches a terminal state.
+
+    Token streaming is best-effort/cosmetic; polling ``/status`` stays the
+    authoritative progress channel, so a dropped/absent stream never loses state.
+    """
     if _get_workflow_record(workflow_id) is None:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     async def generate_events():
-        """Generate SSE events for workflow progress."""
+        # The engine's per-workflow token queue may not exist yet (stream opened
+        # before the run task started) or may already be gone (run finished); both
+        # are handled — we re-fetch until we hold a reference, then drain it.
+        queue = workflow_token_queues.get(workflow_id)
         last_status = None
         while True:
+            if queue is None:
+                queue = workflow_token_queues.get(workflow_id)
             workflow = _get_workflow_record(workflow_id)
             if not workflow:
+                yield "event: done\ndata: {}\n\n"
                 break
 
-            # Send current status
-            current_status = json.dumps(_workflow_status_payload(workflow_id, workflow))
+            if queue is not None:
+                for _ in range(100):
+                    try:
+                        item = queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+                    yield f"event: token\ndata: {json.dumps(item)}\n\n"
 
+            current_status = json.dumps(_workflow_status_payload(workflow_id, workflow))
             if current_status != last_status:
-                yield f"data: {current_status}\n\n"
+                yield f"event: status\ndata: {current_status}\n\n"
                 last_status = current_status
 
-            # Check if workflow is done
             if workflow.get("status") in TERMINAL_STATUSES:
+                if queue is not None:
+                    while True:
+                        try:
+                            item = queue.get_nowait()
+                        except asyncio.QueueEmpty:
+                            break
+                        yield f"event: token\ndata: {json.dumps(item)}\n\n"
+                yield "event: done\ndata: {}\n\n"
                 break
 
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
     return StreamingResponse(
         generate_events(),
@@ -328,5 +358,6 @@ async def stream_workflow(workflow_id: str):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         },
     )

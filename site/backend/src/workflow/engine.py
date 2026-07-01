@@ -14,10 +14,16 @@ import mimetypes
 import shutil
 import time
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
-from agents import RunConfig, Runner, trace
+from agents import RunConfig, Runner, custom_span, trace
+from agents.exceptions import (
+    MaxTurnsExceeded,
+    ModelBehaviorError,
+    ModelRefusalError,
+)
 from agents.logger import logger
 from openai import OpenAI
 
@@ -54,6 +60,8 @@ from ..pipeline_validation import (
 )
 from ..registry import agent_entry as _agent_entry
 from ..registry import default_from_agent as _registry_default_from_agent
+from ..registry import guardrail_content_node as _guardrail_content_node
+from ..registry import guardrail_input_node as _guardrail_input_node
 from ..registry import stoppable_agents as _registry_stoppable_agents
 from ..safety import (
     LATEX_SUFFIXES,
@@ -71,6 +79,11 @@ from ..schemas import (
     WorkflowResult,
 )
 from .agents import container_expires_minutes, create_agents
+from .guardrails import (
+    GuardrailDecision,
+    check_content_guardrails,
+    check_input_guardrails,
+)
 from .payloads import (
     build_evaluation_final_result,
     build_extracter_input,
@@ -97,24 +110,129 @@ from .resume import (
 )
 from .stage_cache import StageCache, file_content_hash
 
-# ── Agent metadata derived from agents.json ──────────────────────────────────
-_KEY_BY_NAME: dict[str, str] = {v: k for k, v in AGENT_DISPLAY_NAMES.items()}
-_KEY_BY_NAME["User"] = "user"
+# ── Agent metadata derived from agents.json (lazy, no module-load side effects) ──
 
-_AGENT_FLOW: dict[str, tuple[str, str]] = {
-    key: (
-        _KEY_BY_NAME.get(_agent_entry(key).get("inputFrom", ""), _agent_entry(key).get("inputFrom", "").lower()),
-        _KEY_BY_NAME.get(_agent_entry(key).get("outputTo", ""), _agent_entry(key).get("outputTo", "").lower()),
+
+@lru_cache(maxsize=1)
+def _key_by_name() -> dict[str, str]:
+    """Map agent display names back to their canonical keys (plus "User")."""
+    mapping = {v: k for k, v in AGENT_DISPLAY_NAMES.items()}
+    mapping["User"] = "user"
+    return mapping
+
+
+@lru_cache(maxsize=1)
+def _agent_flow() -> dict[str, tuple[str, str]]:
+    """Resolve each agent's (receivedFrom, sentTo) display-node pair from the registry."""
+    key_by_name = _key_by_name()
+    return {
+        key: (
+            key_by_name.get(
+                _agent_entry(key).get("inputFrom", ""),
+                _agent_entry(key).get("inputFrom", "").lower(),
+            ),
+            key_by_name.get(
+                _agent_entry(key).get("outputTo", ""),
+                _agent_entry(key).get("outputTo", "").lower(),
+            ),
+        )
+        for key in WORKFLOW_AGENT_SEQUENCE
+    }
+
+
+@lru_cache(maxsize=1)
+def _eval_reasoning() -> str:
+    """Evaluation reasoning effort from the registry (default "low")."""
+    return _agent_entry("evaluation").get("reasoning", "low")
+
+
+@lru_cache(maxsize=1)
+def _default_resume_agent() -> str:
+    """Registry-configured default resume agent (start of the pipeline)."""
+    return _registry_default_from_agent()
+
+
+def _max_turns(agent_key: str) -> int:
+    """Per-stage max_turns from an OPTIONAL registry ``maxTurns`` field.
+
+    Defaults to 12 for the tool-heavy latexifier (code interpreter + compile
+    loop) and 6 for the pure output_type stages, so a malformed run fails fast
+    instead of burning the SDK default.
+    """
+    default = 12 if agent_key == "latexifier" else 6
+    return _agent_entry(agent_key).get("maxTurns", default)
+
+
+def _is_container_expired_error(exc: BaseException) -> bool:
+    """Heuristic: does this error indicate the shared container expired / vanished?
+
+    Container-expiry surfaces as varied OpenAI/HTTP errors (404s, "container not
+    found", "expired"). We recreate on any error whose text implicates the
+    container so the latexifier gets one clean retry instead of failing the run.
+    """
+    text = f"{type(exc).__name__}: {exc}".lower()
+    if "container" not in text:
+        return False
+    if getattr(exc, "status_code", None) == 404:
+        return True
+    return any(
+        marker in text
+        for marker in ("expired", "not found", "no longer active", "does not exist")
     )
-    for key in WORKFLOW_AGENT_SEQUENCE
-}
-_EVAL_REASONING: str = _agent_entry("evaluation").get("reasoning", "low")
-_DEFAULT_RESUME_AGENT: str = _registry_default_from_agent()
+
 
 ToThread = Callable[..., Awaitable[Any]]
 TouchWorkflow = Callable[[dict[str, Any]], None]
 LoadRubricModel = Callable[[], str]
 LoadRubricPayload = Callable[[], dict[str, Any]]
+EmitToken = Callable[[str, str], None]  # (agent_key, text_delta)
+
+
+async def run_llm_stage(
+    agent: Any,
+    input: Any,
+    *,
+    run_config: RunConfig,
+    max_turns: int,
+    stage_label: str,
+    emit_token: Optional[EmitToken] = None,
+) -> Any:
+    """Run one LLM stage and return ``final_output``.
+
+    Behavior is identical to a bare ``await Runner.run(...)`` when ``emit_token``
+    is None (the mock-compatible non-streaming path). When ``emit_token`` is set,
+    the run is streamed and each output-text delta is forwarded to the callback;
+    a callback failure never breaks the run. SDK failures are normalized into a
+    ``ValueError`` carrying the stage label so callers surface a clean error.
+    """
+    try:
+        if emit_token is None:
+            result = await Runner.run(
+                agent, input=input, run_config=run_config, max_turns=max_turns
+            )
+            return result.final_output
+
+        streamed = Runner.run_streamed(
+            agent, input=input, run_config=run_config, max_turns=max_turns
+        )
+        async for event in streamed.stream_events():
+            if getattr(event, "type", None) != "raw_response_event":
+                continue
+            data = getattr(event, "data", None)
+            if getattr(data, "type", None) != "response.output_text.delta":
+                continue
+            delta = getattr(data, "delta", None)
+            if not isinstance(delta, str):
+                continue
+            try:
+                emit_token(stage_label, delta)
+            except Exception:
+                pass
+        return streamed.final_output
+    except (MaxTurnsExceeded, ModelBehaviorError, ModelRefusalError) as exc:
+        raise ValueError(
+            f"{stage_label} stage failed: {type(exc).__name__}: {exc}"
+        ) from exc
 
 
 def file_metadata(name: str, path: Path, *, downloadable: bool = True) -> dict[str, Any]:
@@ -439,6 +557,121 @@ def _build_partial_result(
     )
 
 
+def _begin_guardrail_node(
+    workflow: dict[str, Any],
+    node_key: str,
+    *,
+    received_from: str,
+    sent_to: str,
+    touch_workflow: TouchWorkflow,
+) -> None:
+    """Mark a guardrail display node as running (no-op when the node is absent)."""
+    agents_map = workflow.get("agents", {})
+    if node_key not in agents_map:
+        return
+    node = agents_map[node_key]
+    node["status"] = "thinking"
+    data = node.setdefault("data", {})
+    data["startTime"] = datetime.now().isoformat()
+    data.setdefault("receivedFrom", received_from)
+    data.setdefault("sentTo", sent_to)
+    touch_workflow(workflow)
+
+
+def _complete_guardrail_node(
+    workflow: dict[str, Any],
+    node_key: str,
+    *,
+    touch_workflow: TouchWorkflow,
+) -> None:
+    """Mark a guardrail display node as passed (no-op when the node is absent)."""
+    agents_map = workflow.get("agents", {})
+    if node_key not in agents_map:
+        return
+    node = agents_map[node_key]
+    node["status"] = "completed"
+    data = node.setdefault("data", {})
+    data["endTime"] = datetime.now().isoformat()
+    data["output"] = {"allowed": True}
+    touch_workflow(workflow)
+
+
+async def _finalize_blocked(
+    *,
+    workflow: dict[str, Any],
+    outputs_dir: Path,
+    workflow_id: str,
+    output_folder_label: str,
+    touch_workflow: TouchWorkflow,
+    to_thread: ToThread,
+    decision: GuardrailDecision,
+    agent_metadata_records: list[dict[str, Any]],
+    normalizer_output: Optional[NormalizerOutput] = None,
+) -> WorkflowResult:
+    """Finalize a run that a guardrail blocked.
+
+    Marks the workflow ``blocked``, records the decision, cancels any agents that
+    had not yet completed, writes a minimal ``final_result.json``, notifies the
+    caller, and returns the (empty) WorkflowResult.
+    """
+    logger.warning(
+        "Workflow %s blocked by %s guardrail (category=%s): %s",
+        workflow_id,
+        decision.stage,
+        decision.category,
+        decision.reason,
+    )
+    workflow["status"] = "blocked"
+    workflow["blocked"] = {
+        "category": decision.category,
+        "reason": decision.reason,
+        "stage": decision.stage,
+    }
+    blocked_node = (
+        _guardrail_input_node()
+        if decision.stage == "input"
+        else _guardrail_content_node()
+        if decision.stage == "content"
+        else ""
+    )
+    agents_map = workflow.get("agents", {})
+    for node_key, agent_state in agents_map.items():
+        if node_key == blocked_node:
+            continue
+        if agent_state.get("status") != "completed":
+            agent_state["status"] = "cancelled"
+    if blocked_node and blocked_node in agents_map:
+        blocked_state = agents_map[blocked_node]
+        blocked_state["status"] = "blocked"
+        blocked_data = blocked_state.setdefault("data", {})
+        blocked_data["endTime"] = datetime.now().isoformat()
+        blocked_data["output"] = {
+            "allowed": False,
+            "category": decision.category,
+            "reason": decision.reason,
+        }
+
+    final_result = WorkflowResult(
+        config=normalizer_output or NormalizerOutput(),
+        source_questions=[],
+        verified_questions=[],
+        generated_questions=[],
+        latex_file="",
+        pdf_file="",
+    )
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    result_path = outputs_dir / "final_result.json"
+    await to_thread(
+        result_path.write_text,
+        final_result.model_dump_json(indent=2),
+        encoding="utf-8",
+    )
+    workflow["outputFolder"] = output_folder_label
+    workflow["result"] = final_result.model_dump()
+    touch_workflow(workflow)
+    return final_result
+
+
 async def run_workflow_async(
     *,
     client: OpenAI,
@@ -453,7 +686,7 @@ async def run_workflow_async(
     to_thread: ToThread,
     load_rubric_model: LoadRubricModel,
     load_rubric_payload: LoadRubricPayload,
-    resume_from_agent: str = _DEFAULT_RESUME_AGENT,
+    resume_from_agent: str | None = None,
     resume_source_dir: Optional[Path] = None,
     resume_source_label: str = "",
     agent_input_override: Any = None,
@@ -461,13 +694,19 @@ async def run_workflow_async(
     input_to_agent_run: bool = False,
     run_evaluation: bool = True,
     stop_after_agent: Optional[str] = None,
+    emit_token: Optional[EmitToken] = None,
 ) -> WorkflowResult:
     """Run the workflow and write artifacts into a specific output directory.
 
     Returns the final WorkflowResult. The `workflow` dict is mutated in place to
     track stage status for callers (FastAPI) that surface it to the UI; CLI
     callers can pass a stub dict with the expected nested structure.
+
+    When ``emit_token`` is provided the LLM stages stream their output-text deltas
+    to it as ``(agent_key, delta)``; when None (the default) the stages run
+    non-streaming, identical to the prior behavior.
     """
+    resume_from_agent = resume_from_agent or _default_resume_agent()
     with trace("Isomorphic Question Generation Workflow"):
         if resume_from_agent not in WORKFLOW_AGENT_SEQUENCE:
             raise ValueError(f"Unknown resume_from_agent: {resume_from_agent}")
@@ -522,6 +761,15 @@ async def run_workflow_async(
             not should_run_evaluation
             and should_run_agent("evaluation", resume_from_agent)
         )
+        # A "fresh full run" starts at the normalizer with no uploaded agent input
+        # and no resume-from-cache source. Guardrails only apply to these runs;
+        # resumes/replays already went through them on the original run.
+        is_fresh_full_run = (
+            should_run_agent("normalizer", resume_from_agent)
+            and not is_input_to_agent_run
+            and resume_source_dir is None
+        )
+        prompt_text = (prompt or "").strip()
 
         file_ids: list[str] = []
         file_names: list[str] = []
@@ -550,6 +798,39 @@ async def run_workflow_async(
                 "Workflow %s finished file upload (%d file_ids)",
                 workflow_id,
                 len(file_ids),
+            )
+
+        # Input guardrails run BEFORE the container is created so a blocked input
+        # never spins up an OpenAI container. Only fresh full runs are checked.
+        if is_fresh_full_run:
+            _begin_guardrail_node(
+                workflow,
+                _guardrail_input_node(),
+                received_from="Starter",
+                sent_to="Normalizer",
+                touch_workflow=touch_workflow,
+            )
+            input_decision = await check_input_guardrails(
+                client=client,
+                prompt=prompt_text,
+                file_names=file_names,
+                to_thread=to_thread,
+            )
+            if not input_decision.allowed:
+                return await _finalize_blocked(
+                    workflow=workflow,
+                    outputs_dir=outputs_dir,
+                    workflow_id=workflow_id,
+                    output_folder_label=output_folder_label,
+                    touch_workflow=touch_workflow,
+                    to_thread=to_thread,
+                    decision=input_decision,
+                    agent_metadata_records=agent_metadata_records,
+                )
+            _complete_guardrail_node(
+                workflow,
+                _guardrail_input_node(),
+                touch_workflow=touch_workflow,
             )
 
         if not hasattr(client, "containers"):
@@ -582,31 +863,142 @@ async def run_workflow_async(
             allowed_domains=allowed_domains_from_env(),
         )
 
-        # Installing the LaTeX toolchain (apt-get texlive…) is the slow part of
-        # setup, but only the latexifier needs it. Kick it off in the background
-        # so normalizer→generator start as soon as the container exists instead
-        # of blocking on it; it's awaited at the top of the latexifier stage.
-        # compile_latex() also calls bootstrap() idempotently, so it installs
-        # exactly once.
-        latex_bootstrap_task: Optional[asyncio.Task] = None
-        if should_run_agent("latexifier", resume_from_agent):
-            latex_bootstrap_task = asyncio.ensure_future(
-                to_thread(shared_runtime.bootstrap)
-            )
-            latex_bootstrap_task.add_done_callback(
-                lambda task: _log_task_exception(
-                    task, f"Workflow {workflow_id} LaTeX runtime bootstrap"
+        # Keep the shared container from expiring while long, container-idle
+        # stages (normalizer→generator) run: every half-expiry (bounded to
+        # [30, 300]s) touch it via containers.retrieve, which refreshes
+        # last_active_at. Failures just log so the run continues.
+        heartbeat_interval = max(30, min(container_expires_minutes() * 60 // 2, 300))
+
+        async def _container_heartbeat(container_id: str) -> None:
+            while True:
+                await asyncio.sleep(heartbeat_interval)
+                try:
+                    await to_thread(client.containers.retrieve, container_id)
+                except Exception as exc:
+                    logger.warning(
+                        "Workflow %s container heartbeat failed: %s", workflow_id, exc
+                    )
+
+        heartbeat_task = asyncio.ensure_future(_container_heartbeat(shared_container_id))
+
+        # The post-container body is wrapped so the heartbeat is always cancelled
+        # on every exit path (success, early return, or exception) — otherwise a
+        # dangling background task keeps asyncio.run / tests from terminating.
+        try:
+            # Installing the LaTeX toolchain (apt-get texlive…) is the slow part of
+            # setup, but only the latexifier needs it. Kick it off in the background
+            # so normalizer→generator start as soon as the container exists instead
+            # of blocking on it; it's awaited at the top of the latexifier stage.
+            # compile_latex() also calls bootstrap() idempotently, so it installs
+            # exactly once.
+            latex_bootstrap_task: Optional[asyncio.Task] = None
+            if should_run_agent("latexifier", resume_from_agent):
+                latex_bootstrap_task = asyncio.ensure_future(
+                    to_thread(shared_runtime.bootstrap)
                 )
+                latex_bootstrap_task.add_done_callback(
+                    lambda task: _log_task_exception(
+                        task, f"Workflow {workflow_id} LaTeX runtime bootstrap"
+                    )
+                )
+
+            agents = create_agents(
+                file_ids=file_ids,
+                container_id=shared_container_id,
+                latex_compile_tool=shared_runtime.build_compile_latex_tool(),
             )
 
-        agents = create_agents(
-            file_ids=file_ids,
-            container_id=shared_container_id,
-            latex_compile_tool=shared_runtime.build_compile_latex_tool(),
-        )
+            return await _run_pipeline_body(
+                client=client,
+                workflow_id=workflow_id,
+                workflow=workflow,
+                prompt_text=prompt_text,
+                theme=theme,
+                file_paths=file_paths,
+                file_ids=file_ids,
+                file_names=file_names,
+                file_content_hashes=file_content_hashes,
+                outputs_dir=outputs_dir,
+                output_folder_label=output_folder_label,
+                touch_workflow=touch_workflow,
+                to_thread=to_thread,
+                run_config=run_config,
+                agents=agents,
+                shared_runtime=shared_runtime,
+                shared_container_id=shared_container_id,
+                latex_bootstrap_task=latex_bootstrap_task,
+                agent_metadata_records=agent_metadata_records,
+                stage_cache=stage_cache,
+                resume_from_agent=resume_from_agent,
+                resume_source_dir=resume_source_dir,
+                resume_source_label=resume_source_label,
+                agent_input_filename=agent_input_filename,
+                is_input_to_agent_run=is_input_to_agent_run,
+                has_uploaded_agent_input=has_uploaded_agent_input,
+                uploaded_agent_input=uploaded_agent_input,
+                uploaded_agent_payload=uploaded_agent_payload,
+                workflow_type=workflow_type,
+                should_run_evaluation=should_run_evaluation,
+                evaluation_was_skipped=evaluation_was_skipped,
+                is_fresh_full_run=is_fresh_full_run,
+                stop_after_agent=stop_after_agent,
+                load_rubric_model=load_rubric_model,
+                load_rubric_payload=load_rubric_payload,
+                emit_token=emit_token,
+            )
+        finally:
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
-        prompt_text = (prompt or "").strip()
 
+async def _run_pipeline_body(
+    *,
+    client: OpenAI,
+    workflow_id: str,
+    workflow: dict[str, Any],
+    prompt_text: str,
+    theme: str,
+    file_paths: list[str],
+    file_ids: list[str],
+    file_names: list[str],
+    file_content_hashes: list[str],
+    outputs_dir: Path,
+    output_folder_label: str,
+    touch_workflow: TouchWorkflow,
+    to_thread: ToThread,
+    run_config: RunConfig,
+    agents: dict[str, Any],
+    shared_runtime: SharedWorkflowRuntime,
+    shared_container_id: str,
+    latex_bootstrap_task: Optional[asyncio.Task],
+    agent_metadata_records: list[dict[str, Any]],
+    stage_cache: StageCache,
+    resume_from_agent: str,
+    resume_source_dir: Optional[Path],
+    resume_source_label: str,
+    agent_input_filename: str,
+    is_input_to_agent_run: bool,
+    has_uploaded_agent_input: bool,
+    uploaded_agent_input: Any,
+    uploaded_agent_payload: dict[str, Any],
+    workflow_type: str,
+    should_run_evaluation: bool,
+    evaluation_was_skipped: bool,
+    is_fresh_full_run: bool,
+    stop_after_agent: Optional[str],
+    load_rubric_model: LoadRubricModel,
+    load_rubric_payload: LoadRubricPayload,
+    emit_token: Optional[EmitToken],
+) -> WorkflowResult:
+    """Run stages normalizer→output once the container/agents/runtime exist.
+
+    Split out of ``run_workflow_async`` so the container heartbeat can wrap this
+    whole body in a try/finally without re-indenting the entire pipeline.
+    """
+    if True:
         # ---- Normalizer ----
         if should_run_agent("normalizer", resume_from_agent):
             logger.info("Workflow %s starting Normalizer", workflow_id)
@@ -618,8 +1010,8 @@ async def run_workflow_async(
             normalizer_input = build_json_message(normalizer_input_payload)
             if has_uploaded_agent_input and resume_from_agent == "normalizer":
                 normalizer_input = uploaded_agent_input
-            workflow["agents"]["normalizer"]["data"]["receivedFrom"] = _AGENT_FLOW["normalizer"][0]
-            workflow["agents"]["normalizer"]["data"]["sentTo"] = _AGENT_FLOW["normalizer"][1]
+            workflow["agents"]["normalizer"]["data"]["receivedFrom"] = _agent_flow()["normalizer"][0]
+            workflow["agents"]["normalizer"]["data"]["sentTo"] = _agent_flow()["normalizer"][1]
             workflow["agents"]["normalizer"]["data"]["input"] = (
                 uploaded_agent_payload
                 if has_uploaded_agent_input and resume_from_agent == "normalizer" and uploaded_agent_payload
@@ -628,11 +1020,15 @@ async def run_workflow_async(
             touch_workflow(workflow)
 
             start_time = time.time()
-            normalizer_result = await Runner.run(
-                agents["normalizer"], input=normalizer_input, run_config=run_config
+            normalizer_output: NormalizerOutput = await run_llm_stage(
+                agents["normalizer"],
+                normalizer_input,
+                run_config=run_config,
+                max_turns=_max_turns("normalizer"),
+                stage_label="normalizer",
+                emit_token=emit_token,
             )
             elapsed = time.time() - start_time
-            normalizer_output: NormalizerOutput = normalizer_result.final_output
 
             finalize_agent_run(
                 workflow=workflow,
@@ -649,8 +1045,8 @@ async def run_workflow_async(
                     "model": agents["normalizer"].model,
                     "reasoning_level": agent_reasoning_level(agents["normalizer"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": _AGENT_FLOW["normalizer"][0],
-                    "sent_to_node": _AGENT_FLOW["normalizer"][1],
+                    "received_from_node": _agent_flow()["normalizer"][0],
+                    "sent_to_node": _agent_flow()["normalizer"][1],
                     "input_summary": f"{len(normalizer_input)} message(s)",
                 },
             )
@@ -689,8 +1085,8 @@ async def run_workflow_async(
                 if has_uploaded_agent_input and resume_from_agent == "extracter"
                 else build_json_message(extracter_input_payload, file_refs=file_refs)
             )
-            workflow["agents"]["extracter"]["data"]["receivedFrom"] = _AGENT_FLOW["extracter"][0]
-            workflow["agents"]["extracter"]["data"]["sentTo"] = _AGENT_FLOW["extracter"][1]
+            workflow["agents"]["extracter"]["data"]["receivedFrom"] = _agent_flow()["extracter"][0]
+            workflow["agents"]["extracter"]["data"]["sentTo"] = _agent_flow()["extracter"][1]
             workflow["agents"]["extracter"]["data"]["input"] = (
                 uploaded_agent_payload
                 if has_uploaded_agent_input and resume_from_agent == "extracter" and uploaded_agent_payload
@@ -717,22 +1113,30 @@ async def run_workflow_async(
                 extracter_output: ExtracterOutput = ExtracterOutput.model_validate(cached_extracter)
                 logger.info("Workflow %s reused cached Extracter output", workflow_id)
             else:
-                extracter_result = await Runner.run(
-                    agents["extracter"], input=extracter_input, run_config=run_config
+                extracter_output = await run_llm_stage(
+                    agents["extracter"],
+                    extracter_input,
+                    run_config=run_config,
+                    max_turns=_max_turns("extracter"),
+                    stage_label="extracter",
+                    emit_token=emit_token,
                 )
-                extracter_output = extracter_result.final_output
                 if file_ids and not extracter_output.questions:
                     retry_extract_payload = build_extracter_retry_input(file_names, normalizer_output)
                     retry_extract_input = build_json_message(
                         retry_extract_payload,
                         file_refs=file_refs,
                     )
-                    retry_extract_result = await Runner.run(
-                        agents["extracter"], input=retry_extract_input, run_config=run_config
-                    )
                     extracter_input = retry_extract_input
                     extracter_input_payload = retry_extract_payload
-                    extracter_output = retry_extract_result.final_output
+                    extracter_output = await run_llm_stage(
+                        agents["extracter"],
+                        retry_extract_input,
+                        run_config=run_config,
+                        max_turns=_max_turns("extracter"),
+                        stage_label="extracter",
+                        emit_token=emit_token,
+                    )
             elapsed = time.time() - start_time
             normalize_question_types(extracter_output.questions)
             if file_ids and not extracter_output.questions:
@@ -769,8 +1173,8 @@ async def run_workflow_async(
                     "model": agents["extracter"].model,
                     "reasoning_level": agent_reasoning_level(agents["extracter"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": _AGENT_FLOW["extracter"][0],
-                    "sent_to_node": _AGENT_FLOW["extracter"][1],
+                    "received_from_node": _agent_flow()["extracter"][0],
+                    "sent_to_node": _agent_flow()["extracter"][1],
                     "input_summary": f"{len(extracter_input)} message(s)",
                     "questions_count": len(extracter_output.questions),
                     "cache_hit": extracter_cache_hit,
@@ -799,6 +1203,41 @@ async def run_workflow_async(
                 post_process=_apply_extracter_metadata,
             )
 
+        # Content guardrails run once the extracter/normalizer content exists, so
+        # off-topic or non-question source material is caught before the verifier.
+        # Fresh full runs only (resumes/replays already passed on the original run).
+        if is_fresh_full_run:
+            _begin_guardrail_node(
+                workflow,
+                _guardrail_content_node(),
+                received_from="Extracter",
+                sent_to="Verifier",
+                touch_workflow=touch_workflow,
+            )
+            content_decision = await check_content_guardrails(
+                client=client,
+                extracter_output=extracter_output,
+                normalizer_output=normalizer_output,
+                to_thread=to_thread,
+            )
+            if not content_decision.allowed:
+                return await _finalize_blocked(
+                    workflow=workflow,
+                    outputs_dir=outputs_dir,
+                    workflow_id=workflow_id,
+                    output_folder_label=output_folder_label,
+                    touch_workflow=touch_workflow,
+                    to_thread=to_thread,
+                    decision=content_decision,
+                    agent_metadata_records=agent_metadata_records,
+                    normalizer_output=normalizer_output,
+                )
+            _complete_guardrail_node(
+                workflow,
+                _guardrail_content_node(),
+                touch_workflow=touch_workflow,
+            )
+
         if stop_after_agent == "extracter":
             workflow["status"] = "completed"
             touch_workflow(workflow)
@@ -817,8 +1256,8 @@ async def run_workflow_async(
             verifier_input = build_json_message(verifier_input_payload)
             if has_uploaded_agent_input and resume_from_agent == "verifier":
                 verifier_input = uploaded_agent_input
-            workflow["agents"]["verifier"]["data"]["receivedFrom"] = _AGENT_FLOW["verifier"][0]
-            workflow["agents"]["verifier"]["data"]["sentTo"] = _AGENT_FLOW["verifier"][1]
+            workflow["agents"]["verifier"]["data"]["receivedFrom"] = _agent_flow()["verifier"][0]
+            workflow["agents"]["verifier"]["data"]["sentTo"] = _agent_flow()["verifier"][1]
             workflow["agents"]["verifier"]["data"]["input"] = (
                 uploaded_agent_payload
                 if has_uploaded_agent_input and resume_from_agent == "verifier" and uploaded_agent_payload
@@ -827,11 +1266,15 @@ async def run_workflow_async(
             touch_workflow(workflow)
 
             start_time = time.time()
-            verifier_result = await Runner.run(
-                agents["verifier"], input=verifier_input, run_config=run_config
+            verifier_output: VerifierOutput = await run_llm_stage(
+                agents["verifier"],
+                verifier_input,
+                run_config=run_config,
+                max_turns=_max_turns("verifier"),
+                stage_label="verifier",
+                emit_token=emit_token,
             )
             elapsed = time.time() - start_time
-            verifier_output: VerifierOutput = verifier_result.final_output
             normalize_question_types(verifier_output.questions)
             apply_requested_difficulty(verifier_output.questions, normalizer_output.difficulty)
             verifier_report = validate_verifier_output(extracter_output.questions, verifier_output)
@@ -846,12 +1289,15 @@ async def run_workflow_async(
                         repair_questions,
                         verifier_report.summary(),
                     )
-                    repair_result = await Runner.run(
-                        agents["verifier"],
-                        input=build_json_message(repair_payload),
-                        run_config=run_config,
-                    )
-                    repair_output: VerifierOutput = repair_result.final_output
+                    with custom_span("verifier-repair"):
+                        repair_output: VerifierOutput = await run_llm_stage(
+                            agents["verifier"],
+                            build_json_message(repair_payload),
+                            run_config=run_config,
+                            max_turns=_max_turns("verifier"),
+                            stage_label="verifier",
+                            emit_token=emit_token,
+                        )
                     merged_questions = [
                         q for q in verifier_output.questions
                         if q.source_id not in set(verifier_report.repair_source_ids)
@@ -878,8 +1324,8 @@ async def run_workflow_async(
                     "model": agents["verifier"].model,
                     "reasoning_level": agent_reasoning_level(agents["verifier"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": _AGENT_FLOW["verifier"][0],
-                    "sent_to_node": _AGENT_FLOW["verifier"][1],
+                    "received_from_node": _agent_flow()["verifier"][0],
+                    "sent_to_node": _agent_flow()["verifier"][1],
                     "input_summary": f"{len(verifier_input)} message(s)",
                     "questions_count": len(verifier_output.questions),
                 },
@@ -939,8 +1385,8 @@ async def run_workflow_async(
                 uploaded_requirements.setdefault("do_not_add_padding_to_concise_sources", True)
                 uploaded_requirements.setdefault("self_review_style_before_return", True)
                 generator_input = build_json_message(generator_input_payload)
-            workflow["agents"]["generator"]["data"]["receivedFrom"] = _AGENT_FLOW["generator"][0]
-            workflow["agents"]["generator"]["data"]["sentTo"] = _AGENT_FLOW["generator"][1]
+            workflow["agents"]["generator"]["data"]["receivedFrom"] = _agent_flow()["generator"][0]
+            workflow["agents"]["generator"]["data"]["sentTo"] = _agent_flow()["generator"][1]
             workflow["agents"]["generator"]["data"]["input"] = generator_input_payload
             touch_workflow(workflow)
 
@@ -962,29 +1408,43 @@ async def run_workflow_async(
                 generator_output: GeneratorOutput = GeneratorOutput.model_validate(cached_generator)
                 logger.info("Workflow %s reused cached Generator output", workflow_id)
             else:
-                generator_result = await Runner.run(
-                    agents["generator"], input=generator_input, run_config=run_config
+                generator_output = await run_llm_stage(
+                    agents["generator"],
+                    generator_input,
+                    run_config=run_config,
+                    max_turns=_max_turns("generator"),
+                    stage_label="generator",
+                    emit_token=emit_token,
                 )
-                generator_output = generator_result.final_output
 
                 # Guard against a flaky empty generation: retry once before the style
                 # pass so a single degenerate response does not sink the whole run.
                 if not generator_output.isomorphic_questions:
-                    retry_generator_result = await Runner.run(
-                        agents["generator"], input=generator_input, run_config=run_config
+                    retry_generator_output = await run_llm_stage(
+                        agents["generator"],
+                        generator_input,
+                        run_config=run_config,
+                        max_turns=_max_turns("generator"),
+                        stage_label="generator",
+                        emit_token=emit_token,
                     )
-                    if retry_generator_result.final_output.isomorphic_questions:
-                        generator_output = retry_generator_result.final_output
+                    if retry_generator_output.isomorphic_questions:
+                        generator_output = retry_generator_output
 
                 pre_review_output = generator_output
                 style_review_payload = build_style_review_input(
                     normalizer_output, verifier_output, generator_output
                 )
                 style_review_input = build_json_message(style_review_payload)
-                style_review_result = await Runner.run(
-                    agents["generator"], input=style_review_input, run_config=run_config
-                )
-                reviewed_output = style_review_result.final_output
+                with custom_span("generator-style-review"):
+                    reviewed_output = await run_llm_stage(
+                        agents["generator"],
+                        style_review_input,
+                        run_config=run_config,
+                        max_turns=_max_turns("generator"),
+                        stage_label="generator",
+                        emit_token=emit_token,
+                    )
                 # The style pass only revises wording; it must never drop questions.
                 # If it returns fewer items than it was given (e.g. an empty response),
                 # keep the pre-review generation instead of letting it wipe the set.
@@ -1011,12 +1471,15 @@ async def run_workflow_async(
                         repair_questions,
                         generator_report.summary(),
                     )
-                    repair_result = await Runner.run(
-                        agents["generator"],
-                        input=build_json_message(repair_payload),
-                        run_config=run_config,
-                    )
-                    generator_output = repair_result.final_output
+                    with custom_span("generator-repair"):
+                        generator_output = await run_llm_stage(
+                            agents["generator"],
+                            build_json_message(repair_payload),
+                            run_config=run_config,
+                            max_turns=_max_turns("generator"),
+                            stage_label="generator",
+                            emit_token=emit_token,
+                        )
                     generator_report = validate_generator_output(
                         verifier_output.questions,
                         generator_output,
@@ -1054,8 +1517,8 @@ async def run_workflow_async(
                     "model": agents["generator"].model,
                     "reasoning_level": agent_reasoning_level(agents["generator"]),
                     "execution_time_seconds": elapsed,
-                    "received_from_node": _AGENT_FLOW["generator"][0],
-                    "sent_to_node": _AGENT_FLOW["generator"][1],
+                    "received_from_node": _agent_flow()["generator"][0],
+                    "sent_to_node": _agent_flow()["generator"][1],
                     "input_summary": f"{len(generator_input)} message(s)",
                     "questions_count": len(generator_output.isomorphic_questions),
                     "cache_hit": generator_cache_hit,
@@ -1119,7 +1582,7 @@ async def run_workflow_async(
             latex_input = build_json_message(latex_input_payload)
             if has_uploaded_agent_input and resume_from_agent == "latexifier":
                 latex_input = uploaded_agent_input
-            workflow["agents"]["latexifier"]["data"]["receivedFrom"] = _AGENT_FLOW["latexifier"][0]
+            workflow["agents"]["latexifier"]["data"]["receivedFrom"] = _agent_flow()["latexifier"][0]
             workflow["agents"]["latexifier"]["data"]["sentTo"] = (
                 "evaluation" if should_run_evaluation else "output"
             )
@@ -1131,17 +1594,93 @@ async def run_workflow_async(
             touch_workflow(workflow)
 
             start_time = time.time()
-            latex_result = await Runner.run(
-                agents["latexifier"], input=latex_input, run_config=run_config
+            latex_output: LaTeXOutput = await run_llm_stage(
+                agents["latexifier"],
+                latex_input,
+                run_config=run_config,
+                max_turns=_max_turns("latexifier"),
+                stage_label="latexifier",
+                emit_token=emit_token,
             )
+            try:
+                (
+                    latex_output,
+                    latex_filename,
+                    latex_path,
+                    pdf_filename,
+                    pdf_path,
+                ) = await to_thread(
+                    materialize_latex_output,
+                    latex_output,
+                    outputs_dir,
+                    shared_runtime,
+                )
+            except Exception as exc:
+                # The shared container may have expired during the long pre-latex
+                # stages. Try ONE recreate (same file_ids), re-bootstrap the LaTeX
+                # toolchain, rebuild the agents against the new container, and
+                # retry compilation once before giving up.
+                if not _is_container_expired_error(exc):
+                    raise
+                logger.warning(
+                    "Workflow %s latexifier hit a container error (%s); "
+                    "recreating the container and retrying once.",
+                    workflow_id,
+                    exc,
+                )
+                new_container = await to_thread(
+                    client.containers.create,
+                    name=(
+                        f"isomorphic-workflow-{workflow_id}-"
+                        f"{output_folder_label.replace('/', '-')}-recreate"
+                    ),
+                    expires_after={
+                        "anchor": "last_active_at",
+                        "minutes": container_expires_minutes(),
+                    },
+                    file_ids=file_ids,
+                )
+                shared_container_id = new_container.id
+                workflow["container"]["id"] = shared_container_id
+                touch_workflow(workflow)
+                shared_runtime = SharedWorkflowRuntime(
+                    client=client,
+                    container_id=shared_container_id,
+                    output_dir=outputs_dir,
+                    allowed_domains=allowed_domains_from_env(),
+                )
+                await to_thread(shared_runtime.bootstrap)
+                agents = create_agents(
+                    file_ids=file_ids,
+                    container_id=shared_container_id,
+                    latex_compile_tool=shared_runtime.build_compile_latex_tool(),
+                )
+                latex_output = await run_llm_stage(
+                    agents["latexifier"],
+                    latex_input,
+                    run_config=run_config,
+                    max_turns=_max_turns("latexifier"),
+                    stage_label="latexifier",
+                    emit_token=emit_token,
+                )
+                (
+                    latex_output,
+                    latex_filename,
+                    latex_path,
+                    pdf_filename,
+                    pdf_path,
+                ) = await to_thread(
+                    materialize_latex_output,
+                    latex_output,
+                    outputs_dir,
+                    shared_runtime,
+                )
+                logger.info(
+                    "Workflow %s recovered from container expiry (new id=%s).",
+                    workflow_id,
+                    shared_container_id,
+                )
             elapsed = time.time() - start_time
-            latex_output: LaTeXOutput = latex_result.final_output
-            latex_output, latex_filename, latex_path, pdf_filename, pdf_path = await to_thread(
-                materialize_latex_output,
-                latex_output,
-                outputs_dir,
-                shared_runtime,
-            )
 
             finalize_agent_run(
                 workflow=workflow,
@@ -1251,7 +1790,7 @@ async def run_workflow_async(
             workflow["agents"]["evaluation"]["status"] = "thinking"
             workflow["agents"]["evaluation"]["data"]["startTime"] = datetime.now().isoformat()
             workflow["agents"]["evaluation"]["data"]["model"] = load_rubric_model()
-            workflow["agents"]["evaluation"]["data"]["reasoningLevel"] = "low"
+            workflow["agents"]["evaluation"]["data"]["reasoningLevel"] = _eval_reasoning()
             touch_workflow(workflow)
 
             evaluation_stage_start = time.time()
@@ -1290,22 +1829,27 @@ async def run_workflow_async(
             # Copy source PDFs into the output folder before evaluation so the
             # report's run_inputs can reference downloadable relative paths.
             input_files_dir = outputs_dir / "input_files"
+
+            def _copy_source_pdf(src: Path) -> str:
+                input_files_dir.mkdir(parents=True, exist_ok=True)
+                dest_name = safe_filename(
+                    src.name, fallback="input.pdf",
+                    allowed_suffixes={".pdf", ".txt", ".docx"},
+                )
+                dest = input_files_dir / dest_name
+                if not dest.exists():
+                    shutil.copy2(src, dest)
+                return dest_name
+
             for raw_fp in file_paths:
                 src = Path(raw_fp)
                 if not src.is_file():
                     continue
                 try:
-                    input_files_dir.mkdir(parents=True, exist_ok=True)
-                    dest_name = safe_filename(
-                        src.name, fallback="input.pdf",
-                        allowed_suffixes={".pdf", ".txt", ".docx"},
-                    )
-                    dest = input_files_dir / dest_name
-                    if not dest.exists():
-                        shutil.copy2(src, dest)
+                    dest_name = await to_thread(_copy_source_pdf, src)
                     input_name_map[src.name] = f"input_files/{dest_name}"
                 except Exception:
-                    pass
+                    logger.exception("Failed to copy source PDF %s", src)
 
             evaluation_report = await asyncio.to_thread(
                 run_openai_output_evaluation,
@@ -1327,7 +1871,8 @@ async def run_workflow_async(
                     outputs_dir / EVALUATION_OUTPUTS_DIRNAME / EVALUATION_REPORT_FILENAME
                 )
                 if eval_report_path_on_disk.exists():
-                    eval_report_path_on_disk.write_text(
+                    await to_thread(
+                        eval_report_path_on_disk.write_text,
                         json.dumps(evaluation_report, ensure_ascii=False, indent=2),
                         encoding="utf-8",
                     )
@@ -1347,7 +1892,7 @@ async def run_workflow_async(
                     output_payload=evaluation_report,
                     metadata={
                         "execution_time_seconds": evaluation_elapsed,
-                        "reasoning_level": "low",
+                        "reasoning_level": _eval_reasoning(),
                         "received_from_node": "latexifier",
                         "sent_to_node": "output",
                         "input_summary": (
@@ -1362,7 +1907,7 @@ async def run_workflow_async(
             workflow["agents"]["evaluation"]["data"]["receivedFrom"] = "latexifier"
             workflow["agents"]["evaluation"]["data"]["sentTo"] = "output"
             workflow["agents"]["evaluation"]["data"]["model"] = load_rubric_model()
-            workflow["agents"]["evaluation"]["data"]["reasoningLevel"] = "low"
+            workflow["agents"]["evaluation"]["data"]["reasoningLevel"] = _eval_reasoning()
             workflow["agents"]["evaluation"]["data"]["input"] = "Evaluation disabled for this workflow"
             workflow["agents"]["evaluation"]["data"]["output"] = "Skipped because Run Evaluations is off."
             touch_workflow(workflow)
