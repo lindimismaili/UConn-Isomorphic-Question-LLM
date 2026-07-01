@@ -33,11 +33,31 @@ Everything below is a `var(--token)`. The token table *is* the contract.
 | `--color-bg`, `--color-bg-secondary` | Page background |
 | `--color-surface`, `--color-surface-hover` | Card / control fills |
 | `--color-border`, `--color-border-hover` | 1px borders (default / hover) |
-| `--color-primary`, `--color-primary-hover`, `--color-primary-glow` | Primary actions, focus glow |
+| `--color-navy` (`#000E2F`) | UConn brand navy — masthead/footer surface, emphasis text, heading color |
+| `--color-primary`, `--color-primary-hover`, `--color-primary-glow` | Primary actions, focus glow (UConn-blue accent `#0A5BC4`) |
 | `--color-secondary`, `--color-accent` | Scrollbar ramp, small accents |
 | `--color-text`, `--color-text-secondary`, `--color-text-muted` | Text hierarchy (high → low) |
 | `--color-success` / `--color-warning` / `--color-error` / `--color-info` | Status |
 | `--color-success-glow` / `--color-warning-glow` / `--color-error-glow` / `--color-muted-glow` | Soft status halos (shadows, badges, dots) |
+
+**Tinted rgba come from `-rgb` channel tokens, not baked hex.** Every tinted
+border/fill/glow uses `rgba(var(--color-primary-rgb), α)` (also
+`--color-navy-rgb`, `--color-secondary-rgb`, `--color-accent-rgb`, and the
+status `-rgb` tokens). This is why one accent edit re-themes the whole app — do
+**not** reintroduce baked `rgba(91,141,238,…)`-style literals.
+
+### Typography tokens
+
+`--font-sans` (IBM Plex Sans), `--font-serif` (Source Serif 4 — academic
+headings), `--font-mono` (code/IDs). A size scale `--font-size-xs|sm|md|base|lg|xl|2xl`
+and `--line-height-tight|snug|normal`. Reference these — never re-hardcode a
+font-family string or a raw `rem` size.
+
+### Stacking (z-index)
+
+`--z-base` (1), `--z-connector` (2), `--z-header` (100), `--z-modal` (1000).
+Modal stacking still derives `1000 + depth` in `Modal.jsx` (see §8) — the token
+is the header/base/connector baseline.
 
 ### Gradients
 
@@ -113,16 +133,27 @@ properties. See §11 for the full motion catalog.
 
 ## 2. Theme
 
-There is **one theme**: a dark, blue-accented surface, defined entirely by the
-`:root` tokens above. There is no light mode and no runtime theme switch.
+There is **one theme**: a **bright, academic UConn (Physics)** look — a light,
+blue-tinted canvas with near-white surfaces, UConn navy (`#000E2F`) for the
+masthead/footer + brand + emphasis text, and a vivid readable UConn-blue accent
+(`#0A5BC4`) for interaction. Serif headings carry the academic signal; a subtle
+physics motif sits behind the navy masthead. There is no dark mode and no
+runtime theme switch. All text pairs are verified **WCAG-AA**.
 
 - "Theme" in the UI copy refers to the **question theme** dropdown
   (`.prompt-theme-row` / `.prompt-dropdown-select`), not a color scheme.
 - To re-theme the whole app, change the token values in `:root` — never patch
   colors at the component level. Because every surface, border, status, and
-  shadow reads from a token, one edit propagates everywhere.
+  shadow reads from a token (and every tint from a `-rgb` channel token), one
+  edit propagates everywhere.
+- Shadows are **soft navy-tinted elevation** (`rgba(var(--color-navy-rgb), …)`),
+  not heavy black drops — the canvas is light. Glows are subtle tints, not neon
+  halos. Keep new elevation on the `--shadow-*` tokens.
 - Status meaning is carried by the semantic colors (`--color-success`, etc.)
   and their `*-glow` halos. Never reach for a raw hex to signal status.
+- The navy masthead + footer are the two surfaces that carry **light text on
+  navy** (white / `rgba(255,255,255,α)`); everywhere else uses the dark text
+  tokens on the light canvas.
 
 ---
 
@@ -133,10 +164,16 @@ with `#root` and `body` as `flex` columns filling `min-height: 100vh`.
 
 | Region | Class | Notes |
 |---|---|---|
-| Outage notice | `.outage-banner` (+ `.outage-banner-detail`) | Full-width red gradient strip above the header; only rendered during an outage |
-| Header | `.header` → `.header-content` | Sticky (`top: 0`, `z-index: 100`), `--gradient-surface`, `--blur-md`, bottom border; holds `.logo` + `.uconn-mark` |
+| Outage notice | `.outage-banner` (+ `.outage-banner-detail`) | Full-width tinted-error strip above the header; only rendered during an outage. Render via the `Banner` primitive (§14) |
+| Header / hero | `.header` (+ `.has-hero` + `.header-motif`) → `.header-content` | Sticky (`top: 0`, `z-index: var(--z-header)`), `--gradient-surface` (navy) masthead with a physics motif behind (`.header-motif`, pointer-inert); holds `.logo` + `.uconn-mark`. Render via the `PageHeader` primitive |
 | Main | `.main-content` → `.content-shell` | Centered to `--site-max-width`; `clamp()` padding; `.content-shell` stacks sections with `--section-gap` |
-| Footer | `.footer` → `.footer-content` | `--gradient-surface`, top border, centered |
+| Footer | `.footer` → `.footer-content` | `--gradient-surface` (navy), top accent border, centered. Render via the `Footer` primitive |
+
+The whole scaffold is composed by the **`AppShell`** primitive (§14):
+`AppShell` takes `banner` / `header` / `footer` slots + children (main content).
+`App.jsx` and the design-system showcase compose the **same** chrome from
+`src/sections/SiteChrome.jsx` (`SiteHeader` / `SiteBanner` / `SiteFooter`) — the
+header/footer/banner exist once, never as duplicated raw markup.
 
 Primary content grids inside `.content-shell`:
 
@@ -413,6 +450,10 @@ Status is expressed with the semantic color + its glow, never a raw hex:
 - **Badges / step chips** — `.eval-source-id`, `.create-data-step-chip`,
   `.rubric-index` / `.rubric-category`, `.eval-reference-kind`: pill or `sm`
   rounded tags on a tinted surface.
+- **Generic chip** — `.chip` (+ `.chip-neutral` / `.chip-success` /
+  `.chip-warning` / `.chip-error`, `.chip-square`, `.chip-mono`) is the
+  consolidated small-tinted-tag primitive (`Chip`, §14). Prefer it for new tags
+  over adding another bespoke `*-id` / `*-node` tag class.
 
 Empty states: `.log-empty-state` / `.modal-empty-state` (dashed border, muted
 text); error variant `.modal-empty-state-error`.
@@ -492,9 +533,12 @@ The whole UI is composed from a small set of reusable **primitives** in
 
 ```js
 import { Button, Card, CardHeader, CardBody, TextInput, Select, TextArea,
-         ToggleSwitch, Badge, StatusChip, ScoreChip, Pill, StatusDot, LogItem,
-         LogList, EmptyState, Tabs, DataTable, KeyValueTable, IconButton,
-         SectionHeading, Modal } from './components/ui';
+         ToggleSwitch, Badge, StatusChip, ScoreChip, Pill, Chip, StatusDot,
+         LogItem, LogList, EmptyState, Tabs, DataTable, KeyValueTable, IconButton,
+         SectionHeading, AppShell, PageHeader, Banner, Footer, Modal,
+         Avatar, ChatMessage, ChatTranscript, TypingIndicator, Composer,
+         Stepper, TokenStream }
+  from './components/ui';
 ```
 
 Each primitive is a **thin wrapper that emits the documented classes above** —
@@ -510,10 +554,22 @@ construction rather than by review.
 | `ToggleSwitch` | §6 `.developer-toggle` | `checked`, `onChange`, `label`, `disabled` |
 | `Card` / `CardHeader` / `CardBody` | §7 `.card` | `variant` (`completed\|failed\|main\|developer-tools\|workflow\|log-panel`), `title`, `subtitle`, `actions`, `disclaimer` |
 | `Badge` / `StatusChip` / `ScoreChip` / `Pill` | §10 chips/pills | `kind`/`tone`/`status`/`state` → the documented `is-*` / `eval-*` classes |
+| `Chip` | §10 `.chip` (generic tag) | `tone` (`primary\|neutral\|success\|warning\|error`), `shape` (`pill\|square`), `mono` — consolidates the small tinted-tag look |
 | `StatusDot` / `LogItem` / `LogList` / `EmptyState` | §10 | `status` / `level` / `entries` / `variant`+`error` |
 | `Tabs` | §8 `.viewer-tab-bar` | `value`, `onChange`, `tabs` |
 | `DataTable` / `KeyValueTable` | §8/§10 tables | `variant` (`eval\|file-viewer`) / `rows` |
+| `AppShell` | §3 scaffold | `banner` / `header` / `footer` slots + children → `.main-content` / `.content-shell` |
+| `PageHeader` | §3 `.header` masthead | `brand`, `aside`, `motif` (renders `.header-motif` hero overlay) |
+| `Banner` | §3 `.outage-banner` | `children`, `detail`, `role` |
+| `Footer` | §3 `.footer` | `children` → `.footer-content` |
 | `Modal` | §8 shell | re-exported from `components/modals/Modal.jsx` (unchanged) |
+| `Avatar` | §15 `.chat-avatar` | `role` (`user\|assistant\|agent\|runtime\|guardrail`), `icon`, `label` |
+| `ChatMessage` | §15 `.chat-message` | `variant` (`user\|assistant\|agent`), `avatar`, `author`, `timestamp`, `actions`, `tone` (`success\|error\|blocked\|thinking`), `grouped` |
+| `ChatTranscript` | §15 `.chat-transcript` | `count` (drives auto-scroll), `emptyState`, `children` |
+| `TypingIndicator` | §15 `.chat-typing` | `label` |
+| `Composer` | §15 `.composer` | `value`, `onChange`, `onSend`, `onAttach`, `isRunning`, `themeSelect`, `attachLabel`, `sendFeedback`/`attachFeedback` |
+| `Stepper` | §15 `.stepper` | `nodes` (`{key,label,status,kind}`), `onNodeClick`, `activeKey`, `stream` |
+| `TokenStream` | §15 `.token-stream` | `text`, `active`, `columns`, `placeholder` |
 
 **Adding a new primitive:** add the wrapper + a barrel export in `ui/`, add a
 specimen to the showcase (`src/design-system/sections/Components.jsx`), extend
@@ -524,3 +580,76 @@ it in the relevant section first.
 **Showcase:** [`design-system.html`](design-system.html) renders the real
 primitives (single source of truth) inside the app scaffold, organized
 Foundations → Components → Patterns. It's a second Vite entry (`/design-system.html`).
+
+---
+
+## 15. Chat-first surface (conversation, process rail, live output)
+
+The primary view is a **conversation**, not a form. It is composed only from the
+chat primitives in [`src/components/ui/`](src/components/ui/) — feature code
+never hand-rolls a bubble, transcript, rail, or composer. The whole surface is
+assembled in [`src/sections/ChatConversation.jsx`](src/sections/ChatConversation.jsx),
+which **projects** the presentation-agnostic reducer state
+(`state.agents` / `state.logs` / `state.result` / `state.blocked`) into messages
+via [`src/state/transcript.js`](src/state/transcript.js). The reducer is
+untouched; only the view changed.
+
+### Chat primitives
+
+- `.chat-avatar` (+ `.chat-avatar-{user|assistant|agent|runtime|guardrail}`) —
+  round identity chip; renders the role's default icon (`Avatar`).
+- `.chat-message` (+ `.chat-message-{user|assistant|agent}`, optional
+  `.chat-message-{success|error|blocked|thinking}` tone, `.is-grouped`) — one
+  conversation turn: `.chat-message-avatar` + `.chat-message-body`
+  (`.chat-message-header` → `.chat-message-author` + `.chat-message-time`,
+  `.chat-message-content`, `.chat-message-actions`). User turns align right with
+  the primary-gradient bubble; assistant/agent align left on a surface bubble.
+  `.chat-message-embed` strips the bubble frame so a full `Card` (the
+  `ResultsSection` / `FailureSection`) can render raw inside a turn.
+- `.chat-transcript` — the scrollable conversation surface; `ChatTranscript`
+  auto-scrolls to the newest message when its `count` grows, **unless** the user
+  has scrolled up (pins within 80px of the bottom).
+- `.chat-typing` (`.chat-typing-dots` → three `.chat-typing-dot`) — the
+  animated "working" indicator (`TypingIndicator`).
+- `.composer` — the pinned input that **supersedes** the old
+  `.prompt-actions-row`: a `.composer-input` textarea + `.composer-controls`
+  (theme `.composer-theme-select` on the left, `.composer-attach` +
+  `.composer-send` on the right). Ctrl/⌘+Enter sends. `Composer` composes from
+  `Button`/`Field` primitives, so it stays inside the templates-first contract.
+
+### Stepper (process rail) & TokenStream (live output)
+
+- `.stepper` — a compact inline rail rendering **all** registry nodes in order
+  (`.stepper-node` + `.stepper-connector`), with a per-node status
+  (`data-status`) and kind affordance (`data-node-kind`: runtime, `guardrail`
+  gets the square shield badge, agent). Clicking a node fires `onNodeClick(key)`
+  so the host opens that node's modal (runtime → `setup`/`output`;
+  guardrail/agent → the agent detail modal). The node list is **caller-supplied
+  from the registry** (`deriveStepperNodes`) — the Stepper never hardcodes keys.
+  The active node hosts the `stream` slot.
+- `.token-stream` — a matrix-style live-output view. `.token-stream-rain`
+  (decorative, aria-hidden) animates GPU-light glyph columns via
+  `transform`/`opacity`; `.token-stream-body` shows the accumulated streamed
+  text (fed by the SSE hook) with a blinking `.token-stream-cursor`. With no
+  live stream it shows a subtle synthetic shimmer while the node is `thinking`.
+  A global `@media (prefers-reduced-motion: reduce)` block stills the rain,
+  cursor, typing dots, and message-entrance animations.
+
+### Live token streaming (SSE)
+
+[`src/hooks/useTokenStream.js`](src/hooks/useTokenStream.js) opens an
+`EventSource` on `GET /api/workflow/{id}/stream` and routes `token` deltas
+(`{agent, delta}`) into per-agent streamed-text state, closing on `done` /
+terminal status / error. This is **cosmetic** — the `useWorkflow` poller stays
+the authoritative status source. The hook degrades gracefully when the stream is
+unavailable (404 / no `EventSource`): the TokenStream simply falls back to the
+synthetic shimmer.
+
+### Blocked runs
+
+A workflow can end in the terminal **`blocked`** status (a guardrail tripped).
+The status payload carries a top-level `blocked` = `{category, reason, stage}`.
+`useWorkflow` dispatches `WORKFLOW_BLOCKED`; the reducer marks the tripped
+guardrail node `blocked` (status dot / `.stepper-node` / `.agent-card` all
+support `data-status="blocked"` — warning-tinted) and records the block, and the
+transcript shows a `.chat-message-blocked` bubble explaining the reason/category.

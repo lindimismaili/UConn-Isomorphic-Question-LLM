@@ -12,10 +12,14 @@ export { Button, IconButton } from './Button.jsx';
 export { TextInput, TextArea, Select } from './Field.jsx';
 export { ToggleSwitch } from './ToggleSwitch.jsx';
 export { Card, CardHeader, CardBody, SectionHeading } from './Card.jsx';
-export { Badge, StatusChip, ScoreChip, Pill } from './Badge.jsx';
+export { Badge, StatusChip, ScoreChip, Pill, Chip } from './Badge.jsx';
 export { StatusDot, LogItem, LogList, EmptyState } from './Status.jsx';
 export { Tabs } from './Tabs.jsx';
 export { DataTable, KeyValueTable } from './Table.jsx';
+export { AppShell, PageHeader, Banner, Footer } from './Shell.jsx';
+export { Avatar, ChatMessage, ChatTranscript, TypingIndicator, Composer } from './Chat.jsx';
+export { Stepper } from './Stepper.jsx';
+export { TokenStream } from './TokenStream.jsx';
 // The canonical modal shell stays in components/modals; re-export so callers
 // import all primitives from one place.
 export { default as Modal } from '../modals/Modal.jsx';

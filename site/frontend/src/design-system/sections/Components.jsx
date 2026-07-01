@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import {
+  Avatar,
   Badge,
   Button,
   Card,
   CardBody,
   CardHeader,
+  ChatMessage,
+  ChatTranscript,
+  Chip,
+  Composer,
   DataTable,
   EmptyState,
   IconButton,
@@ -13,15 +18,29 @@ import {
   Pill,
   ScoreChip,
   Select,
+  Stepper,
   StatusChip,
   StatusDot,
   Tabs,
   TextArea,
   TextInput,
+  TokenStream,
   ToggleSwitch,
+  TypingIndicator,
 } from '../../components/ui/index.js';
 import { IconInfo, IconSend, IconUpload, IconClose } from '../../components/Icons.jsx';
 import { Grid, Row, Spec, Stack } from '../Specimen.jsx';
+
+/** A 10-node pipeline fixture (with the two guardrail nodes) for the Stepper. */
+const STEPPER_NODES = [
+  { key: 'setup', label: 'Setup', status: 'completed', kind: 'runtime' },
+  { key: 'input_guardrail', label: 'Input Guardrail', status: 'completed', kind: 'guardrail' },
+  { key: 'normalizer', label: 'Normalizer', status: 'completed', kind: 'agent' },
+  { key: 'extracter', label: 'Extracter', status: 'thinking', kind: 'agent' },
+  { key: 'content_guardrail', label: 'Content Guardrail', status: 'queued', kind: 'guardrail' },
+  { key: 'verifier', label: 'Verifier', status: 'queued', kind: 'agent' },
+  { key: 'output', label: 'Output', status: 'queued', kind: 'runtime' },
+];
 
 const SAMPLE_LOGS = [
   { id: 1, level: 'info', time: '12:00:01', message: 'Workflow started.' },
@@ -34,6 +53,7 @@ const SAMPLE_LOGS = [
 export default function Components() {
   const [toggle, setToggle] = useState(true);
   const [tab, setTab] = useState('config');
+  const [composer, setComposer] = useState('Generate 2 isomorphic questions per source, medium difficulty.');
 
   return (
     <Stack gap="var(--section-gap)">
@@ -177,6 +197,15 @@ export default function Components() {
               <Badge kind="reference-kind" tone="rubric">rubric</Badge>
               <Badge kind="rubric-category">Preservation</Badge>
             </Spec>
+            <Spec label="Chip (generic tag — tone / shape / mono)">
+              <Chip>primary</Chip>
+              <Chip tone="neutral">neutral</Chip>
+              <Chip tone="success">passed</Chip>
+              <Chip tone="warning">retry</Chip>
+              <Chip tone="error">failed</Chip>
+              <Chip shape="square">square</Chip>
+              <Chip mono tone="neutral">gpt-5.5</Chip>
+            </Spec>
             <Spec label="Empty states">
               <EmptyState>Logs will appear here when you start a workflow.</EmptyState>
               <EmptyState variant="modal" error>
@@ -247,6 +276,94 @@ export default function Components() {
                 { key: 'questions per source', value: '2' },
               ]}
             />
+          </Stack>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="Chat primitives" subtitle="Avatar, ChatMessage (user/assistant/agent), TypingIndicator, Composer, ChatTranscript — the chat-first surface (DESIGN.md §15)." />
+        <CardBody>
+          <Stack gap="var(--spacing-lg)">
+            <Spec label="Avatars (role → default icon)">
+              <Avatar role="user" label="You" />
+              <Avatar role="assistant" label="Assistant" />
+              <Avatar role="agent" label="Generator" />
+              <Avatar role="runtime" label="Setup" />
+              <Avatar role="guardrail" label="Content Guardrail" />
+            </Spec>
+            <Spec label="Messages (variants + status tones)">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--panel-gap)', width: '100%' }}>
+                <ChatMessage variant="user" avatar={<Avatar role="user" label="You" />} author="You" timestamp="12:00">
+                  Generate 3 isomorphic questions per source, harder.
+                </ChatMessage>
+                <ChatMessage variant="agent" tone="thinking" avatar={<Avatar role="agent" label="Generator" />} author="Generator" timestamp="12:01">
+                  <TypingIndicator label="Generator is working" />
+                </ChatMessage>
+                <ChatMessage variant="assistant" tone="success" avatar={<Avatar role="assistant" label="Assistant" />} author="Assistant" timestamp="12:02" actions={<Button variant="primary" size="sm">View Results</Button>}>
+                  Done — 6 questions generated and compiled.
+                </ChatMessage>
+                <ChatMessage variant="assistant" tone="blocked" avatar={<Avatar role="guardrail" label="Guardrail" />} author="Guardrail" timestamp="12:03">
+                  Request blocked by the content guardrail (off-topic).
+                </ChatMessage>
+              </div>
+            </Spec>
+            <Spec label="TypingIndicator">
+              <TypingIndicator label="Thinking" />
+            </Spec>
+            <Spec label="Composer (supersedes the prompt-actions row)">
+              <div style={{ width: '100%', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                <Composer
+                  value={composer}
+                  onChange={setComposer}
+                  onSend={() => {}}
+                  onAttach={() => {}}
+                  attachLabel="Attach"
+                  placeholder="Describe the questions…"
+                  themeSelect={{ value: '', onChange: () => {}, placeholder: 'Select a theme…', options: [{ value: 'physics', label: 'Physics' }] }}
+                />
+              </div>
+            </Spec>
+            <Spec label="ChatTranscript (scrollable, grouped)">
+              <div style={{ width: '100%', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', maxHeight: 220, overflow: 'hidden' }}>
+                <ChatTranscript count={3}>
+                  <ChatMessage variant="user" avatar={<Avatar role="user" label="You" />} author="You" timestamp="12:00">
+                    Make them harder.
+                  </ChatMessage>
+                  <ChatMessage variant="agent" avatar={<Avatar role="agent" label="Extracter" />} author="Extracter" timestamp="12:00">
+                    Reading uploaded files…
+                  </ChatMessage>
+                  <ChatMessage variant="agent" grouped avatar={<Avatar role="agent" label="Extracter" />} author="Extracter" timestamp="12:01">
+                    Extracted 4 source questions.
+                  </ChatMessage>
+                </ChatTranscript>
+              </div>
+            </Spec>
+          </Stack>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="Stepper & TokenStream" subtitle="The registry-driven process rail (runtime / guardrail = shield / agent) and the matrix-style live-output view (DESIGN.md §15)." />
+        <CardBody>
+          <Stack gap="var(--spacing-lg)">
+            <Spec label="Stepper (all node kinds, live status)">
+              <div style={{ width: '100%' }}>
+                <Stepper nodes={STEPPER_NODES} onNodeClick={() => {}} activeKey="extracter" />
+              </div>
+            </Spec>
+            <Spec label="TokenStream — live text">
+              <div style={{ width: 'min(420px, 100%)' }}>
+                <TokenStream
+                  active
+                  text={'∫ F·dr = ΔKE\nGenerating distractors for question 2…\noption (b): applies impulse–momentum theorem'}
+                />
+              </div>
+            </Spec>
+            <Spec label="TokenStream — synthetic (no live stream)">
+              <div style={{ width: 'min(420px, 100%)' }}>
+                <TokenStream active text="" placeholder="Streaming tokens…" />
+              </div>
+            </Spec>
           </Stack>
         </CardBody>
       </Card>

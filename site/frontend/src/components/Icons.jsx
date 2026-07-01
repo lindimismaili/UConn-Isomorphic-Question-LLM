@@ -284,3 +284,63 @@ export function IconInfo({ className }) {
     </svg>
   );
 }
+
+/**
+ * Shield icon used for guardrail pipeline nodes (input/content guardrails).
+ *
+ * @param {{className?: string}} props
+ */
+export function IconShield({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+/**
+ * User icon used for the user chat avatar.
+ *
+ * @param {{className?: string}} props
+ */
+export function IconUser({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" />
+    </svg>
+  );
+}
+
+/**
+ * Robot / assistant icon used for the assistant chat avatar.
+ *
+ * @param {{className?: string}} props
+ */
+export function IconRobot({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="8" width="16" height="11" rx="2.5" />
+      <path d="M12 4v4" />
+      <circle cx="12" cy="4" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="13" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="13" r="1.1" fill="currentColor" stroke="none" />
+      <path d="M9.5 16.5h5" />
+      <path d="M2 12v3M22 12v3" />
+    </svg>
+  );
+}
+
+/**
+ * Paperclip icon used for the chat composer attach action.
+ *
+ * @param {{className?: string}} props
+ */
+export function IconPaperclip({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 12.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.3 3.3 0 0 1 4.7 4.7l-9 9a1.7 1.7 0 0 1-2.4-2.4l8-8" />
+    </svg>
+  );
+}

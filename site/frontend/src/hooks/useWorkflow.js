@@ -209,6 +209,27 @@ export function useWorkflow(dispatch) {
         return;
       }
 
+      if (status.status === 'blocked') {
+        // Terminal guardrail block. The poller stays authoritative; surface the
+        // block so the transcript can explain it and the tripped node styles.
+        const blocked = status.blocked || {};
+        const blockedStage =
+          blocked.stage ||
+          agentKeys.find((key) => status.agents?.[key]?.status === 'blocked') ||
+          '';
+        const label = (getDerivedRegistry()?.agentLabels ?? {})[blockedStage] || blockedStage;
+        dispatch({
+          type: 'WORKFLOW_BLOCKED',
+          blocked: { ...blocked, stage: blockedStage },
+        });
+        dispatch({
+          type: 'LOG',
+          message: label ? `${label} blocked the run` : 'Workflow blocked by a guardrail',
+          level: 'warning',
+        });
+        return;
+      }
+
       if (status.status === 'errored') {
         const erroredAgent = agentKeys
           .map((key) => status.agents?.[key])

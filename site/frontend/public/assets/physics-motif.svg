@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="240" viewBox="0 0 1200 240" fill="none" role="img" aria-label="Physics orbits and particles motif">
+  <defs>
+    <linearGradient id="pm-stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4d8fe8" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#a9cdf7" stop-opacity="0.28"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#pm-stroke)" stroke-width="1.5" fill="none" opacity="0.9">
+    <!-- Atom / orbit lockup -->
+    <g transform="translate(180 120)">
+      <ellipse cx="0" cy="0" rx="96" ry="38"/>
+      <ellipse cx="0" cy="0" rx="96" ry="38" transform="rotate(60)"/>
+      <ellipse cx="0" cy="0" rx="96" ry="38" transform="rotate(120)"/>
+      <circle cx="0" cy="0" r="7" fill="#4d8fe8" fill-opacity="0.5" stroke="none"/>
+      <circle cx="96" cy="0" r="4" fill="#a9cdf7" fill-opacity="0.7" stroke="none"/>
+      <circle cx="-48" cy="83" r="4" fill="#a9cdf7" fill-opacity="0.7" stroke="none"/>
+      <circle cx="-48" cy="-83" r="4" fill="#a9cdf7" fill-opacity="0.7" stroke="none"/>
+    </g>
+    <!-- Sine wave -->
+    <path d="M420 120 q30 -60 60 0 t60 0 t60 0 t60 0 t60 0 t60 0" opacity="0.7"/>
+    <!-- Projectile parabola -->
+    <path d="M840 200 q120 -220 240 0" stroke-dasharray="4 6" opacity="0.7"/>
+    <circle cx="840" cy="200" r="4" fill="#4d8fe8" fill-opacity="0.6" stroke="none"/>
+    <circle cx="1080" cy="200" r="4" fill="#4d8fe8" fill-opacity="0.6" stroke="none"/>
+    <!-- Scattered particles -->
+    <circle cx="620" cy="60" r="3" fill="#a9cdf7" fill-opacity="0.6" stroke="none"/>
+    <circle cx="700" cy="180" r="3" fill="#a9cdf7" fill-opacity="0.6" stroke="none"/>
+    <circle cx="990" cy="70" r="3" fill="#a9cdf7" fill-opacity="0.6" stroke="none"/>
+  </g>
+</svg>

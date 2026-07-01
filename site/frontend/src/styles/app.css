@@ -3,59 +3,100 @@
    ============================================================================= */
 
 :root {
-  /* Colors */
-  --color-bg: #0d1520;
-  --color-bg-secondary: #111a2b;
-  --color-surface: rgba(18, 28, 50, 0.9);
-  --color-surface-hover: rgba(24, 36, 62, 0.95);
-  --color-border: rgba(91, 141, 238, 0.14);
-  --color-border-hover: rgba(91, 141, 238, 0.3);
+  /* ---------------------------------------------------------------------------
+     Theme: bright, academic UConn (Physics). Light blue-tinted canvas, near-
+     white surfaces, UConn navy #000E2F for brand/emphasis, a vivid readable
+     UConn-blue accent for interaction. All text pairs verified WCAG-AA.
+     Re-theme the whole app by editing these tokens — never patch colors at the
+     component level.
+     --------------------------------------------------------------------------- */
 
-  --color-primary: #5b8dee;
-  --color-primary-hover: #7ba3f5;
-  --color-primary-glow: rgba(91, 141, 238, 0.22);
+  /* Brand anchors */
+  --color-navy: #000e2f; /* UConn navy — headers, brand, emphasis text */
+  --color-navy-rgb: 0, 14, 47;
 
-  --color-secondary: #4a7bd5;
-  --color-accent: #7ba3f5;
+  /* The interactive accent (UConn-blue family). `-rgb` is the channel source
+     for every tinted rgba below, so a re-theme propagates from one place. */
+  --color-primary: #0a5bc4;
+  --color-primary-rgb: 10, 91, 196;
+  --color-primary-hover: #0847a0;
+  --color-primary-glow: rgba(var(--color-primary-rgb), 0.18);
 
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #60a5fa;
+  --color-secondary: #2f6fd6; /* scrollbar ramp / secondary accent */
+  --color-secondary-rgb: 47, 111, 214;
+  --color-accent: #4d8fe8;
+  --color-accent-rgb: 77, 143, 232;
 
-  --color-text: #e8edf5;
-  --color-text-secondary: #9bb3d8;
-  --color-text-muted: #6b82a8;
+  /* Surfaces & canvas (light) */
+  --color-bg: #f5f8fc;
+  --color-bg-secondary: #e8f0fe; /* light-blue highlight canvas band */
+  --color-surface: rgba(255, 255, 255, 0.96);
+  --color-surface-hover: rgba(255, 255, 255, 1);
+  --color-border: rgba(var(--color-primary-rgb), 0.16);
+  --color-border-hover: rgba(var(--color-primary-rgb), 0.32);
+
+  /* Status */
+  --color-success: #0f7a4e;
+  --color-success-rgb: 15, 122, 78;
+  --color-warning: #b26a00;
+  --color-warning-rgb: 178, 106, 0;
+  --color-error: #c62828;
+  --color-error-rgb: 198, 40, 40;
+  --color-info: #0a5bc4;
+  --color-info-rgb: 10, 91, 196;
+
+  /* Text hierarchy (high → low), all AA on the light canvas */
+  --color-text: #000e2f;
+  --color-text-secondary: #3a4a63;
+  --color-text-muted: #5e6e86;
+
+  /* Typography families (were scattered string literals) */
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-serif: "Source Serif 4", "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, "Consolas", "Monaco",
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Type scale */
+  --font-size-xs: 0.72rem;
+  --font-size-sm: 0.8rem;
+  --font-size-md: 0.9rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 1.75rem;
+  --line-height-tight: 1.3;
+  --line-height-snug: 1.45;
+  --line-height-normal: 1.6;
 
   /* Gradients */
   --gradient-primary: linear-gradient(
     135deg,
-    #2a55b8 0%,
-    #3d6fd4 50%,
-    #5b8dee 100%
+    #0a5bc4 0%,
+    #1a6bd4 50%,
+    #2f7fe0 100%
   );
   --gradient-surface: linear-gradient(
     135deg,
-    rgba(10, 17, 32, 0.97) 0%,
-    rgba(13, 22, 42, 0.95) 100%
+    #000e2f 0%,
+    #0a1f4a 100%
   );
   --gradient-card: linear-gradient(
     135deg,
-    rgba(14, 22, 40, 0.92) 0%,
-    rgba(17, 26, 48, 0.88) 100%
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(240, 246, 253, 0.96) 100%
   );
 
-  /* Status Glows */
-  --color-success-glow: rgba(16, 185, 129, 0.2);
-  --color-warning-glow: rgba(245, 158, 11, 0.2);
-  --color-error-glow: rgba(239, 68, 68, 0.2);
-  --color-muted-glow: rgba(100, 116, 139, 0.5);
+  /* Status Glows — softened for a light canvas (subtle tint, not neon halo) */
+  --color-success-glow: rgba(var(--color-success-rgb), 0.22);
+  --color-warning-glow: rgba(var(--color-warning-rgb), 0.22);
+  --color-error-glow: rgba(var(--color-error-rgb), 0.22);
+  --color-muted-glow: rgba(94, 110, 134, 0.4);
 
-  /* Shadows */
-  --shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.55);
-  --shadow-glow: 0 0 40px var(--color-primary-glow);
+  /* Shadows — soft navy-tinted elevation (light canvas: no heavy black drops) */
+  --shadow-sm: 0 2px 8px rgba(var(--color-navy-rgb), 0.08);
+  --shadow-md: 0 6px 20px rgba(var(--color-navy-rgb), 0.1);
+  --shadow-lg: 0 14px 40px rgba(var(--color-navy-rgb), 0.14);
+  --shadow-glow: 0 6px 24px rgba(var(--color-primary-rgb), 0.18);
 
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -92,6 +133,12 @@
   --blur-md: 16px;
   --blur-lg: 24px;
 
+  /* Stacking order (z-index scale) */
+  --z-base: 1;
+  --z-connector: 2;
+  --z-header: 100;
+  --z-modal: 1000;
+
   /* Layout */
   --site-max-width: 1760px;
 }
@@ -111,10 +158,10 @@ html {
 }
 
 body {
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.6;
+  line-height: var(--line-height-normal);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -135,9 +182,9 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: "Source Serif 4", "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-weight: 700;
-  line-height: 1.3;
+  line-height: var(--line-height-tight);
 }
 
 h1 {
@@ -162,7 +209,7 @@ select {
   -webkit-appearance: none;
   padding: 0.45rem 2.2rem 0.45rem 0.75rem;
   background-color: var(--color-surface);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235B8DEE' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230A5BC4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   border: 1px solid var(--color-border);
@@ -186,7 +233,7 @@ select:disabled {
 }
 
 select option {
-  background: rgb(12, 20, 38);
+  background: #ffffff;
   color: var(--color-text);
 }
 
@@ -199,30 +246,30 @@ select option {
   padding: 0.7rem var(--spacing-xl);
   background: linear-gradient(
     90deg,
-    rgba(127, 29, 29, 0.95) 0%,
-    rgba(153, 27, 27, 0.95) 100%
+    rgba(var(--color-error-rgb), 0.12) 0%,
+    rgba(var(--color-error-rgb), 0.18) 100%
   );
-  border-bottom: 1px solid rgba(248, 113, 113, 0.5);
-  color: #fee2e2;
-  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(var(--color-error-rgb), 0.35);
+  color: var(--color-error);
+  font-size: var(--font-size-md);
   font-weight: 600;
   text-align: center;
 }
 
 .outage-banner-detail {
-  color: #fecaca;
+  color: var(--color-error);
   font-weight: 500;
+  opacity: 0.85;
 }
 
 .header {
   padding: var(--spacing-lg) var(--spacing-xl);
-  background: linear-gradient(135deg, rgba(10, 17, 32, 0.72) 0%, rgba(13, 22, 42, 0.68) 100%);
-  border-bottom: 1px solid rgba(91, 141, 238, 0.14);
-  backdrop-filter: blur(var(--blur-md));
+  background: var(--gradient-surface);
+  border-bottom: 3px solid var(--color-primary);
   position: sticky;
   top: 0;
-  z-index: 100;
-  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.48), 0 1px 0 rgba(91, 141, 238, 0.1);
+  z-index: var(--z-header);
+  box-shadow: var(--shadow-md);
 }
 
 .header-content {
@@ -248,7 +295,7 @@ select option {
   }
   50% {
     filter: drop-shadow(0 0 20px var(--color-primary-glow))
-      drop-shadow(0 0 30px rgba(139, 92, 246, 0.3));
+      drop-shadow(0 0 30px rgba(var(--color-accent-rgb), 0.3));
     transform: scale(1.02);
   }
 }
@@ -261,50 +308,121 @@ select option {
 
 .logo-icon-ai {
   display: inline-block;
-  background: linear-gradient(135deg, #4a7bd5 0%, #5b8dee 55%, #7ba3f5 100%);
+  /* Sits on the navy masthead — a light accent fill with a soft blue halo. */
+  background: linear-gradient(135deg, #6da8f0 0%, #a9cdf7 55%, #ffffff 100%);
   -webkit-mask: url("/assets/ai_icon_fill.svg") center / contain no-repeat;
   mask: url("/assets/ai_icon_fill.svg") center / contain no-repeat;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.88))
-    drop-shadow(0 0 14px rgba(255, 255, 255, 0.55))
-    drop-shadow(0 0 20px rgba(255, 255, 255, 0.35));
+  filter: drop-shadow(0 0 8px rgba(var(--color-accent-rgb), 0.7))
+    drop-shadow(0 0 16px rgba(var(--color-accent-rgb), 0.4));
 }
 
 .logo h1 {
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
   letter-spacing: 0.01em;
 }
 
 .uconn-mark {
   padding: 0.65rem 1rem;
-  border: 1px solid rgba(91, 141, 238, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: var(--radius-md);
   background: linear-gradient(
     135deg,
-    rgba(14, 22, 42, 0.92) 0%,
-    rgba(18, 28, 52, 0.9) 100%
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.08) 100%
   );
   backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   text-align: right;
 }
 
 .uconn-text {
-  font-family: "Source Serif 4", "Times New Roman", serif;
-  font-size: 1.2rem;
+  font-family: var(--font-serif);
+  font-size: var(--font-size-lg);
   line-height: 1;
   letter-spacing: 0.1em;
   font-weight: 700;
-  color: var(--color-text);
+  color: #ffffff;
 }
 
 .uconn-subtext {
-  font-size: 0.72rem;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.09em;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Hero masthead: the physics motif sits behind the navy header content as a
+   subtle right-anchored academic accent. Header stays sticky; the motif is
+   pointer-inert and never affects layout. */
+.header.has-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.header-motif {
+  position: absolute;
+  inset: 0;
+  background-image: var(--header-motif-image);
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: auto 200%;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.header.has-hero .header-content {
+  position: relative;
+  z-index: var(--z-base);
+}
+
+/* Generic chip: consolidates the small tinted-tag look shared by the eval /
+   create-data / rubric / viewer tags. Tone-driven; never a raw hex. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: rgba(var(--color-primary-rgb), 0.08);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+}
+
+.chip.chip-square {
+  border-radius: var(--radius-sm);
+}
+
+.chip.chip-mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.chip.chip-neutral {
+  background: rgba(var(--color-navy-rgb), 0.06);
   color: var(--color-text-secondary);
+}
+
+.chip.chip-success {
+  background: rgba(var(--color-success-rgb), 0.12);
+  border-color: rgba(var(--color-success-rgb), 0.3);
+  color: var(--color-success);
+}
+
+.chip.chip-warning {
+  background: rgba(var(--color-warning-rgb), 0.12);
+  border-color: rgba(var(--color-warning-rgb), 0.3);
+  color: var(--color-warning);
+}
+
+.chip.chip-error {
+  background: rgba(var(--color-error-rgb), 0.12);
+  border-color: rgba(var(--color-error-rgb), 0.3);
+  color: var(--color-error);
 }
 
 /* =============================================================================
@@ -374,11 +492,10 @@ select option {
 }
 
 .card-header h2 {
-  color: var(--color-primary);
+  color: var(--color-navy);
   font-weight: 700;
   font-size: 1.6rem;
   margin-bottom: var(--spacing-xs);
-  text-shadow: 0 0 20px var(--color-primary-glow);
 }
 
 .help-btn {
@@ -907,9 +1024,9 @@ select option {
 }
 
 .btn-icon-only:hover {
-  background: rgba(91, 141, 238, 0.14);
+  background: rgba(var(--color-primary-rgb), 0.14);
   color: var(--color-text);
-  border-color: rgba(91, 141, 238, 0.35);
+  border-color: rgba(var(--color-primary-rgb), 0.35);
 }
 
 .file-count-btn {
@@ -990,15 +1107,13 @@ select option {
   background: rgba(5, 10, 20, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(91, 141, 238, 0.15);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.15);
   border-radius: var(--radius-md);
   padding: var(--panel-padding);
   box-shadow:
-    var(--shadow-lg),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    var(--shadow-md),
+    inset 0 0 0 1px rgba(var(--color-primary-rgb), 0.06);
+  font-family: var(--font-mono);
 }
 
 .log-list {
@@ -1049,7 +1164,7 @@ select option {
   text-align: center;
   padding: var(--panel-padding);
   color: var(--color-text-secondary);
-  border: 1px dashed rgba(91, 141, 238, 0.22);
+  border: 1px dashed rgba(var(--color-primary-rgb), 0.22);
   border-radius: var(--radius-md);
   background: rgba(12, 20, 36, 0.55);
   line-height: 1.65;
@@ -1174,7 +1289,7 @@ select option {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px dashed rgba(91, 141, 238, 0.12);
+  border: 1px dashed rgba(var(--color-primary-rgb), 0.12);
   border-radius: var(--radius-lg);
   pointer-events: none;
   animation: ghostBrainReveal 380ms ease forwards;
@@ -1400,7 +1515,7 @@ select option {
   display: flex;
   flex-direction: column;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.03), transparent),
     var(--gradient-card);
   transition:
     border-color var(--transition-fast),
@@ -1415,17 +1530,17 @@ select option {
 .agent-card.clickable:hover,
 .agent-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.85);
+  border-color: var(--color-primary);
   box-shadow:
     var(--shadow-lg),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    inset 0 0 0 1px rgba(var(--color-primary-rgb), 0.25);
 }
 
 .agent-card[data-status="inactive"] {
-  border-color: rgba(91, 141, 238, 0.18);
+  border-color: rgba(var(--color-primary-rgb), 0.18);
   box-shadow:
     var(--shadow-md),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    inset 0 0 0 1px rgba(var(--color-primary-rgb), 0.05);
 }
 
 .agent-header {
@@ -1570,8 +1685,8 @@ select option {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border: 1px solid rgba(91, 141, 238, 0.16);
-  background: rgba(91, 141, 238, 0.08);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.16);
+  background: rgba(var(--color-primary-rgb), 0.08);
   color: var(--color-text-secondary);
 }
 
@@ -1597,7 +1712,7 @@ select option {
   padding: 0.08rem 0.42rem;
   border-radius: var(--radius-sm);
   font-size: 0.62rem;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
 }
 
 .agent-timing span[data-visible="false"] {
@@ -1661,6 +1776,10 @@ select option {
   background: var(--color-error);
   box-shadow: 0 0 12px var(--color-error-glow);
 }
+.status-indicator.blocked {
+  background: var(--color-warning);
+  box-shadow: 0 0 12px var(--color-warning-glow);
+}
 
 @keyframes pulse {
   0%,
@@ -1712,6 +1831,666 @@ select option {
 .agent-card[data-status="cancelled"] {
   border-color: rgba(148, 163, 184, 0.28);
   box-shadow: var(--shadow-md);
+}
+.agent-card[data-status="blocked"] {
+  border-color: var(--color-warning);
+  box-shadow:
+    var(--shadow-md),
+    0 0 30px var(--color-warning-glow);
+}
+
+/* =============================================================================
+   Chat / Conversation primitives (DESIGN.md §15)
+   ============================================================================= */
+
+/* Avatar — round identity chip. */
+.chat-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+.chat-avatar-icon {
+  width: 20px;
+  height: 20px;
+}
+.chat-avatar-initial {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  line-height: 1;
+}
+.chat-avatar-user {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: #fff;
+}
+.chat-avatar-assistant,
+.chat-avatar-agent {
+  background: var(--color-bg-secondary);
+  color: var(--color-primary);
+}
+.chat-avatar-runtime {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+}
+.chat-avatar-guardrail {
+  background: rgba(var(--color-warning-rgb), 0.12);
+  border-color: rgba(var(--color-warning-rgb), 0.4);
+  color: var(--color-warning);
+}
+
+/* ChatMessage — one conversation turn. */
+.chat-message {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+  max-width: min(860px, 100%);
+  animation: chatMessageIn var(--transition-normal) ease both;
+}
+.chat-message-user {
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+.chat-message.is-grouped {
+  margin-top: calc(-1 * var(--spacing-xs));
+}
+.chat-message-avatar {
+  width: 36px;
+  flex-shrink: 0;
+}
+.chat-message-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.chat-message-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+}
+.chat-message-user .chat-message-header {
+  flex-direction: row-reverse;
+}
+.chat-message-author {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.chat-message-time {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}
+.chat-message-content {
+  padding: var(--spacing-sm) var(--panel-padding);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+  line-height: var(--line-height-snug);
+  overflow-wrap: anywhere;
+}
+.chat-message-user .chat-message-content {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: #fff;
+  border-bottom-right-radius: var(--radius-sm);
+}
+.chat-message-assistant .chat-message-content,
+.chat-message-agent .chat-message-content {
+  border-bottom-left-radius: var(--radius-sm);
+}
+.chat-message-content p {
+  margin: 0;
+}
+.chat-message-content p + p {
+  margin-top: var(--spacing-sm);
+}
+.chat-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+/* Status tones tint the bubble edge. */
+.chat-message-success .chat-message-content {
+  border-color: var(--color-success);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 1px var(--color-success-glow);
+}
+.chat-message-error .chat-message-content {
+  border-color: var(--color-error);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 1px var(--color-error-glow);
+}
+.chat-message-blocked .chat-message-content {
+  border-color: var(--color-warning);
+  background: rgba(var(--color-warning-rgb), 0.06);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 1px var(--color-warning-glow);
+}
+.chat-message-thinking .chat-message-content {
+  border-style: dashed;
+}
+
+@keyframes chatMessageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ChatTranscript — scrollable conversation surface. */
+.chat-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--panel-gap);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--panel-padding);
+  min-height: 320px;
+  scroll-behavior: smooth;
+}
+
+/* TypingIndicator — three staggered dots. */
+.chat-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+.chat-typing-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.chat-typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: chatTyping 1.2s infinite ease-in-out both;
+}
+.chat-typing-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.chat-typing-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes chatTyping {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Composer — the pinned chat input (supersedes .prompt-actions-row). */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--panel-padding);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.composer-input.prompt-input {
+  min-height: 60px;
+  max-height: 200px;
+}
+.composer-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+.composer-controls-left,
+.composer-controls-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.composer-controls-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.composer-controls-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.composer-theme-select {
+  max-width: 240px;
+}
+
+/* Workspace — chat surface (primary) + developer-tools side panel. Collapses to
+   one column at the shared ≤1100px breakpoint (DESIGN.md §3). */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
+  gap: var(--layout-gap);
+  align-items: start;
+}
+.workspace-main {
+  min-width: 0;
+}
+.workspace-side {
+  min-width: 0;
+  position: sticky;
+  top: calc(var(--z-base) * 0 + 96px);
+  /* The panel scrolls if it ever exceeds the viewport, so nothing is lost. */
+  max-height: calc(100vh - 112px);
+  overflow-y: auto;
+}
+/* In the side-panel context the developer-tools card sizes to its content — it
+   has no sibling to stretch against, so the stretch-era `overflow:hidden` +
+   `flex:1 1 0` (meant to keep the log from inflating the old grid row) would
+   instead clip the buttons + log. Let the card and its regions grow naturally. */
+.workspace-side .developer-tools-card,
+.workspace-side .developer-tools-card .card-body,
+.workspace-side .developer-log-area {
+  overflow: visible;
+}
+.workspace-side .developer-tools-card .card-body,
+.workspace-side .developer-log-area {
+  flex: 0 0 auto;
+}
+/* The four dev-tool tiles + the toggle wrap instead of being crushed onto one
+   narrow row in the ~1fr side panel. */
+.workspace-side .developer-tools-row {
+  flex-wrap: wrap;
+}
+.workspace-side .developer-tools-row .developer-tool-btn,
+.workspace-side .developer-tools-row .developer-toggle {
+  flex: 1 1 calc(50% - var(--panel-gap));
+}
+.workspace-side .developer-log-area {
+  min-height: 220px;
+}
+.workspace-side .developer-log-area .log-frame {
+  min-height: 200px;
+}
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  .workspace-side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Chat shell — the chat-first surface: rail + transcript + composer. */
+.chat-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-card);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.chat-rail {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  /* The inner .stepper owns horizontal scrolling; keep this wrapper from adding
+     a second (clipping) scroll container so every node stays reachable. */
+  min-width: 0;
+  overflow: hidden;
+}
+.chat-shell .chat-transcript {
+  flex: 1 1 auto;
+  max-height: 60vh;
+}
+
+/* Empty conversation state. */
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  text-align: center;
+}
+.chat-empty-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--color-primary);
+  opacity: 0.7;
+}
+
+/* Message body variants. */
+.chat-user-body p {
+  margin: 0;
+}
+.chat-user-files {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  opacity: 0.85;
+}
+.chat-agent-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+.chat-agent-desc {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+.chat-agent-status {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+.chat-blocked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+.chat-blocked-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+.chat-blocked-reason {
+  margin: 0;
+}
+.chat-blocked-meta {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Embedded bubble — the ResultsSection / FailureSection card renders raw inside
+   the message body (no bubble padding/background/border double-framing). */
+.chat-message-embed {
+  max-width: 100%;
+  width: 100%;
+}
+.chat-message-embed .chat-message-content {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.chat-message-embed .chat-message-body {
+  width: 100%;
+}
+
+/* =============================================================================
+   Stepper — inline process rail (DESIGN.md §15)
+   ============================================================================= */
+
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  /* All 10 registry nodes always stay reachable: the rail scrolls horizontally
+     (the global themed scrollbar applies) rather than hiding nodes past the
+     viewport edge. `max-width: 100%` keeps it inside the chat shell. */
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  padding: var(--spacing-sm) var(--spacing-xs) var(--spacing-md);
+}
+.stepper-item {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.stepper-connector {
+  width: 28px;
+  height: 2px;
+  flex-shrink: 0;
+  align-self: center;
+  margin-top: -20px;
+  background: var(--color-border);
+  transition: background-color var(--transition-fast);
+}
+.stepper-connector[data-status="completed"] {
+  background: var(--color-success);
+}
+.stepper-connector[data-status="thinking"] {
+  background: var(--color-warning);
+}
+.stepper-connector[data-status="blocked"] {
+  background: var(--color-warning);
+}
+.stepper-connector[data-status="errored"] {
+  background: var(--color-error);
+}
+.stepper-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: 92px;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  padding: var(--spacing-xs) var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+.stepper-node:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+.stepper-node.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-bg-secondary);
+}
+.stepper-node-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+.stepper-node-badge[data-status="thinking"] {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+  box-shadow: 0 0 12px var(--color-warning-glow);
+}
+.stepper-node-badge[data-status="completed"] {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+.stepper-node-badge[data-status="errored"] {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+.stepper-node-badge[data-status="blocked"] {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+  box-shadow: 0 0 12px var(--color-warning-glow);
+}
+.stepper-node[data-node-kind="guardrail"] .stepper-node-badge {
+  border-radius: var(--radius-sm);
+}
+.stepper-node-icon {
+  width: 20px;
+  height: 20px;
+}
+.stepper-node-label {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.stepper-node .status-indicator {
+  width: 8px;
+  height: 8px;
+}
+.stepper-node-stream {
+  position: absolute;
+  top: calc(100% + var(--spacing-xs));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, 70vw);
+  z-index: var(--z-connector);
+}
+
+/* Compact the rail on narrower viewports so more of the 10 nodes fit before
+   scrolling is needed (all nodes stay reachable via horizontal scroll either
+   way). Reuses the documented ≤900px breakpoint (DESIGN.md §3). */
+@media (max-width: 900px) {
+  .stepper-node {
+    width: 76px;
+  }
+  .stepper-connector {
+    width: 16px;
+  }
+}
+
+/* =============================================================================
+   TokenStream — matrix live-output (DESIGN.md §15)
+   ============================================================================= */
+
+.token-stream {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-navy);
+  box-shadow: var(--shadow-md);
+  min-height: 64px;
+}
+.token-stream-rain {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-around;
+  pointer-events: none;
+  opacity: 0.28;
+  overflow: hidden;
+}
+.token-stream-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-accent);
+  animation: tokenRain var(--stream-duration, 2s) linear infinite;
+  animation-delay: var(--stream-delay, 0s);
+  will-change: transform, opacity;
+}
+.token-stream-glyph {
+  line-height: 1;
+}
+@keyframes tokenRain {
+  0% {
+    transform: translateY(-60%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(120%);
+    opacity: 0;
+  }
+}
+.token-stream-body {
+  position: relative;
+  z-index: var(--z-base);
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
+  color: #dbe7ff;
+  text-shadow: 0 0 8px rgba(var(--color-accent-rgb), 0.5);
+}
+.token-stream-placeholder {
+  color: rgba(219, 231, 255, 0.55);
+  font-style: italic;
+}
+.token-stream-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--color-accent);
+  animation: tokenCursor 1s steps(2) infinite;
+}
+@keyframes tokenCursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+.token-stream.is-synthetic .token-stream-rain {
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .token-stream-col,
+  .token-stream-cursor,
+  .chat-typing-dot,
+  .chat-message {
+    animation: none !important;
+  }
+  .token-stream-rain {
+    opacity: 0.16;
+  }
+  .chat-transcript {
+    scroll-behavior: auto;
+  }
 }
 
 /* =============================================================================
@@ -1820,13 +2599,13 @@ select option {
   display: inline-block;
   width: 1px;
   height: 18px;
-  background: rgba(91, 141, 238, 0.22);
+  background: rgba(var(--color-primary-rgb), 0.22);
   flex-shrink: 0;
   margin: 0 var(--spacing-sm);
 }
 
 .downloads-inline-label {
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -1855,7 +2634,7 @@ select option {
 
 .download-column-title {
   color: var(--color-text);
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.88rem;
   font-weight: 700;
 }
@@ -1875,7 +2654,7 @@ select option {
   min-height: 52px;
   padding: 0.55rem 0.7rem;
   background: transparent;
-  border-bottom: 1px solid rgba(91, 141, 238, 0.12);
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.12);
 }
 
 .download-item:last-child {
@@ -1938,11 +2717,11 @@ select option {
 }
 
 .agent-output-groups {
-  border-top: 1px solid rgba(91, 141, 238, 0.12);
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.12);
 }
 
 .agent-output-agent-section + .agent-output-agent-section {
-  border-top: 1px solid rgba(91, 141, 238, 0.12);
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.12);
 }
 
 .agent-output-agent-section {
@@ -1958,7 +2737,7 @@ select option {
   margin: 0;
   padding: 0;
   color: var(--color-text);
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -2036,7 +2815,7 @@ select option {
 .footer {
   padding: var(--spacing-lg) var(--spacing-xl);
   background: var(--gradient-surface);
-  border-top: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-primary);
   text-align: center;
 }
 
@@ -2058,14 +2837,14 @@ body.modal-open .footer {
 }
 
 .footer-primary {
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: var(--font-size-md);
   margin-bottom: var(--spacing-xs);
 }
 
 .footer-secondary {
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: var(--font-size-sm);
   margin-bottom: 0;
 }
 
@@ -2287,7 +3066,7 @@ body.modal-open .footer {
   min-width: 0;
   padding: 4px var(--spacing-sm);
   background: rgba(12, 20, 36, 0.72);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-sm);
 }
 
@@ -2348,7 +3127,7 @@ body.modal-open .footer {
   min-width: 0;
   padding: var(--spacing-sm);
   background: rgba(12, 20, 36, 0.62);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-md);
 }
 
@@ -2374,8 +3153,8 @@ body.modal-open .footer {
   justify-content: center;
   padding: 0 var(--spacing-xs);
   border-radius: 999px;
-  background: rgba(91, 141, 238, 0.12);
-  border: 1px solid rgba(91, 141, 238, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
   color: var(--color-text-secondary);
   font-size: 0.76rem;
 }
@@ -2393,7 +3172,7 @@ body.modal-open .footer {
   gap: var(--spacing-sm);
   padding: var(--spacing-sm);
   background: rgba(8, 13, 26, 0.52);
-  border: 1px solid rgba(91, 141, 238, 0.14);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.14);
   border-radius: var(--radius-sm);
 }
 
@@ -2487,7 +3266,7 @@ body.modal-open .footer {
 .eval-table th,
 .eval-table td {
   padding: var(--spacing-sm);
-  border-bottom: 1px solid rgba(91, 141, 238, 0.14);
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.14);
   vertical-align: top;
 }
 
@@ -2527,10 +3306,10 @@ body.modal-open .footer {
   align-items: center;
   justify-content: center;
   padding: 0 var(--spacing-xs);
-  border: 1px solid rgba(91, 141, 238, 0.24);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.24);
   border-radius: var(--radius-sm);
   color: var(--color-text);
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
 }
 
 .eval-status-chip {
@@ -2648,7 +3427,7 @@ body.modal-open .footer {
 
 .eval-score-chip strong {
   flex: 0 0 auto;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
 }
 
 .eval-notes {
@@ -2671,7 +3450,7 @@ body.modal-open .footer {
 .eval-note {
   padding: var(--spacing-sm);
   background: rgba(12, 20, 36, 0.62);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-sm);
 }
 
@@ -2778,7 +3557,7 @@ body.modal-open .footer {
 .file-item-path {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   margin-top: 2px;
 }
 
@@ -2922,7 +3701,7 @@ body.modal-open .footer {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -2987,7 +3766,7 @@ body.modal-open .footer {
   background: var(--color-bg);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   color: var(--color-primary);
 }
 
@@ -3174,8 +3953,8 @@ body.modal-open .footer {
   justify-content: center;
   padding: 0.28rem 0.65rem;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(91, 141, 238, 0.24);
-  background: rgba(91, 141, 238, 0.08);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.24);
+  background: rgba(var(--color-primary-rgb), 0.08);
   color: var(--color-text-secondary);
   font-size: 0.74rem;
   font-weight: 700;
@@ -3195,12 +3974,12 @@ body.modal-open .footer {
   flex-wrap: wrap;
   gap: var(--spacing-sm);
   color: var(--color-text-muted);
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
 }
 
 .create-data-item-output {
   color: var(--color-primary);
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
 }
 
 .create-data-item-error,
@@ -3233,7 +4012,7 @@ body.modal-open .footer {
 .create-data-pill.is-starting,
 .create-data-pill.is-stopping {
   color: var(--color-text-secondary);
-  background: rgba(91, 141, 238, 0.08);
+  background: rgba(var(--color-primary-rgb), 0.08);
 }
 
 .create-data-pill.is-running {
@@ -3382,10 +4161,10 @@ body.modal-open .footer {
     var(--color-secondary)
   );
   border-radius: var(--radius-lg);
-  border: 2px solid rgba(15, 15, 26, 0.8);
+  border: 2px solid var(--color-bg);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 8px 16px rgba(0, 0, 0, 0.6);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 2px 6px rgba(var(--color-navy-rgb), 0.18);
 }
 ::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:active {
@@ -3395,8 +4174,8 @@ body.modal-open .footer {
     var(--color-accent)
   );
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-    0 10px 24px rgba(0, 0, 0, 0.7);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 3px 10px rgba(var(--color-navy-rgb), 0.24);
 }
 
 ::selection {
@@ -3447,7 +4226,7 @@ body.modal-open .footer {
 .rubric-summary > div {
   min-width: 0;
   padding: var(--spacing-sm);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-sm);
   background: rgba(12, 20, 36, 0.72);
 }
@@ -3471,7 +4250,7 @@ body.modal-open .footer {
 
 .rubric-criterion {
   padding: var(--spacing-md);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-md);
   background: rgba(8, 13, 26, 0.48);
 }
@@ -3499,8 +4278,8 @@ body.modal-open .footer {
   min-height: 26px;
   padding: 0 var(--spacing-xs);
   border-radius: 999px;
-  border: 1px solid rgba(91, 141, 238, 0.2);
-  background: rgba(91, 141, 238, 0.12);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+  background: rgba(var(--color-primary-rgb), 0.12);
   color: var(--color-text-secondary);
   font-size: 0.74rem;
   font-weight: 700;
@@ -3848,7 +4627,7 @@ body.modal-open .footer {
 
 .viewer-kv-key {
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--color-navy-rgb), 0.05);
   color: var(--color-text-secondary);
   font-weight: 500;
   text-transform: capitalize;
@@ -3863,7 +4642,7 @@ body.modal-open .footer {
 .viewer-kv-json {
   margin: 0;
   font-size: 0.8rem;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   white-space: pre-wrap;
   color: var(--color-text-secondary);
 }
@@ -3876,7 +4655,7 @@ body.modal-open .footer {
 }
 
 .viewer-question-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--color-navy-rgb), 0.04);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
@@ -4004,7 +4783,7 @@ body.modal-open .footer {
 .viewer-generation-notes {
   font-size: 0.82rem;
   color: var(--color-text-secondary);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--color-navy-rgb), 0.04);
   border-left: 3px solid var(--color-border);
   padding: 6px 10px;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -4041,7 +4820,7 @@ body.modal-open .footer {
 }
 
 .viewer-cell-num {
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   text-align: right;
   color: var(--color-text-secondary);
   white-space: nowrap;
@@ -4090,7 +4869,7 @@ body.modal-open .footer {
 
 .file-viewer-table td {
   padding: 7px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--color-border);
   vertical-align: top;
   color: var(--color-text);
 }
@@ -4100,7 +4879,7 @@ body.modal-open .footer {
 }
 
 .file-viewer-table tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--color-navy-rgb), 0.04);
 }
 
 .viewer-th-narrow {
@@ -4108,7 +4887,7 @@ body.modal-open .footer {
 }
 
 .viewer-cell-score {
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   text-align: right;
   color: var(--color-text-secondary);
 }
@@ -4140,7 +4919,7 @@ body.modal-open .footer {
 
 /* --- LaTeX code viewer --- */
 .tex-pre {
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.6;
   overflow: auto;
@@ -4158,7 +4937,7 @@ body.modal-open .footer {
 }
 
 .tex-line:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--color-navy-rgb), 0.04);
 }
 
 .tex-line-num {
@@ -4227,7 +5006,7 @@ body.modal-open .footer {
 }
 
 .viewer-agent-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--color-navy-rgb), 0.04);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
@@ -4259,10 +5038,10 @@ body.modal-open .footer {
 
 .viewer-agent-model {
   font-size: 0.78rem;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   padding: 2px 7px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--color-primary-rgb), 0.08);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
@@ -4283,7 +5062,7 @@ body.modal-open .footer {
 .viewer-flow-node {
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--color-navy-rgb), 0.06);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
   font-size: 0.78rem;
@@ -4311,7 +5090,7 @@ body.modal-open .footer {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
   opacity: 0.7;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
 }
 
 .viewer-source-files {
@@ -4325,10 +5104,10 @@ body.modal-open .footer {
 
 .viewer-source-file {
   font-size: 0.82rem;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   color: var(--color-text-secondary);
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--color-navy-rgb), 0.04);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
 }
@@ -4355,7 +5134,7 @@ body.modal-open .footer {
   gap: 2px;
   padding: 6px var(--spacing-sm);
   background: rgba(12, 20, 36, 0.72);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-sm);
 }
 
@@ -4372,7 +5151,7 @@ body.modal-open .footer {
 }
 
 .workflow-agents-id {
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem !important;
   word-break: break-all;
 }
@@ -4389,7 +5168,7 @@ body.modal-open .footer {
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
   background: rgba(12, 20, 36, 0.62);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-md);
 }
 
@@ -4414,7 +5193,7 @@ body.modal-open .footer {
   gap: var(--spacing-sm);
   padding: var(--spacing-md);
   background: rgba(12, 20, 36, 0.62);
-  border: 1px solid rgba(91, 141, 238, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   border-radius: var(--radius-md);
 }
 
@@ -4453,7 +5232,7 @@ body.modal-open .footer {
 .workflow-agent-meta span {
   font-size: 0.82rem;
   color: var(--color-text-secondary);
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
 }
 
 .workflow-agent-files {
@@ -4480,10 +5259,10 @@ body.modal-open .footer {
 
 .reasoning-grader-model {
   font-size: 0.78rem;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: var(--font-mono);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--color-primary-rgb), 0.08);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
@@ -4495,7 +5274,7 @@ body.modal-open .footer {
 }
 
 .reasoning-step {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--color-navy-rgb), 0.04);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);

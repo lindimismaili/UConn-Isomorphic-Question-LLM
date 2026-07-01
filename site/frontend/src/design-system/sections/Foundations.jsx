@@ -2,6 +2,7 @@ import { Card, CardBody, CardHeader } from '../../components/ui/index.js';
 import { Grid, Row, SizeBox, Spec, Stack, Swatch } from '../Specimen.jsx';
 
 const COLOR_TOKENS = [
+  '--color-navy',
   '--color-bg',
   '--color-bg-secondary',
   '--color-surface',
@@ -65,18 +66,18 @@ export default function Foundations() {
       </Card>
 
       <Card>
-        <CardHeader title="Typography" subtitle="Source Serif 4 headings · IBM Plex Sans body · monospace for code/IDs." />
+        <CardHeader title="Typography" subtitle="--font-serif headings · --font-sans body · --font-mono for code/IDs. Family + size + line-height all tokenized." />
         <CardBody>
           <Stack>
-            <h1>Heading 1 — Source Serif 4</h1>
+            <h1>Heading 1 — Source Serif 4 (--font-serif)</h1>
             <h2>Heading 2 — Source Serif 4</h2>
             <h3>Heading 3 — Source Serif 4</h3>
             <h4>Heading 4 — Source Serif 4</h4>
-            <p>Body — IBM Plex Sans. The quick brown fox jumps over the lazy dog.</p>
+            <p>Body — IBM Plex Sans (--font-sans). The quick brown fox jumps over the lazy dog.</p>
             <p className="subtitle">Subtitle — secondary text used under headers.</p>
             <p className="disclaimer-text">Disclaimer text — muted caption style.</p>
-            <code style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
-              Monospace — workflow-1a2b · 12:00:00
+            <code style={{ fontFamily: 'var(--font-mono)' }}>
+              Monospace (--font-mono) — workflow-1a2b · 12:00:00
             </code>
           </Stack>
         </CardBody>
