@@ -35,7 +35,19 @@
       }
     },
     "apiTitle": "Isomorphic Question Generator API",
-    "apiDescription": "Generate isomorphic physics questions using AI agents"
+    "apiDescription": "Generate isomorphic physics questions using AI agents",
+    "guardrails": {
+      "enabled": true,
+      "model": "gpt-5.5",
+      "moderationModel": "omni-moderation-latest",
+      "reasoning": "low",
+      "physicsMinConfidence": 0.75,
+      "blockOffTopic": true,
+      "failClosed": false,
+      "maxQuestionsSampled": 40,
+      "inputNode": "input_guardrail",
+      "contentNode": "content_guardrail"
+    }
   },
   "setup": {
     "sequence": 0,
@@ -69,6 +81,24 @@
       "PyPDF2",
       "python-docx"
     ]
+  },
+  "input_guardrail": {
+    "sequence": 0.5,
+    "name": "Input Guardrail",
+    "description": "Screens the request for unsafe, jailbreak, or off-goal input before any work begins",
+    "model": "gpt-5.5",
+    "reasoning": "low",
+    "kind": "guardrail",
+    "isLLM": false,
+    "hasPrompt": true,
+    "acceptsSourceFiles": false,
+    "isStoppable": false,
+    "useCodeInterpreter": false,
+    "countLabel": null,
+    "aliases": [],
+    "inputFrom": "Starter",
+    "outputTo": "Normalizer",
+    "cliDescription": "Screen the user instruction for moderation, jailbreak, and prompt injection before running"
   },
   "normalizer": {
     "sequence": 1,
@@ -108,6 +138,24 @@
     "outputTo": "Verifier",
     "cliDescription": "Extract source questions from uploaded PDF/DOCX files",
     "resultField": "source_questions"
+  },
+  "content_guardrail": {
+    "sequence": 2.5,
+    "name": "Content Guardrail",
+    "description": "Confirms the uploaded material is genuine academic physics question content",
+    "model": "gpt-5.5",
+    "reasoning": "low",
+    "kind": "guardrail",
+    "isLLM": false,
+    "hasPrompt": true,
+    "acceptsSourceFiles": false,
+    "isStoppable": false,
+    "useCodeInterpreter": false,
+    "countLabel": null,
+    "aliases": [],
+    "inputFrom": "Extracter",
+    "outputTo": "Verifier",
+    "cliDescription": "Confirm extracted content is genuine academic physics questions before generating"
   },
   "verifier": {
     "sequence": 3,

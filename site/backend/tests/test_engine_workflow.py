@@ -150,6 +150,16 @@ class EngineWorkflowTests(unittest.TestCase):
             patch.object(
                 engine, "run_openai_output_evaluation", return_value={"status": "complete", "overall_score": 1.0}
             ),
+            # Guardrails are exercised in test_guardrails.py; here we assert the
+            # engine control flow, so allow every run through.
+            patch.object(
+                engine, "check_input_guardrails",
+                AsyncMock(return_value=engine.GuardrailDecision(allowed=True, stage="input")),
+            ),
+            patch.object(
+                engine, "check_content_guardrails",
+                AsyncMock(return_value=engine.GuardrailDecision(allowed=True, stage="content")),
+            ),
             patch.object(engine, "Runner") as runner,
         ):
             runner.run = AsyncMock(side_effect=runner_side_effect)

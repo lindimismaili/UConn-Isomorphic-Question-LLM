@@ -14,6 +14,7 @@ registry, call registry._load_raw.cache_clear() before patching AGENTS_CONFIG_PA
 from __future__ import annotations
 
 import json
+import os
 from functools import lru_cache
 from typing import Any
 
@@ -103,8 +104,80 @@ def aliases_map() -> dict[str, str]:
 
 
 def input_to_agent_sequence() -> list[str]:
-    """All runnable stages (all agents except the terminal output node)."""
-    return agent_sequence()[:-1]
+    """Runnable start-from targets: every stage except guardrail nodes and the terminal output.
+
+    Guardrail nodes are display-only pipeline nodes (kind == "guardrail"); they are
+    never valid "start from this agent" targets, so they are excluded here even
+    though they appear in the full ``agent_sequence()``.
+    """
+    runnable = [key for key, entry in _agent_entries() if entry.get("kind") != "guardrail"]
+    return runnable[:-1]
+
+
+# ── Guardrail accessors ───────────────────────────────────────────────────────
+
+def _guardrails_config() -> dict[str, Any]:
+    """Return the _config.guardrails block (empty dict when absent)."""
+    config = _load_raw().get("_config", {}).get("guardrails", {})
+    return config if isinstance(config, dict) else {}
+
+
+def guardrail_nodes() -> list[str]:
+    """Keys for guardrail display nodes (kind == "guardrail"), in sequence order."""
+    return [key for key, entry in _agent_entries() if entry.get("kind") == "guardrail"]
+
+
+def guardrails_enabled() -> bool:
+    """Whether the guardrail layer runs. GUARDRAILS_ENABLED env overrides config."""
+    env = os.getenv("GUARDRAILS_ENABLED")
+    if env is not None:
+        return env.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(_guardrails_config().get("enabled", True))
+
+
+def guardrail_model() -> str:
+    """Model used by the LLM guardrail classifiers."""
+    return _guardrails_config().get("model") or evaluation_model()
+
+
+def guardrail_moderation_model() -> str:
+    """Moderation model used by the deterministic content pre-filter."""
+    return _guardrails_config().get("moderationModel", "omni-moderation-latest")
+
+
+def guardrail_reasoning() -> str:
+    """Reasoning effort for the guardrail classifier agents."""
+    return _guardrails_config().get("reasoning", "low")
+
+
+def guardrail_physics_min_confidence() -> float:
+    """Confidence floor above which a non-physics classification blocks (off-topic)."""
+    return float(_guardrails_config().get("physicsMinConfidence", 0.75))
+
+
+def guardrail_block_off_topic() -> bool:
+    """Whether off-topic (non-physics but genuine question) content is blocked."""
+    return bool(_guardrails_config().get("blockOffTopic", True))
+
+
+def guardrail_fail_closed() -> bool:
+    """Whether a guardrail infrastructure error blocks the run (vs. fails open)."""
+    return bool(_guardrails_config().get("failClosed", False))
+
+
+def guardrail_max_questions_sampled() -> int:
+    """Cap on how many extracted questions are sampled for the content classifier."""
+    return int(_guardrails_config().get("maxQuestionsSampled", 40))
+
+
+def guardrail_input_node() -> str:
+    """Registry key for the input-stage guardrail display node."""
+    return str(_guardrails_config().get("inputNode", "input_guardrail"))
+
+
+def guardrail_content_node() -> str:
+    """Registry key for the content-stage guardrail display node."""
+    return str(_guardrails_config().get("contentNode", "content_guardrail"))
 
 
 def cli_descriptions() -> dict[str, str]:

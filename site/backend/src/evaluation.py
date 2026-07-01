@@ -3,6 +3,19 @@ OpenAI Evals integration for generated isomorphic question outputs.
 
 This module evaluates generated questions against rubric criteria and writes
 an evaluation report to the run output directory.
+
+Grader configuration knobs:
+
+- Grader model source is ``agents.json`` ``evaluation.model`` (via ``rubric_model()``).
+  Set the environment variable ``GRADER_MODEL_OVERRIDE`` to grade with a different
+  model family than the generator — this mitigates generator/judge self-preference
+  without touching ``agents.json`` / ``registry.py``. When unset, ``rubric_model()``
+  is used.
+- Reproducibility: every ``score_model`` grader is seeded with ``GRADER_SEED`` so
+  re-runs of the same batch are comparable (surfaced in the report as ``grader_seed``).
+- Reasoning effort is resolved per criterion from the rubric criterion's own
+  ``reasoning`` field, falling back to the global ``rubric_reasoning_effort()``
+  (surfaced as ``reasoning_effort_by_criterion``).
 """
 
 from __future__ import annotations
@@ -10,6 +23,8 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import os
+import re
 import time
 from functools import lru_cache
 from pathlib import Path
@@ -31,6 +46,40 @@ EVALUATION_DATASET_FILENAME = "evaluation_dataset.jsonl"
 EVALUATION_ITEMS_FILENAME = "evaluation_agents.jsonl"
 EVALUATION_SPREADSHEET_FILENAME = "evaluation_spreadsheet.csv"
 EVALUATION_RUBRIC_FILENAME = "rubric.json"
+
+# Fixed seed passed to every score_model grader's sampling_params so repeated
+# runs of the same batch are reproducible; drift in grades then reflects a
+# rubric/prompt change rather than sampling noise. Surfaced as report["grader_seed"].
+GRADER_SEED = 7
+
+# Environment variable name for a cross-family judge override. When set, its value
+# is used as the grader model instead of rubric_model() (agents.json evaluation.model),
+# so a different judge family can mitigate generator/judge self-preference.
+GRADER_MODEL_OVERRIDE_ENV = "GRADER_MODEL_OVERRIDE"
+
+# Fixed failure-reason taxonomy. When a grader returns 0 (fail) it is instructed to
+# begin the reasoning's final conclusion with exactly one bracketed tag from this
+# vocabulary (e.g. "[WRONG_ANSWER] ..."), making failures machine-mineable by a
+# downstream meta-evaluator. Importable by other modules; does NOT change the
+# numeric 0/1/-1 score contract.
+FAILURE_TAGS: tuple[str, ...] = (
+    "CONCEPT_DRIFT",
+    "MISSING_CONVERSION",
+    "NUMERIC_INCONSISTENT",
+    "WRONG_ANSWER",
+    "DISTRACTOR_ROLE_LOST",
+    "GENERIC_DISTRACTOR",
+    "CLERICAL",
+    "UNDERSPECIFIED",
+    "OTHER",
+)
+
+
+def _grader_model_override() -> Optional[str]:
+    """Return the GRADER_MODEL_OVERRIDE env value (stripped) if set, else None."""
+    value = os.environ.get(GRADER_MODEL_OVERRIDE_ENV, "")
+    value = value.strip() if isinstance(value, str) else ""
+    return value or None
 
 
 @lru_cache(maxsize=1)
@@ -66,11 +115,30 @@ def rubric_criteria() -> list[dict[str, Any]]:
 
 
 def rubric_model() -> str:
-    return _rubric_config()["model"]
+    """Grader model: GRADER_MODEL_OVERRIDE env if set, else agents.json evaluation.model."""
+    return _grader_model_override() or _rubric_config()["model"]
 
 
 def rubric_reasoning_effort() -> str:
+    """Global (fallback) grader reasoning effort from rubric.json (default 'low')."""
     return _rubric_config()["reasoning"]
+
+
+def criterion_reasoning_effort(criterion: dict[str, Any]) -> str:
+    """Reasoning effort for one criterion: its own ``reasoning`` field, else the global default."""
+    own = criterion.get("reasoning")
+    if isinstance(own, str) and own.strip():
+        return own.strip()
+    return rubric_reasoning_effort()
+
+
+def reasoning_effort_by_criterion() -> dict[str, str]:
+    """Map every question-level criterion name to its resolved reasoning effort."""
+    return {
+        criterion["name"]: criterion_reasoning_effort(criterion)
+        for criterion in question_level_criteria()
+        if criterion.get("name")
+    }
 
 
 def rubric_criteria_by_name() -> dict[str, dict[str, Any]]:
@@ -366,15 +434,27 @@ def _attach_report_file_metadata(
 
 
 def _build_item_schema() -> dict[str, Any]:
-    """Return the item schema used when creating the OpenAI eval dataset."""
+    """Return the item schema used when creating the OpenAI eval dataset.
+
+    ``source_distractor_logic`` is an optional per-item summary of the source
+    option ``distractor_logic`` labels, surfaced so the grader can judge the
+    ``distractor_structure_preservation`` criterion against the declared roles
+    rather than re-inferring them from option text. Empty string for legacy items.
+    """
     return {
         "type": "object",
         "properties": {
             "source_id": {"type": "string"},
             "source_question_text": {"type": "string"},
             "generated_question_text": {"type": "string"},
+            "source_distractor_logic": {"type": "string"},
         },
-        "required": ["source_id", "source_question_text", "generated_question_text"],
+        "required": [
+            "source_id",
+            "source_question_text",
+            "generated_question_text",
+            "source_distractor_logic",
+        ],
         "additionalProperties": False,
     }
 
@@ -424,19 +504,28 @@ def _normalize_whitespace(value: str) -> str:
 
 
 def _format_option_lines(options: list[dict[str, Any]]) -> list[str]:
-    """Render answer options into plain text lines."""
+    """Render answer options into plain text lines.
+
+    When an option declares a ``distractor_logic`` label, it is appended as
+    ``distractor_logic: <label>`` so the grader can judge the
+    ``distractor_structure_preservation`` criterion against the declared solver
+    role. Legacy options without the label render unchanged.
+    """
     lines: list[str] = []
     for option in options:
         key = str(option.get("key", "")).strip()
         text = str(option.get("text", "")).strip()
         correctness = "correct" if bool(option.get("is_correct")) else "incorrect"
         explanation = str(option.get("explanation", "")).strip()
+        distractor_logic = str(option.get("distractor_logic", "")).strip()
         if not key and not text:
             continue
         prefix = f"{key}. " if key else "- "
         line = f"{prefix}{text} [{correctness}]"
         if explanation:
             line = f"{line} Explanation: {explanation}"
+        if distractor_logic:
+            line = f"{line} distractor_logic: {distractor_logic}"
         lines.append(line)
     return lines
 
@@ -499,6 +588,41 @@ def _render_question_text(question: dict[str, Any]) -> str:
     return _normalize_whitespace("\n".join(lines))
 
 
+def _collect_distractor_logic_labels(question: dict[str, Any]) -> list[str]:
+    """Collect non-empty ``distractor_logic`` labels from a question's options/parts."""
+    labels: list[str] = []
+
+    def _from_options(options: Any) -> None:
+        if not isinstance(options, list):
+            return
+        for option in options:
+            if not isinstance(option, dict):
+                continue
+            label = str(option.get("distractor_logic", "")).strip()
+            if label:
+                labels.append(label)
+
+    _from_options(question.get("options"))
+    parts = question.get("parts")
+    if isinstance(parts, list):
+        for part in parts:
+            if isinstance(part, dict):
+                _from_options(part.get("options"))
+    return labels
+
+
+def _summarize_source_distractor_logic(question: dict[str, Any]) -> str:
+    """Return a compact, one-line summary of the source distractor_logic roles.
+
+    Empty string when the source declares no labels (legacy items), which keeps
+    the grader robust when the metadata is absent.
+    """
+    labels = _collect_distractor_logic_labels(question)
+    if not labels:
+        return ""
+    return "; ".join(labels)
+
+
 def _render_source_question_text(question: dict[str, Any]) -> str:
     """Render the source question text for eval comparisons."""
     source_raw = str(question.get("source_raw", "")).strip()
@@ -512,10 +636,30 @@ def _render_generated_question_text(question: dict[str, Any]) -> str:
     return _render_question_text(question)
 
 
+def _failure_tag_instruction() -> str:
+    """Instruction telling the grader to tag every failure with one FAILURE_TAG."""
+    tag_list = ", ".join(FAILURE_TAGS)
+    return (
+        "When you return 0 (fail), the FINAL conclusion of your reasoning must begin "
+        "with exactly one bracketed failure tag from this fixed list, followed by a "
+        f"short justification: {tag_list}. For example: '[WRONG_ANSWER] the marked "
+        "correct option is not actually correct.' Use exactly one tag; choose OTHER "
+        "only when none of the specific tags fit. Do not add a tag when you return 1 "
+        "(pass) or -1 (N/A). This tag does not change the numeric score."
+    )
+
+
 def _build_testing_criteria(model: str | None = None) -> list[dict[str, Any]]:
-    """Build the criterion definitions used when creating an eval."""
+    """Build the criterion definitions used when creating an eval.
+
+    Each grader is seeded with :data:`GRADER_SEED` for reproducibility and uses the
+    per-criterion reasoning effort (``criterion_reasoning_effort``), falling back to
+    the global rubric ``reasoning``. Failing scores are tagged from
+    :data:`FAILURE_TAGS`.
+    """
     model = model or rubric_model()
     criteria: list[dict[str, Any]] = []
+    failure_tag_instruction = _failure_tag_instruction()
     for criterion in question_level_criteria():
         na_allowed = bool(criterion.get("na_allowed"))
         score_range = [-1, 1] if na_allowed else [0, 1]
@@ -536,7 +680,8 @@ def _build_testing_criteria(model: str | None = None) -> list[dict[str, Any]]:
                 "type": "score_model",
                 "model": model,
                 "sampling_params": {
-                    "reasoning_effort": rubric_reasoning_effort(),
+                    "reasoning_effort": criterion_reasoning_effort(criterion),
+                    "seed": GRADER_SEED,
                 },
                 "pass_threshold": PASSING_SCORE_THRESHOLD,
                 "range": score_range,
@@ -548,13 +693,16 @@ def _build_testing_criteria(model: str | None = None) -> list[dict[str, Any]]:
                             f"{_format_criterion_prompt(criterion)}\n\n"
                             f"{return_instruction} "
                             "Apply the rules in the rubric guidance literally, "
-                            "and judge only the provided source and generated question text."
+                            "and judge only the provided source and generated question text.\n\n"
+                            f"{failure_tag_instruction}"
                         ),
                     },
                     {
                         "role": "user",
                         "content": (
                             "Source question:\n{{ item.source_question_text }}\n\n"
+                            "Source distractor_logic roles (may be empty for legacy items):\n"
+                            "{{ item.source_distractor_logic }}\n\n"
                             "Generated question:\n{{ item.generated_question_text }}"
                         ),
                     },
@@ -580,6 +728,77 @@ def _normalize_criterion_name(result_name: str) -> Optional[str]:
     for criterion_name in by_name:
         if result_name.startswith(f"{criterion_name}-"):
             return criterion_name
+    return None
+
+
+def parse_sample_steps(sample: Any) -> list[dict[str, str]]:
+    """Parse a grader ``sample`` into a list of ``{conclusion, description}`` steps.
+
+    Mirrors the frontend ``parseSampleSteps`` (modals/eval/evalData.js): the grader
+    reasoning lives at ``sample.output[i].content`` as a JSON string
+    ``{result, steps: [{conclusion, description}]}``. Finds the first output element
+    whose ``content`` is a string, parses it, and returns its ``steps``. When the
+    content is non-JSON, returns a single ``{"conclusion": "", "description": <text>}``
+    step. Robust to ``sample`` being a dict, an SDK object, or missing entirely.
+
+    Exported for the downstream meta-evaluator to mine failure reasons from stored
+    ``evaluation_agents.jsonl`` records without re-implementing the parse.
+    """
+    jsonable = to_jsonable(sample) if sample is not None else None
+    if not isinstance(jsonable, dict):
+        return []
+    outputs = jsonable.get("output")
+    if not isinstance(outputs, list):
+        return []
+
+    output_content: Optional[str] = None
+    for entry in outputs:
+        if isinstance(entry, dict) and isinstance(entry.get("content"), str):
+            output_content = entry["content"]
+            break
+    if not output_content:
+        return []
+
+    try:
+        parsed = json.loads(output_content)
+    except (ValueError, TypeError):
+        return [{"conclusion": "", "description": output_content}]
+
+    if isinstance(parsed, dict) and isinstance(parsed.get("steps"), list):
+        return [
+            {
+                "conclusion": str(step.get("conclusion", "")) if isinstance(step, dict) else "",
+                "description": str(step.get("description", "")) if isinstance(step, dict) else "",
+            }
+            for step in parsed["steps"]
+        ]
+    return []
+
+
+def _extract_failure_tag(sample: Any) -> Optional[str]:
+    """Return the bracketed FAILURE_TAG from a grader sample's final conclusion, if any.
+
+    The grader is instructed to begin its final conclusion with exactly one
+    ``[TAG]`` from :data:`FAILURE_TAGS` when returning 0 (fail). We scan the parsed
+    steps' text (conclusion + description) for the first recognized bracketed tag.
+    Returns the canonical tag string or None when absent/unrecognized.
+    """
+    steps = parse_sample_steps(sample)
+    if not steps:
+        return None
+    valid = set(FAILURE_TAGS)
+    # Prefer the last step's conclusion (the "final conclusion"), then fall back to
+    # any step text, since graders vary in where they place the summary tag.
+    ordered_texts: list[str] = []
+    for step in reversed(steps):
+        ordered_texts.append(step.get("conclusion", ""))
+        ordered_texts.append(step.get("description", ""))
+    for text in ordered_texts:
+        if not text:
+            continue
+        for match in re.findall(r"\[([A-Z_]+)\]", text):
+            if match in valid:
+                return match
     return None
 
 
@@ -620,6 +839,11 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
     criterion_na: dict[str, int] = {
         criterion["name"]: 0 for criterion in criteria
     }
+    # Per-criterion tally of the bracketed FAILURE_TAGS mined from grader reasoning
+    # on failing (score 0) items, for the downstream meta-evaluator.
+    criterion_failure_tags: dict[str, dict[str, int]] = {
+        criterion["name"]: {} for criterion in criteria
+    }
     unmatched_results: list[str] = []
 
     for output_item in output_items:
@@ -638,6 +862,11 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
                     criterion_na[criterion_name] = criterion_na.get(criterion_name, 0) + 1
                 else:
                     criterion_scores[criterion_name].append(value)
+                    if value < 1.0:
+                        tag = _extract_failure_tag(getattr(result, "sample", None))
+                        tag = tag or "OTHER"
+                        tags = criterion_failure_tags.setdefault(criterion_name, {})
+                        tags[tag] = tags.get(tag, 0) + 1
 
     summary: dict[str, Any] = {}
     missing_scores: list[str] = []
@@ -659,6 +888,7 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
             "items_scored": len(values),
             "na_count": na_count,
             "na_rate": round(na_count / total_observed, 4) if total_observed else None,
+            "failure_tag_counts": dict(criterion_failure_tags.get(name, {})),
         }
 
     return summary, sorted(set(unmatched_results + missing_scores))
@@ -690,6 +920,8 @@ def _build_base_report(
         "created_at": utc_now_iso(),
         "rubric": rubric_criteria(),
         "grader_model": grader_model,
+        "grader_seed": GRADER_SEED,
+        "reasoning_effort_by_criterion": reasoning_effort_by_criterion(),
         "items_evaluated": items_evaluated,
         "dataset_file": _evaluation_relative_path(dataset_path) if dataset_path else "",
         "criterion_scores": {},
@@ -839,6 +1071,7 @@ def run_openai_output_evaluation(
                 "source_id": str(generated.get("source_id", "")),
                 "source_question_text": _render_source_question_text(source),
                 "generated_question_text": _render_generated_question_text(generated),
+                "source_distractor_logic": _summarize_source_distractor_logic(source),
             }
         )
 
@@ -959,6 +1192,8 @@ def run_openai_output_evaluation(
             "rubric": rubric_criteria(),
             "items_evaluated": len(items),
             "grader_model": grader_model,
+            "grader_seed": GRADER_SEED,
+            "reasoning_effort_by_criterion": reasoning_effort_by_criterion(),
             "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": criterion_scores,
             "overall_score": overall_score,
@@ -1005,6 +1240,8 @@ def run_openai_output_evaluation(
             "rubric": rubric_criteria(),
             "items_evaluated": len(items),
             "grader_model": grader_model,
+            "grader_seed": GRADER_SEED,
+            "reasoning_effort_by_criterion": reasoning_effort_by_criterion(),
             "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": {},
             "overall_score": _compute_overall_score({}),

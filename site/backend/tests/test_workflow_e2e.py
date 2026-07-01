@@ -161,6 +161,14 @@ def _run(
         patch.object(engine, "SharedWorkflowRuntime", _FakeRuntime),
         patch.object(engine, "upload_file_to_openai", return_value="fid_e2e"),
         patch.object(engine, "run_openai_output_evaluation", return_value={"score": 0.9}),
+        patch.object(
+            engine, "check_input_guardrails",
+            AsyncMock(return_value=engine.GuardrailDecision(allowed=True, stage="input")),
+        ),
+        patch.object(
+            engine, "check_content_guardrails",
+            AsyncMock(return_value=engine.GuardrailDecision(allowed=True, stage="content")),
+        ),
         patch.object(engine, "Runner") as runner,
     ):
         runner.run = AsyncMock(side_effect=runner_side_effect)
