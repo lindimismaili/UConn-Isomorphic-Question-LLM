@@ -9,7 +9,13 @@ The app takes question sources and produces a fresh set of physics questions tha
 
 The core workflow is:
 
-`Normalizer -> Extracter -> Verifier -> Generator -> Latexifier -> Evaluation -> Output`
+`Setup -> Input Guardrail -> Normalizer -> Extracter -> Content Guardrail -> Verifier -> Generator -> Latexifier -> Evaluation -> Output`
+
+Two safety guardrails run inline: an input guardrail (content moderation plus a
+jailbreak / prompt-injection check on the request, before any container is created)
+and a content guardrail (moderation plus an academic/physics on-topic check on the
+extracted questions). If a guardrail trips, the run ends in a `blocked` state with a
+reason rather than failing as an error.
 
 For coding-agent onboarding, repo conventions, and a full tour of the
 architecture, see [AGENTS.md](AGENTS.md).
@@ -30,7 +36,7 @@ Every Markdown doc in the repo and what it covers:
 
 - [README.md](README.md) — this file: setup, environment, run/CLI/output reference, and troubleshooting.
 - [AGENTS.md](AGENTS.md) — the single source of truth for coding-agent onboarding: repo conventions, full architecture tour, source-of-truth paths, the commands that work, and the data contracts. ([CLAUDE.md](CLAUDE.md) is a pointer to it.)
-- [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend reference: what every file does, the important functions, the 8-stage workflow, the HTTP API routes, the `data/` files, and the tests.
+- [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend reference: what every file does, the important functions, the 10-node workflow, the HTTP API routes, the `data/` files, and the tests.
 - [site/frontend/DESIGN.md](site/frontend/DESIGN.md) — frontend design system: tokens, the reusable component primitives, modals/stacking, motion, and the single-page design-system showcase. **Read before any UI change.**
 - [deploy/DEPLOY.md](deploy/DEPLOY.md) — deployment and local-preview scripts (operational guide, not a source of truth).
 
@@ -90,7 +96,8 @@ Backend runtime settings:
 
 - `HOST` - bind host for `python -m backend.src.server` defaults
 - `PORT` - bind port for the FastAPI app defaults
-- `MAX_UPLOAD_BYTES` - upload size limit in bytes, default `20971520`
+- `MAX_UPLOAD_BYTES` - per-file upload size limit in bytes, default `20971520`
+- `MAX_UPLOAD_TOTAL_BYTES` - per-request total upload cap across all files in bytes, default `62914560` (60 MB)
 - `WORKFLOW_TTL_SECONDS` - how long workflow records stay in memory, default `86400`
 - `WORKFLOW_MAX_ENTRIES` - max workflow/batch records kept in memory, default `200`
 - `PRUNE_INTERVAL_SECONDS` - background prune cadence, default `60`
@@ -99,6 +106,10 @@ Backend runtime settings:
 - `OPENAI_CONTAINER_EXPIRES_MINUTES` - shared container lifetime, clamped to `1..20`, default `20`
 - `OPENAI_CONTAINER_BOOTSTRAP_MODEL` - model used to bootstrap the shared container, default `gpt-5.5`
 - `OPENAI_CONTAINER_ALLOWED_DOMAINS` - comma-separated allowlist for container bootstrap and tools
+- `GUARDRAILS_ENABLED` - toggle the input/content guardrails (overrides the `agents.json` default)
+- `GRADER_MODEL_OVERRIDE` - grade with a different model than the one in `agents.json`
+
+Optional per-agent turn caps live in `agents.json` as `maxTurns` (default `6`, latexifier `12`).
 
 Frontend dev proxy:
 
@@ -150,13 +161,19 @@ npm -C site/frontend run preview
 
 ## CLI Usage
 
-Run the workflow directly from the command line:
+The CLI has full parity with the web app over the shared engine, exposed as
+argparse subcommands: `run`, `rerun-from-agent`, `from-agent-input`, `batch`,
+`eval`, `improve`, `show`, `zip`, `list` (`agents|themes|prompts|rubric|eval-files|runs`),
+and `prompt`. Run `python -m backend.src.main --help` (works without `OPENAI_API_KEY`)
+for the full list.
+
+The classic flat invocation still works (leading files/flags dispatch to `run`):
 
 ```bash
 PYTHONPATH=site python -m backend.src.main "archive/Question Data Files/PDF/Quiz_Compilation.pdf" -n 2 -i "Make questions harder"
 ```
 
-CLI flags:
+`run` flags:
 
 - positional files: one or more PDF, DOCX, DOC, or TXT inputs
 - `-n`, `--num-questions`: number of generated questions per source question
@@ -189,14 +206,20 @@ before committing.
 
 ## Workflow Stages
 
-1. Upload source files to OpenAI
-2. Normalize the user request into workflow configuration
-3. Extract source questions from the uploaded material
-4. Verify the extracted questions and answers
-5. Generate isomorphic questions
-6. Format the result as LaTeX and compile a PDF
-7. Evaluate the generated output and write run metadata
-8. Finalize local output files
+The pipeline has 10 registry nodes (6 LLM agents + 2 runtime + 2 guardrail):
+
+1. Set up the shared OpenAI container and upload source files
+2. Input guardrail: moderation + jailbreak/prompt-injection check on the request
+3. Normalize the user request into workflow configuration
+4. Extract source questions from the uploaded material
+5. Content guardrail: moderation + academic/physics on-topic check on the extracted questions
+6. Verify the extracted questions and answers
+7. Generate isomorphic questions
+8. Format the result as LaTeX and compile a PDF
+9. Evaluate the generated output and write run metadata
+10. Finalize local output files
+
+If a guardrail trips, the run ends in a `blocked` state (distinct from an error).
 
 The frontend mirrors these stages in the pipeline view, logs, and result panels.
 Clicking a pipeline block opens its detail modal: agents get a wide
