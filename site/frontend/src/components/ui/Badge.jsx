@@ -86,3 +86,40 @@ export function Pill({ state = 'idle', className = '', children, ...rest }) {
     </span>
   );
 }
+
+/**
+ * Chip — the generic small tinted tag (`.chip` + modifiers). Consolidates the
+ * near-identical eval/create-data/rubric/viewer tag looks into one tone-driven
+ * primitive. `tone` picks the semantic color; `shape` swaps pill ↔ square;
+ * `mono` uses the monospace family for ids/models.
+ *
+ * @param {object} props
+ * @param {'primary'|'neutral'|'success'|'warning'|'error'} [props.tone]
+ * @param {'pill'|'square'} [props.shape]
+ * @param {boolean} [props.mono]
+ * @param {string} [props.className]
+ * @param {import('react').ReactNode} [props.children]
+ */
+export function Chip({
+  tone = 'primary',
+  shape = 'pill',
+  mono = false,
+  className = '',
+  children,
+  ...rest
+}) {
+  const classes = [
+    'chip',
+    tone !== 'primary' ? `chip-${tone}` : '',
+    shape === 'square' ? 'chip-square' : '',
+    mono ? 'chip-mono' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return (
+    <span className={classes} {...rest}>
+      {children}
+    </span>
+  );
+}

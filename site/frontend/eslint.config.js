@@ -30,6 +30,29 @@ export default defineConfig([
     },
   },
   {
+    // Templates-first enforcement (DESIGN.md §14): feature components must compose
+    // from the ui/ primitives, not raw control/card/button class strings. The
+    // primitives themselves (components/ui/**) legitimately emit these classes,
+    // and AgentCard/AgentPipeline are the documented .agent-card exception (§9).
+    files: ['src/components/**/*.{js,jsx}'],
+    ignores: [
+      'src/components/ui/**',
+      'src/components/AgentCard.jsx',
+      'src/components/AgentPipeline.jsx',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "JSXAttribute[name.name='className'] > Literal[value=/(^|\\s)(btn|btn-primary|btn-secondary|btn-ghost|btn-danger|btn-icon-only|card|developer-toggle|prompt-input|prompt-dropdown-select)(\\s|$)/]",
+          message:
+            'Do not hardcode ui/ primitive class strings (btn*/card/developer-toggle/prompt-input/prompt-dropdown-select) in feature components. Compose from src/components/ui/ primitives instead (DESIGN.md §14). Premade sub-variant classes may be passed via a primitive\'s className prop.',
+        },
+      ],
+    },
+  },
+  {
     files: ['vite.config.js'],
     languageOptions: {
       globals: globals.node,

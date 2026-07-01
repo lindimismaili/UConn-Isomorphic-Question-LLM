@@ -1,6 +1,9 @@
 import { useEffect, useId, useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from '../Icons.jsx';
+// Direct file import (not the ui/ barrel) because the barrel re-exports this
+// Modal — importing the barrel here would be circular.
+import { IconButton } from '../ui/Button.jsx';
 
 let openModalCount = 0;
 let lockedScrollX = 0;
@@ -273,9 +276,7 @@ export default function Modal({
       >
         <div className="modal-header">
           <h3 id={titleId}>{title}</h3>
-          <button className="btn-icon-only" onClick={onClose} aria-label="Close" type="button">
-            <IconClose />
-          </button>
+          <IconButton onClick={onClose} aria-label="Close" icon={<IconClose />} />
         </div>
         <div className={`modal-body${modalBodyClassName ? ` ${modalBodyClassName}` : ''}`}>
           {children}
