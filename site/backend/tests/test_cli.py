@@ -11,14 +11,17 @@ from __future__ import annotations
 
 import io
 import json
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from backend.src import main
+from backend.src.api import state as api_state
 from backend.src.registry import llm_agents, stoppable_agents
 from backend.src.schemas import NormalizerOutput, WorkflowResult
+from backend.src.tools import meta_evaluator
 
 
 def _fake_result() -> WorkflowResult:
@@ -323,6 +326,250 @@ class RegistryDrivenChoicesTests(unittest.TestCase):
         for agent in llm_agents():
             args = parser.parse_args(["rerun-from-agent", "--source", "x", "--from", agent])
             self.assertEqual(args.from_agent, agent)
+
+
+class BatchCommandTests(unittest.TestCase):
+    """`batch` must delegate to state.run_create_data_batch_async and mirror
+
+    its exit-code contract: 0 only when the batch reaches "completed" with no
+    failed entries, 1 otherwise (including when there are no evaluation files).
+    """
+
+    def setUp(self) -> None:
+        self._saved_batches = dict(api_state.batch_jobs)
+        api_state.batch_jobs.clear()
+
+    def tearDown(self) -> None:
+        api_state.batch_jobs.clear()
+        api_state.batch_jobs.update(self._saved_batches)
+
+    def _fake_files(self, tmp: Path) -> list[Path]:
+        f = tmp / "quiz.pdf"
+        f.write_bytes(b"%PDF-1.4 x")
+        return [f]
+
+    def test_exits_zero_when_batch_completes_with_no_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            eval_dir = Path(tmp)
+            files = self._fake_files(eval_dir)
+
+            async def _fake_run(batch_id: str) -> None:
+                batch = api_state.batch_jobs[batch_id]
+                batch["status"] = "completed"
+                batch["completedFiles"] = batch["totalFiles"]
+                batch["failedFiles"] = 0
+                batch["doneFiles"] = batch["totalFiles"]
+
+            with (
+                patch.object(main, "get_cli_openai_client", return_value=object()),
+                patch.object(main, "EVALUATION_FIXTURES_DIR", eval_dir),
+                patch.object(api_state, "_list_evaluation_source_files", return_value=files),
+                patch.object(api_state, "run_create_data_batch_async", new=_fake_run),
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["batch"])
+            self.assertEqual(ctx.exception.code, 0)
+
+    def test_exits_one_when_batch_has_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            eval_dir = Path(tmp)
+            files = self._fake_files(eval_dir)
+
+            async def _fake_run(batch_id: str) -> None:
+                batch = api_state.batch_jobs[batch_id]
+                batch["status"] = "completed"
+                batch["completedFiles"] = 0
+                batch["failedFiles"] = batch["totalFiles"]
+                batch["doneFiles"] = batch["totalFiles"]
+
+            with (
+                patch.object(main, "get_cli_openai_client", return_value=object()),
+                patch.object(main, "EVALUATION_FIXTURES_DIR", eval_dir),
+                patch.object(api_state, "_list_evaluation_source_files", return_value=files),
+                patch.object(api_state, "run_create_data_batch_async", new=_fake_run),
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["batch"])
+            self.assertEqual(ctx.exception.code, 1)
+
+    def test_exits_one_when_no_evaluation_files(self) -> None:
+        with (
+            patch.object(main, "get_cli_openai_client", return_value=object()),
+            patch.object(api_state, "_list_evaluation_source_files", return_value=[]),
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main(["batch"])
+        self.assertEqual(ctx.exception.code, 1)
+
+
+class EvalCommandTests(unittest.TestCase):
+    """`eval` must delegate to state.run_eval_batch_async for both --runs and
+
+    --pairs, mirroring the same "completed with no failures" exit-code
+    contract as `batch`.
+    """
+
+    def setUp(self) -> None:
+        self._saved_eval_batches = dict(api_state.eval_batch_jobs)
+        api_state.eval_batch_jobs.clear()
+
+    def tearDown(self) -> None:
+        api_state.eval_batch_jobs.clear()
+        api_state.eval_batch_jobs.update(self._saved_eval_batches)
+
+    @staticmethod
+    async def _fake_run_completed(batch_id: str) -> None:
+        batch = api_state.eval_batch_jobs[batch_id]
+        batch["status"] = "completed"
+        batch["completedFiles"] = batch["totalFiles"]
+        batch["failedFiles"] = 0
+        batch["doneFiles"] = batch["totalFiles"]
+
+    def test_runs_mode_success(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            run_dir = outputs_dir / "run1"
+            run_dir.mkdir()
+            (run_dir / "final_result.json").write_text("{}", encoding="utf-8")
+
+            with (
+                patch.object(main, "get_cli_openai_client", return_value=object()),
+                patch.object(main, "OUTPUTS_DIR", outputs_dir),
+                patch.object(api_state, "run_eval_batch_async", new=self._fake_run_completed),
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["eval", "--runs", "run1"])
+            self.assertEqual(ctx.exception.code, 0)
+
+    def test_runs_mode_missing_final_result_is_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            (outputs_dir / "run-empty").mkdir()
+            with (
+                patch.object(main, "get_cli_openai_client", return_value=object()),
+                patch.object(main, "OUTPUTS_DIR", outputs_dir),
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["eval", "--runs", "run-empty"])
+            self.assertEqual(ctx.exception.code, 1)
+
+    def test_pairs_mode_success(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_pdf = root / "source.pdf"
+            source_pdf.write_bytes(b"%PDF-1.4 s")
+            gen_pdf = root / "gen.pdf"
+            gen_pdf.write_bytes(b"%PDF-1.4 g")
+
+            with (
+                patch.object(main, "get_cli_openai_client", return_value=object()),
+                patch.object(api_state, "run_eval_batch_async", new=self._fake_run_completed),
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["eval", "--pairs", str(source_pdf), str(gen_pdf)])
+            self.assertEqual(ctx.exception.code, 0)
+
+    def test_pairs_mode_missing_path_is_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source_pdf = Path(tmp) / "source.pdf"
+            source_pdf.write_bytes(b"%PDF-1.4 s")
+            missing_gen = Path(tmp) / "does-not-exist.pdf"
+            with patch.object(main, "get_cli_openai_client", return_value=object()):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["eval", "--pairs", str(source_pdf), str(missing_gen)])
+            self.assertEqual(ctx.exception.code, 1)
+
+
+class ImproveCommandTests(unittest.TestCase):
+    """`improve` must forward argv verbatim to the meta-evaluator's propose-only CLI."""
+
+    def test_forwards_argv_and_exit_code(self) -> None:
+        captured: dict = {}
+
+        def _fake_main(argv: list[str]) -> int:
+            captured["argv"] = argv
+            return 0
+
+        with patch.object(meta_evaluator, "main", side_effect=_fake_main):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main(["improve", "--eval-dir", "X", "--labels", "Y", "--kappa-floor", "0.4"])
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertEqual(
+            captured["argv"],
+            ["--eval-dir", "X", "--labels", "Y", "--kappa-floor", "0.4"],
+        )
+
+    def test_nonzero_exit_propagates(self) -> None:
+        with patch.object(meta_evaluator, "main", return_value=1):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main(["improve", "--eval-dir", "X"])
+        self.assertEqual(ctx.exception.code, 1)
+
+
+class CompareProfessorCommandTests(unittest.TestCase):
+    """`compare-professor` mirrors the retired script's exit codes: 2 for a
+    missing batch/workbook, 3 for a comparison failure, 0 with a summary."""
+
+    def test_success_prints_summary(self) -> None:
+        from backend.src.tools import professor_comparison
+
+        with tempfile.TemporaryDirectory() as tmp:
+            batch_dir = Path(tmp)
+            outcome = {
+                "report": {"summary": {"mean_kappa": 0.5, "mean_raw_agreement": 0.9}},
+                "xlsx_path": batch_dir / "XLSX" / "compiled.xlsx",
+                "report_path": batch_dir / "XLSX" / "judge_agreement_report.json",
+                "disagreements_path": batch_dir / "XLSX" / "judge_disagreements.csv",
+                "pdfs_compared": ["entry-1"],
+            }
+            with (
+                patch.object(main, "_resolve_output_folder", return_value=batch_dir),
+                patch.object(
+                    professor_comparison, "run_professor_comparison", return_value=outcome
+                ) as run_mock,
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["compare-professor", "batch-label", "--source", "physics_1_set"])
+            self.assertEqual(ctx.exception.code, 0)
+            self.assertEqual(run_mock.call_args.kwargs.get("source_stem"), "physics_1_set")
+
+    def test_missing_batch_exits_two(self) -> None:
+        with patch.object(main, "_resolve_output_folder", side_effect=FileNotFoundError("nope")):
+            with self.assertRaises(SystemExit) as ctx:
+                main.main(["compare-professor", "missing-batch"])
+        self.assertEqual(ctx.exception.code, 2)
+
+    def test_missing_workbook_exits_two(self) -> None:
+        from backend.src.tools import professor_comparison
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch.object(main, "_resolve_output_folder", return_value=Path(tmp)),
+                patch.object(
+                    professor_comparison,
+                    "run_professor_comparison",
+                    side_effect=FileNotFoundError("Professor workbook not found"),
+                ),
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["compare-professor", "batch-label"])
+            self.assertEqual(ctx.exception.code, 2)
+
+    def test_comparison_failure_exits_three(self) -> None:
+        from backend.src.tools import professor_comparison
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch.object(main, "_resolve_output_folder", return_value=Path(tmp)),
+                patch.object(
+                    professor_comparison,
+                    "run_professor_comparison",
+                    side_effect=professor_comparison.ProfessorComparisonError("no overlap"),
+                ),
+            ):
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(["compare-professor", "batch-label"])
+            self.assertEqual(ctx.exception.code, 3)
 
 
 if __name__ == "__main__":

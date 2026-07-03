@@ -19,7 +19,7 @@ of running this skill.
 ## When to use
 
 - After an evaluation run: `site/backend/outputs/<ts>/evaluation_outputs/`.
-- Over a phase-1 eval batch: each `Other/<ts>-...-eval-batch/<pdf>/evaluation_outputs/`.
+- Over an eval batch: each `site/backend/outputs/<batch>/<entry>/evaluation_outputs/`.
 - When you have a labeled calibration dataset (graded by the latest grader, or
   professor labels) and want a per-criterion Cohen's kappa PASS/FAIL gate.
 
@@ -36,8 +36,8 @@ Batch (repeat `--eval-dir`, results aggregate across dirs):
 
 ```bash
 .venv/bin/python -m backend.src.tools.meta_evaluator \
-  --eval-dir ../Other/<ts>-...-eval-batch/<pdfA>/evaluation_outputs \
-  --eval-dir ../Other/<ts>-...-eval-batch/<pdfB>/evaluation_outputs
+  --eval-dir backend/outputs/<batch>/<entryA>/evaluation_outputs \
+  --eval-dir backend/outputs/<batch>/<entryB>/evaluation_outputs
 ```
 
 It prints a markdown summary to stdout and writes

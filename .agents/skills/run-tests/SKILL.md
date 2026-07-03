@@ -26,7 +26,6 @@ python -m ruff check . 2>&1
 - `pytest` target: all tests under `backend/` (auto-discovered via `pyproject.toml`).
 - `-x` stops on first failure — avoids burying the signal in a long output.
 - `ruff check .` enforces line-length 110, target py310 (see `pyproject.toml`).
-- Pre-existing `ruff` warnings in `Other/` scripts are not yours — diff to confirm.
 
 ## Step 3 — Frontend: vitest + eslint
 

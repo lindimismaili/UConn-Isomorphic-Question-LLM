@@ -1,4 +1,5 @@
 import Modal from "./Modal.jsx";
+import CompareProfessorPanel from "./CompareProfessorPanel.jsx";
 import { IconFile, IconFolder, IconZap } from "../Icons.jsx";
 import { useAgentRegistry } from "../../hooks/useAgentRegistry";
 import { Button, Pill } from "../ui/index.js";
@@ -122,6 +123,11 @@ export default function CreateDataModal({
         {createData.error && (
           <div className="create-data-alert">{createData.error}</div>
         )}
+
+        {["completed", "errored", "cancelled"].includes(createData.status) &&
+          createData.outputFolder && (
+            <CompareProfessorPanel outputFolder={createData.outputFolder} />
+          )}
 
         <div className="output-folder-note">
           <IconFolder />

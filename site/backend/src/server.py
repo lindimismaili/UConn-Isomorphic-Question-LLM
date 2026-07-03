@@ -30,6 +30,7 @@ from backend.src.api.config import router as config_router
 from backend.src.api.eval_batch import router as eval_batch_router
 from backend.src.api.files import router as files_router
 from backend.src.api.health import router as health_router
+from backend.src.api.professor_comparison import router as professor_comparison_router
 from backend.src.api.workflows import router as workflows_router
 from backend.src.paths import DIST_DIR
 from backend.src.registry import api_description as _api_description
@@ -72,6 +73,7 @@ app.include_router(files_router)
 app.include_router(workflows_router)
 app.include_router(batch_router)
 app.include_router(eval_batch_router)
+app.include_router(professor_comparison_router)
 
 
 # Mount static files last so API routes win.

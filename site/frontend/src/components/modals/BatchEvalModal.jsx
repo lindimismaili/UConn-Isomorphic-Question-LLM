@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal.jsx';
+import CompareProfessorPanel from './CompareProfessorPanel.jsx';
 import { IconZap, IconUpload, IconFile } from '../Icons.jsx';
 import { Button, Pill } from '../ui/index.js';
 
@@ -185,6 +186,7 @@ export default function BatchEvalModal({ isOpen, onClose, batchEval, loadRuns })
                 </div>
               </div>
             </div>
+            <CompareProfessorPanel outputFolder={batchEval.outputFolder} />
           </div>
         )}
 

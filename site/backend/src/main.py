@@ -15,6 +15,7 @@ Subcommand map (CLI verb -> API endpoint):
     from-agent-input    POST /api/workflow/start-from-agent-input
     batch               POST /api/create-data/start (+ status/result)
     eval                POST /api/eval-batch/start   (+ status/result)
+    compare-professor   POST /api/outputs/{label}/compare-professor
     improve             (offline meta-evaluator tool; no web route)
     show                GET  /api/workflow/{id}/result (from final_result.json)
     zip                 GET  /api/download-zip/{id}
@@ -82,6 +83,7 @@ _SUBCOMMANDS = frozenset(
         "from-agent-input",
         "batch",
         "eval",
+        "compare-professor",
         "improve",
         "show",
         "zip",
@@ -125,22 +127,17 @@ def _new_cli_workflow_record() -> dict[str, Any]:
 def _resolve_output_folder(label: str) -> Path:
     """Resolve and validate an output-folder label under OUTPUTS_DIR.
 
-    Mirrors the server's ``_resolve_output_folder_label`` traversal guard but
-    raises plain errors (the CLI has no HTTP layer).
+    Thin CLI wrapper over the server's shared resolver: same traversal guard,
+    but plain ``ValueError``/``FileNotFoundError`` (the CLI has no HTTP layer).
     """
-    rel_path = Path((label or "").strip())
-    if not rel_path.parts:
-        raise ValueError("output folder label is required")
-    if rel_path.is_absolute() or any(part in {"", ".", ".."} for part in rel_path.parts):
-        raise ValueError(f"Invalid output folder label: {label!r}")
-    output_dir = (OUTPUTS_DIR / rel_path).resolve()
+    from backend.src.api.state import OutputFolderError, _resolve_output_folder_path
+
     try:
-        output_dir.relative_to(OUTPUTS_DIR.resolve())
-    except ValueError as exc:
-        raise ValueError(f"Invalid output folder label: {label!r}") from exc
-    if not output_dir.exists() or not output_dir.is_dir():
-        raise FileNotFoundError(f"Output folder not found: {label}")
-    return output_dir
+        return _resolve_output_folder_path(label)
+    except OutputFolderError as exc:
+        if exc.not_found:
+            raise FileNotFoundError(str(exc)) from exc
+        raise ValueError(str(exc)) from exc
 
 
 def _relative_output_folder(output_dir: Path) -> str:
@@ -154,23 +151,12 @@ def _relative_output_folder(output_dir: Path) -> str:
 def _resolve_test_files(rel_paths: list[str]) -> list[str]:
     """Resolve bundled test-file selections under EVALUATION_FIXTURES_DIR.
 
-    Mirrors the server's ``testFiles`` handling in ``start_workflow``: each path
-    is resolved under the fixtures dir and traversal outside is rejected.
+    Thin wrapper over the server's shared resolver in strict mode: any bad
+    entry raises instead of being silently skipped.
     """
-    from backend.src.api.state import ALLOWED_UPLOAD_EXTENSIONS, _is_under_directory
+    from backend.src.api.state import _resolve_evaluation_fixture_paths
 
-    resolved: list[str] = []
-    for rel in rel_paths or []:
-        candidate = (EVALUATION_FIXTURES_DIR / Path(str(rel))).resolve()
-        if (
-            _is_under_directory(candidate, EVALUATION_FIXTURES_DIR)
-            and candidate.is_file()
-            and candidate.suffix.lower() in ALLOWED_UPLOAD_EXTENSIONS
-        ):
-            resolved.append(str(candidate))
-        else:
-            raise FileNotFoundError(f"Test file not found under data/evaluation: {rel}")
-    return resolved
+    return _resolve_evaluation_fixture_paths(rel_paths, strict=True)
 
 
 # ── Core single-run engine wrapper ────────────────────────────────────────────
@@ -566,6 +552,36 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     return 0 if batch.get("failedFiles", 0) == 0 and batch.get("status") == "completed" else 1
 
 
+def _cmd_compare_professor(args: argparse.Namespace) -> int:
+    """Compare a batch's judge grades against the professor's workbook."""
+    from backend.src.tools.professor_comparison import (
+        ProfessorComparisonError,
+        run_professor_comparison,
+    )
+
+    try:
+        batch_dir = _resolve_output_folder(args.batch)
+    except (ValueError, FileNotFoundError) as exc:
+        logger.error("%s", exc)
+        return 2
+
+    professor = Path(args.professor) if args.professor else None
+    try:
+        outcome = run_professor_comparison(batch_dir, professor, source_stem=args.source or "")
+    except FileNotFoundError as exc:
+        logger.error("%s", exc)
+        return 2
+    except ProfessorComparisonError as exc:
+        logger.error("%s", exc)
+        return 3
+
+    print(json.dumps(outcome["report"]["summary"], indent=2))
+    print(f"\nWrote {outcome['report_path']}")
+    print(f"Wrote {outcome['disagreements_path']}")
+    print(f"Updated {outcome['xlsx_path']} (Agreement sheet)")
+    return 0
+
+
 def _cmd_improve(args: argparse.Namespace) -> int:
     """Run the propose-only meta-evaluator over an evaluation dir."""
     from backend.src.tools import meta_evaluator
@@ -654,19 +670,22 @@ def _cmd_list(args: argparse.Namespace) -> int:
         for path in _list_evaluation_source_files():
             print(path.relative_to(EVALUATION_FIXTURES_DIR).as_posix())
     elif what == "runs":
+        from backend.src.api.state import _run_summary
+
         if not OUTPUTS_DIR.exists():
             return 0
-        found: list[tuple[float, str]] = []
+        found: list[tuple[float, str, dict[str, Any]]] = []
         for result_path in OUTPUTS_DIR.rglob("final_result.json"):
             run_dir = result_path.parent
+            summary = _run_summary(run_dir)
+            if summary is None:
+                continue
             label = _relative_output_folder(run_dir)
-            try:
-                mtime = run_dir.stat().st_mtime
-            except OSError:
-                mtime = 0.0
-            found.append((mtime, label))
-        for _mtime, label in sorted(found, reverse=True):
-            print(label)
+            found.append((summary.get("mtime", 0.0), label, summary))
+        for _mtime, label, summary in sorted(found, key=lambda item: item[0], reverse=True):
+            score = summary.get("existingScore")
+            score_text = f"{score}" if summary.get("hasEval") and score is not None else "-"
+            print(f"{label}  questions={summary.get('questionCount', 0)}  score={score_text}")
     return 0
 
 
@@ -791,6 +810,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Source PDF followed by one or more generated PDFs",
     )
     p_eval.set_defaults(func=_cmd_eval)
+
+    # compare-professor ---------------------------------------------------------
+    p_compare = subparsers.add_parser(
+        "compare-professor",
+        help="Compare a batch's judge grades against the professor's hand-graded workbook",
+    )
+    p_compare.add_argument("batch", metavar="FOLDER", help="Batch output-folder label")
+    p_compare.add_argument(
+        "--professor",
+        default="",
+        metavar="PATH",
+        help="Professor workbook (default: data/professor_comparison/Evaluation.xlsx)",
+    )
+    p_compare.add_argument(
+        "--source",
+        default="",
+        metavar="STEM",
+        help="Source-PDF stem for category averages (see data/professor_comparison/source_classification.json)",
+    )
+    p_compare.set_defaults(func=_cmd_compare_professor)
 
     # improve -----------------------------------------------------------------
     p_improve = subparsers.add_parser("improve", help="Run the propose-only meta-evaluator")
