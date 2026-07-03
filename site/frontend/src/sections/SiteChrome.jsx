@@ -71,6 +71,11 @@ export function SiteFooter({ version }) {
       </p>
       <p className="footer-primary">Created by Lindim Ismaili</p>
       {version != null ? <p className="footer-secondary">{version}</p> : null}
+      {import.meta.env.DEV ? (
+        <p className="footer-secondary">
+          <a href="/design-system.html">Design system</a>
+        </p>
+      ) : null}
     </Footer>
   );
 }

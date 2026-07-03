@@ -148,6 +148,20 @@ describe('status + feedback', () => {
     expect(container.querySelector('.eval-score-chip').className).toBe('eval-score-chip is-fail');
   });
 
+  it('ScoreChip with onClick renders an interactive button', () => {
+    let clicked = false;
+    render(
+      <ScoreChip tone="pass" onClick={() => { clicked = true; }}>
+        1
+      </ScoreChip>,
+    );
+    const chip = container.querySelector('button.eval-score-chip');
+    expect(chip.className).toBe('eval-score-chip is-pass is-clickable');
+    expect(chip.getAttribute('type')).toBe('button');
+    act(() => chip.click());
+    expect(clicked).toBe(true);
+  });
+
   it('Pill maps state', () => {
     render(<Pill state="running">Running</Pill>);
     expect(container.querySelector('span').className).toBe('create-data-pill is-running');

@@ -1,3 +1,4 @@
+import { DataTable } from '../../ui/index.js';
 import { formatScore } from './evalData.js';
 
 /**
@@ -10,7 +11,7 @@ import { formatScore } from './evalData.js';
 export default function EvalAggregateTable({ rows }) {
   return (
     <div className="eval-table-shell">
-      <table className="eval-table eval-aggregate-table">
+      <DataTable variant="eval" className="eval-aggregate-table">
         <thead>
           <tr>
             <th>Criterion</th>
@@ -29,7 +30,7 @@ export default function EvalAggregateTable({ rows }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </DataTable>
     </div>
   );
 }

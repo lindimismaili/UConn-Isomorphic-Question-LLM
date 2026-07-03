@@ -64,6 +64,33 @@ export function Spec({ label, children, style }) {
   );
 }
 
+/**
+ * Tile chrome for one manifest entry in the Components showcase: a bordered,
+ * padded card-like frame around a live specimen + its metadata (name,
+ * summary, prop table, usage snippet). Not the real `Card` primitive — this
+ * is catalog-only chrome, so it stays a token-referencing inline style like
+ * the other helpers in this file.
+ */
+export function SpecimenTile({ children, style }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--spacing-sm)',
+        padding: 'var(--spacing-md)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--color-surface)',
+        minWidth: 0,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** A color swatch tile showing the token chip, name, and resolved value. */
 export function Swatch({ token, label }) {
   const value = useTokenValue(token);

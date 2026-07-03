@@ -56,14 +56,28 @@ export function StatusChip({ status, className = '', children, ...rest }) {
 
 /**
  * Eval score chip (`.eval-score-chip` + `.is-pass|.is-fail|.is-neutral`).
+ * Passing `onClick` (or `interactive`) renders a real `<button>` with
+ * `.is-clickable` instead of the default `<span>`.
  *
  * @param {object} props
  * @param {'pass'|'fail'|'neutral'} props.tone
+ * @param {boolean} [props.interactive]
+ * @param {() => void} [props.onClick]
  * @param {string} [props.className]
  * @param {import('react').ReactNode} [props.children]
  */
-export function ScoreChip({ tone = 'neutral', className = '', children, ...rest }) {
-  const classes = ['eval-score-chip', `is-${tone}`, className].filter(Boolean).join(' ');
+export function ScoreChip({ tone = 'neutral', interactive = false, onClick, className = '', children, ...rest }) {
+  const isInteractive = interactive || typeof onClick === 'function';
+  const classes = ['eval-score-chip', `is-${tone}`, isInteractive ? 'is-clickable' : '', className]
+    .filter(Boolean)
+    .join(' ');
+  if (isInteractive) {
+    return (
+      <button type="button" className={classes} onClick={onClick} {...rest}>
+        {children}
+      </button>
+    );
+  }
   return (
     <span className={classes} {...rest}>
       {children}

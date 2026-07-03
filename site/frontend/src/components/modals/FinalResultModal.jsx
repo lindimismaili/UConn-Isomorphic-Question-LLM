@@ -3,7 +3,7 @@ import Modal from './Modal.jsx';
 import { IconDownload } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
 import { DEFAULT_PASSING_THRESHOLD } from './eval/evalData.js';
-import { Button, EmptyState, Tabs } from '../ui/index.js';
+import { Button, DataTable, EmptyState, KeyValueTable, Tabs } from '../ui/index.js';
 
 const TABS = ['Config', 'Source Questions', 'Generated Questions', 'Evaluation'];
 
@@ -18,20 +18,11 @@ function stripLatex(text) {
 
 function ConfigTab({ config }) {
   if (!config) return <EmptyState variant="modal">No config data.</EmptyState>;
-  const entries = Object.entries(config);
-  return (
-    <div className="viewer-kv-table">
-      {entries.map(([k, v]) => {
-        const isEmpty = v === null || v === undefined || v === '';
-        return (
-          <div className="viewer-kv-row" key={k}>
-            <span className="viewer-kv-key">{k.replaceAll('_', ' ')}</span>
-            <span className="viewer-kv-value">{isEmpty ? 'None' : String(v)}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
+  const rows = Object.entries(config).map(([k, v]) => {
+    const isEmpty = v === null || v === undefined || v === '';
+    return { key: k.replaceAll('_', ' '), value: isEmpty ? 'None' : String(v) };
+  });
+  return <KeyValueTable rows={rows} />;
 }
 
 function OptionRow({ option, showMarker }) {
@@ -127,7 +118,7 @@ function EvaluationTab({ evaluation, onViewInDepth }) {
     <div className="viewer-body-stack">
       {Object.keys(criterionScores).length > 0 && (
         <div className="file-viewer-table-shell">
-          <table className="file-viewer-table eval-summary-table">
+          <DataTable variant="file-viewer" className="eval-summary-table">
             <thead>
               <tr>
                 <th>Criterion</th>
@@ -171,7 +162,7 @@ function EvaluationTab({ evaluation, onViewInDepth }) {
                 );
               })}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       )}
       <div className="viewer-eval-footer">

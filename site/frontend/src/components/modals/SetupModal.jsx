@@ -1,6 +1,6 @@
 import Modal from './Modal.jsx';
 import { useAgentRegistry } from '../../hooks/useAgentRegistry';
-import { Button } from '../ui/index.js';
+import { Button, KeyValueTable } from '../ui/index.js';
 
 /**
  * Details for the runtime starter phase shown in the pipeline: the runtime
@@ -52,14 +52,7 @@ export default function SetupModal({ isOpen, onClose, workflowId, runInputs }) {
         </p>
 
         <h4>Runtime Parameters</h4>
-        <div className="viewer-kv-table">
-          {parameters.map(({ key, value }) => (
-            <div className="viewer-kv-row" key={key}>
-              <span className="viewer-kv-key">{key}</span>
-              <span className="viewer-kv-value">{value}</span>
-            </div>
-          ))}
-        </div>
+        <KeyValueTable rows={parameters} />
 
         {packages.length > 0 && (
           <>

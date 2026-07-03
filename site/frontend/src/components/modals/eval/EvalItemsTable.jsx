@@ -1,4 +1,4 @@
-import { Badge, StatusChip } from '../../ui/index.js';
+import { Badge, DataTable, ScoreChip, StatusChip } from '../../ui/index.js';
 import { formatScore } from './evalData.js';
 
 /**
@@ -11,7 +11,7 @@ import { formatScore } from './evalData.js';
 export default function EvalItemsTable({ rows, onCriterionClick }) {
   return (
     <div className="eval-table-shell">
-      <table className="eval-table">
+      <DataTable variant="eval">
         <thead>
           <tr>
             <th>Source ID</th>
@@ -42,29 +42,28 @@ export default function EvalItemsTable({ rows, onCriterionClick }) {
               <td>
                 <div className="eval-chip-grid">
                   {row.evaluations.map((evaluation) => (
-                    <button
-                      className={`eval-score-chip ${
-                        evaluation.passed === false
-                          ? 'is-fail'
-                          : evaluation.passed === true
-                            ? 'is-pass'
-                            : 'is-neutral'
-                      }${onCriterionClick ? ' is-clickable' : ''}`}
+                    <ScoreChip
                       key={evaluation.key}
+                      tone={
+                        evaluation.passed === false
+                          ? 'fail'
+                          : evaluation.passed === true
+                            ? 'pass'
+                            : 'neutral'
+                      }
                       onClick={onCriterionClick ? () => onCriterionClick(evaluation) : undefined}
                       title={onCriterionClick ? `View reasoning for ${evaluation.label}` : evaluation.label}
-                      type="button"
                     >
                       <span>{evaluation.label}</span>
                       <strong>{formatScore(evaluation.score)}</strong>
-                    </button>
+                    </ScoreChip>
                   ))}
                 </div>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </DataTable>
     </div>
   );
 }
