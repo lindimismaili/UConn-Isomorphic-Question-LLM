@@ -3,16 +3,16 @@
   "tasks": [
     {
       "label": "Run Web Preview",
-      "type": "shell",
-      "command": "bash",
+      "type": "process",
+      "command": "node",
       "args": [
-        "deploy/preview.sh",
+        "deploy/preview.mjs",
         "--web"
       ],
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
-          "LOCAL_DOMAIN": "isomorphic.localhost",
+          "LOCAL_DOMAIN": "localhost",
           "WEB_PORT": "8000"
         }
       },
@@ -25,18 +25,18 @@
       }
     },
     {
-      "label": "Run Dev Preview",
-      "type": "shell",
-      "command": "bash",
+      "label": "Run Dev Mode",
+      "type": "process",
+      "command": "node",
       "args": [
-        "deploy/preview.sh",
+        "deploy/preview.mjs",
         "--dev"
       ],
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
           "PORT": "5173",
-          "LOCAL_DOMAIN": "isomorphic.localhost",
+          "LOCAL_DOMAIN": "localhost",
           "BACKEND_PORT": "8000"
         }
       },
