@@ -457,12 +457,12 @@ build_frontend() {
 
 write_version() {
   local dist_dir="${DEPLOY_DIR}/site/dist"
-  local commit_sha="unknown"
-  local commit_short="unknown"
-  local commit_time="unknown"
+  local commit_sha="${DEPLOY_COMMIT_SHA:-unknown}"
+  local commit_short="${DEPLOY_COMMIT_SHORT:-unknown}"
+  local commit_time="${DEPLOY_COMMIT_TIME:-unknown}"
   local published_at
 
-  if command -v git >/dev/null 2>&1 && git -C "${REPO_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if [[ "${commit_sha}" == "unknown" ]] && command -v git >/dev/null 2>&1 && git -C "${REPO_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     commit_sha="$(git -C "${REPO_DIR}" rev-parse HEAD 2>/dev/null || echo 'unknown')"
     commit_short="$(git -C "${REPO_DIR}" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
     commit_time="$(git -C "${REPO_DIR}" log -1 --format=%cI 2>/dev/null || echo 'unknown')"
@@ -1478,6 +1478,11 @@ run_auto_update() {
   git_as_owner clean -ffd \
     -e "site/backend/uploads" \
     -e "site/backend/outputs"
+
+  export DEPLOY_COMMIT_SHA="${remote_sha}"
+  export DEPLOY_COMMIT_SHORT="${remote_sha:0:7}"
+  DEPLOY_COMMIT_TIME="$(git_as_owner log -1 --format=%cI "${remote_sha}")"
+  export DEPLOY_COMMIT_TIME
 
   require_sudo
   sync_repo_to_deploy_dir
