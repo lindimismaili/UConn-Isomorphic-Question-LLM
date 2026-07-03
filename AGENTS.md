@@ -97,8 +97,7 @@ Frontend:
   `/api/agents` once; exports `useAgentRegistry()` hook (React) and `getDerivedRegistry()`
   sync accessor (for reducers). All pipeline keys, labels, and routing derive from this.
 - `site/frontend/src/hooks/useWorkflow.js` (status polling; dispatches `WORKFLOW_BLOCKED`),
-  `useTokenStream.js` (SSE consumer for the cosmetic matrix streaming effect; polling stays
-  authoritative), `useAgents.js` (triggers registry load), `useCreateData.js`, `useFileUpload.js`
+  `useAgents.js` (triggers registry load), `useCreateData.js`, `useFileUpload.js`
 - `site/frontend/src/utils/` — shared `api.js` (HTTP client), `abortableSleep.js`,
   `ids.js`, `files.js` (file `getViewerType` dispatch + download URL helpers)
 - `site/frontend/src/components/modals/` (one `Modal.jsx` shell; `eval/` holds the
@@ -269,18 +268,23 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 
 - The engine emits token deltas via `emit_token(agent_key, delta)` → a per-workflow
   queue in `api/state.py` → the SSE endpoint `GET /api/workflow/{id}/stream`, which
-  emits named events `token` `{agent, delta}`, `status`, and `done`. This powers the
-  frontend "matrix" streaming effect. **Polling `/status` stays authoritative** and its
-  payload now includes a `blocked` field.
+  emits named events `token` `{agent, delta}`, `status`, and `done`. The endpoint
+  still exists, but the frontend **no longer consumes it** (the matrix token-stream
+  effect was removed; the Stepper cycles a status word above the thinking node
+  instead). **Polling `/status` stays authoritative** and its payload includes a
+  `blocked` field.
 
 ### Frontend
 
 - React 19 + Vite 7; centralized `useReducer` state (reducer in `src/state/reducer.js`),
-  wired in `App.jsx`. The primary view is a **chat conversation** with a Developer-Tools
-  side panel; all modals/features are preserved.
+  wired in `App.jsx`. The primary view is a **chat conversation**; a header
+  **site-mode dropdown** (User / Teacher / Dev, persisted in `localStorage`
+  `uiMode`) gates the Developer-Tools side panel (dev only) and swaps the
+  empty-conversation hint copy. All modals/features are preserved.
 - Progress comes from **polling** `GET /api/workflow/{id}/status` (see `useWorkflow.js`),
-  which stays authoritative. The SSE `/stream` endpoint **is now real**: `useTokenStream.js`
-  consumes it to drive a cosmetic "matrix" token-stream effect only.
+  which stays authoritative. The frontend no longer consumes the SSE `/stream`
+  endpoint — while an agent works, the Stepper cycles a status word
+  ("Thinking…", "Combobulating…", …) above that node and auto-scrolls it into view.
 - All HTTP goes through `src/utils/api.js` (`requestJson`, `getJsonOrNull`,
   `fetchWithAbort`) — don't hand-roll `fetch` + error handling in hooks.
 - Styling follows `site/frontend/DESIGN.md`: design tokens in `:root`, one `.btn`
@@ -296,7 +300,7 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   StatusChip/ScoreChip/Pill, Chip, StatusDot, LogItem/LogList, EmptyState, Tabs,
   DataTable/KeyValueTable, Modal, AppShell/PageHeader/Banner/Footer, plus the
   chat primitives Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer/
-  Stepper/TokenStream) — not from raw `<button className="btn …">` /
+  Stepper) — not from raw `<button className="btn …">` /
   `<input>` / ad-hoc class strings. An ESLint rule forbids raw `.btn`/`.card`/control
   class strings in `components/**` outside `ui/`. Primitives are thin wrappers over the
   documented classes (no new CSS). If a genuinely new element is needed, add it
@@ -434,7 +438,7 @@ Routes live in `site/backend/src/api/` (registered on the app in `server.py`):
   a guardrail-tripped run has terminal status `blocked`)
 - `GET /api/workflow/{workflow_id}/result`
 - `GET /api/workflow/{workflow_id}/stream` (SSE; emits named events `token` `{agent,delta}`,
-  `status`, and `done` — powers the frontend token-stream effect; polling `/status` stays authoritative)
+  `status`, and `done` — no longer consumed by the frontend UI; polling `/status` stays authoritative)
 - `GET /api/download/{workflow_id}/{file_path}`
 - `GET /api/download-zip/{workflow_id}` (zips the whole output folder once,
   reuses the archive on later requests)
@@ -538,7 +542,7 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 | Grader self-improvement proposals | `site/backend/src/tools/meta_evaluator.py`, `.agents/grader-review/SKILL.md` |
 | Judge ↔ professor agreement | `site/backend/src/tools/judge_agreement.py`, `site/backend/src/tools/professor_comparison.py`, `site/backend/data/professor_comparison/` |
 | Frontend UX / state | `site/frontend/src/App.jsx`, `site/frontend/src/state/reducer.js`, `site/frontend/src/state/transcript.js`, `site/frontend/src/hooks/**`, `site/frontend/src/components/**` |
-| Chat surface / token streaming | `site/frontend/src/sections/ChatConversation.jsx`, `site/frontend/src/components/ui/Chat.jsx` (Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer), `site/frontend/src/components/ui/Stepper.jsx`, `site/frontend/src/components/ui/TokenStream.jsx`, `site/frontend/src/hooks/useTokenStream.js` |
+| Chat surface / process rail | `site/frontend/src/sections/ChatConversation.jsx`, `site/frontend/src/components/ui/Chat.jsx` (Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer), `site/frontend/src/components/ui/Stepper.jsx` (incl. the cycling thinking words + auto-scroll) |
 | Frontend styling / design system | `site/frontend/DESIGN.md`, `site/frontend/src/styles/app.css` |
 | Add/extend a UI primitive (template) | `site/frontend/src/components/ui/*` + `ui/index.js`, then `site/frontend/src/design-system/sections/Components.jsx` + `ui/ui.test.jsx` + `site/frontend/DESIGN.md` §14 |
 | Design-system showcase page | `site/frontend/design-system.html`, `site/frontend/src/design-system/**`, `site/frontend/vite.config.js` (multi-page input) |
@@ -569,8 +573,12 @@ operational guides, not source of truth for local development.
   two `kind: "guardrail"` nodes); the list is driven by `useAgentRegistry()`, not hardcoded.
   Guardrail nodes are display/animation-only — they're excluded from the runnable/stoppable/LLM
   sets (`input_to_agent_sequence()`/`llm_agents()`/`stoppable_agents()` skip `kind == "guardrail"`).
-- The SSE `/stream` endpoint is **real and in use** (cosmetic token-stream effect via
-  `useTokenStream.js`); polling `/status` remains the authoritative status source.
+- The SSE `/stream` endpoint still exists on the backend but is **not consumed by the
+  frontend** (the matrix token-stream effect was removed); polling `/status` remains
+  the authoritative status source.
+- The site has three modes — **User / Teacher / Dev** — via the header `.mode-select`
+  dropdown (persisted in `localStorage` `uiMode`). Only Dev shows the Developer-Tools
+  side panel; the App smoke test sets `uiMode=dev` before rendering.
 - A guardrail-tripped run ends in the terminal **`blocked`** status (distinct from `error`),
   surfaced as a top-level `blocked` field on the status payload.
 - `dist/` is generated by `npm -C site/frontend run build`; it is gitignored.

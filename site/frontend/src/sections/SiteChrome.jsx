@@ -6,10 +6,17 @@
  * here, so the header/footer/banner exist once, not duplicated as raw markup.
  */
 
-import { Banner, PageHeader, Footer } from '../components/ui/index.js';
+import { Banner, PageHeader, Footer, Select } from '../components/ui/index.js';
 
 /** Physics-academic motif surfaced behind the navy masthead. */
 export const HEADER_MOTIF = '/assets/physics-motif.svg';
+
+/** The three site modes surfaced by the header mode dropdown. */
+const SITE_MODES = [
+  { value: 'user', label: 'User Mode' },
+  { value: 'teacher', label: 'Teacher Mode' },
+  { value: 'dev', label: 'Dev Mode' },
+];
 
 /** The UConn Physics Research brand mark (right slot of the masthead). */
 export function UConnMark() {
@@ -22,14 +29,18 @@ export function UConnMark() {
 }
 
 /**
- * SiteHeader — the physics-academic masthead: AI logo + serif title on the
- * left, the UConn brand mark on the right, with the physics motif behind.
+ * SiteHeader — the physics-academic masthead: AI logo + serif title (followed
+ * by the site-mode dropdown) on the left, the UConn brand mark on the right,
+ * with the physics motif behind.
  *
  * @param {object} [props]
  * @param {string} [props.title]
  * @param {import('react').ReactNode} [props.aside] - Override the right slot.
+ * @param {'user'|'teacher'|'dev'} [props.mode] - Current site mode.
+ * @param {(mode: string) => void} [props.onModeChange] - Renders the mode
+ *   dropdown right after the title when provided.
  */
-export function SiteHeader({ title = 'Isomorphic Question Generator', aside }) {
+export function SiteHeader({ title = 'Isomorphic Question Generator', aside, mode, onModeChange }) {
   return (
     <PageHeader
       motif={HEADER_MOTIF}
@@ -37,6 +48,15 @@ export function SiteHeader({ title = 'Isomorphic Question Generator', aside }) {
         <div className="logo">
           <span className="logo-icon logo-icon-ai" aria-hidden="true" />
           <h1>{title}</h1>
+          {onModeChange ? (
+            <Select
+              className="mode-select"
+              aria-label="Site mode"
+              value={mode}
+              onChange={(event) => onModeChange(event.target.value)}
+              options={SITE_MODES}
+            />
+          ) : null}
         </div>
       }
       aside={aside ?? <UConnMark />}

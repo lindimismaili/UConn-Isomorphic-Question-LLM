@@ -14,7 +14,6 @@ import {
   LogList,
   PageHeader,
   Stepper,
-  TokenStream,
   TypingIndicator,
 } from '../../components/ui/index.js';
 import { HEADER_MOTIF, UConnMark } from '../../sections/SiteChrome.jsx';
@@ -82,7 +81,7 @@ export default function Patterns() {
       </h2>
 
       <Card>
-        <CardHeader title="Chat-first conversation" subtitle="The primary surface: a Stepper process-rail (TokenStream on the active node) above a ChatTranscript, with the Composer pinned below. The reducer's agents/logs/result project into messages." />
+        <CardHeader title="Chat-first conversation" subtitle="The primary surface: a Stepper process-rail (a status word cycles above the thinking node) above a ChatTranscript, with the Composer pinned below. The reducer's agents/logs/result project into messages." />
         <CardBody>
           <div className="chat-shell">
             <div className="chat-rail">
@@ -90,7 +89,6 @@ export default function Patterns() {
                 nodes={CHAT_STEPPER_NODES}
                 onNodeClick={() => {}}
                 activeKey="generator"
-                stream={<TokenStream active text={'∫ F·dr = ΔKE\nGenerating distractor (b)…'} />}
               />
             </div>
             <ChatTranscript count={3} style={{ maxHeight: 260 }}>

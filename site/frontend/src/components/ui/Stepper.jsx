@@ -5,10 +5,13 @@
  * the host can open that node's modal. The node list is caller-supplied (the
  * host derives it from the agent registry — the Stepper never hardcodes keys).
  *
- * An optional `stream` slot (usually a `TokenStream`) renders inside the active
- * node so live token output shows exactly where work is happening.
+ * While a node is `thinking`, a cycling status word ("Thinking…",
+ * "Combobulating…", …) shows above its icon, and the rail auto-scrolls to keep
+ * the active node centered as the workflow advances. Labels are always a single
+ * ellipsized line so every node stays the same height.
  */
 
+import { useEffect, useRef, useState } from 'react';
 import { IconShield, IconComputer, IconLightbulb, IconPatchCheck, IconPatchExclamation } from '../Icons.jsx';
 
 /** Status → semantic dot class (mirrors the `.status-indicator` families). */
@@ -21,6 +24,46 @@ const STEP_STATUS = {
   errored: 'errored',
   cancelled: 'cancelled',
 };
+
+/** Playful status words cycled above the active node's icon while it works. */
+const THINKING_WORDS = [
+  'Thinking',
+  'Combobulating',
+  'Cogitating',
+  'Percolating',
+  'Synthesizing',
+  'Calculating',
+  'Pondering',
+  'Distilling',
+  'Reasoning',
+  'Assembling',
+  'Calibrating',
+  'Conjuring',
+];
+
+/** How often the thinking word above the active node swaps (ms). */
+const THINKING_WORD_INTERVAL_MS = 1400;
+
+/**
+ * Cycles through THINKING_WORDS (never repeating back-to-back) while active.
+ * Always opens on "Thinking…" and shuffles from there on each interval tick.
+ */
+function useThinkingWord(active) {
+  const [word, setWord] = useState(THINKING_WORDS[0]);
+  useEffect(() => {
+    if (!active) return undefined;
+    const pickNext = (prev) => {
+      let next = prev;
+      while (next === prev) {
+        next = THINKING_WORDS[Math.floor(Math.random() * THINKING_WORDS.length)];
+      }
+      return next;
+    };
+    const id = setInterval(() => setWord((prev) => pickNext(prev)), THINKING_WORD_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [active]);
+  return word;
+}
 
 /** Picks the glyph for a node by kind + status. */
 function StepIcon({ kind, status }) {
@@ -36,19 +79,45 @@ function StepIcon({ kind, status }) {
  * @param {object} props
  * @param {Array<{key: string, label: string, status?: string, kind?: string}>} props.nodes
  * @param {(key: string) => void} [props.onNodeClick]
- * @param {string} [props.activeKey] - Node currently working (gets the `stream` slot).
- * @param {import('react').ReactNode} [props.stream] - Live-output node (e.g. TokenStream).
+ * @param {string} [props.activeKey] - Node currently working (auto-scrolled into view).
  * @param {string} [props.className]
  * @param {string} [props['aria-label']]
  */
-export function Stepper({ nodes = [], onNodeClick, activeKey, stream, className = '', ...rest }) {
+export function Stepper({ nodes = [], onNodeClick, activeKey, className = '', ...rest }) {
+  const railRef = useRef(null);
+  const anyThinking = nodes.some((node) => node.status === 'thinking');
+  const word = useThinkingWord(anyThinking);
+
+  // Keep the active node centered in the rail as the workflow advances.
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || !activeKey) return;
+    const node = rail.querySelector(`[data-node-key="${activeKey}"]`);
+    if (!node) return;
+    const railRect = rail.getBoundingClientRect();
+    const nodeRect = node.getBoundingClientRect();
+    const target = rail.scrollLeft + (nodeRect.left - railRect.left) - (railRect.width - nodeRect.width) / 2;
+    if (typeof rail.scrollTo === 'function') {
+      rail.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+    } else {
+      rail.scrollLeft = Math.max(0, target);
+    }
+  }, [activeKey]);
+
   const classes = ['stepper', className].filter(Boolean).join(' ');
   return (
-    <div className={classes} role="list" aria-label={rest['aria-label'] || 'Workflow progress'} {...rest}>
+    <div
+      className={classes}
+      role="list"
+      aria-label={rest['aria-label'] || 'Workflow progress'}
+      ref={railRef}
+      {...rest}
+    >
       {nodes.map((node, index) => {
         const status = STEP_STATUS[node.status] || 'inactive';
         const kind = node.kind || 'agent';
         const isActive = node.key === activeKey;
+        const isThinking = status === 'thinking';
         return (
           <div className="stepper-item" role="listitem" key={node.key}>
             {index > 0 ? (
@@ -63,18 +132,23 @@ export function Stepper({ nodes = [], onNodeClick, activeKey, stream, className 
               className={`stepper-node${isActive ? ' is-active' : ''}`}
               data-status={status}
               data-node-kind={kind}
+              data-node-key={node.key}
               onClick={() => onNodeClick?.(node.key)}
               title={`${node.label} — ${status}`}
               aria-label={`${node.label} (${status})`}
             >
+              <span className="stepper-node-word" aria-hidden="true">
+                {isThinking ? (
+                  <span className="stepper-node-word-text" key={word}>
+                    {word}…
+                  </span>
+                ) : null}
+              </span>
               <span className="stepper-node-badge" data-status={status}>
                 <StepIcon kind={kind} status={status} />
               </span>
               <span className="stepper-node-label">{node.label}</span>
               <span className={`status-indicator ${status}`} data-status={status} aria-hidden="true" />
-              {isActive && stream != null ? (
-                <span className="stepper-node-stream">{stream}</span>
-              ) : null}
             </button>
           </div>
         );

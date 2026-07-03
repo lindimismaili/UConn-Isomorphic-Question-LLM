@@ -38,6 +38,16 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [prompt, setPrompt] = useState("");
   const [runEvaluations, setRunEvaluations] = useState(false);
+  // Site mode: 'user' | 'teacher' | 'dev'. Dev shows the developer-tools side
+  // panel; user/teacher hide it and tailor the empty-conversation hint.
+  const [mode, setMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem("uiMode");
+      return stored === "teacher" || stored === "dev" ? stored : "user";
+    } catch {
+      return "user";
+    }
+  });
   const [footerVersion, setFooterVersion] = useState("Version -");
   const [openaiStatus, setOpenaiStatus] = useState({
     isDown: false,
@@ -61,6 +71,14 @@ export default function App() {
     loadRuns: loadBatchEvalRuns,
   } = useBatchEval();
   useAgents(dispatch);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("uiMode", mode);
+    } catch {
+      /* storage unavailable (private mode) — mode stays session-only */
+    }
+  }, [mode]);
 
   useEffect(() => {
     fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" })
@@ -184,10 +202,10 @@ export default function App() {
             OpenAI servers are down. This site is currently inactive.
           </SiteBanner>
         }
-        header={<SiteHeader />}
+        header={<SiteHeader mode={mode} onModeChange={setMode} />}
         footer={<SiteFooter version={footerVersion} />}
       >
-        <div className="workspace">
+        <div className={`workspace${mode === "dev" ? "" : " is-single"}`}>
           <div className="workspace-main">
             <ChatConversation
               state={state}
@@ -199,29 +217,32 @@ export default function App() {
               onSend={handleComposerSend}
               onNodeClick={handleNodeClick}
               onShowHelp={() => dispatch({ type: "OPEN_MODAL", modal: "help" })}
+              mode={mode}
             />
           </div>
-          <aside className="workspace-side">
-            <DeveloperToolsPanel
-              isRunning={state.isRunning}
-              serviceInactive={serviceInactive}
-              isCreateDataRunning={
-                createDataState.isRunning || createDataState.isStarting
-              }
-              onCreateData={handleCreateData}
-              onBatchEval={handleBatchEval}
-              isBatchEvalRunning={batchEvalState.isRunning || batchEvalState.isStarting}
-              onInputToAgent={() =>
-                dispatch({ type: "OPEN_MODAL", modal: "input-to-agent" })
-              }
-              onShowTestFiles={() =>
-                dispatch({ type: "OPEN_MODAL", modal: "test-files" })
-              }
-              runEvaluations={runEvaluations}
-              onRunEvaluationsChange={setRunEvaluations}
-              logs={state.logs}
-            />
-          </aside>
+          {mode === "dev" ? (
+            <aside className="workspace-side">
+              <DeveloperToolsPanel
+                isRunning={state.isRunning}
+                serviceInactive={serviceInactive}
+                isCreateDataRunning={
+                  createDataState.isRunning || createDataState.isStarting
+                }
+                onCreateData={handleCreateData}
+                onBatchEval={handleBatchEval}
+                isBatchEvalRunning={batchEvalState.isRunning || batchEvalState.isStarting}
+                onInputToAgent={() =>
+                  dispatch({ type: "OPEN_MODAL", modal: "input-to-agent" })
+                }
+                onShowTestFiles={() =>
+                  dispatch({ type: "OPEN_MODAL", modal: "test-files" })
+                }
+                runEvaluations={runEvaluations}
+                onRunEvaluationsChange={setRunEvaluations}
+                logs={state.logs}
+              />
+            </aside>
+          ) : null}
         </div>
       </AppShell>
 

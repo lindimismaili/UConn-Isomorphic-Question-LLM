@@ -31,7 +31,6 @@ import {
   Tabs,
   TextArea,
   TextInput,
-  TokenStream,
   ToggleSwitch,
   TypingIndicator,
 } from './index.js';
@@ -337,6 +336,21 @@ describe('chat primitives', () => {
     expect(container.querySelector('.composer-send')).toBeTruthy();
     expect(container.querySelector('.composer-attach')).toBeTruthy();
     expect(container.querySelector('select.composer-theme-select')).toBeTruthy();
+    // No theme selected → no active glow.
+    expect(container.querySelector('select.composer-theme-select').className).not.toContain('is-active');
+    act(() =>
+      root.render(
+        <Composer
+          value="hi"
+          onChange={() => {}}
+          onSend={onSend}
+          onAttach={() => {}}
+          attachLabel="Upload"
+          themeSelect={{ value: 'a', onChange: () => {}, options: [{ value: 'a', label: 'A' }], placeholder: 'Theme' }}
+        />,
+      ),
+    );
+    expect(container.querySelector('select.composer-theme-select').className).toContain('is-active');
   });
 
   it('Composer send button flips to Stop while running', () => {
@@ -353,14 +367,17 @@ describe('process rail primitives', () => {
       { key: 'input_guardrail', label: 'Input Guardrail', status: 'blocked', kind: 'guardrail' },
       { key: 'normalizer', label: 'Normalizer', status: 'thinking', kind: 'agent' },
     ];
-    render(<Stepper nodes={nodes} onNodeClick={() => {}} activeKey="normalizer" stream={<div className="ds-stream" />} />);
+    render(<Stepper nodes={nodes} onNodeClick={() => {}} activeKey="normalizer" />);
     const stepNodes = container.querySelectorAll('.stepper-node');
     expect(stepNodes).toHaveLength(3);
     expect(stepNodes[1].getAttribute('data-node-kind')).toBe('guardrail');
     expect(stepNodes[1].getAttribute('data-status')).toBe('blocked');
     expect(stepNodes[2].className).toContain('is-active');
-    // The stream slot only renders inside the active node.
-    expect(container.querySelector('.stepper-node.is-active .stepper-node-stream .ds-stream')).toBeTruthy();
+    // The cycling status word renders only above the thinking node's icon; the
+    // (empty) word slot exists on every node so heights stay equal.
+    expect(stepNodes[2].querySelector('.stepper-node-word-text')).toBeTruthy();
+    expect(stepNodes[0].querySelector('.stepper-node-word-text')).toBeFalsy();
+    expect(stepNodes[0].querySelector('.stepper-node-word')).toBeTruthy();
     // Connectors appear between nodes (n-1 of them).
     expect(container.querySelectorAll('.stepper-connector')).toHaveLength(2);
   });
@@ -372,14 +389,4 @@ describe('process rail primitives', () => {
     expect(clicked).toBe('output');
   });
 
-  it('TokenStream shows streamed text + cursor, and the synthetic placeholder when empty', () => {
-    render(<TokenStream text="partial output" active />);
-    expect(container.querySelector('.token-stream').className).toContain('has-text');
-    expect(container.querySelector('.token-stream-body').textContent).toContain('partial output');
-    expect(container.querySelector('.token-stream-cursor')).toBeTruthy();
-    expect(container.querySelectorAll('.token-stream-col').length).toBeGreaterThan(0);
-    act(() => root.render(<TokenStream text="" active placeholder="waiting" />));
-    expect(container.querySelector('.token-stream').className).toContain('is-synthetic');
-    expect(container.querySelector('.token-stream-placeholder').textContent).toBe('waiting');
-  });
 });

@@ -18,7 +18,7 @@ const BANNED_PRIMITIVE_CLASSES =
   'create-data-pill|create-data-step-chip|eval-source-id|eval-reference-kind|rubric-index|' +
   'rubric-category|chip|status-indicator|log-item|log-list|log-empty-state|modal-empty-state|' +
   'viewer-tab|viewer-tab-bar|eval-table|file-viewer-table|viewer-kv-table|chat-avatar|' +
-  'chat-message|chat-transcript|chat-typing|composer|stepper|token-stream)(\\s|$)'
+  'chat-message|chat-transcript|chat-typing|composer|stepper)(\\s|$)'
 
 const PRIMITIVE_CLASS_MESSAGE =
   'Do not hardcode ui/ primitive class strings in feature components. Compose from ' +

@@ -31,7 +31,6 @@ import {
   Tabs,
   TextArea,
   TextInput,
-  TokenStream,
   ToggleSwitch,
   TypingIndicator,
 } from '../components/ui/index.js';
@@ -720,36 +719,18 @@ export const MANIFEST = [
   {
     name: 'Stepper',
     group: 'Process rail',
-    summary: "A compact inline process-rail rendering a workflow's nodes in order with a per-node status dot and kind affordance.",
+    summary:
+      "A compact inline process-rail rendering a workflow's nodes in order with a per-node status dot and kind affordance. A cycling status word shows above the thinking node's icon, and the rail auto-scrolls the active node into view.",
     props: [
       { name: 'nodes', type: 'Array<{key, label, status?, kind?}>', required: true },
       { name: 'onNodeClick', type: '(key: string) => void' },
-      { name: 'activeKey', type: 'string', description: 'Node currently working (gets the `stream` slot).' },
-      { name: 'stream', type: 'ReactNode', description: 'Live-output node (e.g. TokenStream).' },
+      { name: 'activeKey', type: 'string', description: 'Node currently working (auto-scrolled into view).' },
       { name: 'className', type: 'string' },
     ],
     usage: '<Stepper nodes={nodes} onNodeClick={onNodeClick} activeKey={activeKey} />',
     Specimen: () => (
       <div style={{ width: '100%' }}>
         <Stepper nodes={STEPPER_NODES} onNodeClick={() => {}} activeKey="generator" />
-      </div>
-    ),
-  },
-  {
-    name: 'TokenStream',
-    group: 'Process rail',
-    summary: 'A matrix-style live-output view rendering accumulated streamed text with a GPU-light rain backdrop.',
-    props: [
-      { name: 'text', type: 'string' },
-      { name: 'active', type: 'boolean' },
-      { name: 'columns', type: 'number' },
-      { name: 'placeholder', type: 'string' },
-      { name: 'className', type: 'string' },
-    ],
-    usage: '<TokenStream active text={streamedText} />',
-    Specimen: () => (
-      <div style={{ width: 'min(360px, 100%)' }}>
-        <TokenStream active text={'∫ F·dr = ΔKE\nGenerating distractors for question 2…'} />
       </div>
     ),
   },

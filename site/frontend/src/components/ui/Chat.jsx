@@ -195,7 +195,8 @@ export function TypingIndicator({ label, className = '', ...rest }) {
  * @param {'success'|'error'} [props.sendFeedback] - Transient send-button lock.
  * @param {'success'|'error'} [props.attachFeedback] - Transient attach-button lock.
  * @param {import('react').ReactNode} [props.attachLabel] - Attach button label.
- * @param {object} [props.themeSelect] - `{value, onChange, options, placeholder, disabled}`.
+ * @param {object} [props.themeSelect] - `{value, onChange, options, placeholder, disabled}`;
+ *   the select gets `.is-active` (primary glow) while a theme is selected.
  * @param {import('react').ReactNode} [props.children] - Extra leading controls.
  * @param {string} [props.className]
  */
@@ -247,12 +248,13 @@ export function Composer({
           {children}
           {themeSelect ? (
             <Select
-              className="composer-theme-select"
+              className={`composer-theme-select${themeSelect.value ? ' is-active' : ''}`}
               value={themeSelect.value}
               onChange={themeSelect.onChange}
               disabled={themeSelect.disabled}
               placeholder={themeSelect.placeholder}
               options={themeSelect.options}
+              title={themeSelect.value ? 'Theme prompt active — sent with your run' : undefined}
             />
           ) : null}
         </div>
