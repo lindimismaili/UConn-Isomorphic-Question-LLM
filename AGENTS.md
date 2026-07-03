@@ -107,10 +107,15 @@ Frontend:
 
 Tooling / analysis:
 
-- `Other/createXLSX.py` — bundles per-batch eval CSVs into `compiled.xlsx`
-- `Other/compare_to_professor.py` — CLI: judge ↔ professor κ, confusion,
-  disagreements; appends an `Agreement` sheet to `compiled.xlsx`
-- `Other/Evaluation.xlsx` — professor's hand-graded ground-truth grid
+- `site/backend/src/tools/professor_comparison.py` — bundles per-batch eval CSVs into
+  `<batch>/XLSX/compiled.xlsx` and computes judge ↔ professor κ / confusion /
+  disagreements, appending an `Agreement` sheet. Exposed as CLI
+  `main.py compare-professor <batch>` and API
+  `POST /api/outputs/{label}/compare-professor` (surfaced in the frontend's
+  Batch Eval + Create Data modals via `CompareProfessorPanel.jsx`).
+- `site/backend/data/professor_comparison/Evaluation.xlsx` — professor's hand-graded
+  ground-truth grid; `source_classification.json` (same dir) holds the professor's
+  conceptual/abstract/numerical source-question classification keyed by source-PDF stem.
 - `site/pyproject.toml` — ruff + pytest config (line length 110, target py310)
 
 ## Commands That Work
@@ -163,10 +168,12 @@ npm -C frontend test               # frontend (vitest)
 npm -C frontend run lint           # frontend (eslint)
 ```
 
-Judge ↔ professor agreement on a generated batch:
+Judge ↔ professor agreement on a generated batch (the batch label is a folder
+under `site/backend/outputs/`):
 
 ```bash
-python Other/compare_to_professor.py Other/<timestamp>-other-phase1-eval-batch
+cd site
+.venv/bin/python -m backend.src.main compare-professor <batch-output-folder> [--source physics_1_set]
 ```
 
 ## Git Workflow
@@ -389,8 +396,8 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 - Within one workflow the stages are sequential (each consumes the previous output).
 - Multi-file uploads in one workflow are intentionally combined into one dataset
   (the extracter prompt handles this).
-- The batch endpoint runs workflows concurrently with `Semaphore(BATCH_WORKFLOW_CONCURRENCY=2)`.
-- `Other/runEvals.py` parallelizes per-PDF evaluations with `--concurrency` (default 2).
+- The batch endpoint runs workflows concurrently with `Semaphore(BATCH_WORKFLOW_CONCURRENCY=2)`;
+  the eval-only batch endpoint (`/api/eval-batch/start`, CLI `main.py eval`) uses the same bound.
 
 ## Workflow Stages
 
@@ -434,10 +441,20 @@ Routes live in `site/backend/src/api/` (registered on the app in `server.py`):
 - `POST /api/create-data/start`, `POST /api/create-data/{batch_id}/stop`
 - `GET /api/create-data/{batch_id}/status`
 - `GET /api/create-data/{batch_id}/result`
+- `POST /api/outputs/{label}/compare-professor` (judge ↔ professor agreement on any
+  batch output folder; optional `sourceStem` form field for category averages)
 
 ## Evaluation System
 
 Lives in `site/backend/src/evaluation.py`.
+
+> **Tracked risk — OpenAI Evals shutdown.** The OpenAI Evals platform that this
+> entire grading pipeline is built on (`client.evals.create`, `score_model`
+> graders) goes **read-only on October 31, 2026 and shuts down November 30,
+> 2026** per OpenAI's docs. No migration guide has been published yet. Do not
+> rearchitect `evaluation.py` preemptively; plan a deliberate migration once
+> OpenAI publishes a replacement (expected to be "Datasets"-based) or as the
+> deprecation date approaches.
 
 Current behavior:
 
@@ -485,12 +502,13 @@ Per-run artifacts under `site/backend/outputs/<timestamp>/`:
 - `evaluation_outputs/evaluation_spreadsheet.csv`
 - `evaluation_outputs/rubric.json` (snapshot)
 
-Per-batch `Other/<timestamp>-other-phase1-eval-batch/`:
+Per-batch (a timestamped batch folder under `site/backend/outputs/`):
 
-- `batch_summary.json` at the batch root
-- `XLSX/compiled.xlsx` (`Summary` + per-PDF sheets; after running
-  `compare_to_professor.py`, also a `judge_agreement_report.json`,
-  `judge_disagreements.csv`, and an `Agreement` sheet in `compiled.xlsx`)
+- `batch_summary.json` at the batch root (create-data batches)
+- After running `main.py compare-professor <batch>` (or the
+  `POST /api/outputs/{label}/compare-professor` route): `XLSX/compiled.xlsx`
+  (`Summary` + per-entry sheets + `Agreement` sheet), `XLSX/judge_agreement_report.json`,
+  and `XLSX/judge_disagreements.csv`
 
 ## Batch / Create Data Flow
 
@@ -518,7 +536,7 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 | Deterministic pipeline validation | `site/backend/src/pipeline_validation.py` |
 | Eval scoring / reporting (seed, per-criterion reasoning, failure tags) | `site/backend/src/evaluation.py`, `site/backend/data/rubric.json` |
 | Grader self-improvement proposals | `site/backend/src/tools/meta_evaluator.py`, `.agents/grader-review/SKILL.md` |
-| Judge ↔ professor agreement | `site/backend/src/tools/judge_agreement.py`, `Other/compare_to_professor.py` |
+| Judge ↔ professor agreement | `site/backend/src/tools/judge_agreement.py`, `site/backend/src/tools/professor_comparison.py`, `site/backend/data/professor_comparison/` |
 | Frontend UX / state | `site/frontend/src/App.jsx`, `site/frontend/src/state/reducer.js`, `site/frontend/src/state/transcript.js`, `site/frontend/src/hooks/**`, `site/frontend/src/components/**` |
 | Chat surface / token streaming | `site/frontend/src/sections/ChatConversation.jsx`, `site/frontend/src/components/ui/Chat.jsx` (Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer), `site/frontend/src/components/ui/Stepper.jsx`, `site/frontend/src/components/ui/TokenStream.jsx`, `site/frontend/src/hooks/useTokenStream.js` |
 | Frontend styling / design system | `site/frontend/DESIGN.md`, `site/frontend/src/styles/app.css` |

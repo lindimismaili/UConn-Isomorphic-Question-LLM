@@ -476,42 +476,55 @@ def _summarize_eval_batch_entries(entries: list[dict]) -> list[dict]:
     return [{"name": e.get("name",""), "folder": e.get("folder",""), "status": e.get("status","unknown"), "score": e.get("score"), "itemsEvaluated": e.get("itemsEvaluated",0), "outputFolder": e.get("outputFolder",""), "error": e.get("error","")} for e in entries]
 
 
+def _run_summary(run_dir: Path) -> dict[str, Any] | None:
+    """Summarize a run folder that contains a final_result.json.
+
+    Returns None when the result file is missing or unreadable. Shared by
+    ``_list_output_runs`` (eval-batch modal) and the CLI's ``list runs``.
+    """
+    result_path = run_dir / "final_result.json"
+    try:
+        data = json.loads(result_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    question_count = len(data.get("generated_questions", []))
+    eval_report_path = run_dir / "evaluation_outputs" / "evaluation_report.json"
+    existing_score = None
+    has_eval = eval_report_path.exists()
+    if has_eval:
+        try:
+            report = json.loads(eval_report_path.read_text(encoding="utf-8"))
+            existing_score = report.get("overall_score")
+        except Exception:
+            pass
+    return {
+        "folder": run_dir.name,
+        "label": run_dir.name,
+        "mtime": run_dir.stat().st_mtime if run_dir.exists() else 0,
+        "questionCount": question_count,
+        "hasEval": has_eval,
+        "existingScore": existing_score,
+    }
+
+
 def _list_output_runs(limit: int = 60) -> list[dict[str, Any]]:
-    """List output folders that contain a final_result.json, newest first."""
-    import json as _json
+    """List top-level output folders that contain a final_result.json, newest first.
+
+    Deliberately non-recursive: eval-batch selections resolve as
+    ``OUTPUTS_DIR / folder``, so only top-level runs are selectable here.
+    """
     runs = []
     try:
         folders = sorted(OUTPUTS_DIR.iterdir(), key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
     except OSError:
         return []
     for folder in folders:
-        if not folder.is_dir():
+        if not folder.is_dir() or not (folder / "final_result.json").exists():
             continue
-        result_path = folder / "final_result.json"
-        if not result_path.exists():
+        summary = _run_summary(folder)
+        if summary is None:
             continue
-        try:
-            data = _json.loads(result_path.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        question_count = len(data.get("generated_questions", []))
-        eval_report_path = folder / "evaluation_outputs" / "evaluation_report.json"
-        existing_score = None
-        has_eval = eval_report_path.exists()
-        if has_eval:
-            try:
-                report = _json.loads(eval_report_path.read_text(encoding="utf-8"))
-                existing_score = report.get("overall_score")
-            except Exception:
-                pass
-        runs.append({
-            "folder": folder.name,
-            "label": folder.name,
-            "mtime": folder.stat().st_mtime if folder.exists() else 0,
-            "questionCount": question_count,
-            "hasEval": has_eval,
-            "existingScore": existing_score,
-        })
+        runs.append(summary)
         if len(runs) >= limit:
             break
     return runs
@@ -920,6 +933,36 @@ def _normalize_agent_key(value: str) -> str:
     aliases = _aliases_map()
     return aliases.get(normalized, normalized)
 
+class OutputFolderError(ValueError):
+    """Raised when an output-folder label is missing, malformed, or absent on disk."""
+
+    def __init__(self, message: str, *, not_found: bool = False):
+        super().__init__(message)
+        self.not_found = not_found
+
+def _resolve_output_folder_path(label: str) -> Path:
+    """Resolve and validate an output-folder label under OUTPUTS_DIR.
+
+    Transport-agnostic core shared by the HTTP layer
+    (``_resolve_output_folder_label``) and the CLI
+    (``main._resolve_output_folder``).
+
+    Raises:
+        OutputFolderError: If the label is missing, malformed, points outside
+            the outputs directory, or (with ``not_found=True``) does not exist.
+    """
+    rel_path = Path((label or "").strip())
+    if not rel_path.parts:
+        raise OutputFolderError("output folder label is required")
+    if rel_path.is_absolute() or any(part in {"", ".", ".."} for part in rel_path.parts):
+        raise OutputFolderError(f"Invalid output folder label: {label!r}")
+    output_dir = (OUTPUTS_DIR / rel_path).resolve()
+    if not _is_under_directory(output_dir, OUTPUTS_DIR):
+        raise OutputFolderError(f"Invalid output folder label: {label!r}")
+    if not output_dir.exists() or not output_dir.is_dir():
+        raise OutputFolderError(f"Output folder not found: {label}", not_found=True)
+    return output_dir
+
 def _resolve_output_folder_label(label: str) -> Path:
     """Resolve and validate a requested output-folder label.
 
@@ -927,18 +970,40 @@ def _resolve_output_folder_label(label: str) -> Path:
         HTTPException: If the label is missing, malformed, or points outside the
             outputs directory.
     """
-    rel_path = Path((label or "").strip())
-    if not rel_path.parts:
-        raise HTTPException(status_code=400, detail="sourceOutputFolder is required")
-    if rel_path.is_absolute() or any(part in {"", ".", ".."} for part in rel_path.parts):
-        raise HTTPException(status_code=400, detail="Invalid sourceOutputFolder")
+    try:
+        return _resolve_output_folder_path(label)
+    except OutputFolderError as exc:
+        if exc.not_found:
+            raise HTTPException(status_code=404, detail="Source output folder not found") from exc
+        if not (label or "").strip():
+            raise HTTPException(status_code=400, detail="sourceOutputFolder is required") from exc
+        raise HTTPException(status_code=400, detail="Invalid sourceOutputFolder") from exc
 
-    output_dir = (OUTPUTS_DIR / rel_path).resolve()
-    if not _is_under_directory(output_dir, OUTPUTS_DIR):
-        raise HTTPException(status_code=400, detail="Invalid sourceOutputFolder")
-    if not output_dir.exists() or not output_dir.is_dir():
-        raise HTTPException(status_code=404, detail="Source output folder not found")
-    return output_dir
+def _resolve_evaluation_fixture_paths(rel_paths: list, *, strict: bool) -> list[str]:
+    """Resolve bundled data/evaluation selections to absolute file paths.
+
+    Shared by the workflow-start route (``strict=False``: silently skip bad
+    entries) and the CLI's ``--test-file`` handling (``strict=True``: raise on
+    the first bad entry).
+    """
+    resolved: list[str] = []
+    for rel_path in rel_paths or []:
+        try:
+            rel = Path(str(rel_path))
+        except Exception:
+            if strict:
+                raise FileNotFoundError(f"Test file not found under data/evaluation: {rel_path}") from None
+            continue
+        candidate = (EVALUATION_DIR / rel).resolve()
+        if (
+            _is_under_directory(candidate, EVALUATION_DIR)
+            and candidate.is_file()
+            and candidate.suffix.lower() in ALLOWED_UPLOAD_EXTENSIONS
+        ):
+            resolved.append(str(candidate))
+        elif strict:
+            raise FileNotFoundError(f"Test file not found under data/evaluation: {rel_path}")
+    return resolved
 
 def _parse_agent_input_upload(content: bytes, filename: str) -> Any:
     """Parse an uploaded agent input file into a Runner-compatible payload."""

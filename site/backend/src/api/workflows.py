@@ -13,12 +13,10 @@ from fastapi.responses import StreamingResponse
 
 from backend.src.api.state import (
     ALLOWED_AGENT_INPUT_EXTENSIONS,
-    ALLOWED_UPLOAD_EXTENSIONS,
     INPUT_TO_AGENT_SEQUENCE,
     SOURCE_FILE_INPUT_AGENTS,
     TERMINAL_STATUSES,
     _get_workflow_record,
-    _is_under_directory,
     _new_workflow_record,
     _normalize_agent_key,
     _parse_agent_input_upload,
@@ -28,6 +26,7 @@ from backend.src.api.state import (
     _prune_workflows,
     _register_workflow_task,
     _relative_output_folder,
+    _resolve_evaluation_fixture_paths,
     _resolve_output_folder_label,
     _save_input_to_agent_source_file,
     _source_paths_from_session,
@@ -42,7 +41,6 @@ from backend.src.api.state import (
     workflows,
 )
 from backend.src.artifacts import WORKFLOW_AGENT_SEQUENCE, load_source_file_paths
-from backend.src.paths import EVALUATION_FIXTURES_DIR as EVALUATION_DIR
 
 router = APIRouter()
 
@@ -100,18 +98,7 @@ async def start_workflow(
         raw_test_files = []
     if not isinstance(raw_test_files, list):
         raw_test_files = []
-    for rel_path in raw_test_files:
-        try:
-            rel = Path(str(rel_path))
-        except Exception:
-            continue
-        candidate = (EVALUATION_DIR / rel).resolve()
-        if (
-            _is_under_directory(candidate, EVALUATION_DIR)
-            and candidate.is_file()
-            and candidate.suffix.lower() in ALLOWED_UPLOAD_EXTENSIONS
-        ):
-            file_paths.append(str(candidate))
+    file_paths.extend(_resolve_evaluation_fixture_paths(raw_test_files, strict=False))
 
     # If sessionId provided, get files from upload directory
     if sessionId:
