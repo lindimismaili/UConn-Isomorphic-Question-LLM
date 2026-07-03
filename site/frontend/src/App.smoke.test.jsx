@@ -1,12 +1,12 @@
 /* @vitest-environment jsdom */
 
 /**
- * App smoke test — mounts the whole chat-first App and asserts the core chat
- * surface (rail + transcript + composer) and the developer-tools side panel
- * render without throwing. Exercises the real integration path: App →
- * ChatConversation → ui/ primitives → useTokenStream → transcript derivation,
- * with all network calls stubbed. Not a full behavior test — a crash guard for
- * the Wave 2 restructure.
+ * App smoke test — mounts the whole chat-first App (in dev mode, so the
+ * developer-tools side panel renders) and asserts the core chat surface
+ * (rail + transcript + composer) and the side panel render without throwing.
+ * Exercises the real integration path: App → ChatConversation → ui/ primitives
+ * → transcript derivation, with all network calls stubbed. Not a full behavior
+ * test — a crash guard for the Wave 2 restructure.
  */
 
 import { act } from 'react';
@@ -53,10 +53,8 @@ let root;
 let container;
 
 beforeEach(() => {
-  vi.stubGlobal('EventSource', class {
-    addEventListener() {}
-    close() {}
-  });
+  // Dev mode shows the developer-tools side panel this test asserts on.
+  localStorage.setItem('uiMode', 'dev');
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url) => {
@@ -75,6 +73,7 @@ afterEach(() => {
   container?.remove();
   root = null;
   container = null;
+  localStorage.removeItem('uiMode');
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -101,6 +100,11 @@ describe('App (chat-first) smoke', () => {
     expect(container.querySelector('.chat-transcript')).toBeTruthy();
     expect(container.querySelector('.composer')).toBeTruthy();
     expect(container.querySelector('textarea.composer-input')).toBeTruthy();
+
+    // Site-mode dropdown sits in the header, currently on Dev Mode.
+    const modeSelect = container.querySelector('select.mode-select');
+    expect(modeSelect).toBeTruthy();
+    expect(modeSelect.value).toBe('dev');
 
     // All 10 registry nodes render in the stepper (incl. guardrail + runtime).
     expect(container.querySelectorAll('.stepper-node')).toHaveLength(PIPELINE_KEYS.length);

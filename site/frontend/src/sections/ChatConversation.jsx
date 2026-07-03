@@ -1,19 +1,17 @@
 /**
  * ChatConversation — the chat-first primary surface. Composes the conversation
- * from ui/ primitives only: a Stepper process-rail (with a TokenStream on the
- * active node) above a ChatTranscript of ChatMessages, with the Composer pinned
- * at the bottom. It projects the presentation-agnostic reducer state
- * (`state.agents` / `state.logs` / `state.result` / `state.blocked`) into
- * messages via `deriveTranscript` — the reducer is untouched.
+ * from ui/ primitives only: a Stepper process-rail above a ChatTranscript of
+ * ChatMessages, with the Composer pinned at the bottom. It projects the
+ * presentation-agnostic reducer state (`state.agents` / `state.logs` /
+ * `state.result` / `state.blocked`) into messages via `deriveTranscript` — the
+ * reducer is untouched.
  *
- * The live SSE token stream (`useTokenStream`) is cosmetic; the poller stays the
- * authoritative status source. When no live stream is available the TokenStream
- * shows a subtle synthetic shimmer while a node is `thinking`.
+ * The poller (`useWorkflow`) is the status source; the Stepper cycles a status
+ * word above the thinking node and auto-scrolls it into view as the run moves.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { useFileUpload } from '../hooks/useFileUpload.js';
-import { useTokenStream } from '../hooks/useTokenStream.js';
 import { useAgentRegistry } from '../hooks/useAgentRegistry.js';
 import {
   Avatar,
@@ -23,7 +21,6 @@ import {
   Composer,
   EmptyState,
   Stepper,
-  TokenStream,
   TypingIndicator,
 } from '../components/ui/index.js';
 import { IconInfo, IconBrain } from '../components/Icons.jsx';
@@ -47,21 +44,17 @@ function normalizeDropdownItems(raw) {
     .filter((item) => item.value && item.label && item.prompt);
 }
 
-/** "Label: Prompt" line injected into the composer for a theme. */
+/** "Label: Prompt" line sent to the backend as the run's `theme` field. */
 function themeLine(item) {
   return item ? `${item.label}: ${item.prompt}` : '';
 }
 
-/** Removes one previously inserted theme line from the composer text. */
-function removePromptLine(text, lineToRemove) {
-  if (!lineToRemove) return text;
-  return text
-    .split('\n')
-    .filter((line) => line.trim() !== lineToRemove.trim())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
+/** Per-mode hint shown in the empty conversation state. */
+const EMPTY_HINTS = {
+  user: 'Try uploading or sending questions you want new variations of to study and practice with!',
+  teacher: 'Try uploading exams or quizzes you want to create new or alternate versions of.',
+  dev: 'Start a conversation — describe the questions you want, attach source files, and send.',
+};
 
 /** Which chat variant a derived message maps to. */
 function messageVariant(message) {
@@ -89,6 +82,7 @@ export default function ChatConversation({
   onSend,
   onNodeClick,
   onShowHelp,
+  mode = 'user',
 }) {
   const registry = useAgentRegistry();
   const fileInputRef = useRef(null);
@@ -98,9 +92,6 @@ export default function ChatConversation({
   const uploadWarningTimer = useRef(null);
 
   const { handleFileSelect, limitReached } = useFileUpload(state.files, dispatch);
-  const { streams, activeAgent } = useTokenStream(state.workflowId, {
-    status: state.result ? 'completed' : state.error ? 'errored' : state.blocked ? 'blocked' : undefined,
-  });
 
   useEffect(() => () => clearTimeout(uploadWarningTimer.current), []);
 
@@ -122,23 +113,11 @@ export default function ChatConversation({
   const messages = deriveTranscript(state, registry);
   const stepperNodes = deriveStepperNodes(state, registry);
   const thinkingKey = activeAgentKey(state, registry);
-  // Prefer the SSE-reported active agent (if it matches a thinking node), else
-  // the poller's thinking node.
-  const streamKey =
-    activeAgent && state.agents[activeAgent]?.status === 'thinking' ? activeAgent : thinkingKey;
-  const streamText = streamKey ? streams[streamKey] || '' : '';
 
-  const dropdownSelectValue = prompt.trim() ? selectedDropdownValue : '';
-
+  // Selecting a theme never touches the composer text — the selection is sent
+  // as the run's `theme` field, and the select itself glows while active.
   const handleDropdownChange = (event) => {
-    const nextValue = event.target.value;
-    const previousItem = dropdownItems.find((item) => item.value === selectedDropdownValue);
-    const nextItem = dropdownItems.find((item) => item.value === nextValue);
-    const cleaned = removePromptLine(prompt, themeLine(previousItem));
-    const nextLine = themeLine(nextItem);
-    const merged = nextLine ? [cleaned, nextLine].filter(Boolean).join('\n\n') : cleaned;
-    setSelectedDropdownValue(nextValue);
-    onPromptChange(merged);
+    setSelectedDropdownValue(event.target.value);
   };
 
   const handleSend = () => {
@@ -154,7 +133,7 @@ export default function ChatConversation({
       alert('Please enter a prompt or upload files.');
       return;
     }
-    const selectedItem = dropdownItems.find((item) => item.value === dropdownSelectValue);
+    const selectedItem = dropdownItems.find((item) => item.value === selectedDropdownValue);
     onSend({ prompt, files: state.files, theme: themeLine(selectedItem) });
   };
 
@@ -228,12 +207,7 @@ export default function ChatConversation({
         <Stepper
           nodes={stepperNodes}
           onNodeClick={onNodeClick}
-          activeKey={streamKey || undefined}
-          stream={
-            streamKey ? (
-              <TokenStream text={streamText} active placeholder="Streaming tokens…" />
-            ) : undefined
-          }
+          activeKey={thinkingKey || undefined}
         />
       </div>
 
@@ -244,7 +218,7 @@ export default function ChatConversation({
           <EmptyState>
             <div className="chat-empty">
               <IconBrain className="chat-empty-icon" />
-              <p>Start a conversation — describe the questions you want, attach source files, and send.</p>
+              <p>{EMPTY_HINTS[mode] || EMPTY_HINTS.user}</p>
               <Button variant="secondary" onClick={onShowHelp} icon={<IconInfo className="btn-icon" />}>
                 <span>How it works</span>
               </Button>
@@ -288,10 +262,10 @@ export default function ChatConversation({
         isRunning={isRunning}
         placeholder="Describe the questions to generate… (Ctrl+Enter to send)"
         themeSelect={{
-          value: dropdownSelectValue,
+          value: selectedDropdownValue,
           onChange: handleDropdownChange,
           options: dropdownItems,
-          placeholder: 'Select a theme…',
+          placeholder: 'Select a theme… (none)',
           disabled: isRunning || serviceInactive || dropdownItems.length === 0,
         }}
       />

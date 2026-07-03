@@ -165,7 +165,7 @@ with `#root` and `body` as `flex` columns filling `min-height: 100vh`.
 | Region | Class | Notes |
 |---|---|---|
 | Outage notice | `.outage-banner` (+ `.outage-banner-detail`) | Full-width tinted-error strip above the header; only rendered during an outage. Render via the `Banner` primitive (§14) |
-| Header / hero | `.header` (+ `.has-hero` + `.header-motif`) → `.header-content` | Sticky (`top: 0`, `z-index: var(--z-header)`), `--gradient-surface` (navy) masthead with a physics motif behind (`.header-motif`, pointer-inert); holds `.logo` + `.uconn-mark`. Render via the `PageHeader` primitive |
+| Header / hero | `.header` (+ `.has-hero` + `.header-motif`) → `.header-content` | Sticky (`top: 0`, `z-index: var(--z-header)`), `--gradient-surface` (navy) masthead with a physics motif behind (`.header-motif`, pointer-inert); holds `.logo` (title + `.mode-select` site-mode dropdown, §15) + `.uconn-mark`. Render via the `PageHeader` primitive |
 | Main | `.main-content` → `.content-shell` | Centered to `--site-max-width`; `clamp()` padding; `.content-shell` stacks sections with `--section-gap` |
 | Footer | `.footer` → `.footer-content` | `--gradient-surface` (navy), top accent border, centered. Render via the `Footer` primitive |
 
@@ -311,8 +311,8 @@ hand-roll an overlay.
 
 ```
 .modal                → fixed overlay, centers content, fade via .is-visible (250ms)
-  .modal-backdrop     → rgba(0,0,0,.72) + blur(--blur-sm); click closes
-  .modal-content      → gradient surface, --radius-lg, --shadow-lg
+  .modal-backdrop     → navy tint rgba(var(--color-navy-rgb), .45) + blur(--blur-sm); click closes
+  .modal-content      → --gradient-card (light, same family as .card), --radius-lg, --shadow-lg
                         enters with translateY(-16px) scale(.97) → 0/1
     .modal-header     → title (h3) + .btn-icon-only close, bottom border
     .modal-body       → scrolls, flex:1 (use .modal-body-flush for zero padding,
@@ -491,8 +491,9 @@ Component-level motion rules:
 
 These are global and themed — don't override per component:
 
-- Custom WebKit scrollbar: 10px, gradient thumb (`--color-primary` →
-  `--color-secondary`), rounded. This global `::-webkit-scrollbar` is the
+- Custom WebKit scrollbar: 10px, soft light-blue gradient thumb
+  (`color-mix` of the primary/secondary tokens with white — an affordance, not
+  a deep brand stripe; deepens slightly on hover). This global `::-webkit-scrollbar` is the
   **single source of truth** for every scrollbar (page + panels alike).
   **Don't set `scrollbar-color`/`scrollbar-width` on `body` or any element:**
   modern Chrome now honors the standard `scrollbar-color`, which overrides the
@@ -537,7 +538,7 @@ import { Button, Card, CardHeader, CardBody, TextInput, Select, TextArea,
          LogItem, LogList, EmptyState, Tabs, DataTable, KeyValueTable, IconButton,
          SectionHeading, AppShell, PageHeader, Banner, Footer, Modal,
          Avatar, ChatMessage, ChatTranscript, TypingIndicator, Composer,
-         Stepper, TokenStream }
+         Stepper }
   from './components/ui';
 ```
 
@@ -568,8 +569,7 @@ construction rather than by review.
 | `ChatTranscript` | §15 `.chat-transcript` | `count` (drives auto-scroll), `emptyState`, `children` |
 | `TypingIndicator` | §15 `.chat-typing` | `label` |
 | `Composer` | §15 `.composer` | `value`, `onChange`, `onSend`, `onAttach`, `isRunning`, `themeSelect`, `attachLabel`, `sendFeedback`/`attachFeedback` |
-| `Stepper` | §15 `.stepper` | `nodes` (`{key,label,status,kind}`), `onNodeClick`, `activeKey`, `stream` |
-| `TokenStream` | §15 `.token-stream` | `text`, `active`, `columns`, `placeholder` |
+| `Stepper` | §15 `.stepper` | `nodes` (`{key,label,status,kind}`), `onNodeClick`, `activeKey` |
 
 **Adding a new primitive** is exactly three steps:
 
@@ -631,8 +631,12 @@ untouched; only the view changed.
   (theme `.composer-theme-select` on the left, `.composer-attach` +
   `.composer-send` on the right). Ctrl/⌘+Enter sends. `Composer` composes from
   `Button`/`Field` primitives, so it stays inside the templates-first contract.
+  The theme select shares the Attach/Send **36px tier** (one control group, one
+  height), and selecting a theme **never injects text into the textarea** — the
+  selection is sent as the run's `theme` field and the select gets `.is-active`
+  (primary border + glow) so it's visible that a theme prompt rides along.
 
-### Stepper (process rail) & TokenStream (live output)
+### Stepper (process rail)
 
 - `.stepper` — a compact inline rail rendering **all** registry nodes in order
   (`.stepper-node` + `.stepper-connector`), with a per-node status
@@ -641,24 +645,28 @@ untouched; only the view changed.
   so the host opens that node's modal (runtime → `setup`/`output`;
   guardrail/agent → the agent detail modal). The node list is **caller-supplied
   from the registry** (`deriveStepperNodes`) — the Stepper never hardcodes keys.
-  The active node hosts the `stream` slot.
-- `.token-stream` — a matrix-style live-output view. `.token-stream-rain`
-  (decorative, aria-hidden) animates GPU-light glyph columns via
-  `transform`/`opacity`; `.token-stream-body` shows the accumulated streamed
-  text (fed by the SSE hook) with a blinking `.token-stream-cursor`. With no
-  live stream it shows a subtle synthetic shimmer while the node is `thinking`.
-  A global `@media (prefers-reduced-motion: reduce)` block stills the rain,
-  cursor, typing dots, and message-entrance animations.
+- **Thinking word** — while a node is `thinking`, a cycling status word
+  ("Thinking…", "Combobulating…", …) renders in the `.stepper-node-word` slot
+  above its icon (`.stepper-node-word-text` fades in per word via
+  `stepperWordIn`). The (empty) slot exists on every node so heights never
+  shift. This replaced the old matrix `TokenStream` — the SSE stream is no
+  longer consumed by the frontend.
+- **One-line labels** — `.stepper-node-label` is always a single ellipsized
+  line (the full name lives in the node's `title` tooltip), so nodes stay one
+  uniform height.
+- **Auto-scroll** — the rail scrolls horizontally and auto-centers the
+  `activeKey` node as agents become active; every node stays reachable by
+  manual scroll too.
 
-### Live token streaming (SSE)
+### Site modes & the header mode select
 
-[`src/hooks/useTokenStream.js`](src/hooks/useTokenStream.js) opens an
-`EventSource` on `GET /api/workflow/{id}/stream` and routes `token` deltas
-(`{agent, delta}`) into per-agent streamed-text state, closing on `done` /
-terminal status / error. This is **cosmetic** — the `useWorkflow` poller stays
-the authoritative status source. The hook degrades gracefully when the stream is
-unavailable (404 / no `EventSource`): the TokenStream simply falls back to the
-synthetic shimmer.
+The header carries a **site-mode dropdown** (`.mode-select`, a `Select`
+sub-variant) right after the title: **User / Teacher / Dev**. It uses the
+light-on-navy masthead treatment (translucent white fill, white text/chevron,
+36px tier); the popup list stays white/navy via the global `select option`
+rule. Dev mode shows the developer-tools side panel (`.workspace` two-column);
+user/teacher modes hide it (`.workspace.is-single`) and swap the
+empty-conversation hint text. The choice persists in `localStorage` (`uiMode`).
 
 ### Blocked runs
 
