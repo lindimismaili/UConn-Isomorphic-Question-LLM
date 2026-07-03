@@ -1,9 +1,11 @@
 # Raspberry Pi Deployment
 
-This folder now has two scripts:
+This folder has three launchers:
 
 - `deploy.sh` installs and configures the Raspberry Pi runtime.
-- `preview.sh` runs self-contained local previews at `isomorphic.localhost`.
+- `preview.mjs` runs cross-platform local previews at `localhost` on Windows,
+  macOS, and Linux.
+- `preview.sh` remains available as the Unix shell preview launcher.
 
 ## Raspberry Pi Install
 
@@ -93,32 +95,32 @@ sudo systemctl start uconn-isomorphic-update.service          # update now, once
 Hot reload:
 
 ```bash
-bash deploy/preview.sh --dev
+node deploy/preview.mjs --dev
 ```
 
 Built preview:
 
 ```bash
-bash deploy/preview.sh --web
+node deploy/preview.mjs --web
 ```
 
-The preview script uses `isomorphic.localhost`, starts the backend, installs missing local dependencies into the active/project virtual environment, and warns if `OPENAI_API_KEY` is missing. It does not edit `/etc/hosts` or other files outside the repo.
+The cross-platform preview launcher is also used by the VS Code `Run Dev Mode`
+and `Run Web Preview` tasks. It uses `localhost`, starts the backend,
+installs missing local dependencies into the active/project virtual environment,
+and warns if `OPENAI_API_KEY` is missing. It does not edit the hosts file or
+other files outside the repo.
 
 Both modes always rebuild the frontend **and start a fresh backend**, so a
 preview never serves stale assets or stale Python code:
 
 - `--web` runs `vite build` (which empties `site/dist/` first) on every invocation,
-  then starts a brand-new backend. If the app's own backend is already running
-  on the web port it is stopped first and relaunched on freshly built assets; an
-  unrelated process on that port is left alone and the preview moves to the next
-  free port instead.
-- `--dev` likewise stops any existing app backend and starts a fresh one (with
-  `--reload`), and launches Vite with `--force` so dependencies are re-optimized
-  from scratch (ignoring the `node_modules/.vite` cache). Source files are always
-  served fresh via HMR.
-
-Stopping only ever targets a process that answers the app's `/api/health` check,
-so it restarts the app's own backend rather than killing an unrelated process.
+  then starts a brand-new backend. If the preferred web port is occupied, the
+  cross-platform launcher increments until it finds a free port and reports the
+  selected URL without stopping the existing process.
+- `--dev` starts a fresh backend with `--reload` on the first available backend
+  port, then launches Vite with `--force` on the first available dev port so
+  dependencies are re-optimized from scratch. Source files are served fresh via
+  HMR.
 
 ## Useful Checks
 
