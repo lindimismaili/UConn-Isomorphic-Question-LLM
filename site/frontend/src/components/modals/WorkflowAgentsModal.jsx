@@ -4,7 +4,7 @@ import PromptViewerModal from './PromptViewerModal.jsx';
 import RubricViewerModal from './RubricViewerModal.jsx';
 import { IconDownload, IconFile, IconList, IconMonitor } from '../Icons.jsx';
 import useFileContent from '../../hooks/useFileContent.js';
-import { Button, EmptyState } from '../ui/index.js';
+import { Button, EmptyState, KeyValueTable } from '../ui/index.js';
 import { useAgentRegistry, getDerivedRegistry } from '../../hooks/useAgentRegistry';
 
 /** Orders metadata agent records by the pipeline sequence. */
@@ -253,17 +253,12 @@ export default function WorkflowAgentsModal({
                 {config && (
                   <div className="workflow-agents-context-block">
                     <h4 className="workflow-agents-context-title">Configuration</h4>
-                    <div className="viewer-kv-table">
-                      {Object.entries(config).map(([key, value]) => {
+                    <KeyValueTable
+                      rows={Object.entries(config).map(([key, value]) => {
                         const isEmpty = value === null || value === undefined || value === '';
-                        return (
-                          <div className="viewer-kv-row" key={key}>
-                            <span className="viewer-kv-key">{key.replaceAll('_', ' ')}</span>
-                            <span className="viewer-kv-value">{isEmpty ? 'None' : String(value)}</span>
-                          </div>
-                        );
+                        return { key: key.replaceAll('_', ' '), value: isEmpty ? 'None' : String(value) };
                       })}
-                    </div>
+                    />
                   </div>
                 )}
               </div>

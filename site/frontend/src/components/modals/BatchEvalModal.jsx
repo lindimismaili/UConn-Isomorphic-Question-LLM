@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal.jsx';
 import CompareProfessorPanel from './CompareProfessorPanel.jsx';
 import { IconZap, IconUpload, IconFile } from '../Icons.jsx';
-import { Button, Pill } from '../ui/index.js';
+import { Badge, Button, Pill } from '../ui/index.js';
 
 function ScoreBadge({ score }) {
   if (score == null) return null;
@@ -74,7 +74,7 @@ function EntryRow({ entry }) {
         <div className="create-data-item-header">
           <div className="create-data-item-title"><IconFile /><span>{entry.name}</span></div>
           <div className="create-data-item-tracking">
-            {entry.itemsEvaluated > 0 && <span className="create-data-step-chip">{entry.itemsEvaluated} items</span>}
+            {entry.itemsEvaluated > 0 && <Badge kind="step-chip">{entry.itemsEvaluated} items</Badge>}
             <ScoreBadge score={entry.score} />
             <Pill state={entry.status}>{statusLabel(entry.status)}</Pill>
           </div>

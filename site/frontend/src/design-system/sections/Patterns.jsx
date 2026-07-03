@@ -20,6 +20,10 @@ import {
 import { HEADER_MOTIF, UConnMark } from '../../sections/SiteChrome.jsx';
 import { IconSend, IconUpload } from '../../components/Icons.jsx';
 import { Row, Spec, Stack } from '../Specimen.jsx';
+import { MANIFEST } from '../manifest.jsx';
+
+/** Reuse the Modal entry's live Specimen (manifest.jsx) instead of duplicating an opener. */
+const ModalSpecimen = MANIFEST.find((entry) => entry.name === 'Modal').Specimen;
 
 /** A 10-node pipeline fixture (with guardrails) for the chat-first pattern. */
 const CHAT_STEPPER_NODES = [
@@ -201,27 +205,10 @@ export default function Patterns() {
       </Card>
 
       <Card>
-        <CardHeader title="Modal shell" subtitle="Static preview of the Modal.jsx structure (live modals always flow through the shell; §8 owns stacking)." />
+        <CardHeader title="Modal shell" subtitle="A real, live Modal.jsx dialog (opened on click) — the same shell every modal in the app flows through; §8 owns stacking." />
         <CardBody>
           <Spec label="Structure">
-            <div
-              className="modal-content"
-              style={{ position: 'static', maxWidth: 420, width: '100%', transform: 'none', opacity: 1 }}
-            >
-              <div className="modal-header">
-                <h3>Modal title</h3>
-                <button type="button" className="btn-icon-only" aria-label="Close">
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                <p className="subtitle">Body scrolls; footer actions are .btn.</p>
-              </div>
-              <div className="modal-footer">
-                <Button variant="secondary">Cancel</Button>
-                <Button variant="primary">Confirm</Button>
-              </div>
-            </div>
+            <ModalSpecimen />
           </Spec>
         </CardBody>
       </Card>

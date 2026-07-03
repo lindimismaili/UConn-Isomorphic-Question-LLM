@@ -552,7 +552,7 @@ construction rather than by review.
 | `IconButton` | §4 `.btn-icon-only` | `icon`, `aria-label` |
 | `TextInput` / `TextArea` / `Select` | §5 controls | native props; `Select` takes `options`/`placeholder` |
 | `ToggleSwitch` | §6 `.developer-toggle` | `checked`, `onChange`, `label`, `disabled` |
-| `Card` / `CardHeader` / `CardBody` | §7 `.card` | `variant` (`completed\|failed\|main\|developer-tools\|workflow\|log-panel`), `title`, `subtitle`, `actions`, `disclaimer` |
+| `Card` / `CardHeader` / `CardBody` / `SectionHeading` | §7 `.card` | `variant` (`completed\|failed\|main\|developer-tools\|workflow\|log-panel`), `title`, `subtitle`, `actions`, `disclaimer` |
 | `Badge` / `StatusChip` / `ScoreChip` / `Pill` | §10 chips/pills | `kind`/`tone`/`status`/`state` → the documented `is-*` / `eval-*` classes |
 | `Chip` | §10 `.chip` (generic tag) | `tone` (`primary\|neutral\|success\|warning\|error`), `shape` (`pill\|square`), `mono` — consolidates the small tinted-tag look |
 | `StatusDot` / `LogItem` / `LogList` / `EmptyState` | §10 | `status` / `level` / `entries` / `variant`+`error` |
@@ -571,15 +571,30 @@ construction rather than by review.
 | `Stepper` | §15 `.stepper` | `nodes` (`{key,label,status,kind}`), `onNodeClick`, `activeKey`, `stream` |
 | `TokenStream` | §15 `.token-stream` | `text`, `active`, `columns`, `placeholder` |
 
-**Adding a new primitive:** add the wrapper + a barrel export in `ui/`, add a
-specimen to the showcase (`src/design-system/sections/Components.jsx`), extend
-`ui/ui.test.jsx` with its class-contract assertion, and add a row to the table
-above. Never introduce new CSS in a primitive — if a class is missing, document
-it in the relevant section first.
+**Adding a new primitive** is exactly three steps:
 
-**Showcase:** [`design-system.html`](design-system.html) renders the real
-primitives (single source of truth) inside the app scaffold, organized
-Foundations → Components → Patterns. It's a second Vite entry (`/design-system.html`).
+1. Add the wrapper + a barrel export in `ui/` (no new CSS — if a class is
+   missing, document it in the relevant section of this file first).
+2. Add one entry to the catalog manifest
+   [`src/design-system/manifest.jsx`](src/design-system/manifest.jsx) —
+   `name`, `group`, `summary`, `props[]`, `usage`, and a live `Specimen`.
+3. Add the class-contract assertion in `ui/ui.test.jsx`.
+
+The showcase tile **auto-appears** from the manifest entry, and the coverage
+test (`src/design-system/manifest.test.jsx`) asserts a strict 1:1 between
+`ui/index.js` exports, manifest entries, and the primitive names in the table
+above — a missing or orphaned entry (or a missing table row here) **fails CI**.
+
+**Showcase:** [`design-system.html`](design-system.html) renders every manifest
+entry as a searchable gallery tile (live specimen + prop table + copyable usage)
+inside the app scaffold, organized Foundations → Components → Patterns. It's a
+second Vite entry (`/design-system.html`); in dev builds the site footer links
+to it (the link is stripped from production bundles).
+[`src/design-system/manifest.jsx`](src/design-system/manifest.jsx) is the
+catalog's single source of truth — this table is checked against it.
+
+This component library is **frontend-only**: it is unrelated to the backend
+`agents.json` registry and the prompt-versioning conventions.
 
 ---
 

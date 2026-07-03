@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
-import { Button, EmptyState } from '../ui/index.js';
+import { Badge, Button, EmptyState } from '../ui/index.js';
 
 /**
  * Loads the rubric JSON from the API first, then the data directory.
@@ -120,11 +120,11 @@ export default function RubricViewerModal({ isOpen, onClose }) {
                 <section className="rubric-criterion" key={criterion.name || index}>
                   <div className="rubric-criterion-header">
                     <div>
-                      <span className="rubric-index">{String(index + 1).padStart(2, '0')}</span>
+                      <Badge kind="rubric-index">{String(index + 1).padStart(2, '0')}</Badge>
                       <h4>{formatTitle(criterion.name)}</h4>
                     </div>
                     {criterion.category && (
-                      <span className="rubric-category">{criterion.category}</span>
+                      <Badge kind="rubric-category">{criterion.category}</Badge>
                     )}
                   </div>
 

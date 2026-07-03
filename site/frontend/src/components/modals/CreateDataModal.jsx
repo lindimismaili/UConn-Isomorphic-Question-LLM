@@ -2,7 +2,7 @@ import Modal from "./Modal.jsx";
 import CompareProfessorPanel from "./CompareProfessorPanel.jsx";
 import { IconFile, IconFolder, IconZap } from "../Icons.jsx";
 import { useAgentRegistry } from "../../hooks/useAgentRegistry";
-import { Button, Pill } from "../ui/index.js";
+import { Badge, Button, Pill } from "../ui/index.js";
 
 /**
  * Normalizes the batch output folder label for display.
@@ -152,9 +152,9 @@ export default function CreateDataModal({
                     <span>{entry.name}</span>
                   </div>
                   <div className="create-data-item-tracking">
-                    <span className="create-data-step-chip">
+                    <Badge kind="step-chip">
                       {`${entry.stepLabel || fallbackStepLabel} ${entry.currentAgentName || fallbackAgentName}`.trim()}
-                    </span>
+                    </Badge>
                     <Pill state={entry.status}>
                       {getStatusLabel(entry.status)}
                     </Pill>
