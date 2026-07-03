@@ -1492,6 +1492,14 @@ install_auto_update_units() {
 
   local service_file="/etc/systemd/system/${SERVICE_NAME}-update.service"
   local timer_file="/etc/systemd/system/${SERVICE_NAME}-update.timer"
+  local repo_owner repo_owner_home
+
+  repo_owner="$(stat -c '%U' "${REPO_DIR}/.git")"
+  repo_owner_home="$(getent passwd "${repo_owner}" | cut -d: -f6)"
+  if [[ -z "${repo_owner_home}" ]]; then
+    err "Could not determine the home directory for repository owner ${repo_owner}."
+    exit 1
+  fi
 
   sudo tee "${service_file}" >/dev/null <<EOF
 [Unit]
@@ -1501,6 +1509,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+Environment="HOME=${repo_owner_home}"
 ExecStart=/bin/bash ${REPO_DIR}/deploy/deploy.sh --update
 EOF
 
