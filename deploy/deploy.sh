@@ -373,7 +373,6 @@ sync_repo_to_deploy_dir() {
     --exclude "site/frontend/.vite/" \
     --exclude "site/backend/outputs/" \
     --exclude "site/backend/uploads/" \
-    --exclude "site/backend/runtime/" \
     --exclude "__pycache__/" \
     "${REPO_DIR}/" "${DEPLOY_DIR}/"
 
@@ -1470,16 +1469,15 @@ run_auto_update() {
   # Force the checkout to exactly match origin/main no matter what was edited
   # locally on the Pi: discard tracked-file edits and untracked junk.
   #
-  # Data dirs are NOT touched: `clean -ffd` (no -x) already skips gitignored
-  # paths, so uploads/outputs/runtime contents survive; the explicit excludes
-  # are belt-and-suspenders in case those dirs are ever un-ignored. The live
-  # uploaded/output data lives under DEPLOY_DIR, which git never operates on.
+  # uploads/ and outputs/ are the only persistent application-data dirs. Keep
+  # ignored copies during checkout cleanup; every other checkout path may be
+  # replaced by origin/main. The live copies under DEPLOY_DIR are separately
+  # protected by sync_repo_to_deploy_dir's rsync excludes.
   git_as_owner checkout -f main
   git_as_owner reset --hard origin/main
   git_as_owner clean -ffd \
     -e "site/backend/uploads" \
-    -e "site/backend/outputs" \
-    -e "site/backend/runtime"
+    -e "site/backend/outputs"
 
   require_sudo
   sync_repo_to_deploy_dir

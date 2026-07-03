@@ -68,12 +68,13 @@ files are discarded**), then it re-syncs to the deploy directory, rebuilds the
 frontend, and restarts the backend (waiting on `/api/health`).
 `dist/version.json` reflects the new short commit SHA once a redeploy completes.
 
-Your data is preserved. `clean` runs without `-x`, so gitignored paths
-(`uploads/`, `outputs/`, `runtime/`) are left alone — and those dirs are also
-listed as explicit `clean` excludes as a safeguard. More importantly, the live
-uploaded/generated data lives under the deploy directory
-(`/var/www/uconn-isomorphic/...`), which git never touches; the redeploy's
-`rsync` already excludes `uploads/`, `outputs/`, and `runtime/` there too.
+The two persistent data folders are always preserved:
+`site/backend/uploads/` and `site/backend/outputs/`. They are explicit excludes
+in both checkout cleanup and the live deploy `rsync`. The saved live copies are
+under the deploy directory (`/var/www/uconn-isomorphic/...`), which Git never
+touches, so a forced checkout and redeploy cannot overwrite or delete them.
+Every other application path may be replaced by the latest `origin/main`
+version.
 
 **Prerequisite:** the timer pulls non-interactively **as the repository owner**
 (not root), so that user must have working git auth for `origin`. With the
