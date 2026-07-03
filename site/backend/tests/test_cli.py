@@ -68,7 +68,21 @@ class NormalizeArgvShimTests(unittest.TestCase):
 
 
 class RunCommandTests(unittest.TestCase):
-    """`run` must thread files/theme/stop-after/eval into the engine call."""
+    """`run` must thread files/theme/stop-after/eval into the engine call.
+
+    OUTPUTS_DIR is redirected to a temp dir because `run_workflow` creates its
+    dated run directory eagerly, before the (mocked) engine runs — otherwise
+    every test run leaks an empty folder into the real outputs tree.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self._outputs_patch = patch.object(main, "OUTPUTS_DIR", Path(self._tmp.name))
+        self._outputs_patch.start()
+
+    def tearDown(self) -> None:
+        self._outputs_patch.stop()
+        self._tmp.cleanup()
 
     def test_run_passes_engine_kwargs(self) -> None:
         captured: dict = {}
@@ -120,7 +134,20 @@ class RunCommandTests(unittest.TestCase):
 
 
 class RerunFromAgentTests(unittest.TestCase):
-    """rerun-from-agent must thread resume_source_dir/label/from into the engine."""
+    """rerun-from-agent must thread resume_source_dir/label/from into the engine.
+
+    OUTPUTS_DIR is redirected to a temp dir for the same eager-run-dir reason
+    as RunCommandTests.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self._outputs_patch = patch.object(main, "OUTPUTS_DIR", Path(self._tmp.name))
+        self._outputs_patch.start()
+
+    def tearDown(self) -> None:
+        self._outputs_patch.stop()
+        self._tmp.cleanup()
 
     def test_threads_resume_args(self) -> None:
         captured: dict = {}
