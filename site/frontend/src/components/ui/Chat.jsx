@@ -8,7 +8,8 @@
 
 import { useEffect, useRef } from 'react';
 import { Button, IconButton } from './Button.jsx';
-import { Select, TextArea } from './Field.jsx';
+import { TextArea } from './Field.jsx';
+import { Dropdown } from './Dropdown.jsx';
 import { IconRobot, IconUser, IconComputer, IconShield, IconSend, IconPaperclip } from '../Icons.jsx';
 
 /** Maps a chat role to the default identity icon shown in its avatar. */
@@ -195,8 +196,9 @@ export function TypingIndicator({ label, className = '', ...rest }) {
  * @param {'success'|'error'} [props.sendFeedback] - Transient send-button lock.
  * @param {'success'|'error'} [props.attachFeedback] - Transient attach-button lock.
  * @param {import('react').ReactNode} [props.attachLabel] - Attach button label.
- * @param {object} [props.themeSelect] - `{value, onChange, options, placeholder, disabled}`;
- *   the select gets `.is-active` (primary glow) while a theme is selected.
+ * @param {object} [props.themeSelect] - `{value, onChange(value), options, placeholder, disabled}`;
+ *   `onChange` receives the selected value (not a DOM event); the trigger gets
+ *   `.is-active` (primary glow) while a theme is selected.
  * @param {import('react').ReactNode} [props.children] - Extra leading controls.
  * @param {string} [props.className]
  */
@@ -247,8 +249,10 @@ export function Composer({
         <div className="composer-controls-left">
           {children}
           {themeSelect ? (
-            <Select
+            <Dropdown
               className={`composer-theme-select${themeSelect.value ? ' is-active' : ''}`}
+              size="sm"
+              aria-label="Theme prompt"
               value={themeSelect.value}
               onChange={themeSelect.onChange}
               disabled={themeSelect.disabled}

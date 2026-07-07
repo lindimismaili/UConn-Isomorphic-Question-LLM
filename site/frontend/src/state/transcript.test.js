@@ -87,6 +87,30 @@ describe('deriveTranscript', () => {
     expect(messages[0]).toMatchObject({ id: 'user-prompt', variant: 'user', text: 'make it harder', files: ['a.pdf'] });
   });
 
+  it('adds a workflow-started note (after the user prompt) carrying the latest run id', () => {
+    const state = baseState({
+      runInputs: { prompt: 'go', files: [] },
+      isRunning: true,
+      workflowId: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    });
+    const messages = deriveTranscript(state, REGISTRY);
+    const started = messages.find((m) => m.id === 'workflow-started');
+    expect(messages.indexOf(started)).toBe(1); // right after 'user-prompt'
+    expect(started).toMatchObject({ kind: 'workflow-started', variant: 'assistant' });
+    expect(started.text).toBe('Workflow ID: 3f2504e0 - Latest Run');
+  });
+
+  it('shows a starting placeholder before the workflow id is registered', () => {
+    const state = baseState({ isRunning: true, workflowId: null });
+    const started = deriveTranscript(state, REGISTRY).find((m) => m.id === 'workflow-started');
+    expect(started.text).toBe('Workflow starting…');
+  });
+
+  it('omits the workflow-started note when no run has started', () => {
+    const state = baseState();
+    expect(deriveTranscript(state, REGISTRY).find((m) => m.id === 'workflow-started')).toBeUndefined();
+  });
+
   it('emits one bubble per started node, in registry order, skipping inactive/queued', () => {
     const state = baseState({
       agents: {
@@ -108,7 +132,7 @@ describe('deriveTranscript', () => {
     const state = baseState({ blocked: { category: 'policy', reason: 'Off topic', stage: 'content_guardrail' } });
     const messages = deriveTranscript(state, REGISTRY);
     const blocked = messages.find((m) => m.id === 'blocked');
-    expect(blocked).toMatchObject({ kind: 'guardrail', tone: 'blocked', text: 'Off topic' });
+    expect(blocked).toMatchObject({ kind: 'blocked', tone: 'blocked', text: 'Off topic' });
     expect(blocked.blocked.category).toBe('policy');
   });
 

@@ -6,7 +6,7 @@
  * here, so the header/footer/banner exist once, not duplicated as raw markup.
  */
 
-import { Banner, PageHeader, Footer, Select } from '../components/ui/index.js';
+import { Banner, PageHeader, Footer, Dropdown } from '../components/ui/index.js';
 
 /** Physics-academic motif surfaced behind the navy masthead. */
 export const HEADER_MOTIF = '/assets/physics-motif.svg';
@@ -49,11 +49,13 @@ export function SiteHeader({ title = 'Isomorphic Question Generator', aside, mod
           <span className="logo-icon logo-icon-ai" aria-hidden="true" />
           <h1>{title}</h1>
           {onModeChange ? (
-            <Select
+            <Dropdown
               className="mode-select"
+              variant="onDark"
+              size="sm"
               aria-label="Site mode"
               value={mode}
-              onChange={(event) => onModeChange(event.target.value)}
+              onChange={onModeChange}
               options={SITE_MODES}
             />
           ) : null}

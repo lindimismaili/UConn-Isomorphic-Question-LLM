@@ -10,6 +10,7 @@
 
 export { Button, IconButton } from './Button.jsx';
 export { TextInput, TextArea, Select } from './Field.jsx';
+export { Dropdown } from './Dropdown.jsx';
 export { ToggleSwitch } from './ToggleSwitch.jsx';
 export { Card, CardHeader, CardBody, SectionHeading } from './Card.jsx';
 export { Badge, StatusChip, ScoreChip, Pill, Chip } from './Badge.jsx';
