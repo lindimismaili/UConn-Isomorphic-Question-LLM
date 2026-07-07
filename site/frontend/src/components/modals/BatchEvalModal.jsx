@@ -96,11 +96,22 @@ export default function BatchEvalModal({ isOpen, onClose, batchEval, loadRuns })
   const isActive = batchEval.isStarting || batchEval.isRunning;
   const isIdle = !isActive && !['completed','errored','cancelled'].includes(batchEval.status);
 
+  // Load prior runs once per open. Keying the previous effect on
+  // `availableRuns.length === 0` re-fired forever when the folder was genuinely
+  // empty (load → empty → not loading → load again), flashing the
+  // "Loading…"/"No runs found" hints. The ref fires exactly one load per open
+  // and resets when the modal closes so reopening refreshes the list.
+  const loadTriggeredRef = useRef(false);
   useEffect(() => {
-    if (isOpen && tab === 'prior_runs' && batchEval.availableRuns.length === 0 && !batchEval.loadingRuns) {
+    if (!isOpen) {
+      loadTriggeredRef.current = false;
+      return;
+    }
+    if (tab === 'prior_runs' && !loadTriggeredRef.current && !batchEval.loadingRuns) {
+      loadTriggeredRef.current = true;
       loadRuns();
     }
-  }, [isOpen, tab, loadRuns, batchEval.availableRuns.length, batchEval.loadingRuns]);
+  }, [isOpen, tab, loadRuns, batchEval.loadingRuns]);
 
   const handleToggle = (folder) => {
     setSelectedFolders(prev => {

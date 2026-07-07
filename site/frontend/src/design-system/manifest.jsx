@@ -13,6 +13,7 @@ import {
   Chip,
   Composer,
   DataTable,
+  Dropdown,
   EmptyState,
   Footer,
   IconButton,
@@ -166,6 +167,40 @@ export const MANIFEST = [
           options={[
             { value: 'physics', label: 'Physics' },
             { value: 'biology', label: 'Biology' },
+          ]}
+        />
+      );
+    },
+  },
+  {
+    name: 'Dropdown',
+    group: 'Form controls',
+    summary:
+      'Custom accessible listbox that replaces native `<select>` for list selectors — a portaled, fully site-themed popup that never clips (opens upward when needed) with full keyboard/typeahead support.',
+    props: [
+      { name: 'value', type: 'string' },
+      { name: 'onChange', type: '(value: string) => void' },
+      { name: 'options', type: 'Array<{value, label, disabled?}>' },
+      { name: 'placeholder', type: 'string' },
+      { name: 'size', type: "'default' | 'sm'" },
+      { name: 'variant', type: "'default' | 'onDark'" },
+      { name: 'disabled', type: 'boolean' },
+      { name: 'aria-label', type: 'string' },
+      { name: 'id', type: 'string' },
+    ],
+    usage: '<Dropdown placeholder="Select a theme…" options={options} value={value} onChange={setValue} />',
+    Specimen: () => {
+      const [value, setValue] = useState('');
+      return (
+        <Dropdown
+          aria-label="Theme"
+          placeholder="Select a theme…"
+          value={value}
+          onChange={setValue}
+          options={[
+            { value: 'physics', label: 'Physics' },
+            { value: 'biology', label: 'Biology' },
+            { value: 'chemistry', label: 'Chemistry' },
           ]}
         />
       );

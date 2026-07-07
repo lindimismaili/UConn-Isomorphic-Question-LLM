@@ -59,7 +59,13 @@ const EMPTY_HINTS = {
 /** Which chat variant a derived message maps to. */
 function messageVariant(message) {
   if (message.variant === 'user') return 'user';
-  return message.kind === 'result' || message.kind === 'error' || message.kind === 'guardrail'
+  // `blocked` is the terminal guardrail summary (an assistant reply);
+  // `workflow-started` is a system note; per-node `guardrail` bubbles are
+  // ordinary agent activity updates.
+  return message.kind === 'result' ||
+    message.kind === 'error' ||
+    message.kind === 'blocked' ||
+    message.kind === 'workflow-started'
     ? 'assistant'
     : 'agent';
 }
@@ -67,8 +73,8 @@ function messageVariant(message) {
 /** Avatar role for a message. */
 function avatarRole(message) {
   if (message.variant === 'user') return 'user';
-  if (message.kind === 'guardrail') return 'guardrail';
-  if (message.kind === 'runtime') return 'runtime';
+  if (message.kind === 'guardrail' || message.kind === 'blocked') return 'guardrail';
+  if (message.kind === 'runtime' || message.kind === 'workflow-started') return 'runtime';
   return 'assistant';
 }
 
@@ -114,10 +120,17 @@ export default function ChatConversation({
   const stepperNodes = deriveStepperNodes(state, registry);
   const thinkingKey = activeAgentKey(state, registry);
 
+  // The pipeline is "active" once a run has started this session (running, or a
+  // registered workflow id that persists as the latest run). Before the first
+  // run it reads as blurred/greyed/inactive.
+  const pipelineActive = state.isRunning || Boolean(state.workflowId);
+  const shortWorkflowId = state.workflowId ? state.workflowId.slice(0, 8) : null;
+
   // Selecting a theme never touches the composer text — the selection is sent
-  // as the run's `theme` field, and the select itself glows while active.
-  const handleDropdownChange = (event) => {
-    setSelectedDropdownValue(event.target.value);
+  // as the run's `theme` field, and the select itself glows while active. The
+  // Dropdown passes the value directly (not a DOM event).
+  const handleDropdownChange = (value) => {
+    setSelectedDropdownValue(value);
   };
 
   const handleSend = () => {
@@ -163,7 +176,15 @@ export default function ChatConversation({
     if (message.kind === 'error') {
       return <FailureSection error={message.error} outputFolder={message.errorFolder} />;
     }
-    if (message.kind === 'guardrail') {
+    if (message.kind === 'workflow-started') {
+      return (
+        <div className="chat-workflow-started">
+          <span className="chat-workflow-started-label">Workflow started</span>
+          <span className="chat-workflow-started-id">{message.text}</span>
+        </div>
+      );
+    }
+    if (message.kind === 'blocked') {
       const blocked = message.blocked || {};
       return (
         <div className="chat-blocked">
@@ -202,14 +223,6 @@ export default function ChatConversation({
         hidden
         onChange={handleFileSelect}
       />
-
-      <div className="chat-rail">
-        <Stepper
-          nodes={stepperNodes}
-          onNodeClick={onNodeClick}
-          activeKey={thinkingKey || undefined}
-        />
-      </div>
 
       <ChatTranscript
         count={messages.length}
@@ -269,6 +282,26 @@ export default function ChatConversation({
           disabled: isRunning || serviceInactive || dropdownItems.length === 0,
         }}
       />
+
+      {/* The pipeline process-rail sits beneath the conversation + composer as a
+          status footer (it used to sit above the chat). It reads as inactive
+          (blurred/greyed) until a workflow exists this session, and labels the
+          latest run's id in its top-right. */}
+      <div className={`chat-rail${pipelineActive ? '' : ' is-inactive'}`}>
+        <div className="chat-rail-header">
+          <span className="chat-rail-title">Workflow Pipeline</span>
+          {pipelineActive ? (
+            <span className="chat-rail-id" title={state.workflowId || undefined}>
+              {shortWorkflowId ? `Workflow ID: ${shortWorkflowId} - Latest Run` : 'Workflow starting…'}
+            </span>
+          ) : null}
+        </div>
+        <Stepper
+          nodes={stepperNodes}
+          onNodeClick={onNodeClick}
+          activeKey={thinkingKey || undefined}
+        />
+      </div>
     </div>
   );
 }

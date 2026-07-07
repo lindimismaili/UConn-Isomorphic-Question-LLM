@@ -17,6 +17,7 @@ import {
   Chip,
   Composer,
   DataTable,
+  Dropdown,
   EmptyState,
   Footer,
   IconButton,
@@ -102,6 +103,44 @@ describe('form controls', () => {
     const sel = container.querySelector('select');
     expect(sel.className).toBe('prompt-dropdown-select');
     expect(sel.querySelectorAll('option')).toHaveLength(2);
+  });
+
+  it('Dropdown renders a closed listbox trigger with the placeholder', () => {
+    render(
+      <Dropdown value="" onChange={() => {}} placeholder="Pick" options={[{ value: 'a', label: 'A' }]} />,
+    );
+    const root = container.querySelector('.dropdown');
+    const trigger = root.querySelector('button.dropdown-trigger');
+    expect(trigger.getAttribute('aria-haspopup')).toBe('listbox');
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger.querySelector('.dropdown-trigger-label.is-placeholder').textContent).toBe('Pick');
+    // Closed → no portaled listbox yet.
+    expect(document.body.querySelector('[role="listbox"]')).toBeNull();
+  });
+
+  it('Dropdown opens on click (portaled) and commits the chosen value', () => {
+    let picked = null;
+    render(
+      <Dropdown
+        value=""
+        onChange={(v) => {
+          picked = v;
+        }}
+        options={[
+          { value: 'a', label: 'Alpha' },
+          { value: 'b', label: 'Beta' },
+        ]}
+      />,
+    );
+    act(() => container.querySelector('.dropdown-trigger').click());
+    const listbox = document.body.querySelector('[role="listbox"]');
+    expect(listbox).toBeTruthy();
+    const options = listbox.querySelectorAll('[role="option"]');
+    expect(options).toHaveLength(2);
+    act(() => options[1].click());
+    expect(picked).toBe('b');
+    // Selecting closes the menu.
+    expect(document.body.querySelector('[role="listbox"]')).toBeNull();
   });
 });
 
@@ -335,9 +374,10 @@ describe('chat primitives', () => {
     expect(container.querySelector('textarea.composer-input')).toBeTruthy();
     expect(container.querySelector('.composer-send')).toBeTruthy();
     expect(container.querySelector('.composer-attach')).toBeTruthy();
-    expect(container.querySelector('select.composer-theme-select')).toBeTruthy();
-    // No theme selected → no active glow.
-    expect(container.querySelector('select.composer-theme-select').className).not.toContain('is-active');
+    // The theme selector is the custom Dropdown (a trigger button, not a native select).
+    expect(container.querySelector('.composer-theme-select .dropdown-trigger')).toBeTruthy();
+    // No theme selected → no active glow (on the wrapper).
+    expect(container.querySelector('.composer-theme-select').className).not.toContain('is-active');
     act(() =>
       root.render(
         <Composer
@@ -350,7 +390,7 @@ describe('chat primitives', () => {
         />,
       ),
     );
-    expect(container.querySelector('select.composer-theme-select').className).toContain('is-active');
+    expect(container.querySelector('.composer-theme-select').className).toContain('is-active');
   });
 
   it('Composer send button flips to Stop while running', () => {

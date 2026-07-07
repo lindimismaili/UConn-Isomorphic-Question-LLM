@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from '../Icons.jsx';
 // Direct file import (not the ui/ barrel) because the barrel re-exports this
@@ -188,6 +188,30 @@ export default function Modal({
   const stackIndex = useSyncExternalStore(subscribeStack, () => getModalLayer(titleId));
   const isTopModal = isOpen && stack.at(-1) === titleId;
 
+  // Enter-phase gate: a modal (especially a stacked/viewer modal mounted on
+  // open) is first rendered with `.is-entering` (visible layer, but backdrop
+  // still at blur(0)/opacity 0), then flipped to `.is-visible` on the next
+  // painted frame so the backdrop-filter/opacity transition actually animates
+  // instead of popping straight to its final value.
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    if (isOpen) {
+      // Flip to visible on the frame after the pre-enter frame is painted.
+      let raf2 = 0;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setEntered(true));
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        if (raf2) cancelAnimationFrame(raf2);
+      };
+    }
+    // Reset for the next open (scheduled, not synchronous — the class already
+    // reads `is-closing` from `isOpen` this render).
+    const raf = requestAnimationFrame(() => setEntered(false));
+    return () => cancelAnimationFrame(raf);
+  }, [isOpen]);
+
   // Lock body scroll and add modal-open class when open
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -256,9 +280,11 @@ export default function Modal({
     ? ` modal-${size}`
     : (large ? ' modal-large' : '');
 
+  const phaseClass = entered ? ' is-visible' : isOpen ? ' is-entering' : ' is-closing';
+
   const modal = (
     <div
-      className={`modal${isOpen ? ' is-visible' : ' is-closing'}${modalClassName ? ` ${modalClassName}` : ''}`}
+      className={`modal${phaseClass}${isTopModal ? ' is-top' : ''}${modalClassName ? ` ${modalClassName}` : ''}`}
       role={isOpen ? 'dialog' : undefined}
       aria-modal={isOpen ? 'true' : undefined}
       aria-hidden={isOpen ? undefined : 'true'}

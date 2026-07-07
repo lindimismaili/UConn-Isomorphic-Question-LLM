@@ -78,6 +78,23 @@ export function deriveTranscript(state, derivedRegistry) {
     }
   }
 
+  // 1b. A "workflow began" note carrying the latest run's id, so the transcript
+  // is clearly tied to the run shown in the pipeline. Shows "starting…" during
+  // the setup window (before the backend registers the id) and persists after
+  // completion (workflowId is not cleared until the next run starts).
+  if (state.isRunning || state.workflowId) {
+    messages.push({
+      id: 'workflow-started',
+      variant: 'assistant',
+      kind: 'workflow-started',
+      author: 'Workflow',
+      workflowId: state.workflowId || null,
+      text: state.workflowId
+        ? `Workflow ID: ${state.workflowId.slice(0, 8)} - Latest Run`
+        : 'Workflow starting…',
+    });
+  }
+
   // 2. One bubble per started pipeline node, in registry order.
   const order = pipelineKeys.length
     ? pipelineKeys
@@ -99,12 +116,14 @@ export function deriveTranscript(state, derivedRegistry) {
     });
   }
 
-  // 3. A guardrail block bubble (terminal `blocked` status).
+  // 3. A guardrail block bubble (terminal `blocked` status). Uses kind
+  // `'blocked'` — distinct from the per-node `'guardrail'` activity bubbles
+  // above, which render as ordinary pass/working/blocked node updates.
   if (state.blocked) {
     messages.push({
       id: 'blocked',
       variant: 'assistant',
-      kind: 'guardrail',
+      kind: 'blocked',
       author: 'Guardrail',
       status: 'blocked',
       tone: 'blocked',

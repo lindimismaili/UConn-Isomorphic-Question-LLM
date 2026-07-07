@@ -21,23 +21,33 @@ export function IconComputer({ className }) {
 }
 
 /**
- * Brain icon used for the idle workflow placeholder.
+ * Brain icon used for LLM agent nodes and the idle workflow placeholder.
+ * Forwards `style`/extra props so callers can stagger animations (e.g. the
+ * ghost-brain `animationDelay` in AgentPipeline).
  *
  * @param {{className?: string}} props
  */
-export function IconBrain({ className }) {
+export function IconBrain({ className, ...rest }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M9 4.5A3.5 3.5 0 0 0 5.5 8 3 3 0 0 0 3 11a3.2 3.2 0 0 0 2.1 3.02A3.5 3.5 0 0 0 9 18.5" />
-      <path d="M15 4.5A3.5 3.5 0 0 1 18.5 8 3 3 0 0 1 21 11a3.2 3.2 0 0 1-2.1 3.02A3.5 3.5 0 0 1 15 18.5" />
-      <path d="M9 4.5v14" />
-      <path d="M15 4.5v14" />
-      <path d="M9 8h2" />
-      <path d="M13 8h2" />
-      <path d="M8 12h3" />
-      <path d="M13 12h3" />
-      <path d="M9 16h2" />
-      <path d="M13 16h2" />
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...rest}
+    >
+      <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
+      <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
+      <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
+      <path d="M17.599 6.5a3 3 0 0 0 .399-1.375" />
+      <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5" />
+      <path d="M3.477 10.896a4 4 0 0 1 .585-.396" />
+      <path d="M19.938 10.5a4 4 0 0 1 .585.396" />
+      <path d="M6 18a4 4 0 0 1-1.967-.516" />
+      <path d="M19.967 17.484A4 4 0 0 1 18 18" />
     </svg>
   );
 }
@@ -295,6 +305,38 @@ export function IconShield({ className }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
       <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+/**
+ * Warning-triangle icon used for guardrail pipeline nodes at rest (a checkpoint
+ * that may stop the run).
+ *
+ * @param {{className?: string}} props
+ */
+export function IconWarning({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+/**
+ * Shield-with-alert icon used when a guardrail node fails / blocks a run (the
+ * failure counterpart to the passing `IconShield`).
+ *
+ * @param {{className?: string}} props
+ */
+export function IconShieldExclamation({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
+      <line x1="12" y1="8.5" x2="12" y2="12.5" />
+      <line x1="12" y1="15.5" x2="12.01" y2="15.5" />
     </svg>
   );
 }

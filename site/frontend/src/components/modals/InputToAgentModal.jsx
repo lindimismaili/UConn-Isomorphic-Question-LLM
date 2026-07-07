@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import Modal from './Modal.jsx';
 import { IconFile, IconUpload } from '../Icons.jsx';
 import { useAgentRegistry } from '../../hooks/useAgentRegistry';
-import { Button, EmptyState, Select } from '../ui/index.js';
+import { Button, Dropdown, EmptyState } from '../ui/index.js';
 
 /**
  * Lets developers upload an agent input artifact and resume from that stage.
@@ -113,12 +113,12 @@ export default function InputToAgentModal({
 
         <label className="input-to-agent-field" htmlFor="input-to-agent-select">
           <span>Agent</span>
-          <Select
+          <Dropdown
             id="input-to-agent-select"
             className="input-to-agent-select"
             value={resolvedAgent}
-            onChange={(event) => {
-              setSelectedAgent(event.target.value);
+            onChange={(value) => {
+              setSelectedAgent(value);
               resetLocalState();
             }}
             disabled={isRunning || serviceInactive}

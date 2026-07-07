@@ -138,6 +138,9 @@
   --z-connector: 2;
   --z-header: 100;
   --z-modal: 1000;
+  /* Custom dropdown popups portal to <body> and must clear stacked modals
+     (which layer at 1000 + depth). */
+  --z-popover: 1100;
 
   /* Layout */
   --site-max-width: 1760px;
@@ -221,6 +224,11 @@ select {
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+select:hover:not(:disabled) {
+  border-color: var(--color-border-hover);
+  background-color: rgba(var(--color-primary-rgb), 0.04);
+}
+
 select:focus {
   outline: none;
   border-color: var(--color-primary);
@@ -232,9 +240,152 @@ select:disabled {
   cursor: not-allowed;
 }
 
+/* The open option list is OS-rendered, so styling is best-effort (honoured by
+   Firefox + Chromium; ignored by some native Windows menus). */
 select option {
   background: #ffffff;
   color: var(--color-text);
+  padding: 8px 10px;
+}
+
+select option:checked {
+  background: rgba(var(--color-primary-rgb), 0.12);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* -----------------------------------------------------------------------------
+   Custom Dropdown primitive (DESIGN.md §5). A genuinely new element, so it owns
+   this `.dropdown*` class family (the documented exception to "primitives add no
+   new CSS"). The trigger mirrors the native `select` box; the menu is portaled
+   to <body> and fixed-positioned, so it uses --z-popover to clear stacked modals.
+   --------------------------------------------------------------------------- */
+.dropdown {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: var(--control-height);
+  height: var(--control-height);
+  padding: 0 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+.dropdown-trigger:hover:not(:disabled) {
+  border-color: var(--color-border-hover);
+  background-color: rgba(var(--color-primary-rgb), 0.04);
+}
+.dropdown-trigger:focus-visible,
+.dropdown.is-open .dropdown-trigger {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
+.dropdown-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.dropdown-trigger-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dropdown-trigger-label.is-placeholder {
+  color: var(--color-text-muted);
+}
+.dropdown-chevron {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 8px;
+  transition: transform var(--transition-fast);
+}
+.dropdown.is-open .dropdown-chevron {
+  transform: rotate(180deg);
+}
+/* Small tier — matches --control-height-sm controls (header + composer row). */
+.dropdown-sm .dropdown-trigger {
+  min-height: var(--control-height-sm);
+  height: var(--control-height-sm);
+  font-size: var(--font-size-sm);
+}
+/* Navy-masthead variant: light-on-navy trigger (the menu stays light). */
+.dropdown-onDark .dropdown-trigger {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-weight: 600;
+}
+.dropdown-onDark .dropdown-trigger:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.dropdown-onDark .dropdown-trigger:focus-visible,
+.dropdown-onDark.is-open .dropdown-trigger {
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
+}
+/* Portaled popup. */
+.dropdown-menu {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow-y: auto;
+  z-index: var(--z-popover);
+}
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.dropdown-menu.dropdown-sm .dropdown-option {
+  font-size: var(--font-size-sm);
+}
+.dropdown-option.is-placeholder {
+  color: var(--color-text-muted);
+}
+.dropdown-option.is-highlighted {
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+.dropdown-option.is-selected {
+  background: rgba(var(--color-primary-rgb), 0.12);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.dropdown-option.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-chevron {
+    transition: none;
+  }
 }
 
 /* =============================================================================
@@ -667,6 +818,17 @@ select option {
 .prompt-dropdown-select {
   min-height: var(--control-height-lg);
   height: var(--control-height-lg);
+  /* The default --color-border is very faint (primary @ 16%), which made these
+     read as bare text with an arrow. Give them a clearer border + light primary
+     fill so they present as proper site controls. (The header .mode-select keeps
+     its own navy treatment via a more specific rule.) */
+  border-color: var(--color-border-hover);
+  background-color: rgba(var(--color-primary-rgb), 0.04);
+  font-weight: 500;
+}
+.prompt-dropdown-select:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background-color: rgba(var(--color-primary-rgb), 0.07);
 }
 
 .send-action {
@@ -2102,20 +2264,14 @@ select option {
   flex: 0 0 auto;
   margin-left: auto;
 }
+/* The theme selector is a custom Dropdown (size="sm" keeps it on the Attach/Send
+   height tier so the composer control row reads as one group, DESIGN.md §1). */
 .composer-theme-select {
   max-width: 240px;
 }
-/* The theme select shares the Attach/Send buttons' height tier so the composer
-   control row reads as one group (DESIGN.md §1 consistency rule). */
-.composer-theme-select.prompt-dropdown-select {
-  min-height: var(--control-height-sm);
-  height: var(--control-height-sm);
-  padding-top: 0;
-  padding-bottom: 0;
-}
-/* A selected theme never injects text into the composer — the select itself
+/* A selected theme never injects text into the composer — the trigger itself
    glows primary so it's clear a theme prompt will ride along with the run. */
-.composer-theme-select.is-active {
+.composer-theme-select.is-active .dropdown-trigger {
   border-color: var(--color-primary);
   box-shadow:
     0 0 0 3px var(--color-primary-glow),
@@ -2130,7 +2286,9 @@ select option {
   display: grid;
   grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
   gap: var(--layout-gap);
-  align-items: start;
+  /* Stretch both columns to the row height so the developer-tools panel stands
+     as tall as the chat panel beside it. */
+  align-items: stretch;
 }
 /* User/teacher modes hide the developer-tools side panel: the chat surface
    takes the full width. */
@@ -2139,31 +2297,32 @@ select option {
 }
 .workspace-main {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.workspace-main > .chat-shell {
+  flex: 1 1 auto;
 }
 .workspace-side {
   min-width: 0;
-  position: sticky;
-  top: calc(var(--z-base) * 0 + 96px);
-  /* The panel scrolls if it ever exceeds the viewport, so nothing is lost. */
-  max-height: calc(100vh - 112px);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
-/* In the side-panel context the developer-tools card sizes to its content — it
-   has no sibling to stretch against, so the stretch-era `overflow:hidden` +
-   `flex:1 1 0` (meant to keep the log from inflating the old grid row) would
-   instead clip the buttons + log. Let the card and its regions grow naturally. */
-.workspace-side .developer-tools-card,
-.workspace-side .developer-tools-card .card-body,
-.workspace-side .developer-log-area {
-  overflow: visible;
+/* In the side panel the developer-tools card fills the column, so it's as tall
+   as the chat panel and carries the same clean outer drop shadow (its own
+   --shadow-md, no longer clipped by a scrolling wrapper). The log well scrolls
+   internally instead of inflating the card. */
+.workspace-side .developer-tools-card {
+  height: 100%;
 }
-.workspace-side .developer-tools-card .card-body,
-.workspace-side .developer-log-area {
-  flex: 0 0 auto;
+.workspace-side .developer-tools-card .card-body {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 /* The four dev-tool tiles + the toggle wrap instead of being crushed onto one
    narrow row in the ~1fr side panel. */
 .workspace-side .developer-tools-row {
+  flex: 0 0 auto;
   flex-wrap: wrap;
 }
 .workspace-side .developer-tools-row .developer-tool-btn,
@@ -2171,19 +2330,12 @@ select option {
   flex: 1 1 calc(50% - var(--panel-gap));
 }
 .workspace-side .developer-log-area {
-  min-height: 220px;
-}
-.workspace-side .developer-log-area .log-frame {
-  min-height: 200px;
+  flex: 1 1 auto;
+  min-height: 160px;
 }
 @media (max-width: 1100px) {
   .workspace {
     grid-template-columns: 1fr;
-  }
-  .workspace-side {
-    position: static;
-    max-height: none;
-    overflow: visible;
   }
 }
 
@@ -2199,12 +2351,51 @@ select option {
   overflow: hidden;
 }
 .chat-rail {
-  border-bottom: 1px solid var(--color-border);
+  /* The rail sits at the bottom of the chat shell (below the composer) as a
+     status footer, so the divider is on top. */
+  border-top: 1px solid var(--color-border);
   background: var(--color-surface);
   /* The inner .stepper owns horizontal scrolling; keep this wrapper from adding
      a second (clipping) scroll container so every node stays reachable. */
   min-width: 0;
   overflow: hidden;
+}
+/* Panel header: title on the left, latest-run id on the right. */
+.chat-rail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md) 0;
+  min-width: 0;
+}
+.chat-rail-title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.chat-rail-id {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Before the first run the pipeline reads as inactive: blurred, greyed, and
+   non-interactive. The .stepper transition lets it clear smoothly once a run
+   starts. */
+.chat-rail .stepper {
+  transition:
+    filter var(--transition-normal),
+    opacity var(--transition-normal);
+}
+.chat-rail.is-inactive .stepper {
+  filter: blur(2.5px) grayscale(0.55);
+  opacity: 0.55;
+  pointer-events: none;
 }
 .chat-shell .chat-transcript {
   flex: 1 1 auto;
@@ -2249,6 +2440,27 @@ select option {
   margin: 0;
   font-weight: 600;
   font-size: var(--font-size-sm);
+}
+/* While an agent works, its status line ("Working…") reads amber to match the
+   pipeline's cycling status word. */
+.chat-message-thinking .chat-agent-status {
+  color: var(--color-warning);
+}
+/* "Workflow started" system note — a slim line with the latest-run id. */
+.chat-workflow-started {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-xs) var(--spacing-sm);
+}
+.chat-workflow-started-label {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+.chat-workflow-started-id {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
 }
 .chat-blocked {
   display: flex;
@@ -2338,7 +2550,9 @@ select option {
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-xs);
-  width: 92px;
+  /* Wide enough that the longer node labels ("Input Guardrail", "Content
+     Guardrail") read without ellipsizing on desktop. */
+  width: 120px;
   flex: 0 0 auto;
   padding: var(--spacing-xs) var(--spacing-xs) var(--spacing-sm);
   border: 1px solid transparent;
@@ -2425,10 +2639,16 @@ select option {
   font-size: var(--font-size-xs);
   font-weight: 600;
   line-height: 16px;
-  color: var(--color-primary);
+  /* Working = amber: the cycling status word matches the thinking badge glow. */
+  color: var(--color-warning);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* The active node's label also turns amber while it works, so the whole node
+   reads as "working" (matching the cycling status word above it). */
+.stepper-node[data-status="thinking"] .stepper-node-label {
+  color: var(--color-warning);
 }
 .stepper-node-word-text {
   display: inline-block;
@@ -2451,7 +2671,7 @@ select option {
    way). Reuses the documented ≤900px breakpoint (DESIGN.md §3). */
 @media (max-width: 900px) {
   .stepper-node {
-    width: 76px;
+    width: 100px;
   }
   .stepper-connector {
     width: 16px;
@@ -2467,6 +2687,9 @@ select option {
   .chat-transcript,
   .stepper {
     scroll-behavior: auto;
+  }
+  .chat-rail .stepper {
+    transition: none;
   }
 }
 
@@ -2852,6 +3075,25 @@ body.modal-open .footer {
   transition:
     opacity var(--transition-normal),
     visibility 0s;
+}
+
+/* Pre-enter frame: the modal is made visible in its layer while still holding
+   the base (transparent / blur(0)) values, so the flip to .is-visible on the
+   next frame has a starting value to animate the backdrop blur + opacity from
+   (rather than popping straight to the final state). pointer-events stays none
+   here (inherited from base .modal) so no clicks register mid-entrance. */
+.modal.is-entering {
+  visibility: visible;
+}
+
+/* Only the topmost modal scrolls / is interactive; modals stacked beneath it
+   are inert so wheel/touch/keys can't reach their (still-mounted) bodies and
+   the background clicks fall through to nothing. */
+.modal.is-visible:not(.is-top) .modal-body {
+  overflow: hidden;
+}
+.modal.is-visible:not(.is-top) .modal-content {
+  pointer-events: none;
 }
 
 /* The blur radius is animated alongside opacity because backdrop-filter does
@@ -3759,10 +4001,10 @@ body.modal-open .footer {
   font-weight: 700;
 }
 
+/* Full-width Dropdown inside the Input-To-Agent modal. */
 .input-to-agent-select {
+  display: flex;
   width: 100%;
-  min-height: var(--control-height);
-  font-size: 0.9rem;
 }
 
 .input-to-agent-upload {

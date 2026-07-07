@@ -259,6 +259,26 @@ Inputs, selects, and textareas share: `--color-surface` fill, `--color-border`,
 - Placeholder text: `--color-text-muted`.
 - Disabled controls: `opacity ~0.55`, `cursor: not-allowed`.
 
+**Custom dropdown (`.dropdown*`).** For list selectors the native `<select>` is
+replaced by the `Dropdown` primitive so the control *and* its option list are
+fully site-themed. This is a genuinely new element, so it owns the `.dropdown*`
+class family — the **documented exception** to the §14 "primitives add no new
+CSS" rule:
+
+- `.dropdown` (root) → `.dropdown-trigger` (the button; mirrors the `select`
+  box, same `--color-surface` fill / `--color-border` / `--radius-sm` / focus
+  ring), `.dropdown-trigger-label(.is-placeholder)`, `.dropdown-chevron`
+  (rotates 180° on open).
+- `.dropdown-menu` is **portaled to `<body>`** and `position: fixed` (computed
+  from the trigger), so it is never clipped by an `overflow:hidden` shell or a
+  scrolling modal body; it opens upward (`.is-up`) when there's no room below and
+  sits at `--z-popover` (just above `--z-modal`) to clear stacked modals.
+- `.dropdown-option(.is-highlighted/.is-selected/.is-disabled)` — the selected
+  state ports `select option:checked`.
+- `.dropdown-sm` matches the `--control-height-sm` tier; `.dropdown-onDark` is
+  the navy-masthead trigger variant (the menu itself stays light).
+- The native `Select` primitive remains for plain form selects.
+
 ---
 
 ## 6. Toggle switches
@@ -552,6 +572,7 @@ construction rather than by review.
 | `Button` | §4 `.btn` + variant | `variant` (`primary\|secondary\|ghost\|danger`), `size` (`sm`), `icon`, `fixedWidth`, `feedbackState` (`success\|error`), `className` (premade sub-variants), `...rest` |
 | `IconButton` | §4 `.btn-icon-only` | `icon`, `aria-label` |
 | `TextInput` / `TextArea` / `Select` | §5 controls | native props; `Select` takes `options`/`placeholder` |
+| `Dropdown` | §5 `.dropdown*` (custom listbox) | `value`, `onChange(value)`, `options` (`{value,label,disabled?}`), `placeholder`, `size` (`sm`), `variant` (`onDark`), `disabled`, `aria-label`, `id` |
 | `ToggleSwitch` | §6 `.developer-toggle` | `checked`, `onChange`, `label`, `disabled` |
 | `Card` / `CardHeader` / `CardBody` / `SectionHeading` | §7 `.card` | `variant` (`completed\|failed\|main\|developer-tools\|workflow\|log-panel`), `title`, `subtitle`, `actions`, `disclaimer` |
 | `Badge` / `StatusChip` / `ScoreChip` / `Pill` | §10 chips/pills | `kind`/`tone`/`status`/`state` → the documented `is-*` / `eval-*` classes |

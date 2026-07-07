@@ -1,9 +1,11 @@
 /**
  * Stepper — a compact inline process-rail (DESIGN.md §15). Renders a workflow's
- * nodes in order with a per-node status dot and kind affordance (runtime,
- * guardrail = shield, plain agent). Clicking a node fires `onNodeClick(key)` so
- * the host can open that node's modal. The node list is caller-supplied (the
- * host derives it from the agent registry — the Stepper never hardcodes keys).
+ * nodes in order with a per-node status dot and a kind/status glyph: runtime
+ * nodes show a computer, guardrail nodes a warning→shield (pass) / shield-alert
+ * (fail), and LLM agents a brain that becomes a lightbulb while thinking and a
+ * success/alert patch when done. Clicking a node fires `onNodeClick(key)` so the
+ * host can open that node's modal. The node list is caller-supplied (the host
+ * derives it from the agent registry — the Stepper never hardcodes keys).
  *
  * While a node is `thinking`, a cycling status word ("Thinking…",
  * "Combobulating…", …) shows above its icon, and the rail auto-scrolls to keep
@@ -12,7 +14,16 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { IconShield, IconComputer, IconLightbulb, IconPatchCheck, IconPatchExclamation } from '../Icons.jsx';
+import {
+  IconShield,
+  IconShieldExclamation,
+  IconWarning,
+  IconBrain,
+  IconComputer,
+  IconLightbulb,
+  IconPatchCheck,
+  IconPatchExclamation,
+} from '../Icons.jsx';
 
 /** Status → semantic dot class (mirrors the `.status-indicator` families). */
 const STEP_STATUS = {
@@ -67,12 +78,22 @@ function useThinkingWord(active) {
 
 /** Picks the glyph for a node by kind + status. */
 function StepIcon({ kind, status }) {
-  if (kind === 'guardrail') return <IconShield className="stepper-node-icon" />;
+  // Runtime nodes (setup/output) always keep the computer glyph.
   if (kind === 'runtime') return <IconComputer className="stepper-node-icon" />;
+  // Guardrail nodes: a warning at rest, the passing shield on success, the
+  // shield-alert on failure, and the lightbulb while checking.
+  if (kind === 'guardrail') {
+    if (status === 'completed') return <IconShield className="stepper-node-icon" />;
+    if (status === 'errored' || status === 'blocked') return <IconShieldExclamation className="stepper-node-icon" />;
+    if (status === 'thinking') return <IconLightbulb className="stepper-node-icon" />;
+    return <IconWarning className="stepper-node-icon" />;
+  }
+  // LLM agent nodes: a brain at rest, a lightbulb while thinking, and the
+  // success / alert patch when the stage finishes.
   if (status === 'completed') return <IconPatchCheck className="stepper-node-icon" />;
   if (status === 'errored' || status === 'blocked') return <IconPatchExclamation className="stepper-node-icon" />;
   if (status === 'thinking') return <IconLightbulb className="stepper-node-icon" />;
-  return <IconComputer className="stepper-node-icon" />;
+  return <IconBrain className="stepper-node-icon" />;
 }
 
 /**

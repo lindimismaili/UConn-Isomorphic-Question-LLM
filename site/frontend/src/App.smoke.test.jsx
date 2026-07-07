@@ -101,10 +101,10 @@ describe('App (chat-first) smoke', () => {
     expect(container.querySelector('.composer')).toBeTruthy();
     expect(container.querySelector('textarea.composer-input')).toBeTruthy();
 
-    // Site-mode dropdown sits in the header, currently on Dev Mode.
-    const modeSelect = container.querySelector('select.mode-select');
-    expect(modeSelect).toBeTruthy();
-    expect(modeSelect.value).toBe('dev');
+    // Site-mode dropdown (custom Dropdown) sits in the header, currently on Dev Mode.
+    const modeTrigger = container.querySelector('.mode-select .dropdown-trigger');
+    expect(modeTrigger).toBeTruthy();
+    expect(modeTrigger.textContent).toContain('Dev Mode');
 
     // All 10 registry nodes render in the stepper (incl. guardrail + runtime).
     expect(container.querySelectorAll('.stepper-node')).toHaveLength(PIPELINE_KEYS.length);
