@@ -62,13 +62,14 @@ for key, entry in agents.items():
     non_empty_aliases = [a for a in entry.get('aliases', []) if a]
     if non_empty_aliases:
         print(f'  NON-EMPTY aliases in {key}: {non_empty_aliases}')
-    if entry.get('model') != 'gpt-5.5':
+    if entry.get('model') not in ('gpt-5.6-terra', 'gpt-5.6-luna'):
         print(f'  UNEXPECTED model in {key}: {entry.get(\"model\")}')
 print('  Field check complete.')
 "
 ```
 
-Expect: sequence has 8 entries, all models `gpt-5.5`, `aliases_map()` returns `{}`,
+Expect: sequence has 8 entries; the generator is `gpt-5.6-terra` and every other node is
+`gpt-5.6-luna`; `aliases_map()` returns `{}`,
 LLM agents includes evaluation, stoppable excludes evaluation/setup/output.
 
 ## Step 3 — Run backend tests
@@ -77,7 +78,7 @@ LLM agents includes evaluation, stoppable excludes evaluation/setup/output.
 python -m pytest backend/tests/ -q
 ```
 
-All tests must pass. If `test_workflow_and_grading_models_use_gpt_5_5` fails,
+All tests must pass. If `test_workflow_and_grading_models_use_configured_gpt_5_6` fails,
 a non-LLM or null-model agent crept into the LLM filter — check `isLLM` fields.
 
 ## Step 4 — Run ruff lint
