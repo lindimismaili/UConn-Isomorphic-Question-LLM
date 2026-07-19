@@ -217,5 +217,7 @@ coverage by file (not exhaustive):
 - **Engine never imports HTTP/CLI state** — it takes callbacks; don't import FastAPI types into `workflow/`.
 - **All agent constants come from `registry.py`** (never hardcode `"normalizer"`, etc.); paths come from `paths.py`.
 - **Structured outputs** are enforced via Pydantic `output_type=` on each agent (optional/nullable fields like `classification`/`decomposition` stay backward-compatible).
-- **Reasoning effort and models** are per-agent in `agents.json`; `gpt-5.5` is intentional everywhere.
+- **Reasoning effort and models** are per-agent in `agents.json`. The two-tier split is
+  intentional: `gpt-5.6-terra` (high reasoning) for the Generator, `gpt-5.6-luna` for
+  every other LLM stage and the grader.
 - **Active in-flight runs do not resume across a server restart** (in-memory + SQLite mirror).

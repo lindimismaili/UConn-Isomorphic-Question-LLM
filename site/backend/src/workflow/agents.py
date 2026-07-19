@@ -96,7 +96,7 @@ def create_agents(
         agents[agent_key] = Agent(
             name=config.get("name", agent_key.title()),
             instructions=_agent_instructions(agent_key),
-            model=config.get("model", "gpt-5.5"),
+            model=config.get("model", "gpt-5.6-luna"),
             tools=tools,
             output_type=output_type,
             model_settings=ModelSettings(reasoning=reasoning),

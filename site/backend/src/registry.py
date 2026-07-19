@@ -198,7 +198,7 @@ def count_labels() -> dict[str, str]:
 
 def setup_bootstrap_model() -> str:
     """Model used for container bootstrap shell tasks."""
-    return agent_entry("setup").get("model", "gpt-5.5")
+    return agent_entry("setup").get("model", "gpt-5.6-luna")
 
 
 def setup_allowed_domains() -> list[str]:
@@ -215,7 +215,7 @@ def setup_container_packages() -> list[str]:
 
 def evaluation_model() -> str:
     """Model used for evaluation/grading. Authoritative source for the eval agent."""
-    return agent_entry("evaluation").get("model", "gpt-5.5")
+    return agent_entry("evaluation").get("model", "gpt-5.6-luna")
 
 
 # ── Config/schema accessors ───────────────────────────────────────────────────

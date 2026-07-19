@@ -213,19 +213,29 @@ class EvaluationContractTests(unittest.TestCase):
             else:
                 self.assertEqual(criterion.get("range"), [0, 1])
 
-    def test_workflow_and_grading_models_use_gpt_5_5(self) -> None:
+    def test_workflow_and_grading_models_use_configured_gpt_5_6(self) -> None:
+        # Model policy: the generator runs on the high-reasoning "terra" tier; every
+        # other LLM stage and the grader run on the cheaper "luna" tier. Only these
+        # two model ids may appear across the pipeline.
         repo_root = Path(__file__).resolve().parents[2]
         agents = json.loads((repo_root / "backend/data/agents.json").read_text(encoding="utf-8"))
         rubric = json.loads((repo_root / "backend/data/rubric.json").read_text(encoding="utf-8"))
 
+        allowed_models = {"gpt-5.6-terra", "gpt-5.6-luna"}
+
         llm_agents = {k: v for k, v in agents.items() if isinstance(v, dict) and v.get("isLLM") and v.get("model") is not None}
         self.assertGreater(len(llm_agents), 0)
-        for config in llm_agents.values():
-            self.assertEqual(config.get("model"), "gpt-5.5")
+        for key, config in llm_agents.items():
+            self.assertIn(config.get("model"), allowed_models, msg=f"{key} model")
+        # The generator is the only stage on the terra tier; everything else is luna.
+        self.assertEqual(agents["generator"].get("model"), "gpt-5.6-terra")
+        for key, config in llm_agents.items():
+            if key != "generator":
+                self.assertEqual(config.get("model"), "gpt-5.6-luna", msg=f"{key} model")
 
-        self.assertEqual(rubric.get("model"), "gpt-5.5")
+        self.assertEqual(rubric.get("model"), "gpt-5.6-luna")
         for criterion in _build_testing_criteria():
-            self.assertEqual(criterion.get("model"), "gpt-5.5")
+            self.assertEqual(criterion.get("model"), "gpt-5.6-luna")
 
 
 if __name__ == "__main__":

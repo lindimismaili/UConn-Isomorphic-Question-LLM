@@ -49,7 +49,7 @@ def _q(stem: str = "A ball rolls down a ramp; find its speed.", qtype: str = "mu
 _BASE_CONFIG = {
     "guardrails_enabled": lambda: True,
     "guardrail_fail_closed": lambda: False,
-    "guardrail_model": lambda: "gpt-5.5",
+    "guardrail_model": lambda: "gpt-5.6-luna",
     "guardrail_moderation_model": lambda: "omni-moderation-latest",
     "guardrail_reasoning": lambda: "low",
     "guardrail_block_off_topic": lambda: True,
