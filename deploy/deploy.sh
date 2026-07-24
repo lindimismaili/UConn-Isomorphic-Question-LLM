@@ -1675,6 +1675,7 @@ deploy_commit() {
   if [[ -n "${previous}" ]] && [[ -d "${previous}" ]]; then
     switch_current_release "${previous}"
     if install_backend_service && release_health_is_valid "${active}"; then
+      sudo rm -rf "${release_dir}"
       write_deployment_status "rolled_back" "rollback" "${commit_sha}" "${active}" "${active}" "true" "false" "0" "Rollback completed and the previous release is healthy."
     else
       write_deployment_status "failed" "rollback" "${commit_sha}" "${active}" "${active}" "false" "false" "0" "Rollback could not restore a healthy service."
