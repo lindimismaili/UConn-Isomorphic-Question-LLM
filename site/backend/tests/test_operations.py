@@ -6,11 +6,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from fastapi.testclient import TestClient
+from starlette.applications import Starlette
+from starlette.routing import Mount
 
 from backend.src.api import state
 from backend.src.api.admin import _safe_path, require_admin
 from backend.src.operations import CODE_COST, Operations, classify_openai_failure, operations
-from backend.src.server import app
+from backend.src.server import SPAStaticFiles, app
 
 
 def test_operations_state_is_durable_and_deduplicates_incidents() -> None:
@@ -84,3 +86,14 @@ def test_maintenance_blocks_uploads_with_public_code() -> None:
     finally:
         operations.set_maintenance(active=False)
         state.workflows.clear()
+
+
+def test_spa_static_files_serves_browser_routes_but_not_api_or_missing_assets() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        (root / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+        static_app = Starlette(routes=[Mount("/", app=SPAStaticFiles(directory=str(root), html=True))])
+        client = TestClient(static_app)
+        assert client.get("/admin").status_code == 200
+        assert client.get("/api/not-real").status_code == 404
+        assert client.get("/assets/missing.js").status_code == 404
