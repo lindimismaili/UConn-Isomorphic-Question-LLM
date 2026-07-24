@@ -5669,6 +5669,16 @@ button.eval-score-chip.is-clickable:focus-visible {
   gap: var(--spacing-sm);
 }
 
+.admin-summary-card {
+  position: relative;
+}
+
+.admin-summary-status {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+}
+
 .admin-log-report {
   display: flex;
   flex-direction: column;
@@ -5710,8 +5720,49 @@ button.eval-score-chip.is-clickable:focus-visible {
   background: rgba(var(--color-primary-rgb), 0.035);
 }
 
+.admin-file-path-group,
+.admin-file-type {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.admin-file-path-group {
+  min-width: 0;
+}
+
+.admin-root-button.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-glow);
+}
+
+.admin-file-name-button {
+  max-width: 100%;
+  justify-content: flex-start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-file-type-icon {
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
+  color: var(--color-primary);
+}
+
+.admin-file-extension {
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
 .admin-path {
+  min-width: 0;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  text-overflow: ellipsis;
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
 }
@@ -5753,6 +5804,17 @@ button.eval-score-chip.is-clickable:focus-visible {
 
 .admin-table-shell table {
   min-width: 680px;
+}
+
+.admin-audit-shell {
+  max-height: calc(var(--control-height-xl) * 5);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.admin-audit-shell table {
+  min-width: 480px;
 }
 
 .admin-incident {
@@ -5800,5 +5862,9 @@ button.eval-score-chip.is-clickable:focus-visible {
   .admin-file-toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .admin-file-path-group {
+    width: 100%;
   }
 }

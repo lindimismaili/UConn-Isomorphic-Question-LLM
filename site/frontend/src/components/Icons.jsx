@@ -108,6 +108,36 @@ export function IconArrowRight({ className }) {
 }
 
 /**
+ * Left-arrow icon used for returning to a parent folder.
+ *
+ * @param {{className?: string}} props
+ */
+export function IconArrowLeft({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 5 5 12 12 19" />
+    </svg>
+  );
+}
+
+/**
+ * Refresh icon used for manual status updates.
+ *
+ * @param {{className?: string}} props
+ */
+export function IconRefresh({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20 11a8.1 8.1 0 0 0-14.89-3.91L3 9" />
+      <polyline points="3 3 3 9 9 9" />
+      <path d="M4 13a8.1 8.1 0 0 0 14.89 3.91L21 15" />
+      <polyline points="21 21 21 15 15 15" />
+    </svg>
+  );
+}
+
+/**
  * Close icon used by modal chrome.
  *
  * @param {{className?: string}} props

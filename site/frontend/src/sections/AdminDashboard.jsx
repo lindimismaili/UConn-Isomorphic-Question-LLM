@@ -11,10 +11,12 @@ import {
   EmptyState,
   KeyValueTable,
   Modal,
+  StatusDot,
   Tabs,
   TextInput,
   ToggleSwitch,
 } from '../components/ui/index.js';
+import { IconArrowLeft, IconDownload, IconFile, IconFolder, IconRefresh } from '../components/Icons.jsx';
 import { SiteFooter, SiteHeader } from './SiteChrome.jsx';
 import { requestJson } from '../utils/api.js';
 
@@ -60,10 +62,25 @@ function toneForState(state) {
   return 'primary';
 }
 
-function SummaryCard({ label, value, detail, tone = 'neutral' }) {
+function statusDotForTone(tone) {
+  return { success: 'completed', warning: 'thinking', error: 'errored' }[tone] || null;
+}
+
+function humanizeKey(key) {
+  return String(key).split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+function fileExtension(name) {
+  const index = name.lastIndexOf('.');
+  return index > 0 ? name.slice(index) : '';
+}
+
+function SummaryCard({ label, value, detail, tone = 'neutral', showStatus = false }) {
+  const dotStatus = showStatus ? statusDotForTone(tone) : null;
   return (
     <Card className="admin-summary-card">
       <CardBody>
+        {dotStatus ? <StatusDot status={dotStatus} className="admin-summary-status" aria-label={`${label}: ${value}`} role="img" /> : null}
         <span className="admin-summary-label">{label}</span>
         <strong className="admin-summary-value">{value}</strong>
         <Chip tone={tone} shape="square">{detail}</Chip>
@@ -119,49 +136,64 @@ function FileBrowser({ onError }) {
       <CardBody className="admin-stack">
         <div className="admin-action-row">
           {ROOTS.map((item) => (
-            <Button key={item.id} variant={root === item.id ? 'primary' : 'secondary'} size="sm" onClick={() => selectRoot(item.id)}>
+            <Button key={item.id} variant="secondary" size="sm" className={root === item.id ? 'admin-root-button is-active' : 'admin-root-button'} onClick={() => selectRoot(item.id)}>
               {item.label}
             </Button>
           ))}
         </div>
         <div className="admin-file-toolbar">
-          <span className="admin-path">{displayPath}{path ? `/${path}` : ''}</span>
-          <div className="admin-action-row">
-            <Button variant="ghost" size="sm" disabled={!path} onClick={goUp}>Up</Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => window.open(`/api/admin/files/${root}/zip?path=${encodeURIComponent(path)}`, '_blank', 'noopener,noreferrer')}
-            >
-              Download ZIP
+          <div className="admin-file-path-group">
+            <Button variant="secondary" size="sm" fixedWidth disabled={!path} onClick={goUp} icon={<IconArrowLeft className="btn-icon" />}>
+              Back
             </Button>
+            <span className="admin-path">{displayPath}{path ? `/${path}` : ''}</span>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            fixedWidth
+            icon={<IconDownload className="btn-icon" />}
+            onClick={() => window.open(`/api/admin/files/${root}/zip?path=${encodeURIComponent(path)}`, '_blank', 'noopener,noreferrer')}
+          >
+            Download as .ZIP
+          </Button>
         </div>
         <div className="admin-table-shell">
           <DataTable>
-            <thead><tr><th>Name</th><th>Modified</th><th>Size</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Type</th><th>Name</th><th>Modified</th><th>Size</th><th>Download</th></tr></thead>
             <tbody>
               {entries.map((entry) => (
                 <tr key={entry.path}>
-                  <td>{entry.isDirectory ? <Button variant="ghost" size="sm" onClick={() => openEntry(entry)}>{entry.name}/</Button> : entry.name}</td>
+                  <td>
+                    <span className="admin-file-type" title={entry.isDirectory ? 'Folder' : 'File'}>
+                      {entry.isDirectory ? <IconFolder className="admin-file-type-icon" /> : <IconFile className="admin-file-type-icon" />}
+                      {!entry.isDirectory && fileExtension(entry.name) ? <span className="admin-file-extension">{fileExtension(entry.name)}</span> : null}
+                    </span>
+                  </td>
+                  <td>
+                    <Button variant="ghost" size="sm" className="admin-file-name-button" onClick={() => entry.isDirectory ? openEntry(entry) : openFile('preview', entry)}>
+                      {entry.isDirectory ? `${entry.name}/` : entry.name}
+                    </Button>
+                  </td>
                   <td>{time(entry.modifiedAt)}</td>
                   <td>{entry.isDirectory ? 'Folder' : formatBytes(entry.size)}</td>
                   <td>
-                    {entry.isDirectory ? (
-                      <Button variant="ghost" size="sm" onClick={() => openEntry(entry)}>Browse</Button>
-                    ) : (
-                      <div className="admin-action-row">
-                        <Button variant="ghost" size="sm" onClick={() => openFile('preview', entry)}>View</Button>
-                        <Button variant="secondary" size="sm" onClick={() => openFile('download', entry)}>Download</Button>
-                      </div>
-                    )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fixedWidth
+                      icon={<IconDownload className="btn-icon" />}
+                      onClick={() => entry.isDirectory ? openFile('zip', entry) : openFile('download', entry)}
+                    >
+                      {entry.isDirectory ? 'Download as .ZIP' : 'Download File'}
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </DataTable>
         </div>
-        {!loading && entries.length === 0 ? <EmptyState title="No approved files in this folder" /> : null}
+        {!loading && entries.length === 0 ? <EmptyState>No approved files in this folder.</EmptyState> : null}
       </CardBody>
     </Card>
   );
@@ -237,7 +269,7 @@ export default function AdminDashboard() {
 
   const content = (() => {
     if (!data) {
-      return <Card><CardBody><EmptyState title={loading ? 'Loading operations dashboard…' : 'Dashboard unavailable'} /></CardBody></Card>;
+      return <Card><CardBody><EmptyState>{loading ? 'Loading operations dashboard…' : 'Dashboard unavailable.'}</EmptyState></CardBody></Card>;
     }
     if (tab === 'files') return <FileBrowser onError={setError} />;
     if (tab === 'workflows') {
@@ -258,10 +290,10 @@ export default function AdminDashboard() {
     if (tab === 'operations') {
       return (
         <div className="admin-grid">
-          <Card><CardHeader title="Pi and Cloudflare probes" subtitle="Sanitized status written by the Pi-side operations timer." /><CardBody><KeyValueTable rows={Object.entries(data.operations || {}).filter(([, value]) => typeof value !== 'object').map(([key, value]) => ({ key, value: String(value || '—') }))} /></CardBody></Card>
-          <Card><CardHeader title="Recent incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><strong>{incident.title}</strong><span>{incident.detail}</span><small>{time(incident.updated_at)} · {incident.occurrences} occurrence(s)</small></div>) : <EmptyState title="No recorded incidents" />}</CardBody></Card>
+          <Card><CardHeader title="Pi and Cloudflare probes" subtitle="Sanitized status written by the Pi-side operations timer." /><CardBody><KeyValueTable rows={Object.entries(data.operations || {}).filter(([, value]) => typeof value !== 'object').map(([key, value]) => ({ key: humanizeKey(key), value: String(value || '—') }))} /></CardBody></Card>
+          <Card><CardHeader title="Recent incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><strong>{incident.title}</strong><span>{incident.detail}</span><small>{time(incident.updated_at)} · {incident.occurrences} occurrence(s)</small></div>) : <EmptyState>Nothing to show yet.</EmptyState>}</CardBody></Card>
           <Card><CardHeader title="Sanitized service logs" subtitle="Latest bounded excerpts from the backend and Cloudflare tunnel services." /><CardBody className="admin-stack">{Object.entries(data.operations?.logs || {}).map(([name, lines]) => <div className="admin-log-report" key={name}><strong>{name}</strong><pre>{Array.isArray(lines) && lines.length ? lines.join('\n') : 'No report available yet.'}</pre></div>)}</CardBody></Card>
-          <Card><CardHeader title="Audit events" /><CardBody><div className="admin-table-shell"><DataTable><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Outcome</th></tr></thead><tbody>{data.audit.map((event, index) => <tr key={`${event.at}-${index}`}><td>{time(event.at)}</td><td>{event.actor}</td><td>{event.action} · {event.target}</td><td>{event.outcome}</td></tr>)}</tbody></DataTable></div></CardBody></Card>
+          <Card><CardHeader title="Audit events" subtitle="Most recent recorded changes and downloads." /><CardBody><div className="admin-audit-shell"><DataTable><thead><tr><th>When</th><th>Action</th><th>Outcome</th></tr></thead><tbody>{data.audit.map((event, index) => <tr key={`${event.at}-${index}`}><td>{time(event.at)}</td><td>{event.action}</td><td>{event.outcome}</td></tr>)}</tbody></DataTable></div></CardBody></Card>
         </div>
       );
     }
@@ -275,7 +307,7 @@ export default function AdminDashboard() {
               <p className="admin-help-text">Maintenance mode blocks new uploads and workflow starts, then shows every visitor a timestamped maintenance notice. Existing files and downloads remain available.</p>
               <ToggleSwitch checked={Boolean(data.settings.stageCacheEnabled)} onChange={(checked) => updateSettings({ stage_cache_enabled: checked })} label="Enable exact-match stage cache" />
               <p className="admin-help-text">The stage cache reuses a prior Extracter or Generator result only when its input, model, reasoning setting, and prompt are exactly identical.</p>
-              <TextInput aria-label="OpenAI cost warning threshold in USD" placeholder="OpenAI cost warning threshold (USD)" type="number" value={data.settings.costWarningDollars ?? ''} onChange={(event) => updateSettings({ cost_warning_dollars: Number(event.target.value || 0) })} />
+              <TextInput className="admin-key-input" aria-label="OpenAI cost warning threshold in USD" placeholder="OpenAI cost warning threshold (USD)" type="number" value={data.settings.costWarningDollars ?? ''} onChange={(event) => updateSettings({ cost_warning_dollars: Number(event.target.value || 0) })} />
             </CardBody>
           </Card>
           <Card>
@@ -292,10 +324,10 @@ export default function AdminDashboard() {
     return (
       <>
         <div className="admin-summary-grid">
-          <SummaryCard label="Site access" value={data.site?.label || 'Unknown'} detail={data.site?.detail || 'No recent site probe'} tone={toneForState(data.site?.state)} />
-          <SummaryCard label="Cloudflare" value={data.cloudflare?.label || 'Unknown'} detail={data.cloudflare?.detail || 'No recent tunnel probe'} tone={toneForState(data.cloudflare?.state)} />
-          <SummaryCard label="OpenAI status" value={data.openai?.indicator === 'none' ? 'Operational' : (data.openai?.indicator || 'Unknown')} detail={data.openai?.description || 'No recent OpenAI probe'} tone={toneForState(data.openai?.indicator)} />
-          <SummaryCard label="Service" value={maintenance?.maintenance ? 'Maintenance' : 'Available'} detail={maintenance?.maintenance ? maintenance.code : 'Public workflows enabled'} tone={maintenance?.maintenance ? 'error' : 'success'} />
+          <SummaryCard label="Site access" value={data.site?.label || 'Unknown'} detail={data.site?.detail || 'No recent site probe'} tone={toneForState(data.site?.state)} showStatus />
+          <SummaryCard label="Cloudflare" value={data.cloudflare?.label || 'Unknown'} detail={data.cloudflare?.detail || 'No recent tunnel probe'} tone={toneForState(data.cloudflare?.state)} showStatus />
+          <SummaryCard label="OpenAI status" value={data.openai?.indicator === 'none' ? 'Operational' : (data.openai?.indicator || 'Unknown')} detail={data.openai?.description || 'No recent OpenAI probe'} tone={toneForState(data.openai?.indicator)} showStatus />
+          <SummaryCard label="Service" value={maintenance?.maintenance ? 'Maintenance' : 'Available'} detail={maintenance?.maintenance ? maintenance.code : 'Public workflows enabled'} tone={maintenance?.maintenance ? 'error' : 'success'} showStatus />
           <SummaryCard label="Connected visitors" value={data.activeVisitors} detail="Approx. last 5 minutes" tone="primary" />
           <SummaryCard label="Active workflows" value={data.activeWorkflows} detail="Real active workflow state" tone="primary" />
           <SummaryCard label="OpenAI daily cost" value={data.cost?.available ? `${data.cost.amount} ${data.cost.currency}` : 'Unavailable'} detail={data.cost?.configured ? `Checked ${time(data.cost.checked_at)}` : 'Admin cost key not configured'} tone={data.cost?.available ? 'primary' : 'warning'} />
@@ -303,7 +335,7 @@ export default function AdminDashboard() {
         </div>
         <div className="admin-grid">
           <Card><CardHeader title="Storage" /><CardBody><KeyValueTable rows={storageCards.map(([key, value]) => ({ key, value: formatBytes(value) }))} /></CardBody></Card>
-          <Card><CardHeader title="Latest incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.slice(0, 4).map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><span>{time(incident.updated_at)}</span></div>) : <EmptyState title="No incidents" />}</CardBody></Card>
+          <Card><CardHeader title="Latest incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.slice(0, 4).map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><span>{time(incident.updated_at)}</span></div>) : <EmptyState>Nothing to show yet.</EmptyState>}</CardBody></Card>
         </div>
       </>
     );
@@ -314,7 +346,7 @@ export default function AdminDashboard() {
       <div className="admin-dashboard">
         <div className="admin-page-heading">
           <div><h2>Operations dashboard</h2><p>Secure internal controls, health, files, and workflow data.</p></div>
-          <div className="admin-action-row"><Chip tone="primary">Auto-refreshes every 30 seconds · {time(lastUpdated)}</Chip><Button variant="secondary" size="sm" onClick={load}>Refresh now</Button></div>
+          <div className="admin-action-row"><Chip tone="primary">Auto-refreshes every 30 seconds · {time(lastUpdated)}</Chip><Button variant="secondary" size="sm" onClick={load} icon={<IconRefresh className="btn-icon" />}>Refresh now</Button></div>
         </div>
         {error ? <Card variant="failed"><CardBody>{error}</CardBody></Card> : null}
         <Tabs value={tab} onChange={setTab} tabs={TABS} />
