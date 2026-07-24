@@ -11,8 +11,8 @@ let lockedScrollY = 0;
 
 // ---------------------------------------------------------------------------
 // Modal stack — tracks stacking order so each open modal layers above the one
-// it was opened from. The first (bottom) modal darkens + blurs the page; every
-// stacked modal above it only blurs what is beneath it.
+// it was opened from. The first (bottom) modal supplies the navy dim layer;
+// stacked modal layers leave that backdrop transparent.
 // ---------------------------------------------------------------------------
 let _modalStack = [];
 const _stackListeners = new Set();
@@ -190,10 +190,10 @@ export default function Modal({
   const isTopModal = isOpen && stack.at(-1) === titleId;
 
   // Enter-phase gate: a modal (especially a stacked/viewer modal mounted on
-  // open) is first rendered with `.is-entering` (visible layer, but backdrop
-  // still at blur(0)/opacity 0), then flipped to `.is-visible` on the next
-  // painted frame so the backdrop-filter/opacity transition actually animates
-  // instead of popping straight to its final value.
+// open) is first rendered with `.is-entering` (visible layer, but backdrop
+// and content still transparent), then flipped to `.is-visible` on the next
+// painted frame so the opacity/transform transition actually animates instead
+// of popping straight to its final value.
   const [entered, setEntered] = useState(false);
   useEffect(() => {
     if (isOpen) {

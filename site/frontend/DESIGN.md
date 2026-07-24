@@ -108,16 +108,16 @@ grid gaps; use the scale for everything else.
 ### Shadow & blur
 
 - `--shadow-sm|md|lg` (elevation), `--shadow-glow` (primary halo).
-- `--blur-sm|md|lg` (8 / 16 / 24px) for backdrop blur. Modal backdrops use
-  `--blur-sm`; the header uses `--blur-md`. The page-behind-modal blur is a
-  fixed `6px` (see §3).
+- `--blur-sm|md|lg` (8 / 16 / 24px) for supported surface effects such as the
+  header's `--blur-md` treatment. Modal backdrops intentionally use no blur
+  (see §3 and §8).
 
 ### Motion
 
 | Token | ms | Use |
 |---|---|---|
 | `--transition-fast` | 150 | Buttons, hovers, inputs, connectors |
-| `--transition-normal` | 250 | Modals, panels, cards, page blur |
+| `--transition-normal` | 250 | Modals, panels, cards |
 | `--transition-slow` | 400 | Section entrances |
 
 Animate only `opacity`, `transform`, `background-color`, `border-color`,
@@ -201,9 +201,10 @@ Primary content grids inside `.content-shell`:
   the explicit download. Long audit histories use an internally scrollable
   table shell rather than extending the page indefinitely.
 
-**Modal-open dimming:** when any modal is open the body gets `.modal-open`,
-which applies `filter: blur(6px)` to `.header`, `.main-content`, and `.footer`
-(transition `--transition-normal`) and locks page scroll (see §8).
+**Modal-open dimming:** when any modal is open the body gets `.modal-open` to
+lock page scroll. The modal's own backdrop supplies the smoothly faded navy tint;
+do not add a page-wide or `backdrop-filter` blur, which can make the opening
+frame jump on consumer browsers (see §8).
 
 **Responsive breakpoints** (mobile-last, `max-width`): `1200` (downloads → one
 column), `1100` (top-panels & pipeline → one column), `900` (dev-tools tiles
@@ -345,9 +346,9 @@ hand-roll an overlay.
 
 ```
 .modal                → fixed overlay, centers content, fade via .is-visible (250ms)
-  .modal-backdrop     → navy tint rgba(var(--color-navy-rgb), .45) + blur(--blur-sm); click closes
+  .modal-backdrop     → navy tint rgba(var(--color-navy-rgb), .45), opacity fade; click closes
   .modal-content      → --gradient-card (light, same family as .card), --radius-lg, --shadow-lg
-                        enters with translateY(-16px) scale(.97) → 0/1
+                        enters with a short upward translate + opacity → 0/1
     .modal-header     → title (h3) + .btn-icon-only close, bottom border
     .modal-body       → scrolls, flex:1 (use .modal-body-flush for zero padding,
                         .modal-body-stack to stack children with --panel-gap)
@@ -382,9 +383,9 @@ Agents modal). `Modal.jsx` tracks a global open-modal stack and:
 
 - assigns each open modal `z-index: 1000 + stackIndex`, so a modal always
   layers **above** the modal it was opened from;
-- darkens + blurs with the standard backdrop only on the **first (bottom)**
-  modal; every stacked modal's backdrop gets `.is-stacked` (transparent,
-  blur-only) so layers don't compound the darkening;
+- dims with the standard backdrop only on the **first (bottom)** modal; every
+  stacked modal's backdrop gets `.is-stacked` (transparent) so layers do not
+  compound the dimming;
 - only the topmost backdrop handles click-to-close, and a closing modal keeps
   its depth through the exit transition.
 
@@ -510,12 +511,11 @@ The named keyframes already in the system (reuse before adding new ones):
 
 Component-level motion rules:
 
-- Modal: backdrop `opacity` **and** `backdrop-filter` (blur 0 → `--blur-sm`;
-  backdrop-filter does not fade with opacity, so the radius itself is
-  animated to keep the blur in sync with the entrance), content `opacity` +
-  `translateY`/`scale`, all on `--transition-normal`.
+- Modal: backdrop `opacity`, content `opacity` + a short `translateY`, all on
+  `--transition-normal`. Avoid modal blur filters: the navy tint preserves focus
+  without the browser-specific compositing jump.
 - Buttons / inputs / connectors: `--transition-fast`.
-- Cards & page-blur: `--transition-normal`; cards never transform on hover.
+- Cards and app shells: `--transition-normal`; cards never transform on hover.
 - Honor reduced-motion intent by keeping animations to opacity/transform/filter
   so they degrade gracefully.
 
@@ -694,6 +694,8 @@ untouched; only the view changed.
   `stepperWordIn`). The (empty) slot exists on every node so heights never
   shift. This replaced the old matrix `TokenStream` — the SSE stream is no
   longer consumed by the frontend.
+- **Pre-run rail** — the rail is labeled “Watch the agents work!” and its title
+  plus stepper are blurred, greyed, and pointer-inert until a workflow begins.
 - **One-line labels** — `.stepper-node-label` is always a single ellipsized
   line (the full name lives in the node's `title` tooltip), so nodes stay one
   uniform height.

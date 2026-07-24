@@ -2387,11 +2387,13 @@ select option:checked {
 /* Before the first run the pipeline reads as inactive: blurred, greyed, and
    non-interactive. The .stepper transition lets it clear smoothly once a run
    starts. */
+.chat-rail .chat-rail-header,
 .chat-rail .stepper {
   transition:
     filter var(--transition-normal),
     opacity var(--transition-normal);
 }
+.chat-rail.is-inactive .chat-rail-header,
 .chat-rail.is-inactive .stepper {
   filter: blur(2.5px) grayscale(0.55);
   opacity: 0.55;
@@ -3052,18 +3054,6 @@ select option:checked {
   text-align: center;
 }
 
-.header,
-.main-content,
-.footer {
-  transition: filter var(--transition-normal);
-}
-
-body.modal-open .header,
-body.modal-open .main-content,
-body.modal-open .footer {
-  filter: blur(6px);
-}
-
 .footer-content {
   max-width: var(--site-max-width);
   margin: 0 auto;
@@ -3114,10 +3104,10 @@ body.modal-open .footer {
 }
 
 /* Pre-enter frame: the modal is made visible in its layer while still holding
-   the base (transparent / blur(0)) values, so the flip to .is-visible on the
-   next frame has a starting value to animate the backdrop blur + opacity from
-   (rather than popping straight to the final state). pointer-events stays none
-   here (inherited from base .modal) so no clicks register mid-entrance. */
+   transparent base values, so the flip to .is-visible on the next frame has a
+   starting value for the backdrop/content transition (rather than popping
+   straight to the final state). pointer-events stays none here (inherited from
+   base .modal) so no clicks register mid-entrance. */
 .modal.is-entering {
   visibility: visible;
 }
@@ -3132,9 +3122,9 @@ body.modal-open .footer {
   pointer-events: none;
 }
 
-/* The blur radius is animated alongside opacity because backdrop-filter does
-   not fade with element opacity — without this the blur pops in after the
-   modal finishes its entrance instead of ramping with it. */
+/* The backdrop dims smoothly with opacity. Avoid a page-wide or backdrop blur:
+   browser blur compositing can make the opening frame look like a jump rather
+   than a fluid modal entrance. */
 .modal-backdrop {
   position: absolute;
   top: 0;
@@ -3144,22 +3134,15 @@ body.modal-open .footer {
   z-index: 0;
   background: rgba(var(--color-navy-rgb), 0.45);
   opacity: 0;
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
-  transition:
-    opacity var(--transition-normal),
-    backdrop-filter var(--transition-normal),
-    -webkit-backdrop-filter var(--transition-normal);
+  transition: opacity var(--transition-normal);
 }
 
 .modal.is-visible .modal-backdrop {
   opacity: 1;
-  backdrop-filter: blur(var(--blur-sm));
-  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
-/* Stacked modals (opened on top of another modal) only blur what's beneath
-   them; the darkening overlay comes from the first (bottom) modal alone. */
+/* Stacked modals (opened on top of another modal) add no second dim layer; the
+   navy overlay comes from the first (bottom) modal alone. */
 .modal-backdrop.is-stacked {
   background: transparent;
 }
@@ -3178,7 +3161,7 @@ body.modal-open .footer {
   display: flex;
   flex-direction: column;
   opacity: 0;
-  transform: translateY(-16px) scale(0.97);
+  transform: translateY(calc(var(--spacing-sm) * -2));
   transition:
     opacity var(--transition-normal),
     transform var(--transition-normal);
@@ -3975,32 +3958,6 @@ body.modal-open .footer {
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   font-size: 0.85rem;
-}
-
-.modal-file-location {
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: 0.8rem;
-  min-width: 0;
-}
-
-.modal-file-location span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.modal-file-location a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.modal-file-location a:hover {
-  text-decoration: underline;
-}
-
-.help-file-location {
-  margin-top: var(--spacing-md);
-  margin-left: var(--spacing-lg);
 }
 
 .output-folder-note svg {

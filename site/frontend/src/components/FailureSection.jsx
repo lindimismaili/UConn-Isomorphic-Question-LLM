@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { IconXCircle, IconFolder } from './Icons.jsx';
+import { IconXCircle } from './Icons.jsx';
 import { Card, CardBody, CardHeader } from './ui/index.js';
 
 /**
@@ -16,22 +16,11 @@ function formatText(text) {
 }
 
 /**
- * Normalizes the output folder label shown in the failure panel.
+ * Renders the terminal failure summary.
  *
- * @param {string} folder
- * @returns {string}
+ * @param {{error: string}} props
  */
-function formatOutputFolderPath(folder) {
-  if (!folder) return 'outputs/';
-  return folder.startsWith('outputs/') ? folder : `outputs/${folder}`;
-}
-
-/**
- * Renders the terminal failure summary and points users to the output folder.
- *
- * @param {{error: string, outputFolder: string}} props
- */
-export default function FailureSection({ error, outputFolder }) {
+export default function FailureSection({ error }) {
   const sectionRef = useRef(null);
 
   useEffect(() => {
@@ -41,8 +30,6 @@ export default function FailureSection({ error, outputFolder }) {
   }, [error]);
 
   if (!error) return null;
-
-  const folderPath = formatOutputFolderPath(outputFolder);
 
   return (
     <Card variant="failed" ref={sectionRef}>
@@ -60,12 +47,6 @@ export default function FailureSection({ error, outputFolder }) {
         <div className="output-section">
           <h4>Output Summary</h4>
           <div className="output-text">{formatText(error)}</div>
-          <div className="output-folder-note">
-            <IconFolder />
-            <span>
-              Files saved to: <code>{folderPath}</code>
-            </span>
-          </div>
         </div>
       </CardBody>
     </Card>

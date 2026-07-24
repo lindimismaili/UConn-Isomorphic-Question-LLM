@@ -174,7 +174,7 @@ export default function ChatConversation({
       return <ResultsSection result={message.result} />;
     }
     if (message.kind === 'error') {
-      return <FailureSection error={message.error} outputFolder={message.errorFolder} />;
+      return <FailureSection error={message.error} />;
     }
     if (message.kind === 'workflow-started') {
       return (
@@ -290,7 +290,7 @@ export default function ChatConversation({
           latest run's id in its top-right. */}
       <div className={`chat-rail${pipelineActive ? '' : ' is-inactive'}`}>
         <div className="chat-rail-header">
-          <span className="chat-rail-title">Workflow Pipeline</span>
+          <span className="chat-rail-title">Watch the agents work!</span>
           {pipelineActive ? (
             <span className="chat-rail-id" title={state.workflowId || undefined}>
               {shortWorkflowId ? `Workflow ID: ${shortWorkflowId} - Latest Run` : 'Workflow starting…'}
