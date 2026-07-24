@@ -619,6 +619,8 @@ Group=www-data
 WorkingDirectory=${CURRENT_RELEASE}/site
 EnvironmentFile=-${CURRENT_RELEASE}/site/.env
 EnvironmentFile=-${RUNTIME_CONFIG_FILE}
+# A tracked local-development default must never become an origin bypass.
+Environment=ADMIN_LOCAL_DEV_MODE=false
 Environment=RUNTIME_CONFIG_PATH=${RUNTIME_CONFIG_FILE}
 Environment=HOST=127.0.0.1
 Environment=PORT=${BACKEND_PORT}
