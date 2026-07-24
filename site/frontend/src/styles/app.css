@@ -5640,6 +5640,13 @@ button.eval-score-chip.is-clickable:focus-visible {
   margin: var(--spacing-xs) 0 0;
 }
 
+.admin-help-text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
 .admin-summary-grid,
 .admin-grid {
   display: grid;
@@ -5707,6 +5714,35 @@ button.eval-score-chip.is-clickable:focus-visible {
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
+}
+
+.admin-key-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--spacing-md);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--color-primary-rgb), 0.04);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.admin-key-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.admin-key-input:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.07);
+}
+
+.admin-key-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
 
 .admin-table-shell {

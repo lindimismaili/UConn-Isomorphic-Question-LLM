@@ -18,11 +18,13 @@ import {
 import { SiteFooter, SiteHeader } from './SiteChrome.jsx';
 import { requestJson } from '../utils/api.js';
 
+const REFRESH_MS = 30_000;
 const ROOTS = [
   { id: 'archive', label: 'Archive' },
   { id: 'uploads', label: 'Uploads' },
-  { id: 'outputs', label: 'Generation outputs' },
-  { id: 'evaluations', label: 'Evaluation sources' },
+  { id: 'outputs', label: 'Outputs' },
+  { id: 'evaluations', label: 'Evaluation artifacts' },
+  { id: 'data', label: 'Prompts & configuration' },
 ];
 
 const TABS = [
@@ -51,6 +53,13 @@ function time(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
+function toneForState(state) {
+  if (['online', 'ok', 'none', 'completed'].includes(String(state).toLowerCase())) return 'success';
+  if (['offline', 'error', 'errored', 'maintenance', 'major', 'critical'].includes(String(state).toLowerCase())) return 'error';
+  if (['localhost', 'unknown', 'warning'].includes(String(state).toLowerCase())) return 'warning';
+  return 'primary';
+}
+
 function SummaryCard({ label, value, detail, tone = 'neutral' }) {
   return (
     <Card className="admin-summary-card">
@@ -66,6 +75,7 @@ function SummaryCard({ label, value, detail, tone = 'neutral' }) {
 function FileBrowser({ onError }) {
   const [root, setRoot] = useState('archive');
   const [path, setPath] = useState('');
+  const [displayPath, setDisplayPath] = useState('/archive');
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,8 +83,11 @@ function FileBrowser({ onError }) {
     setLoading(true);
     try {
       const query = new URLSearchParams({ path }).toString();
-      const result = await requestJson(`/api/admin/files/${root}/entries?${query}`, { fallbackError: 'Could not load files' });
+      const result = await requestJson(`/api/admin/files/${root}/entries?${query}`, {
+        fallbackError: 'Could not load files',
+      });
       setEntries(result.entries || []);
+      setDisplayPath(result.displayPath || '/');
     } catch (err) {
       onError(err.message);
       setEntries([]);
@@ -85,28 +98,43 @@ function FileBrowser({ onError }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const selectRoot = (nextRoot) => {
+    setRoot(nextRoot);
+    setPath('');
+  };
   const openEntry = (entry) => {
     if (entry.isDirectory) setPath(entry.path);
   };
   const goUp = () => setPath((current) => current.split('/').slice(0, -1).join('/'));
-  const download = (entry) => window.open(`/api/admin/files/${root}/download?path=${encodeURIComponent(entry.path)}`, '_blank', 'noopener,noreferrer');
+  const openFile = (action, entry) => {
+    window.open(`/api/admin/files/${root}/${action}?path=${encodeURIComponent(entry.path)}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <Card>
-      <CardHeader title="Internal files" subtitle="Only approved data roots are available; deployment configuration and credentials stay hidden." />
+      <CardHeader
+        title="Internal files"
+        subtitle="Approved files only: archive, uploads, outputs, evaluation artifacts, prompts, and agent configuration. Credentials remain hidden."
+      />
       <CardBody className="admin-stack">
         <div className="admin-action-row">
           {ROOTS.map((item) => (
-            <Button key={item.id} variant={root === item.id ? 'primary' : 'secondary'} size="sm" onClick={() => { setRoot(item.id); setPath(''); }}>
+            <Button key={item.id} variant={root === item.id ? 'primary' : 'secondary'} size="sm" onClick={() => selectRoot(item.id)}>
               {item.label}
             </Button>
           ))}
         </div>
         <div className="admin-file-toolbar">
-          <span className="admin-path">/{ROOTS.find((item) => item.id === root)?.label}{path ? `/${path}` : ''}</span>
+          <span className="admin-path">{displayPath}{path ? `/${path}` : ''}</span>
           <div className="admin-action-row">
             <Button variant="ghost" size="sm" disabled={!path} onClick={goUp}>Up</Button>
-            <Button variant="secondary" size="sm" onClick={() => window.open(`/api/admin/files/${root}/zip?path=${encodeURIComponent(path)}`, '_blank', 'noopener,noreferrer')}>Download ZIP</Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => window.open(`/api/admin/files/${root}/zip?path=${encodeURIComponent(path)}`, '_blank', 'noopener,noreferrer')}
+            >
+              Download ZIP
+            </Button>
           </div>
         </div>
         <div className="admin-table-shell">
@@ -116,14 +144,24 @@ function FileBrowser({ onError }) {
               {entries.map((entry) => (
                 <tr key={entry.path}>
                   <td>{entry.isDirectory ? <Button variant="ghost" size="sm" onClick={() => openEntry(entry)}>{entry.name}/</Button> : entry.name}</td>
-                  <td>{time(entry.modifiedAt)}</td><td>{entry.isDirectory ? 'Folder' : formatBytes(entry.size)}</td>
-                  <td>{entry.isDirectory ? <Button variant="ghost" size="sm" onClick={() => openEntry(entry)}>Browse</Button> : <div className="admin-action-row"><Button variant="ghost" size="sm" onClick={() => window.open(`/api/admin/files/${root}/preview?path=${encodeURIComponent(entry.path)}`, '_blank', 'noopener,noreferrer')}>View</Button><Button variant="secondary" size="sm" onClick={() => download(entry)}>Download</Button></div>}</td>
+                  <td>{time(entry.modifiedAt)}</td>
+                  <td>{entry.isDirectory ? 'Folder' : formatBytes(entry.size)}</td>
+                  <td>
+                    {entry.isDirectory ? (
+                      <Button variant="ghost" size="sm" onClick={() => openEntry(entry)}>Browse</Button>
+                    ) : (
+                      <div className="admin-action-row">
+                        <Button variant="ghost" size="sm" onClick={() => openFile('preview', entry)}>View</Button>
+                        <Button variant="secondary" size="sm" onClick={() => openFile('download', entry)}>Download</Button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </DataTable>
         </div>
-        {!loading && entries.length === 0 ? <EmptyState title="No files in this folder" /> : null}
+        {!loading && entries.length === 0 ? <EmptyState title="No approved files in this folder" /> : null}
       </CardBody>
     </Card>
   );
@@ -135,6 +173,7 @@ export default function AdminDashboard() {
   const [session, setSession] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [maintenanceConfirm, setMaintenanceConfirm] = useState(null);
   const [apiKey, setApiKey] = useState('');
   const [keyStatus, setKeyStatus] = useState('');
@@ -147,6 +186,7 @@ export default function AdminDashboard() {
       ]);
       setSession(nextSession);
       setData(nextData);
+      setLastUpdated(new Date());
       setError('');
     } catch (err) {
       setError(err.message);
@@ -157,37 +197,130 @@ export default function AdminDashboard() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    const interval = window.setInterval(load, 30_000);
+    const interval = window.setInterval(load, REFRESH_MS);
     return () => window.clearInterval(interval);
   }, [load]);
 
   const updateSettings = async (payload) => {
     try {
-      await requestJson('/api/admin/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), fallbackError: 'Could not save setting' });
+      await requestJson('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        fallbackError: 'Could not save setting',
+      });
       await load();
-    } catch (err) { setError(err.message); }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const submitKey = async () => {
     setKeyStatus('Validating key…');
     try {
-      await requestJson('/api/admin/openai-key', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }), fallbackError: 'Could not update the OpenAI key' });
+      await requestJson('/api/admin/openai-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey }),
+        fallbackError: 'Could not update the OpenAI key',
+      });
       setApiKey('');
       setKeyStatus('Key validated and applied.');
       await load();
-    } catch (err) { setKeyStatus(err.message); }
+    } catch (err) {
+      setKeyStatus(err.message);
+    }
   };
 
   const maintenance = data?.maintenance;
   const storageCards = useMemo(() => Object.entries(data?.storage || {}), [data]);
+
   const content = (() => {
-    if (!data) return <Card><CardBody><EmptyState title={loading ? 'Loading operations dashboard…' : 'Dashboard unavailable'} /></CardBody></Card>;
+    if (!data) {
+      return <Card><CardBody><EmptyState title={loading ? 'Loading operations dashboard…' : 'Dashboard unavailable'} /></CardBody></Card>;
+    }
     if (tab === 'files') return <FileBrowser onError={setError} />;
-    if (tab === 'workflows') return <Card><CardHeader title="Workflow and evaluation activity" subtitle="Durable history with current status and output folders." /><CardBody><div className="admin-table-shell"><DataTable><thead><tr><th>Workflow</th><th>Status</th><th>Updated</th><th>Output</th><th>Error</th></tr></thead><tbody>{data.workflows.map((workflow) => <tr key={workflow.id}><td><Chip mono>{workflow.id.slice(0, 12)}</Chip></td><td><Chip tone={workflow.status === 'completed' ? 'success' : workflow.status === 'errored' ? 'error' : 'warning'}>{workflow.status}</Chip></td><td>{time(workflow.updatedAt)}</td><td>{workflow.outputFolder || '—'}</td><td>{workflow.error || '—'}</td></tr>)}</tbody></DataTable></div></CardBody></Card>;
-    if (tab === 'operations') return <div className="admin-grid"><Card><CardHeader title="Pi and Cloudflare probes" subtitle="Sanitized status written by the Pi-side operations timer." /><CardBody><KeyValueTable rows={Object.entries(data.operations || {}).filter(([, value]) => typeof value !== 'object').map(([key, value]) => ({ key, value: String(value || '—') }))} /></CardBody></Card><Card><CardHeader title="Recent incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><strong>{incident.title}</strong><span>{incident.detail}</span><small>{time(incident.updated_at)} · {incident.occurrences} occurrence(s)</small></div>) : <EmptyState title="No recorded incidents" />}</CardBody></Card><Card><CardHeader title="Sanitized service logs" subtitle="Latest bounded excerpts from the backend and Cloudflare tunnel services." /><CardBody className="admin-stack">{Object.entries(data.operations?.logs || {}).map(([name, lines]) => <div className="admin-log-report" key={name}><strong>{name}</strong><pre>{Array.isArray(lines) && lines.length ? lines.join('\n') : 'No report available yet.'}</pre></div>)}</CardBody></Card><Card><CardHeader title="Audit events" /><CardBody><div className="admin-table-shell"><DataTable><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Outcome</th></tr></thead><tbody>{data.audit.map((event, index) => <tr key={`${event.at}-${index}`}><td>{time(event.at)}</td><td>{event.actor}</td><td>{event.action} · {event.target}</td><td>{event.outcome}</td></tr>)}</tbody></DataTable></div></CardBody></Card></div>;
-    if (tab === 'settings') return <div className="admin-grid"><Card><CardHeader title="Availability controls" subtitle="A maintenance change requires confirmation and is recorded in the audit history." /><CardBody className="admin-stack"><ToggleSwitch checked={Boolean(maintenance?.maintenance)} onChange={(checked) => setMaintenanceConfirm(checked)} label={maintenance?.maintenance ? 'Maintenance mode is active' : 'Maintenance mode is inactive'} /><ToggleSwitch checked={Boolean(data.settings.stageCacheEnabled)} onChange={(checked) => updateSettings({ stage_cache_enabled: checked })} label="Enable exact-match stage cache" /><TextInput aria-label="OpenAI cost warning threshold in USD" placeholder="OpenAI cost warning threshold (USD)" type="number" value={data.settings.costWarningDollars ?? ''} onChange={(event) => updateSettings({ cost_warning_dollars: Number(event.target.value || 0) })} /></CardBody></Card><Card><CardHeader title="OpenAI application key" subtitle="The existing key is never shown. A replacement is verified before it is saved." /><CardBody className="admin-stack"><TextInput aria-label="New OpenAI API key" placeholder="New OpenAI API key" type="password" autoComplete="off" value={apiKey} onChange={(event) => setApiKey(event.target.value)} /><Button variant="primary" disabled={!apiKey} onClick={submitKey}>Validate and apply key</Button>{keyStatus ? <Chip tone={keyStatus.includes('applied') ? 'success' : 'error'}>{keyStatus}</Chip> : null}</CardBody></Card></div>;
-    return <><div className="admin-summary-grid"><SummaryCard label="Service" value={maintenance?.maintenance ? 'Maintenance' : 'Available'} detail={maintenance?.maintenance ? maintenance.code : 'Public workflows enabled'} tone={maintenance?.maintenance ? 'error' : 'success'} /><SummaryCard label="Active workflows" value={data.activeWorkflows} detail="Durable workflow state" tone="primary" /><SummaryCard label="Connected visitors" value={data.activeVisitors} detail="Approx. last 5 minutes" tone="primary" /><SummaryCard label="OpenAI daily cost" value={data.cost?.available ? `${data.cost.amount} ${data.cost.currency}` : 'Unavailable'} detail={data.cost?.configured ? `Checked ${time(data.cost.checked_at)}` : 'Admin cost key not configured'} tone={data.cost?.available ? 'primary' : 'warning'} /><SummaryCard label="Free disk" value={formatBytes(data.disk.free)} detail="Pi output volume" tone="neutral" /></div><div className="admin-grid"><Card><CardHeader title="Storage" /><CardBody><KeyValueTable rows={storageCards.map(([key, value]) => ({ key, value: formatBytes(value) }))} /></CardBody></Card><Card><CardHeader title="Latest incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.slice(0, 4).map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><span>{time(incident.updated_at)}</span></div>) : <EmptyState title="No incidents" />}</CardBody></Card></div></>;
+    if (tab === 'workflows') {
+      return (
+        <Card>
+          <CardHeader title="Workflow and evaluation activity" subtitle="Real UUID-backed workflow history and output folders." />
+          <CardBody><div className="admin-table-shell"><DataTable>
+            <thead><tr><th>Workflow</th><th>Status</th><th>Updated</th><th>Output</th><th>Error</th></tr></thead>
+            <tbody>{data.workflows.map((workflow) => <tr key={workflow.id}>
+              <td><Chip mono>{workflow.id.slice(0, 12)}</Chip></td>
+              <td><Chip tone={toneForState(workflow.status)}>{workflow.status}</Chip></td>
+              <td>{time(workflow.updatedAt)}</td><td>{workflow.outputFolder || '—'}</td><td>{workflow.error || '—'}</td>
+            </tr>)}</tbody>
+          </DataTable></div></CardBody>
+        </Card>
+      );
+    }
+    if (tab === 'operations') {
+      return (
+        <div className="admin-grid">
+          <Card><CardHeader title="Pi and Cloudflare probes" subtitle="Sanitized status written by the Pi-side operations timer." /><CardBody><KeyValueTable rows={Object.entries(data.operations || {}).filter(([, value]) => typeof value !== 'object').map(([key, value]) => ({ key, value: String(value || '—') }))} /></CardBody></Card>
+          <Card><CardHeader title="Recent incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><strong>{incident.title}</strong><span>{incident.detail}</span><small>{time(incident.updated_at)} · {incident.occurrences} occurrence(s)</small></div>) : <EmptyState title="No recorded incidents" />}</CardBody></Card>
+          <Card><CardHeader title="Sanitized service logs" subtitle="Latest bounded excerpts from the backend and Cloudflare tunnel services." /><CardBody className="admin-stack">{Object.entries(data.operations?.logs || {}).map(([name, lines]) => <div className="admin-log-report" key={name}><strong>{name}</strong><pre>{Array.isArray(lines) && lines.length ? lines.join('\n') : 'No report available yet.'}</pre></div>)}</CardBody></Card>
+          <Card><CardHeader title="Audit events" /><CardBody><div className="admin-table-shell"><DataTable><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Outcome</th></tr></thead><tbody>{data.audit.map((event, index) => <tr key={`${event.at}-${index}`}><td>{time(event.at)}</td><td>{event.actor}</td><td>{event.action} · {event.target}</td><td>{event.outcome}</td></tr>)}</tbody></DataTable></div></CardBody></Card>
+        </div>
+      );
+    }
+    if (tab === 'settings') {
+      return (
+        <div className="admin-grid">
+          <Card>
+            <CardHeader title="Availability controls" subtitle="Changes require confirmation and are recorded in the audit history." />
+            <CardBody className="admin-stack">
+              <ToggleSwitch checked={Boolean(maintenance?.maintenance)} onChange={(checked) => setMaintenanceConfirm(checked)} label={maintenance?.maintenance ? 'Maintenance mode is active' : 'Maintenance mode is inactive'} />
+              <p className="admin-help-text">Maintenance mode blocks new uploads and workflow starts, then shows every visitor a timestamped maintenance notice. Existing files and downloads remain available.</p>
+              <ToggleSwitch checked={Boolean(data.settings.stageCacheEnabled)} onChange={(checked) => updateSettings({ stage_cache_enabled: checked })} label="Enable exact-match stage cache" />
+              <p className="admin-help-text">The stage cache reuses a prior Extracter or Generator result only when its input, model, reasoning setting, and prompt are exactly identical.</p>
+              <TextInput aria-label="OpenAI cost warning threshold in USD" placeholder="OpenAI cost warning threshold (USD)" type="number" value={data.settings.costWarningDollars ?? ''} onChange={(event) => updateSettings({ cost_warning_dollars: Number(event.target.value || 0) })} />
+            </CardBody>
+          </Card>
+          <Card>
+            <CardHeader title="OpenAI application key" subtitle="The existing key is never shown. A replacement is verified before it is saved." />
+            <CardBody className="admin-stack">
+              <TextInput className="admin-key-input" aria-label="New OpenAI API key" placeholder="Paste replacement OpenAI API key" type="password" autoComplete="off" spellCheck="false" value={apiKey} onChange={(event) => setApiKey(event.target.value)} />
+              <Button variant="primary" disabled={!apiKey} onClick={submitKey}>Validate and apply key</Button>
+              {keyStatus ? <Chip tone={keyStatus.includes('applied') ? 'success' : 'error'}>{keyStatus}</Chip> : null}
+            </CardBody>
+          </Card>
+        </div>
+      );
+    }
+    return (
+      <>
+        <div className="admin-summary-grid">
+          <SummaryCard label="Site access" value={data.site?.label || 'Unknown'} detail={data.site?.detail || 'No recent site probe'} tone={toneForState(data.site?.state)} />
+          <SummaryCard label="Cloudflare" value={data.cloudflare?.label || 'Unknown'} detail={data.cloudflare?.detail || 'No recent tunnel probe'} tone={toneForState(data.cloudflare?.state)} />
+          <SummaryCard label="OpenAI status" value={data.openai?.indicator === 'none' ? 'Operational' : (data.openai?.indicator || 'Unknown')} detail={data.openai?.description || 'No recent OpenAI probe'} tone={toneForState(data.openai?.indicator)} />
+          <SummaryCard label="Service" value={maintenance?.maintenance ? 'Maintenance' : 'Available'} detail={maintenance?.maintenance ? maintenance.code : 'Public workflows enabled'} tone={maintenance?.maintenance ? 'error' : 'success'} />
+          <SummaryCard label="Connected visitors" value={data.activeVisitors} detail="Approx. last 5 minutes" tone="primary" />
+          <SummaryCard label="Active workflows" value={data.activeWorkflows} detail="Real active workflow state" tone="primary" />
+          <SummaryCard label="OpenAI daily cost" value={data.cost?.available ? `${data.cost.amount} ${data.cost.currency}` : 'Unavailable'} detail={data.cost?.configured ? `Checked ${time(data.cost.checked_at)}` : 'Admin cost key not configured'} tone={data.cost?.available ? 'primary' : 'warning'} />
+          <SummaryCard label="Free disk" value={formatBytes(data.disk.free)} detail="Runtime storage volume" tone="neutral" />
+        </div>
+        <div className="admin-grid">
+          <Card><CardHeader title="Storage" /><CardBody><KeyValueTable rows={storageCards.map(([key, value]) => ({ key, value: formatBytes(value) }))} /></CardBody></Card>
+          <Card><CardHeader title="Latest incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.slice(0, 4).map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><span>{time(incident.updated_at)}</span></div>) : <EmptyState title="No incidents" />}</CardBody></Card>
+        </div>
+      </>
+    );
   })();
 
-  return <AppShell header={<SiteHeader title="Operations Dashboard" />} footer={<SiteFooter version={session ? `Signed in as ${session.email}` : 'Admin access required'} />}><div className="admin-dashboard"><div className="admin-page-heading"><div><h2>Operations dashboard</h2><p>Secure internal controls, health, files, and workflow data.</p></div><Button variant="secondary" size="sm" onClick={load}>Refresh</Button></div>{error ? <Card variant="failed"><CardBody>{error}</CardBody></Card> : null}<Tabs value={tab} onChange={setTab} tabs={TABS} />{content}</div><Modal isOpen={maintenanceConfirm !== null} onClose={() => setMaintenanceConfirm(null)} title={maintenanceConfirm ? 'Enable maintenance mode?' : 'Restore public service?'} footer={<><Button variant="secondary" onClick={() => setMaintenanceConfirm(null)}>Cancel</Button><Button variant={maintenanceConfirm ? 'danger' : 'primary'} onClick={() => { updateSettings({ maintenance: maintenanceConfirm, maintenance_message: 'The site is temporarily unavailable for maintenance.' }); setMaintenanceConfirm(null); }}>{maintenanceConfirm ? 'Enable maintenance' : 'Restore service'}</Button></>}><p>{maintenanceConfirm ? 'New uploads and workflow starts will immediately be blocked with a timestamped public maintenance notice.' : 'Confirm that the underlying issue is resolved before allowing new workflows.'}</p></Modal></AppShell>;
+  return (
+    <AppShell header={<SiteHeader title="Operations Dashboard" />} footer={<SiteFooter version={session ? `Signed in as ${session.email}` : 'Admin access required'} />}>
+      <div className="admin-dashboard">
+        <div className="admin-page-heading">
+          <div><h2>Operations dashboard</h2><p>Secure internal controls, health, files, and workflow data.</p></div>
+          <div className="admin-action-row"><Chip tone="primary">Auto-refreshes every 30 seconds · {time(lastUpdated)}</Chip><Button variant="secondary" size="sm" onClick={load}>Refresh now</Button></div>
+        </div>
+        {error ? <Card variant="failed"><CardBody>{error}</CardBody></Card> : null}
+        <Tabs value={tab} onChange={setTab} tabs={TABS} />
+        {content}
+      </div>
+      <Modal isOpen={maintenanceConfirm !== null} onClose={() => setMaintenanceConfirm(null)} title={maintenanceConfirm ? 'Enable maintenance mode?' : 'Restore public service?'} footer={<><Button variant="secondary" onClick={() => setMaintenanceConfirm(null)}>Cancel</Button><Button variant={maintenanceConfirm ? 'danger' : 'primary'} onClick={() => { updateSettings({ maintenance: maintenanceConfirm, maintenance_message: 'The site is temporarily unavailable for maintenance.' }); setMaintenanceConfirm(null); }}>{maintenanceConfirm ? 'Enable maintenance' : 'Restore service'}</Button></>}><p>{maintenanceConfirm ? 'New uploads and workflow starts will immediately be blocked with a timestamped public maintenance notice.' : 'Confirm that the underlying issue is resolved before allowing new workflows.'}</p></Modal>
+    </AppShell>
+  );
 }
