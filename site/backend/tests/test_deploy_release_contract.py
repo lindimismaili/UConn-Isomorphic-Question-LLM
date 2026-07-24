@@ -15,6 +15,7 @@ def test_auto_updater_builds_immutable_releases_and_never_merges() -> None:
     assert "switch_current_release" in script
     assert 'sudo python3 -m venv "${release_dir}/.venv"' in script
     assert 'sudo mv "${staging}" "${release_dir}"' not in script
+    assert 'npm -C "${release_dir}/site/frontend" ci --no-audit --no-fund >&2' in script
     assert "git_as_owner reset --hard origin/main" not in script
     assert "git_as_owner clean -ffd" not in script
 
