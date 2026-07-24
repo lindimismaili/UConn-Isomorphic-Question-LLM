@@ -16,7 +16,14 @@ import {
   TextInput,
   ToggleSwitch,
 } from '../components/ui/index.js';
-import { IconArrowLeft, IconDownload, IconFile, IconFolder, IconRefresh } from '../components/Icons.jsx';
+import {
+  IconArrowLeft,
+  IconCheckCircle,
+  IconDownload,
+  IconFile,
+  IconFolder,
+  IconRefresh,
+} from '../components/Icons.jsx';
 import { SiteFooter, SiteHeader } from './SiteChrome.jsx';
 import DeveloperMode from './DeveloperMode.jsx';
 import { requestJson } from '../utils/api.js';
@@ -69,6 +76,7 @@ function statusDotForTone(tone) {
 }
 
 function humanizeKey(key) {
+  if (key === 'checked_at') return 'Check Time';
   return String(key).split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
@@ -138,7 +146,14 @@ function FileBrowser({ onError }) {
       <CardBody className="admin-stack">
         <div className="admin-action-row">
           {ROOTS.map((item) => (
-            <Button key={item.id} variant="secondary" size="sm" className={root === item.id ? 'admin-root-button is-active' : 'admin-root-button'} onClick={() => selectRoot(item.id)}>
+            <Button
+              key={item.id}
+              variant="secondary"
+              size="sm"
+              className={root === item.id ? 'admin-root-button is-active' : 'admin-root-button'}
+              onClick={() => selectRoot(item.id)}
+              icon={<IconFolder className="btn-icon" />}
+            >
               {item.label}
             </Button>
           ))}
@@ -208,6 +223,9 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  // Keep the selected action while the shared Modal finishes its closing
+  // animation. Clearing the boolean immediately used to briefly relabel an
+  // "Enable maintenance" dialog as "Restore public service" on Cancel.
   const [maintenanceConfirm, setMaintenanceConfirm] = useState(null);
   const [apiKey, setApiKey] = useState('');
   const [keyStatus, setKeyStatus] = useState('');
@@ -273,7 +291,6 @@ export default function AdminDashboard() {
     if (!data) {
       return <Card><CardBody><EmptyState>{loading ? 'Loading operations dashboard…' : 'Dashboard unavailable.'}</EmptyState></CardBody></Card>;
     }
-    if (tab === 'files') return <FileBrowser onError={setError} />;
     if (tab === 'workflows') {
       return (
         <Card>
@@ -295,7 +312,7 @@ export default function AdminDashboard() {
           <Card><CardHeader title="Pi and Cloudflare probes" subtitle="Sanitized status written by the Pi-side operations timer." /><CardBody><KeyValueTable rows={Object.entries(data.operations || {}).filter(([, value]) => typeof value !== 'object').map(([key, value]) => ({ key: humanizeKey(key), value: String(value || '—') }))} /></CardBody></Card>
           <Card><CardHeader title="Recent incidents" /><CardBody className="admin-stack">{data.incidents.length ? data.incidents.map((incident) => <div className="admin-incident" key={incident.id}><Chip tone={incident.status === 'open' ? 'error' : 'success'}>{incident.code}</Chip><strong>{incident.title}</strong><span>{incident.detail}</span><small>{time(incident.updated_at)} · {incident.occurrences} occurrence(s)</small></div>) : <EmptyState>Nothing to show yet.</EmptyState>}</CardBody></Card>
           <Card><CardHeader title="Sanitized service logs" subtitle="Latest bounded excerpts from the backend and Cloudflare tunnel services." /><CardBody className="admin-stack">{Object.entries(data.operations?.logs || {}).map(([name, lines]) => <div className="admin-log-report" key={name}><strong>{name}</strong><pre>{Array.isArray(lines) && lines.length ? lines.join('\n') : 'No report available yet.'}</pre></div>)}</CardBody></Card>
-          <Card><CardHeader title="Audit events" subtitle="Most recent recorded changes and downloads." /><CardBody><div className="admin-audit-shell"><DataTable><thead><tr><th>When</th><th>Action</th><th>Outcome</th></tr></thead><tbody>{data.audit.map((event, index) => <tr key={`${event.at}-${index}`}><td>{time(event.at)}</td><td>{event.action}</td><td>{event.outcome}</td></tr>)}</tbody></DataTable></div></CardBody></Card>
+          <Card><CardHeader title="Audit events" subtitle="Most recent recorded changes and downloads." /><CardBody><div className="admin-audit-shell"><DataTable><thead><tr><th>Time</th><th>Action</th><th>Outcome</th></tr></thead><tbody>{data.audit.map((event, index) => <tr key={`${event.at}-${index}`}><td>{time(event.at)}</td><td>{event.action}</td><td>{event.outcome}</td></tr>)}</tbody></DataTable></div></CardBody></Card>
         </div>
       );
     }
@@ -305,7 +322,7 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader title="Availability controls" subtitle="Changes require confirmation and are recorded in the audit history." />
             <CardBody className="admin-stack">
-              <ToggleSwitch checked={Boolean(maintenance?.maintenance)} onChange={(checked) => setMaintenanceConfirm(checked)} label={maintenance?.maintenance ? 'Maintenance mode is active' : 'Maintenance mode is inactive'} />
+              <ToggleSwitch checked={Boolean(maintenance?.maintenance)} onChange={(checked) => setMaintenanceConfirm({ open: true, enabled: checked })} label={maintenance?.maintenance ? 'Maintenance mode is active' : 'Maintenance mode is inactive'} />
               <p className="admin-help-text">Maintenance mode blocks new uploads and workflow starts, then shows every visitor a timestamped maintenance notice. Existing files and downloads remain available.</p>
               <ToggleSwitch checked={Boolean(data.settings.stageCacheEnabled)} onChange={(checked) => updateSettings({ stage_cache_enabled: checked })} label="Enable exact-match stage cache" />
               <p className="admin-help-text">The stage cache reuses a prior Extracter or Generator result only when its input, model, reasoning setting, and prompt are exactly identical.</p>
@@ -316,7 +333,7 @@ export default function AdminDashboard() {
             <CardHeader title="OpenAI application key" subtitle="The existing key is never shown. A replacement is verified before it is saved." />
             <CardBody className="admin-stack">
               <TextInput className="admin-key-input" aria-label="New OpenAI API key" placeholder="Paste replacement OpenAI API key" type="password" autoComplete="off" spellCheck="false" value={apiKey} onChange={(event) => setApiKey(event.target.value)} />
-              <Button variant="primary" disabled={!apiKey} onClick={submitKey}>Validate and apply key</Button>
+              <Button variant="primary" disabled={!apiKey} onClick={submitKey} icon={<IconCheckCircle className="btn-icon" />}>Validate and apply key</Button>
               {keyStatus ? <Chip tone={keyStatus.includes('applied') ? 'success' : 'error'}>{keyStatus}</Chip> : null}
             </CardBody>
           </Card>
@@ -360,9 +377,27 @@ export default function AdminDashboard() {
             />
           </section>
         ) : null}
-        {tab === 'developer' && data ? null : content}
+        {data ? (
+          <section className="admin-files-tab" hidden={tab !== 'files'}>
+            <FileBrowser onError={setError} />
+          </section>
+        ) : null}
+        {(tab === 'developer' || tab === 'files') && data ? null : content}
       </div>
-      <Modal isOpen={maintenanceConfirm !== null} onClose={() => setMaintenanceConfirm(null)} title={maintenanceConfirm ? 'Enable maintenance mode?' : 'Restore public service?'} footer={<><Button variant="secondary" onClick={() => setMaintenanceConfirm(null)}>Cancel</Button><Button variant={maintenanceConfirm ? 'danger' : 'primary'} onClick={() => { updateSettings({ maintenance: maintenanceConfirm, maintenance_message: 'The site is temporarily unavailable for maintenance.' }); setMaintenanceConfirm(null); }}>{maintenanceConfirm ? 'Enable maintenance' : 'Restore service'}</Button></>}><p>{maintenanceConfirm ? 'New uploads and workflow starts will immediately be blocked with a timestamped public maintenance notice.' : 'Confirm that the underlying issue is resolved before allowing new workflows.'}</p></Modal>
+      <Modal
+        isOpen={Boolean(maintenanceConfirm?.open)}
+        onClose={() => setMaintenanceConfirm((current) => current ? { ...current, open: false } : current)}
+        title={maintenanceConfirm?.enabled ? 'Enable maintenance mode?' : 'Restore public service?'}
+        footer={<>
+          <Button variant="secondary" onClick={() => setMaintenanceConfirm((current) => current ? { ...current, open: false } : current)}>Cancel</Button>
+          <Button variant={maintenanceConfirm?.enabled ? 'danger' : 'primary'} onClick={() => {
+            updateSettings({ maintenance: maintenanceConfirm?.enabled, maintenance_message: 'The site is temporarily unavailable for maintenance.' });
+            setMaintenanceConfirm((current) => current ? { ...current, open: false } : current);
+          }}>{maintenanceConfirm?.enabled ? 'Enable maintenance' : 'Restore service'}</Button>
+        </>}
+      >
+        <p>{maintenanceConfirm?.enabled ? 'New uploads and workflow starts will immediately be blocked with a timestamped public maintenance notice.' : 'Confirm that the underlying issue is resolved before allowing new workflows.'}</p>
+      </Modal>
     </AppShell>
   );
 }

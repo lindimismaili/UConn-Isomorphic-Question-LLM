@@ -189,22 +189,16 @@ export default function Modal({
   const stackIndex = useSyncExternalStore(subscribeStack, () => getModalLayer(titleId));
   const isTopModal = isOpen && stack.at(-1) === titleId;
 
-  // Enter-phase gate: a modal (especially a stacked/viewer modal mounted on
-// open) is first rendered with `.is-entering` (visible layer, but backdrop
-// and content still transparent), then flipped to `.is-visible` on the next
-// painted frame so the opacity/transform transition actually animates instead
-// of popping straight to its final value.
+  // Enter-phase gate: render a transparent, visible layer for one paint, then
+  // reveal it on the next frame so the backdrop and panel both animate in.
   const [entered, setEntered] = useState(false);
   useEffect(() => {
     if (isOpen) {
-      // Flip to visible on the frame after the pre-enter frame is painted.
-      let raf2 = 0;
-      const raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => setEntered(true));
-      });
+      // Effects run after the entering layer has painted, so one animation
+      // frame preserves the fade while avoiding an unnecessary extra frame.
+      const raf = requestAnimationFrame(() => setEntered(true));
       return () => {
-        cancelAnimationFrame(raf1);
-        if (raf2) cancelAnimationFrame(raf2);
+        cancelAnimationFrame(raf);
       };
     }
     // Reset for the next open (scheduled, not synchronous — the class already

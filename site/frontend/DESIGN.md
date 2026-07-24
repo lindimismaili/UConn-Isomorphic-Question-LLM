@@ -205,9 +205,8 @@ Primary content grids inside `.content-shell`:
   page indefinitely.
 
 **Modal-open dimming:** when any modal is open the body gets `.modal-open` to
-lock page scroll. The modal's own backdrop supplies the smoothly faded navy tint;
-do not add a page-wide or `backdrop-filter` blur, which can make the opening
-frame jump on consumer browsers (see §8).
+lock page scroll. The modal's own backdrop supplies a smoothly faded navy tint
+and `--blur-sm` backdrop blur; do not add a separate page-wide overlay (see §8).
 
 **Responsive breakpoints** (mobile-last, `max-width`): `1200` (downloads → one
 column), `1100` (top-panels & pipeline → one column), `900` (dev-tools tiles
