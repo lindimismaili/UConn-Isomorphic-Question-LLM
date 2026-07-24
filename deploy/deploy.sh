@@ -1517,6 +1517,7 @@ link_persistent_data() {
 
 ensure_release_layout() {
   sudo mkdir -p "${RELEASES_DIR}" "${PERSIST_DIR}/uploads" "${PERSIST_DIR}/outputs" "${PERSIST_RUNTIME_DIR}"
+  sudo chown www-data:www-data "${PERSIST_DIR}" "${PERSIST_DIR}/uploads" "${PERSIST_DIR}/outputs" "${PERSIST_RUNTIME_DIR}"
   local name legacy_dir current legacy_sha
   current="$(current_release_path)"
   if [[ -n "${current}" ]]; then
@@ -1552,8 +1553,13 @@ ensure_release_layout() {
 }
 
 switch_current_release() {
-  local release_dir="$1"
-  local next_link="${DEPLOY_DIR}/.current-next-$$"
+  local release_dir next_link
+  release_dir="$(readlink -f "$1")"
+  if [[ ! -d "${release_dir}" ]] || [[ "${release_dir}" != "${RELEASES_DIR}/"* ]]; then
+    err "Refusing to activate invalid release path: $1"
+    return 1
+  fi
+  next_link="${DEPLOY_DIR}/.current-next-$$"
   sudo ln -s "${release_dir}" "${next_link}"
   sudo mv -Tf "${next_link}" "${CURRENT_RELEASE}"
 }
