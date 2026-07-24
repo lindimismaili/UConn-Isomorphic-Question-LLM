@@ -1577,38 +1577,39 @@ PY
 }
 
 build_candidate_release() {
-  local commit_sha="$1" repo_owner="$2" commit_time staging release_dir
+  local commit_sha="$1" repo_owner="$2" commit_time release_dir
   release_dir="${RELEASES_DIR}/${commit_sha}"
-  if [[ -d "${release_dir}" ]]; then
+  if [[ -x "${release_dir}/.venv/bin/uvicorn" ]]; then
     printf '%s\n' "${release_dir}"
     return 0
   fi
-  staging="${RELEASES_DIR}/.staging-${commit_sha}-$$"
+  # A venv's console scripts have an absolute interpreter path. Build directly
+  # in the final, as-yet-unreferenced release directory rather than moving a
+  # staging directory after venv creation.
+  sudo rm -rf "${release_dir}"
   commit_time="$(sudo -u "${repo_owner}" git -C "${REPO_DIR}" log -1 --format=%cI "${commit_sha}")"
-  sudo rm -rf "${staging}"
-  sudo mkdir -p "${staging}"
-  if ! sudo -u "${repo_owner}" git -C "${REPO_DIR}" archive --format=tar "${commit_sha}" | sudo tar -x -C "${staging}"; then
-    sudo rm -rf "${staging}"
+  sudo mkdir -p "${release_dir}"
+  if ! sudo -u "${repo_owner}" git -C "${REPO_DIR}" archive --format=tar "${commit_sha}" | sudo tar -x -C "${release_dir}"; then
+    sudo rm -rf "${release_dir}"
     return 1
   fi
-  link_persistent_data "${staging}"
-  if ! sudo python3 -m venv "${staging}/.venv" \
-    || ! sudo "${staging}/.venv/bin/pip" install --upgrade pip \
-    || ! sudo "${staging}/.venv/bin/pip" install -r "${staging}/site/backend/requirements.txt"; then
-    sudo rm -rf "${staging}"
+  link_persistent_data "${release_dir}"
+  if ! sudo python3 -m venv "${release_dir}/.venv" \
+    || ! sudo "${release_dir}/.venv/bin/pip" install --upgrade pip \
+    || ! sudo "${release_dir}/.venv/bin/pip" install -r "${release_dir}/site/backend/requirements.txt"; then
+    sudo rm -rf "${release_dir}"
     return 1
   fi
-  sudo mkdir -p "${staging}/site/dist"
-  sudo chown -R "${repo_owner}:${repo_owner}" "${staging}/site/frontend" "${staging}/site/dist"
-  if ! sudo -H -u "${repo_owner}" npm -C "${staging}/site/frontend" ci --no-audit --no-fund \
-    || ! sudo -H -u "${repo_owner}" npm -C "${staging}/site/frontend" run build \
-    || [[ ! -f "${staging}/site/dist/index.html" ]]; then
-    sudo rm -rf "${staging}"
+  sudo mkdir -p "${release_dir}/site/dist"
+  sudo chown -R "${repo_owner}:${repo_owner}" "${release_dir}/site/frontend" "${release_dir}/site/dist"
+  if ! sudo -H -u "${repo_owner}" npm -C "${release_dir}/site/frontend" ci --no-audit --no-fund \
+    || ! sudo -H -u "${repo_owner}" npm -C "${release_dir}/site/frontend" run build \
+    || [[ ! -f "${release_dir}/site/dist/index.html" ]]; then
+    sudo rm -rf "${release_dir}"
     return 1
   fi
-  write_release_version "${staging}" "${commit_sha}" "${commit_time}"
-  sudo chown -R www-data:www-data "${staging}"
-  sudo mv "${staging}" "${release_dir}"
+  write_release_version "${release_dir}" "${commit_sha}" "${commit_time}"
+  sudo chown -R www-data:www-data "${release_dir}"
   printf '%s\n' "${release_dir}"
 }
 

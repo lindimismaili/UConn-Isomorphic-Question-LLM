@@ -13,6 +13,8 @@ def test_auto_updater_builds_immutable_releases_and_never_merges() -> None:
     assert 'CURRENT_RELEASE="${DEPLOY_DIR}/current"' in script
     assert "git -C \"${REPO_DIR}\" archive --format=tar" in script
     assert "switch_current_release" in script
+    assert 'sudo python3 -m venv "${release_dir}/.venv"' in script
+    assert 'sudo mv "${staging}" "${release_dir}"' not in script
     assert "git_as_owner reset --hard origin/main" not in script
     assert "git_as_owner clean -ffd" not in script
 
