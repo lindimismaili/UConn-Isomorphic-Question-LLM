@@ -25,14 +25,30 @@ from backend.src.operations import (
     CODE_MANUAL,
     RUNTIME_CONFIG_PATH,
     fetch_openai_cost_summary,
+    fetch_openai_status,
     operations,
 )
-from backend.src.paths import ARCHIVE_DIR, EVALUATION_FIXTURES_DIR, OUTPUTS_DIR, RUNTIME_DIR, UPLOADS_DIR
+from backend.src.paths import (
+    ARCHIVE_DIR,
+    DATA_DIR,
+    EVALUATION_FIXTURES_DIR,
+    OUTPUTS_DIR,
+    RUNTIME_DIR,
+    UPLOADS_DIR,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 _SENSITIVE_SUFFIXES = {".env", ".key", ".pem", ".pfx", ".sqlite", ".sqlite3", ".db"}
 _MAX_ZIP_BYTES = max(1, int(os.getenv("ADMIN_MAX_ZIP_BYTES", str(5 * 1024 * 1024 * 1024))))
 _MAX_ZIP_FILES = max(1, int(os.getenv("ADMIN_MAX_ZIP_FILES", "10000")))
+_DATA_FILES = frozenset({"agents.json", "latex_template.tex", "rubric.json"})
+_ROOT_DISPLAY_PATHS = {
+    "archive": "/archive",
+    "uploads": "/site/backend/uploads",
+    "outputs": "/site/backend/outputs",
+    "evaluations": "/site/backend/data/evaluation",
+    "data": "/site/backend/data",
+}
 
 
 def _configured_admins() -> set[str]:
@@ -123,7 +139,31 @@ def require_service_available() -> None:
 
 
 def _roots() -> dict[str, Path]:
-    return {"archive": ARCHIVE_DIR, "uploads": UPLOADS_DIR, "outputs": OUTPUTS_DIR, "evaluations": EVALUATION_FIXTURES_DIR}
+    return {
+        "archive": ARCHIVE_DIR,
+        "uploads": UPLOADS_DIR,
+        "outputs": OUTPUTS_DIR,
+        "evaluations": EVALUATION_FIXTURES_DIR,
+        "data": DATA_DIR,
+    }
+
+
+def _allowed_data_path(relative_path: Path) -> bool:
+    """Expose only the requested hand-curated agent configuration files."""
+    parts = relative_path.parts
+    if not parts:
+        return True
+    if len(parts) == 1:
+        return parts[0] in _DATA_FILES or parts[0] == "prompts"
+    return len(parts) == 2 and parts[0] == "prompts" and relative_path.suffix.lower() == ".txt"
+
+
+def _is_real_workflow_id(value: str) -> bool:
+    try:
+        uuid.UUID(str(value))
+    except (TypeError, ValueError, AttributeError):
+        return False
+    return True
 
 
 def _safe_path(root: str, relative: str = "") -> Path:
@@ -133,6 +173,8 @@ def _safe_path(root: str, relative: str = "") -> Path:
     relative_path = Path(relative)
     if relative_path.is_absolute() or any(part in {"", ".", ".."} or part.startswith(".") for part in relative_path.parts):
         raise HTTPException(status_code=400, detail="Invalid file path")
+    if root == "data" and not _allowed_data_path(relative_path):
+        raise HTTPException(status_code=404, detail="File not available")
     candidate = base
     for part in relative_path.parts:
         candidate = candidate / part
@@ -164,16 +206,18 @@ def _directory_size(path: Path) -> int:
     return total
 
 
-def _safe_zip(directory: Path, root: Path) -> Path:
+def _safe_zip(directory: Path, root: Path, root_name: str) -> Path:
     total = 0
     files: list[Path] = []
     for item in directory.rglob("*"):
         if not item.is_file() or item.is_symlink() or item.suffix.lower() in _SENSITIVE_SUFFIXES:
             continue
         try:
-            item.resolve().relative_to(root.resolve())
+            relative_item = item.resolve().relative_to(root.resolve())
             size = item.stat().st_size
         except (OSError, ValueError):
+            continue
+        if root_name == "data" and not _allowed_data_path(relative_item):
             continue
         total += size
         if total > _MAX_ZIP_BYTES or len(files) >= _MAX_ZIP_FILES:
@@ -205,10 +249,14 @@ async def session(actor: str = Depends(require_admin)):
 
 
 @router.get("/dashboard")
-async def dashboard(actor: str = Depends(require_admin)):
+async def dashboard(request: Request, actor: str = Depends(require_admin)):
     del actor
     durable = dict(workflow_store.list_records("workflow"))
-    all_records = {**durable, **workflows}
+    all_records = {
+        workflow_id: value
+        for workflow_id, value in {**durable, **workflows}.items()
+        if _is_real_workflow_id(workflow_id)
+    }
     active = [(workflow_id, value) for workflow_id, value in all_records.items() if value.get("status") not in TERMINAL_STATUSES]
     recent = [
         {"id": workflow_id, "status": value.get("status", "unknown"), "createdAt": value.get("created_at", ""), "updatedAt": value.get("updated_at", ""), "outputFolder": value.get("outputFolder", ""), "error": value.get("error", "")[:240]}
@@ -216,6 +264,25 @@ async def dashboard(actor: str = Depends(require_admin)):
     ]
     usage = shutil.disk_usage(OUTPUTS_DIR)
     services = operations.load_probe()
+    openai_status = await asyncio.to_thread(fetch_openai_status)
+    requested_host = (request.url.hostname or "").lower()
+    public_health = str(services.get("public_health", "not-monitored"))
+    if requested_host in {"localhost", "127.0.0.1", "::1"}:
+        site = {"state": "localhost", "label": "Localhost", "detail": "Running only on this computer.", "checkedAt": ""}
+    elif public_health == "ok":
+        site = {"state": "online", "label": "Online", "detail": "Public health probe passed.", "checkedAt": str(services.get("checked_at", ""))}
+    elif public_health == "not-configured":
+        site = {"state": "offline", "label": "Not online", "detail": "No public hostname is configured.", "checkedAt": str(services.get("checked_at", ""))}
+    else:
+        site = {"state": "offline", "label": "Public check failed", "detail": f"Public health probe: {public_health}.", "checkedAt": str(services.get("checked_at", ""))}
+    tunnel = str(services.get("cloudflared", "not-monitored"))
+    cloudflare_public = str(services.get("cloudflare_status", "not-monitored"))
+    if tunnel == "active" and cloudflare_public == "ok":
+        cloudflare = {"state": "online", "label": "Connected", "detail": "Tunnel active; Cloudflare status operational.", "checkedAt": str(services.get("checked_at", ""))}
+    elif tunnel == "not-monitored":
+        cloudflare = {"state": "unknown", "label": "Not monitored", "detail": "Pi operations probe has not reported yet.", "checkedAt": ""}
+    else:
+        cloudflare = {"state": "offline", "label": "Needs attention", "detail": f"Tunnel: {tunnel}; Cloudflare: {cloudflare_public}.", "checkedAt": str(services.get("checked_at", ""))}
     return {
         "maintenance": operations.public_status(),
         "activeWorkflows": len(active),
@@ -227,6 +294,9 @@ async def dashboard(actor: str = Depends(require_admin)):
         "audit": operations.audit_events(),
         "settings": {"stageCacheEnabled": operations.get_setting("stage_cache_enabled", None), "costWarningDollars": operations.get_setting("cost_warning_dollars", None), "openaiAdminKeyConfigured": bool(os.getenv("OPENAI_ADMIN_KEY", "").strip())},
         "cost": await asyncio.to_thread(fetch_openai_cost_summary),
+        "site": site,
+        "cloudflare": cloudflare,
+        "openai": openai_status,
         "operations": services,
         "deployment": deployment_status_payload(active_workflows=len(active)),
     }
@@ -243,12 +313,14 @@ async def list_entries(root: str, path: str = "", actor: str = Depends(require_a
     for item in directory.iterdir():
         if item.name.startswith(".") or item.is_symlink() or item.suffix.lower() in _SENSITIVE_SUFFIXES:
             continue
+        if root == "data" and not _allowed_data_path(item.relative_to(base)):
+            continue
         try:
             entries.append(_entry(item, base))
         except OSError:
             continue
     entries.sort(key=lambda item: (not item["isDirectory"], item["name"].lower()))
-    return {"root": root, "path": path, "entries": entries}
+    return {"root": root, "path": path, "displayPath": _ROOT_DISPLAY_PATHS[root], "entries": entries}
 
 
 @router.get("/files/{root}/download")
@@ -275,7 +347,7 @@ async def download_folder_zip(root: str, request: Request, path: str = "", actor
     directory = _safe_path(root, path)
     if not directory.is_dir():
         raise HTTPException(status_code=400, detail="Only folders can be downloaded as a ZIP")
-    archive = await asyncio.to_thread(_safe_zip, directory, _roots()[root])
+    archive = await asyncio.to_thread(_safe_zip, directory, _roots()[root], root)
     operations.audit(actor, "folder.zip", f"{root}/{path}", "success")
     return FileResponse(archive, filename=f"{directory.name or root}.zip")
 

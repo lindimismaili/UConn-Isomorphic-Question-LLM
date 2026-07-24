@@ -10,7 +10,7 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 
 from backend.src.api import state
-from backend.src.api.admin import _safe_path, require_admin
+from backend.src.api.admin import _allowed_data_path, _is_real_workflow_id, _safe_path, require_admin
 from backend.src.operations import CODE_COST, Operations, classify_openai_failure, operations
 from backend.src.server import SPAStaticFiles, app
 
@@ -74,6 +74,17 @@ def test_admin_file_resolver_rejects_traversal() -> None:
         assert getattr(exc, "status_code", None) in {400, 404}
     else:
         raise AssertionError("traversal must be rejected")
+
+
+def test_admin_data_allowlist_exposes_only_requested_configuration_files() -> None:
+    assert _allowed_data_path(Path("agents.json"))
+    assert _allowed_data_path(Path("latex_template.tex"))
+    assert _allowed_data_path(Path("rubric.json"))
+    assert _allowed_data_path(Path("prompts/generator.txt"))
+    assert not _allowed_data_path(Path("evaluation/source.pdf"))
+    assert not _allowed_data_path(Path("professor_comparison/Evaluation.xlsx"))
+    assert _is_real_workflow_id("495ac582-4933-495c-a2de-c3e25ab2b955")
+    assert not _is_real_workflow_id("wf-incomplete")
 
 
 def test_maintenance_blocks_uploads_with_public_code() -> None:

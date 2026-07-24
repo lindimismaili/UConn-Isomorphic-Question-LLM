@@ -189,7 +189,11 @@ Primary content grids inside `.content-shell`:
 - `.admin-dashboard` — protected operations view; composes existing cards, tabs,
   data tables, toggles, buttons, and modal shell. Its summary grid is four-up
   on desktop, two-up at ≤1100px, and one-up at ≤700px. It never introduces a
-  separate theme or control style.
+  separate theme or control style. It displays canonical logical storage paths
+  (for example, `/site/backend/outputs`) rather than marketing labels, and its
+  live cards refresh on the established 30-second interval. The key-replacement
+  field is the documented `.admin-key-input`: a full-width standard-height,
+  tokenized input with the usual primary focus ring.
 
 **Modal-open dimming:** when any modal is open the body gets `.modal-open`,
 which applies `filter: blur(6px)` to `.header`, `.main-content`, and `.footer`
