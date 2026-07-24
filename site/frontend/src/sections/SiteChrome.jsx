@@ -11,11 +11,10 @@ import { Banner, PageHeader, Footer, Dropdown } from '../components/ui/index.js'
 /** Physics-academic motif surfaced behind the navy masthead. */
 export const HEADER_MOTIF = '/assets/physics-motif.svg';
 
-/** The three site modes surfaced by the header mode dropdown. */
+/** The consumer-facing site modes surfaced by the header mode dropdown. */
 const SITE_MODES = [
   { value: 'user', label: 'User Mode' },
   { value: 'teacher', label: 'Teacher Mode' },
-  { value: 'dev', label: 'Dev Mode' },
 ];
 
 /** The UConn Physics Research brand mark (right slot of the masthead). */
@@ -36,7 +35,7 @@ export function UConnMark() {
  * @param {object} [props]
  * @param {string} [props.title]
  * @param {import('react').ReactNode} [props.aside] - Override the right slot.
- * @param {'user'|'teacher'|'dev'} [props.mode] - Current site mode.
+ * @param {'user'|'teacher'} [props.mode] - Current site mode.
  * @param {(mode: string) => void} [props.onModeChange] - Renders the mode
  *   dropdown right after the title when provided.
  */
