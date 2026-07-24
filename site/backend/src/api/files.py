@@ -10,6 +10,7 @@ from agents.logger import logger
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
+from backend.src.api.admin import require_service_available
 from backend.src.api.state import (
     ALLOWED_UPLOAD_EXTENSIONS,
     MAX_UPLOAD_BYTES,
@@ -40,6 +41,7 @@ router = APIRouter()
 @router.post("/api/upload")
 async def upload_files(files: list[UploadFile] = File(...)):
     """Upload files for processing."""
+    require_service_available()
     _prune_workflows()
     logger.info("Upload request received with %d file(s)", len(files))
     uploaded_files = []

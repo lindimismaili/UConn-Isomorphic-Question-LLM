@@ -186,6 +186,10 @@ Primary content grids inside `.content-shell`:
   these the body collapses and `overflow: hidden` clips the log entirely.
 - `.pipeline-split` — workflow panel + log panel (`~1.9fr` / `minmax(300px,1fr)`).
   Collapses to one column at **≤1100px**.
+- `.admin-dashboard` — protected operations view; composes existing cards, tabs,
+  data tables, toggles, buttons, and modal shell. Its summary grid is four-up
+  on desktop, two-up at ≤1100px, and one-up at ≤700px. It never introduces a
+  separate theme or control style.
 
 **Modal-open dimming:** when any modal is open the body gets `.modal-open`,
 which applies `filter: blur(6px)` to `.header`, `.main-content`, and `.footer`

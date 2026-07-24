@@ -4,21 +4,17 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
-from urllib.error import URLError
-from urllib.request import Request, urlopen
 
-from agents.logger import logger
 from fastapi import APIRouter
 
 from backend.src.api.deployment_status import deployment_status_payload
 from backend.src.api.state import (
     OPENAI_STATUS_TIMEOUT_SECONDS,
-    OPENAI_STATUS_URL,
     TERMINAL_STATUSES,
     _has_openai_api_key,
     workflows,
 )
+from backend.src.operations import fetch_openai_status, operations
 from backend.src.paths import (
     OUTPUTS_DIR,
     UPLOADS_DIR,
@@ -48,6 +44,19 @@ async def health_check():
         "outputs_dir_writable": os.access(OUTPUTS_DIR, os.W_OK),
     }
 
+
+@router.get("/api/service-status")
+async def service_status():
+    """Public, deliberately minimal availability contract for the web UI."""
+    return operations.public_status()
+
+
+@router.post("/api/visitor/heartbeat")
+async def visitor_heartbeat(payload: dict):
+    """Record an anonymous, short-lived visitor heartbeat without retaining IPs."""
+    operations.record_visitor(str(payload.get("visitorId", "")))
+    return {"ok": True}
+
 @router.get("/api/openai/status")
 async def openai_status():
     """
@@ -56,35 +65,7 @@ async def openai_status():
     Uses OpenAI's public status page API and marks the site as inactive only
     when indicator is major/critical outage.
     """
-    try:
-        req = Request(
-            OPENAI_STATUS_URL,
-            headers={"User-Agent": "IsomorphicQuestionGenerator/1.0"},
-        )
-        with urlopen(req, timeout=OPENAI_STATUS_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-
-        status_payload = payload.get("status", {}) if isinstance(payload, dict) else {}
-        indicator = str(status_payload.get("indicator", "unknown")).lower()
-        description = str(status_payload.get("description", "Unknown"))
-        openai_down = indicator in {"major", "critical"}
-
-        return {
-            "status": "ok",
-            "openai_down": openai_down,
-            "indicator": indicator,
-            "description": description,
-            "checked_at": datetime.now().isoformat(),
-        }
-    except (URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
-        logger.warning("OpenAI status check failed: %s", exc)
-        return {
-            "status": "unknown",
-            "openai_down": False,
-            "indicator": "unknown",
-            "description": "Unable to verify OpenAI status right now.",
-            "checked_at": datetime.now().isoformat(),
-        }
+    return fetch_openai_status(OPENAI_STATUS_TIMEOUT_SECONDS)
 
 @router.get("/version.json")
 async def get_version_json():

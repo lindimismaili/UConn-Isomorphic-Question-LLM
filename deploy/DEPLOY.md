@@ -47,6 +47,22 @@ If no active tunnel is found, the default tunnel name is:
 uconn_isomorphic
 ```
 
+## Admin Dashboard and Operations Probe
+
+The installer creates a persistent `/var/lib/uconn-isomorphic/config/admin-runtime.env`
+override that is read after the release-local `.env`; this is where a dashboard
+key rotation survives immutable release switches. Keep `OPENAI_ADMIN_KEY`, SMTP
+settings, the Cloudflare Access audience/team domain, and the admin email
+allowlist only in this Pi-side file, never in a client bundle.
+
+It also enables `uconn-isomorphic-operations.timer`, which runs every minute as
+a separate systemd job and writes a sanitized report consumed by `/admin`.
+The report contains service/tunnel state, disk/load values, public-health
+reachability, Cloudflare status, and bounded redacted journal excerpts—not shell
+access, credentials, or unrestricted logs.
+Configure Cloudflare Access with Google sign-in for `/admin*` and `/api/admin/*`;
+the FastAPI service verifies each signed Access assertion again.
+
 ## Automatic Updates
 
 After the Cloudflare step, the installer asks whether to enable automatic
@@ -137,6 +153,7 @@ sudo systemctl status uconn-isomorphic
 sudo systemctl status nginx
 sudo systemctl status uconn-isomorphic-cloudflared
 sudo systemctl status uconn-isomorphic-update.timer
+sudo systemctl status uconn-isomorphic-operations.timer
 sudo journalctl -u uconn-isomorphic -f
 sudo journalctl -u uconn-isomorphic-cloudflared -f
 sudo journalctl -u uconn-isomorphic-update.service -f

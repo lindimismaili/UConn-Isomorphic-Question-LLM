@@ -27,7 +27,10 @@ RELEASES_DIR="${DEPLOY_DIR}/releases"
 CURRENT_RELEASE="${DEPLOY_DIR}/current"
 PERSIST_DIR="${PERSIST_DIR:-/var/lib/${SERVICE_NAME}}"
 PERSIST_RUNTIME_DIR="${PERSIST_DIR}/runtime"
+PERSIST_CONFIG_DIR="${PERSIST_DIR}/config"
+RUNTIME_CONFIG_FILE="${PERSIST_CONFIG_DIR}/admin-runtime.env"
 DEPLOY_STATUS_FILE="${PERSIST_RUNTIME_DIR}/deployment_status.json"
+OPERATIONS_PROBE_FILE="${PERSIST_RUNTIME_DIR}/operations_probe.json"
 RELEASE_RETENTION="${RELEASE_RETENTION:-3}"
 
 NGINX_CONF="/etc/nginx/sites-available/${SERVICE_NAME}"
@@ -615,6 +618,8 @@ User=www-data
 Group=www-data
 WorkingDirectory=${CURRENT_RELEASE}/site
 EnvironmentFile=-${CURRENT_RELEASE}/site/.env
+EnvironmentFile=-${RUNTIME_CONFIG_FILE}
+Environment=RUNTIME_CONFIG_PATH=${RUNTIME_CONFIG_FILE}
 Environment=HOST=127.0.0.1
 Environment=PORT=${BACKEND_PORT}
 Environment=ALLOWED_ORIGINS=${allowed_origins}
@@ -1516,8 +1521,10 @@ link_persistent_data() {
 }
 
 ensure_release_layout() {
-  sudo mkdir -p "${RELEASES_DIR}" "${PERSIST_DIR}/uploads" "${PERSIST_DIR}/outputs" "${PERSIST_RUNTIME_DIR}"
-  sudo chown www-data:www-data "${PERSIST_DIR}" "${PERSIST_DIR}/uploads" "${PERSIST_DIR}/outputs" "${PERSIST_RUNTIME_DIR}"
+  sudo mkdir -p "${RELEASES_DIR}" "${PERSIST_DIR}/uploads" "${PERSIST_DIR}/outputs" "${PERSIST_RUNTIME_DIR}" "${PERSIST_CONFIG_DIR}"
+  sudo touch "${RUNTIME_CONFIG_FILE}"
+  sudo chmod 600 "${RUNTIME_CONFIG_FILE}"
+  sudo chown www-data:www-data "${PERSIST_DIR}" "${PERSIST_DIR}/uploads" "${PERSIST_DIR}/outputs" "${PERSIST_RUNTIME_DIR}" "${PERSIST_CONFIG_DIR}" "${RUNTIME_CONFIG_FILE}"
   local name legacy_dir current legacy_sha
   current="$(current_release_path)"
   if [[ -n "${current}" ]]; then
@@ -1768,6 +1775,49 @@ EOF
   info "Disable later with: sudo systemctl disable --now ${SERVICE_NAME}-update.timer"
 }
 
+install_operations_probe_units() {
+  banner "Operations Probe"
+
+  local service_file="/etc/systemd/system/${SERVICE_NAME}-operations.service"
+  local timer_file="/etc/systemd/system/${SERVICE_NAME}-operations.timer"
+  sudo tee "${service_file}" >/dev/null <<EOF
+[Unit]
+Description=Collect sanitized operations status for ${SERVICE_NAME}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=OPERATIONS_PROBE_PATH=${OPERATIONS_PROBE_FILE}
+Environment=SERVICE_NAME=${SERVICE_NAME}
+Environment=CLOUDFLARED_SERVICE_NAME=${CLOUDFLARED_SERVICE_NAME}
+Environment=PERSIST_DIR=${PERSIST_DIR}
+Environment=PUBLIC_HOSTNAME=${PUBLIC_HOSTNAME:-}
+ExecStart=/usr/bin/python3 ${REPO_DIR}/deploy/operations_probe.py
+EOF
+
+  sudo tee "${timer_file}" >/dev/null <<EOF
+[Unit]
+Description=Collect ${SERVICE_NAME} operations status every minute
+
+[Timer]
+OnBootSec=30
+OnUnitInactiveSec=60
+AccuracySec=5s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  sudo chmod 644 "${service_file}" "${timer_file}"
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now "${SERVICE_NAME}-operations.timer"
+  sudo systemctl start "${SERVICE_NAME}-operations.service"
+  sudo chown www-data:www-data "${OPERATIONS_PROBE_FILE}" 2>/dev/null || true
+  info "Operations probe enabled: sudo systemctl status ${SERVICE_NAME}-operations.timer"
+}
+
 main() {
   if [[ "${1:-}" == "--update" ]]; then
     run_auto_update
@@ -1810,6 +1860,7 @@ main() {
   else
     info "Skipped Cloudflare hosting. Local site remains available at http://${LOCAL_DOMAIN}"
   fi
+  install_operations_probe_units
 
   echo ""
   if ask_to_continue "Enable automatic updates (check GitHub every 60s and force-redeploy new commits)?"; then

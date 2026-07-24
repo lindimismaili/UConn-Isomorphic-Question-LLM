@@ -217,6 +217,10 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   stage's output (extracter, generator) keyed on the stage input + model + reasoning +
   prompt, persisted in `site/backend/runtime/stage_cache.sqlite3`. See
   `workflow/stage_cache.py`.
+- `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `ADMIN_EMAILS` — production-only
+  Cloudflare Access identity verification for `/admin` and `/api/admin/*`.
+- `OPENAI_ADMIN_KEY` — optional Organization Owner key used only server-side for
+  cost monitoring; `SMTP_*` + `ALERT_RECIPIENTS` configure incident email.
 
 ## Architecture
 
@@ -427,7 +431,12 @@ A tripped guardrail ends the run in the terminal **`blocked`** status (distinct 
 
 Routes live in `site/backend/src/api/` (registered on the app in `server.py`):
 
-- `GET /api/health`, `GET /api/openai/status`, `GET /version.json`
+- `GET /api/health`, `GET /api/openai/status`, `GET /api/service-status`, `GET /version.json`
+- `POST /api/visitor/heartbeat` — anonymous five-minute active-visitor estimate;
+  stores only a salted identifier hash.
+- `/api/admin/*` — Cloudflare Access JWT-protected operations API (dashboard,
+  approved-root file browser/download/ZIP, maintenance/cache/key controls, audit,
+  incidents, and Pi probe report); never exposes credentials or arbitrary paths.
 - `POST /api/upload` (5 files max, 20 MB each by default; documents, images,
   text/markdown, and LaTeX — see `ALLOWED_UPLOAD_EXTENSIONS` in `api/state.py`)
 - `GET /api/dropdown`, `GET /api/rubric`, `GET /api/agents`
@@ -573,6 +582,8 @@ operational guides, not source of truth for local development.
   migration and rollback plan.
 - `GET /api/deployment/status` is the sanitized, dashboard-safe deploy report;
   use the updater's systemd journal for detailed diagnostics.
+- The installer writes a persistent `config/admin-runtime.env` override and runs
+  `${SERVICE_NAME}-operations.timer`; the web service has no shell/systemd access.
 
 ## Agent Warnings / Gotchas
 
