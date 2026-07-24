@@ -23,6 +23,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend.src.api import state
 from backend.src.api.admin import router as admin_router
@@ -44,6 +45,29 @@ from backend.src.operations import (
 from backend.src.paths import DIST_DIR
 from backend.src.registry import api_description as _api_description
 from backend.src.registry import api_title as _api_title
+
+
+class SPAStaticFiles(StaticFiles):
+    """Serve the React entry page for browser routes such as ``/admin``.
+
+    API routes are registered before this mount. Unknown API paths and missing
+    asset files retain a real 404 rather than receiving the HTML application.
+    """
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            # ``StaticFiles`` normalizes the path before handing it to us. Use
+            # the original ASGI path here so encoded traversal attempts cannot
+            # lose their ``/api/`` prefix and become browser-route fallbacks.
+            relative_path = str(scope.get("path", path)).replace("\\", "/").lstrip("/")
+            is_browser_route = (
+                exc.status_code == 404 and not relative_path.startswith("api/") and not Path(relative_path).suffix
+            )
+            if not is_browser_route:
+                raise
+            return await super().get_response("index.html", scope)
 
 
 @asynccontextmanager
@@ -118,7 +142,7 @@ app.include_router(professor_comparison_router)
 
 # Mount static files last so API routes win.
 if DIST_DIR.is_dir() and (DIST_DIR / "index.html").is_file():
-    app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="static")
+    app.mount("/", SPAStaticFiles(directory=str(DIST_DIR), html=True), name="static")
 else:
     @app.get("/", include_in_schema=False)
     async def root():
