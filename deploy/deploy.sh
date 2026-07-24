@@ -1601,15 +1601,15 @@ build_candidate_release() {
   fi
   link_persistent_data "${release_dir}"
   if ! sudo python3 -m venv "${release_dir}/.venv" \
-    || ! sudo "${release_dir}/.venv/bin/pip" install --upgrade pip \
-    || ! sudo "${release_dir}/.venv/bin/pip" install -r "${release_dir}/site/backend/requirements.txt"; then
+    || ! sudo "${release_dir}/.venv/bin/pip" install --upgrade pip >&2 \
+    || ! sudo "${release_dir}/.venv/bin/pip" install -r "${release_dir}/site/backend/requirements.txt" >&2; then
     sudo rm -rf "${release_dir}"
     return 1
   fi
   sudo mkdir -p "${release_dir}/site/dist"
   sudo chown -R "${repo_owner}:${repo_owner}" "${release_dir}/site/frontend" "${release_dir}/site/dist"
-  if ! sudo -H -u "${repo_owner}" npm -C "${release_dir}/site/frontend" ci --no-audit --no-fund \
-    || ! sudo -H -u "${repo_owner}" npm -C "${release_dir}/site/frontend" run build \
+  if ! sudo -H -u "${repo_owner}" npm -C "${release_dir}/site/frontend" ci --no-audit --no-fund >&2 \
+    || ! sudo -H -u "${repo_owner}" npm -C "${release_dir}/site/frontend" run build >&2 \
     || [[ ! -f "${release_dir}/site/dist/index.html" ]]; then
     sudo rm -rf "${release_dir}"
     return 1
