@@ -675,7 +675,8 @@ untouched; only the view changed.
   (primary border + glow) so it's visible that a theme prompt rides along. Its
   question textarea keeps the documented 180px large-textarea floor (five rows)
   so composing the request, rather than the empty state, receives the page's
-  visual space.
+  visual space. The theme selector uses a stable 240px slot, so selecting a
+  longer theme label never shifts the Attach/Send controls.
 - **Empty conversation hint** — `ChatTranscript.is-empty` becomes a compact,
   non-growing panel. Its `.chat-empty` row places the brain icon on the left,
   mode-aware guidance in the flexible middle, and the secondary “How it works”
