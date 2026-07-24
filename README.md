@@ -310,9 +310,8 @@ itself; a Cloudflare page rule alone is not sufficient.
 
 ### Local dashboard testing
 
-This checkout includes the ignored `site/.env.local` file so a local run can
-exercise the full dashboard without Cloudflare. It contains a non-production
-test identity:
+The tracked `site/.env` enables a non-production dashboard test identity so a
+fresh repository checkout can exercise the full dashboard without Cloudflare:
 
 ```env
 ADMIN_LOCAL_DEV_MODE=true
@@ -325,8 +324,10 @@ loopback connection and only while both variables are set; it must never be
 placed in the Pi runtime configuration. It exercises the real local file,
 workflow, maintenance, cache, and download controls.
 
-Keep `site/.env.local` in your local checkout. It is intentionally gitignored
-so it cannot be committed or deployed by accident.
+`site/.env.local` can still override the local test identity when needed, but
+it is not required. The Pi systemd service explicitly sets
+`ADMIN_LOCAL_DEV_MODE=false` after loading both environment files, so the
+checked-in local default can never bypass Cloudflare Access in production.
 
 The dashboard stores non-secret state in `runtime/operations.sqlite3`. The Pi
 installer creates a release-independent `admin-runtime.env` override for an
