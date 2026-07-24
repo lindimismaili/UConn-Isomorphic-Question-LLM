@@ -11,10 +11,13 @@ from urllib.request import Request, urlopen
 from agents.logger import logger
 from fastapi import APIRouter
 
+from backend.src.api.deployment_status import deployment_status_payload
 from backend.src.api.state import (
     OPENAI_STATUS_TIMEOUT_SECONDS,
     OPENAI_STATUS_URL,
+    TERMINAL_STATUSES,
     _has_openai_api_key,
+    workflows,
 )
 from backend.src.paths import (
     OUTPUTS_DIR,
@@ -23,6 +26,13 @@ from backend.src.paths import (
 )
 
 router = APIRouter()
+
+
+@router.get("/api/deployment/status")
+async def deployment_status():
+    """Return the sanitized status written by the Pi release updater."""
+    active_workflows = sum(1 for workflow in workflows.values() if workflow.get("status") not in TERMINAL_STATUSES)
+    return deployment_status_payload(active_workflows=active_workflows)
 
 @router.get("/api/health")
 async def health_check():

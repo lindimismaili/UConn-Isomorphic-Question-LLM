@@ -16,6 +16,9 @@ Covered:
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -64,6 +67,31 @@ class HealthAndVersionRouteTests(RouteTestBase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.json(), dict)
         self.assertIn("version", resp.json())
+
+    def test_deployment_status_is_sanitized(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "deployment_status.json"
+            path.write_text(
+                '{"status":"rolled_back","stage":"health","active_commit":"good","secret":"nope",'
+                '"events":[{"at":"now","state":"failed","stage":"build","commit":"bad",'
+                '"message":"safe","environment":"hidden"}]}',
+                encoding="utf-8",
+            )
+            with patch("backend.src.api.deployment_status.DEPLOYMENT_STATUS_PATH", path):
+                response = self.client.get("/api/deployment/status")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "rolled_back")
+        self.assertEqual(response.json()["events"][0]["message"], "safe")
+        self.assertNotIn("secret", response.json())
+        self.assertNotIn("environment", response.json()["events"][0])
+
+    def test_deployment_status_handles_missing_or_invalid_file(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "deployment_status.json"
+            with patch("backend.src.api.deployment_status.DEPLOYMENT_STATUS_PATH", path):
+                self.assertEqual(self.client.get("/api/deployment/status").json()["status"], "unavailable")
+                path.write_text("not json", encoding="utf-8")
+                self.assertEqual(self.client.get("/api/deployment/status").json()["status"], "unavailable")
 
 
 class ConfigRouteTests(RouteTestBase):
