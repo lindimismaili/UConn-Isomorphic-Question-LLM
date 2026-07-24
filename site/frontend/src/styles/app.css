@@ -2290,8 +2290,8 @@ select option:checked {
      as tall as the chat panel beside it. */
   align-items: stretch;
 }
-/* User/teacher modes hide the developer-tools side panel: the chat surface
-   takes the full width. */
+/* The consumer site uses this single-column workspace; the protected admin
+   Developer Mode keeps the paired chat + tools layout. */
 .workspace.is-single {
   grid-template-columns: minmax(0, 1fr);
 }

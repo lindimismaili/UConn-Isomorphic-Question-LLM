@@ -18,6 +18,7 @@ import {
 } from '../components/ui/index.js';
 import { IconArrowLeft, IconDownload, IconFile, IconFolder, IconRefresh } from '../components/Icons.jsx';
 import { SiteFooter, SiteHeader } from './SiteChrome.jsx';
+import DeveloperMode from './DeveloperMode.jsx';
 import { requestJson } from '../utils/api.js';
 
 const REFRESH_MS = 30_000;
@@ -31,6 +32,7 @@ const ROOTS = [
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'developer', label: 'Developer Mode' },
   { id: 'files', label: 'Files' },
   { id: 'workflows', label: 'Workflows & Evals' },
   { id: 'operations', label: 'Operations' },
@@ -350,7 +352,15 @@ export default function AdminDashboard() {
         </div>
         {error ? <Card variant="failed"><CardBody>{error}</CardBody></Card> : null}
         <Tabs value={tab} onChange={setTab} tabs={TABS} />
-        {content}
+        {data ? (
+          <section className="admin-developer-mode" hidden={tab !== 'developer'}>
+            <DeveloperMode
+              serviceInactive={Boolean(maintenance?.maintenance)}
+              maintenanceCode={maintenance?.code || ''}
+            />
+          </section>
+        ) : null}
+        {tab === 'developer' && data ? null : content}
       </div>
       <Modal isOpen={maintenanceConfirm !== null} onClose={() => setMaintenanceConfirm(null)} title={maintenanceConfirm ? 'Enable maintenance mode?' : 'Restore public service?'} footer={<><Button variant="secondary" onClick={() => setMaintenanceConfirm(null)}>Cancel</Button><Button variant={maintenanceConfirm ? 'danger' : 'primary'} onClick={() => { updateSettings({ maintenance: maintenanceConfirm, maintenance_message: 'The site is temporarily unavailable for maintenance.' }); setMaintenanceConfirm(null); }}>{maintenanceConfirm ? 'Enable maintenance' : 'Restore service'}</Button></>}><p>{maintenanceConfirm ? 'New uploads and workflow starts will immediately be blocked with a timestamped public maintenance notice.' : 'Confirm that the underlying issue is resolved before allowing new workflows.'}</p></Modal>
     </AppShell>

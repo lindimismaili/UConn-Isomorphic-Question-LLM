@@ -198,8 +198,11 @@ Primary content grids inside `.content-shell`:
   place the existing semantic `StatusDot` in their upper-right corner. File
   roots and download actions remain standard white secondary buttons; the file
   name itself opens a folder or preview, while the final table column performs
-  the explicit download. Long audit histories use an internally scrollable
-  table shell rather than extending the page indefinitely.
+  the explicit download. Its **Developer Mode** tab is immediately after
+  Overview and renders the complete two-column developer workspace (chat plus
+  Developer Tools) that is never mounted on the consumer site. Long audit
+  histories use an internally scrollable table shell rather than extending the
+  page indefinitely.
 
 **Modal-open dimming:** when any modal is open the body gets `.modal-open` to
 lock page scroll. The modal's own backdrop supplies the smoothly faded navy tint;
@@ -706,12 +709,14 @@ untouched; only the view changed.
 ### Site modes & the header mode select
 
 The header carries a **site-mode dropdown** (`.mode-select`, a `Select`
-sub-variant) right after the title: **User / Teacher / Dev**. It uses the
+sub-variant) right after the title: **User / Teacher**. It uses the
 light-on-navy masthead treatment (translucent white fill, white text/chevron,
 36px tier); the popup list stays white/navy via the global `select option`
-rule. Dev mode shows the developer-tools side panel (`.workspace` two-column);
-user/teacher modes hide it (`.workspace.is-single`) and swap the
-empty-conversation hint text. The choice persists in `localStorage` (`uiMode`).
+rule. The consumer site always uses `.workspace.is-single` and swaps the
+empty-conversation hint text by mode. The former Dev mode is now the protected
+Admin Dashboard’s **Developer Mode** tab, where it retains the full two-column
+`.workspace` with its Developer Tools panel. The consumer choice persists in
+`localStorage` (`uiMode`).
 
 ### Blocked runs
 

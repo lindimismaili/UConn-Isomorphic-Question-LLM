@@ -2,17 +2,11 @@ import { useReducer, useEffect, useState } from "react";
 import "./styles/app.css";
 
 import ChatConversation from "./sections/ChatConversation.jsx";
-import DeveloperToolsPanel from "./components/DeveloperToolsPanel.jsx";
 
-import FilesModal from "./components/modals/FilesModal.jsx";
-import TestFilesModal from "./components/modals/TestFilesModal.jsx";
-import CreateDataModal from "./components/modals/CreateDataModal.jsx";
 import AgentDetailModal from "./components/modals/AgentDetailModal.jsx";
 import SetupModal from "./components/modals/SetupModal.jsx";
 import OutputModal from "./components/modals/OutputModal.jsx";
 import HelpModal from "./components/modals/HelpModal.jsx";
-import InputToAgentModal from "./components/modals/InputToAgentModal.jsx";
-import BatchEvalModal from "./components/modals/BatchEvalModal.jsx";
 import AdminDashboard from "./sections/AdminDashboard.jsx";
 
 import { AppShell, Button, Modal } from "./components/ui/index.js";
@@ -21,8 +15,6 @@ import { SiteBanner, SiteHeader, SiteFooter } from "./sections/SiteChrome.jsx";
 import { useWorkflow } from "./hooks/useWorkflow.js";
 import { useAgents } from "./hooks/useAgents.js";
 import { getDerivedRegistry } from "./hooks/useAgentRegistry.js";
-import { useCreateData } from "./hooks/useCreateData.js";
-import { useBatchEval } from "./hooks/useBatchEval.js";
 import { reducer, INITIAL_STATE } from "./state/reducer.js";
 
 // =============================================================================
@@ -38,13 +30,12 @@ import { reducer, INITIAL_STATE } from "./state/reducer.js";
 function PublicApp() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [prompt, setPrompt] = useState("");
-  const [runEvaluations, setRunEvaluations] = useState(false);
-  // Site mode: 'user' | 'teacher' | 'dev'. Dev shows the developer-tools side
-  // panel; user/teacher hide it and tailor the empty-conversation hint.
+  // Public mode only changes audience-facing guidance. Developer controls live
+  // under the protected Admin Dashboard instead of this consumer page.
   const [mode, setMode] = useState(() => {
     try {
       const stored = localStorage.getItem("uiMode");
-      return stored === "teacher" || stored === "dev" ? stored : "user";
+      return stored === "teacher" ? stored : "user";
     } catch {
       return "user";
     }
@@ -54,20 +45,8 @@ function PublicApp() {
 
   const {
     run: runWorkflow,
-    runFromAgentInput,
     abort: abortWorkflow,
   } = useWorkflow(dispatch);
-  const {
-    state: createDataState,
-    start: startCreateData,
-    stop: stopCreateData,
-  } = useCreateData();
-  const {
-    state: batchEvalState,
-    start: startBatchEval,
-    stop: stopBatchEval,
-    loadRuns: loadBatchEvalRuns,
-  } = useBatchEval();
   useAgents(dispatch);
 
   useEffect(() => {
@@ -148,7 +127,7 @@ function PublicApp() {
       });
       return;
     }
-    runWorkflow(promptText, files, { runEvaluations, theme });
+    runWorkflow(promptText, files, { runEvaluations: false, theme });
   };
 
   // The Composer's single send/stop affordance: `{stop:true}` while a run is in
@@ -181,27 +160,6 @@ function PublicApp() {
 
   const closeModal = () => dispatch({ type: "CLOSE_MODAL" });
 
-  const handleCreateData = () => {
-    dispatch({ type: "OPEN_MODAL", modal: "create-data" });
-  };
-
-  const handleBatchEval = () => {
-    dispatch({ type: "OPEN_MODAL", modal: "batch-eval" });
-  };
-
-  const handleInputToAgentRun = (agentKey, inputFile, callbacks = {}) => {
-    if (serviceInactive) {
-      callbacks.onError?.(`${serviceStatus.code || "Service maintenance"}; agent-input workflow start blocked.`);
-      dispatch({
-        type: "LOG",
-        message: `${serviceStatus.code || "Service maintenance"}; agent-input workflow start blocked.`,
-        level: "error",
-      });
-      return;
-    }
-    runFromAgentInput(agentKey, inputFile, prompt, callbacks);
-  };
-
   return (
     <>
       <AppShell
@@ -213,7 +171,7 @@ function PublicApp() {
         header={<SiteHeader mode={mode} onModeChange={setMode} />}
         footer={<SiteFooter version={footerVersion} />}
       >
-        <div className={`workspace${mode === "dev" ? "" : " is-single"}`}>
+        <div className="workspace is-single">
           <div className="workspace-main">
             <ChatConversation
               state={state}
@@ -228,60 +186,9 @@ function PublicApp() {
               mode={mode}
             />
           </div>
-          {mode === "dev" ? (
-            <aside className="workspace-side">
-              <DeveloperToolsPanel
-                isRunning={state.isRunning}
-                serviceInactive={serviceInactive}
-                isCreateDataRunning={
-                  createDataState.isRunning || createDataState.isStarting
-                }
-                onCreateData={handleCreateData}
-                onBatchEval={handleBatchEval}
-                isBatchEvalRunning={batchEvalState.isRunning || batchEvalState.isStarting}
-                onInputToAgent={() =>
-                  dispatch({ type: "OPEN_MODAL", modal: "input-to-agent" })
-                }
-                onShowTestFiles={() =>
-                  dispatch({ type: "OPEN_MODAL", modal: "test-files" })
-                }
-                runEvaluations={runEvaluations}
-                onRunEvaluationsChange={setRunEvaluations}
-                logs={state.logs}
-              />
-            </aside>
-          ) : null}
         </div>
       </AppShell>
 
-      <FilesModal
-        isOpen={state.activeModal === "files"}
-        onClose={closeModal}
-        files={state.files}
-        onRemove={(id) => dispatch({ type: "REMOVE_FILE", fileId: id })}
-      />
-      <TestFilesModal
-        isOpen={state.activeModal === "test-files"}
-        onClose={closeModal}
-        files={state.files}
-        dispatch={dispatch}
-        isRunning={state.isRunning}
-      />
-      <CreateDataModal
-        isOpen={state.activeModal === "create-data"}
-        onClose={closeModal}
-        createData={createDataState}
-        onRun={() => startCreateData(prompt)}
-        onStop={stopCreateData}
-      />
-      <InputToAgentModal
-        isOpen={state.activeModal === "input-to-agent"}
-        onClose={closeModal}
-        agents={state.agents}
-        isRunning={state.isRunning}
-        serviceInactive={serviceInactive}
-        onRun={handleInputToAgentRun}
-      />
       <AgentDetailModal
         isOpen={state.activeModal === "agent"}
         onClose={closeModal}
@@ -301,12 +208,6 @@ function PublicApp() {
         runInputs={state.runInputs}
       />
       <HelpModal isOpen={state.activeModal === "help"} onClose={closeModal} />
-      <BatchEvalModal
-        isOpen={state.activeModal === "batch-eval"}
-        onClose={closeModal}
-        batchEval={{ ...batchEvalState, start: startBatchEval, stop: stopBatchEval }}
-        loadRuns={loadBatchEvalRuns}
-      />
       <Modal isOpen={serviceInactive} onClose={() => {}} dismissible={false} title="Site maintenance">
         <div className="maintenance-modal-content">
           <p>{serviceStatus.message || "This site is temporarily unavailable while administrators resolve an operational issue."}</p>

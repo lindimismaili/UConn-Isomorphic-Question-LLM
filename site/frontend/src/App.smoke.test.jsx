@@ -1,9 +1,9 @@
 /* @vitest-environment jsdom */
 
 /**
- * App smoke test — mounts the whole chat-first App (in dev mode, so the
- * developer-tools side panel renders) and asserts the core chat surface
- * (rail + transcript + composer) and the side panel render without throwing.
+ * App smoke test — mounts the consumer chat-first App and asserts the core
+ * chat surface (rail + transcript + composer) renders without exposing the
+ * protected developer-tools panel.
  * Exercises the real integration path: App → ChatConversation → ui/ primitives
  * → transcript derivation, with all network calls stubbed. Not a full behavior
  * test — a crash guard for the Wave 2 restructure.
@@ -53,8 +53,6 @@ let root;
 let container;
 
 beforeEach(() => {
-  // Dev mode shows the developer-tools side panel this test asserts on.
-  localStorage.setItem('uiMode', 'dev');
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url) => {
@@ -85,7 +83,7 @@ async function flush() {
 }
 
 describe('App (chat-first) smoke', () => {
-  it('mounts the chat shell, stepper, composer, and dev-tools side panel', async () => {
+  it('mounts the consumer chat shell without developer controls', async () => {
     await loadAgentRegistry();
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -103,23 +101,19 @@ describe('App (chat-first) smoke', () => {
     expect(container.querySelector('.composer')).toBeTruthy();
     expect(container.querySelector('textarea.composer-input')).toBeTruthy();
 
-    // Site-mode dropdown (custom Dropdown) sits in the header, currently on Dev Mode.
+    // Site-mode dropdown offers only consumer-facing modes.
     const modeTrigger = container.querySelector('.mode-select .dropdown-trigger');
     expect(modeTrigger).toBeTruthy();
-    expect(modeTrigger.textContent).toContain('Dev Mode');
+    expect(modeTrigger.textContent).toContain('User Mode');
 
     // All 10 registry nodes render in the stepper (incl. guardrail + runtime).
     expect(container.querySelectorAll('.stepper-node')).toHaveLength(PIPELINE_KEYS.length);
     expect(container.querySelector('.stepper-node[data-node-kind="guardrail"]')).toBeTruthy();
     expect(container.querySelector('.stepper-node[data-node-kind="runtime"]')).toBeTruthy();
 
-    // Developer tools preserved in the side panel (all four tiles + the toggle +
-    // the log all render — a DOM guard against the side-panel clipping bug).
-    const side = container.querySelector('.workspace-side');
-    expect(side.querySelector('.developer-tools-card')).toBeTruthy();
-    expect(side.querySelectorAll('.developer-tools-row .developer-tool-btn')).toHaveLength(4);
-    expect(side.querySelector('.developer-tools-row .developer-toggle')).toBeTruthy();
-    expect(side.querySelector('.log-frame')).toBeTruthy();
+    // Developer controls live only in the protected Admin Dashboard.
+    expect(container.querySelector('.workspace-side')).toBeNull();
+    expect(container.querySelector('.developer-tools-card')).toBeNull();
 
     // Empty conversation state before any run.
     expect(container.querySelector('.chat-empty')).toBeTruthy();
