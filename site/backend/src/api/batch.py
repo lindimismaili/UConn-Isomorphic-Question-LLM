@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Form, HTTPException
 
+from backend.src.api.admin import require_service_available
 from backend.src.api.state import (
     TERMINAL_STATUSES,
     _get_batch_record,
@@ -35,6 +36,7 @@ router = APIRouter()
 @router.post("/api/create-data/start")
 async def start_create_data(prompt: str = Form("")):
     """Start a batch workflow run for every file in data/evaluation."""
+    require_service_available()
     try:
         get_openai_client()
     except RuntimeError as e:

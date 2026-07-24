@@ -22,6 +22,9 @@ export async function readErrorDetail(response, fallback) {
   try {
     const data = JSON.parse(text);
     if (typeof data?.detail === 'string') return data.detail;
+    if (data?.detail && typeof data.detail === 'object') {
+      return data.detail.message || data.detail.code || fallback;
+    }
     if (Array.isArray(data?.detail)) {
       return data.detail.map((item) => item?.msg || String(item)).join('; ');
     }

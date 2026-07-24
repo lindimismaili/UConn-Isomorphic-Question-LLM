@@ -192,6 +192,16 @@ def get_openai_client() -> OpenAI:
     _openai_client = OpenAI(api_key=api_key)
     return _openai_client
 
+
+def replace_openai_api_key(api_key: str) -> None:
+    """Apply a validated key replacement without ever returning the value."""
+    global _openai_client
+    value = (api_key or "").strip()
+    if not value:
+        raise ValueError("OpenAI API key cannot be empty")
+    os.environ["OPENAI_API_KEY"] = value
+    _openai_client = None
+
 def _is_under_directory(path: Path, root: Path) -> bool:
     """Return True when `path` resolves inside `root`."""
     try:
@@ -873,6 +883,21 @@ def _mark_workflow_error(workflow: dict[str, Any], error: str, stage: str | None
             except Exception:
                 pass
     _touch_workflow(workflow)
+    # Billing/auth/server failures are operational incidents, not merely an
+    # individual workflow error. Keep this best-effort so recording an alert
+    # never hides the original workflow failure.
+    try:
+        from backend.src.operations import classify_openai_failure, operations, send_incident_email
+
+        classified = classify_openai_failure(error)
+        if classified:
+            code, detail = classified
+            incident = operations.open_incident(code=code, title=code.title(), detail=detail)
+            operations.set_maintenance(active=True, code=code, message=detail)
+            if incident.get("new"):
+                send_incident_email(incident)
+    except Exception:
+        logger.exception("Could not record workflow operational incident")
 
 def _workflow_status_payload(workflow_id: str, workflow: dict[str, Any]) -> dict[str, Any]:
     """Serialize workflow status for polling and SSE."""

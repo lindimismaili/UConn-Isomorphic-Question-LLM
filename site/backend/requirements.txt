@@ -15,6 +15,7 @@ pydantic>=2.0.0
 
 # Utilities
 python-dotenv>=1.0.0
+PyJWT[crypto]>=2.10.0
 
 # Document extraction helpers mirrored in the hosted workflow container
 pymupdf>=1.24.0

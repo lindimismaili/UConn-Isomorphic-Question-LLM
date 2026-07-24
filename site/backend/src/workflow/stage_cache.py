@@ -31,6 +31,18 @@ STAGE_CACHE_DB_PATH = RUNTIME_DIR / "stage_cache.sqlite3"
 
 def stage_cache_enabled() -> bool:
     """Return True when the ENABLE_STAGE_CACHE toggle is set to a truthy value."""
+    # The operations dashboard can persist an override without changing the
+    # deployment's environment file. Import lazily to keep this low-level
+    # module free of API/state import cycles.
+    try:
+        from backend.src.operations import operations
+
+        configured = operations.get_setting("stage_cache_enabled", None)
+        if isinstance(configured, bool):
+            return configured
+    except Exception:
+        # A cache toggle must never prevent a workflow from starting.
+        pass
     return (os.getenv("ENABLE_STAGE_CACHE", "false") or "").strip().lower() in _TRUTHY
 
 

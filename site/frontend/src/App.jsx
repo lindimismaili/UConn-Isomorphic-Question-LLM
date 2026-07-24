@@ -13,8 +13,9 @@ import OutputModal from "./components/modals/OutputModal.jsx";
 import HelpModal from "./components/modals/HelpModal.jsx";
 import InputToAgentModal from "./components/modals/InputToAgentModal.jsx";
 import BatchEvalModal from "./components/modals/BatchEvalModal.jsx";
+import AdminDashboard from "./sections/AdminDashboard.jsx";
 
-import { AppShell } from "./components/ui/index.js";
+import { AppShell, Button, Modal } from "./components/ui/index.js";
 import { SiteBanner, SiteHeader, SiteFooter } from "./sections/SiteChrome.jsx";
 
 import { useWorkflow } from "./hooks/useWorkflow.js";
@@ -34,7 +35,7 @@ import { reducer, INITIAL_STATE } from "./state/reducer.js";
  * surface itself is composed in `sections/ChatConversation.jsx` from ui/
  * primitives.
  */
-export default function App() {
+function PublicApp() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const [prompt, setPrompt] = useState("");
   const [runEvaluations, setRunEvaluations] = useState(false);
@@ -49,10 +50,7 @@ export default function App() {
     }
   });
   const [footerVersion, setFooterVersion] = useState("Version -");
-  const [openaiStatus, setOpenaiStatus] = useState({
-    isDown: false,
-    description: "",
-  });
+  const [serviceStatus, setServiceStatus] = useState({ maintenance: false, code: "", message: "", detectedAt: "" });
 
   const {
     run: runWorkflow,
@@ -101,27 +99,23 @@ export default function App() {
   useEffect(() => {
     let isDisposed = false;
 
-    const checkOpenAiStatus = async () => {
+    const checkServiceStatus = async () => {
       try {
-        const res = await fetch(`/api/openai/status?t=${Date.now()}`, {
+        const res = await fetch(`/api/service-status?t=${Date.now()}`, {
           cache: "no-store",
         });
         if (!res.ok) return;
         const data = await res.json();
         if (isDisposed) return;
-        setOpenaiStatus({
-          isDown: Boolean(data?.openai_down),
-          description:
-            typeof data?.description === "string" ? data.description : "",
-        });
+        setServiceStatus({ maintenance: Boolean(data?.maintenance), code: typeof data?.code === "string" ? data.code : "", message: typeof data?.message === "string" ? data.message : "", detectedAt: typeof data?.detectedAt === "string" ? data.detectedAt : "" });
       } catch {
         if (isDisposed) return;
-        setOpenaiStatus((prev) => ({ ...prev, isDown: false }));
+        setServiceStatus((prev) => ({ ...prev, maintenance: false }));
       }
     };
 
-    checkOpenAiStatus();
-    const intervalId = setInterval(checkOpenAiStatus, 60_000);
+    checkServiceStatus();
+    const intervalId = setInterval(checkServiceStatus, 60_000);
 
     return () => {
       isDisposed = true;
@@ -129,13 +123,27 @@ export default function App() {
     };
   }, []);
 
-  const serviceInactive = openaiStatus.isDown;
+  useEffect(() => {
+    let visitorId = "";
+    try {
+      visitorId = localStorage.getItem("anonymousVisitorId") || crypto.randomUUID();
+      localStorage.setItem("anonymousVisitorId", visitorId);
+    } catch {
+      visitorId = crypto.randomUUID?.() || `visitor-${Date.now()}`;
+    }
+    const heartbeat = () => fetch("/api/visitor/heartbeat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitorId }) }).catch(() => {});
+    heartbeat();
+    const intervalId = setInterval(heartbeat, 60_000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const serviceInactive = serviceStatus.maintenance;
 
   const startRun = (promptText, files, theme = "") => {
     if (serviceInactive) {
       dispatch({
         type: "LOG",
-        message: "OpenAI servers are down; workflow start blocked.",
+        message: `${serviceStatus.code || "Service maintenance"}; workflow start blocked.`,
         level: "error",
       });
       return;
@@ -183,10 +191,10 @@ export default function App() {
 
   const handleInputToAgentRun = (agentKey, inputFile, callbacks = {}) => {
     if (serviceInactive) {
-      callbacks.onError?.("OpenAI servers are down; agent-input workflow start blocked.");
+      callbacks.onError?.(`${serviceStatus.code || "Service maintenance"}; agent-input workflow start blocked.`);
       dispatch({
         type: "LOG",
-        message: "OpenAI servers are down; agent-input workflow start blocked.",
+        message: `${serviceStatus.code || "Service maintenance"}; agent-input workflow start blocked.`,
         level: "error",
       });
       return;
@@ -198,8 +206,8 @@ export default function App() {
     <>
       <AppShell
         banner={
-          <SiteBanner show={serviceInactive} detail={openaiStatus.description || undefined}>
-            OpenAI servers are down. This site is currently inactive.
+          <SiteBanner show={serviceInactive} detail={serviceStatus.code || undefined}>
+            {serviceStatus.message || "This site is currently inactive for maintenance."}
           </SiteBanner>
         }
         header={<SiteHeader mode={mode} onModeChange={setMode} />}
@@ -299,6 +307,18 @@ export default function App() {
         batchEval={{ ...batchEvalState, start: startBatchEval, stop: stopBatchEval }}
         loadRuns={loadBatchEvalRuns}
       />
+      <Modal isOpen={serviceInactive} onClose={() => {}} dismissible={false} title="Site maintenance">
+        <div className="maintenance-modal-content">
+          <p>{serviceStatus.message || "This site is temporarily unavailable while administrators resolve an operational issue."}</p>
+          <strong>{serviceStatus.code || "SCHEDULED MAINTENANCE"}</strong>
+          <span>Detected: {serviceStatus.detectedAt ? new Date(serviceStatus.detectedAt).toLocaleString() : "Unknown"}</span>
+          <Button variant="secondary" onClick={() => window.location.reload()}>Check again</Button>
+        </div>
+      </Modal>
     </>
   );
+}
+
+export default function App() {
+  return window.location.pathname.startsWith("/admin") ? <AdminDashboard /> : <PublicApp />;
 }

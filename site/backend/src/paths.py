@@ -11,6 +11,7 @@ from pathlib import Path
 THIS_DIR = Path(__file__).resolve().parent
 BACKEND_ROOT = THIS_DIR.parent if THIS_DIR.name == "src" else THIS_DIR
 REPO_ROOT = BACKEND_ROOT.parent
+PROJECT_ROOT = REPO_ROOT.parent
 
 ENV_PATH = REPO_ROOT / ".env"
 
@@ -27,6 +28,7 @@ LATEX_TEMPLATE_PATH = DATA_DIR / "latex_template.tex"
 OUTPUTS_DIR = BACKEND_ROOT / "outputs"
 UPLOADS_DIR = BACKEND_ROOT / "uploads"
 RUNTIME_DIR = BACKEND_ROOT / "runtime"
+ARCHIVE_DIR = PROJECT_ROOT / "archive"
 
 DIST_DIR = REPO_ROOT / "dist"
 VERSION_PATHS = (REPO_ROOT / "version.json", DIST_DIR / "version.json")

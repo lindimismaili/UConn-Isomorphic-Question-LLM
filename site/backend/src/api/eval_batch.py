@@ -8,6 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from backend.src.api.admin import require_service_available
 from backend.src.api.state import (
     MAX_UPLOAD_BYTES,
     TERMINAL_STATUSES,
@@ -44,6 +45,7 @@ async def start_eval_batch(
     generated_files: list[UploadFile] = File([]),
 ):
     """Start a batch evaluation job."""
+    require_service_available()
     try:
         get_openai_client()
     except RuntimeError as e:

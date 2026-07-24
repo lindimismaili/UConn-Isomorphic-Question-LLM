@@ -141,6 +141,7 @@ The routers hold only route handlers (state lives in `state.py`):
 | Router | Routes |
 |---|---|
 | [health.py](src/api/health.py) | `GET /api/health`, `GET /api/openai/status`, `GET /version.json` |
+| [admin.py](src/api/admin.py) | Cloudflare Access JWT-protected `/api/admin/*` dashboard APIs: operations summary, approved-root file browser/download/ZIP, settings, and audited key rotation. `GET /api/service-status` remains the public maintenance contract. |
 | [config.py](src/api/config.py) | `GET /api/dropdown` (themes), `GET /api/rubric`, `GET /api/agents`, `GET /api/prompts/{prompt_name}`, `GET /api/evaluation/files` |
 | [files.py](src/api/files.py) | `POST /api/upload` (5 files / 20 MB each, `MAX_UPLOAD_TOTAL_BYTES` total cap ≈60 MB; rejects disallowed types on the **original** extension + PDF magic-byte check via `UPLOAD_MAGIC_SIGNATURES`), `GET /api/download/{workflow_id}/{file_path}`, `GET /api/download-zip/{workflow_id}` (cached zip) |
 | [workflows.py](src/api/workflows.py) | `POST /api/workflow/start`, `POST /api/workflow/rerun-from-agent`, `POST /api/workflow/start-from-agent-input`, `GET /api/workflow/{id}/status` (payload carries a `blocked` field), `GET /api/workflow/{id}/result`, `GET /api/workflow/{id}/stream` (real SSE: named events `token` `{agent,delta}`, `status`, `done`; polling stays authoritative) |

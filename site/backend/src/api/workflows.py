@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
+from backend.src.api.admin import require_service_available
 from backend.src.api.state import (
     ALLOWED_AGENT_INPUT_EXTENSIONS,
     INPUT_TO_AGENT_SEQUENCE,
@@ -80,6 +81,7 @@ async def start_workflow(
     theme: str = Form(""),
 ):
     """Start a new workflow and return a stream of status updates."""
+    require_service_available()
     try:
         get_openai_client()
     except RuntimeError as e:
@@ -144,6 +146,7 @@ async def rerun_workflow_from_agent(
     prompt: str = Form(""),
 ):
     """Start a new workflow by reusing cached outputs before startAgent."""
+    require_service_available()
     try:
         get_openai_client()
     except RuntimeError as e:
@@ -208,6 +211,7 @@ async def start_workflow_from_agent_input(
     agentInput: UploadFile = File(...),
 ):
     """Start a workflow from one agent using an uploaded source or agent input file."""
+    require_service_available()
     try:
         get_openai_client()
     except RuntimeError as e:

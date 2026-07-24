@@ -298,6 +298,24 @@ rollback.
   deployment events for the future local dashboard. Detailed diagnostics remain
   in `journalctl -u uconn-isomorphic-update.service`.
 
+## Secure Operations Dashboard
+
+`/admin` is a protected operations dashboard for output/archive browsing,
+workflow history, evaluations, maintenance mode, stage-cache controls, health
+reports, and incident/audit history. Configure Cloudflare Access to protect
+`/admin*` and `/api/admin/*` with Google sign-in, then set
+`CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, and a comma-separated `ADMIN_EMAILS`
+allowlist only on the Pi. The server validates the signed Access assertion
+itself; a Cloudflare page rule alone is not sufficient.
+
+The dashboard stores non-secret state in `runtime/operations.sqlite3`. The Pi
+installer creates a release-independent `admin-runtime.env` override for an
+admin-replaced `OPENAI_API_KEY` and optional `OPENAI_ADMIN_KEY`; neither is
+returned through the API. Optional SMTP alert settings are `SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, and
+`ALERT_RECIPIENTS`. The operations timer writes a sanitized Pi/cloudflared
+report every minute.
+
 Before pushing to `main`, test changes that affect startup, dependencies,
 database/runtime compatibility, uploads, or output artifacts. Runtime-data
 changes must be backward compatible with the prior release or include an
