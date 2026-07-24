@@ -124,25 +124,16 @@ export default function AgentDetailModal({ isOpen, onClose, agentKey, agent }) {
         contentClassName="agent-detail-modal"
         modalBodyClassName="modal-body-flush"
         footer={
-          <div className="agent-modal-footer">
-            <div className="output-folder-note modal-file-location">
-              <IconFile />
-              <span>
-                File located in:{' '}
-                <code>data/agents.json</code>
-              </span>
-            </div>
-            <div className="modal-footer-actions">
-              <Button
-                variant="secondary"
-                disabled={!canOpenReference}
-                onClick={() => canOpenReference && setViewerOpen(true)}
-                icon={<IconFile className="btn-icon" />}
-              >
-                <span>Prompt</span>
-              </Button>
-              <Button variant="primary" onClick={onClose}>Close</Button>
-            </div>
+          <div className="modal-footer-actions">
+            <Button
+              variant="secondary"
+              disabled={!canOpenReference}
+              onClick={() => canOpenReference && setViewerOpen(true)}
+              icon={<IconFile className="btn-icon" />}
+            >
+              <span>Prompt</span>
+            </Button>
+            <Button variant="primary" onClick={onClose}>Close</Button>
           </div>
         }
       >

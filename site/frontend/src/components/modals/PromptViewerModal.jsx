@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
-import { IconFile } from '../Icons.jsx';
 import { Button } from '../ui/index.js';
 
 /**
@@ -32,12 +31,6 @@ async function fetchPromptContent(promptName) {
  */
 export default function PromptViewerModal({ isOpen, onClose, title, promptName }) {
   const [content, setContent] = useState('Loading...');
-  const fileLocation = promptName
-    ? {
-        label: `data/prompts/${promptName}.txt`,
-        href: `/api/prompts/${promptName}`,
-      }
-    : null;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,20 +56,7 @@ export default function PromptViewerModal({ isOpen, onClose, title, promptName }
       title={title || 'Viewer'}
       large
       modalBodyClassName="modal-body-flush"
-      footer={
-        <div className="modal-footer-row">
-          <div className="output-folder-note modal-file-location">
-            <IconFile />
-            <span>
-              File located in:{' '}
-              <code>{fileLocation?.label || 'Unavailable'}</code>
-            </span>
-          </div>
-          <div className="modal-footer-actions">
-            <Button variant="primary" onClick={onClose}>Close</Button>
-          </div>
-        </div>
-      }
+      footer={<Button variant="primary" onClick={onClose}>Close</Button>}
     >
       <div className="prompt-viewer-body">
         <pre className="prompt-viewer-content">{content}</pre>

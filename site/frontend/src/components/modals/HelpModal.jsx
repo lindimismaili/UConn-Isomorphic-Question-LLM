@@ -1,5 +1,4 @@
 import Modal from './Modal.jsx';
-import { IconFile } from '../Icons.jsx';
 import { Button } from '../ui/index.js';
 
 /**
@@ -47,16 +46,10 @@ export default function HelpModal({ isOpen, onClose }) {
           </li>
           <li>
             <strong>Education-Ready Output</strong> — Questions are formatted for
-            PDF and LaTeX output, with evaluation and agent artifacts available
-            for review
+            PDF and LaTeX output, with downloadable evaluations available for
+            review
           </li>
         </ul>
-        <div className="output-folder-note modal-file-location help-file-location">
-          <IconFile />
-          <span>
-            File located in: <code>data/template.tex</code>
-          </span>
-        </div>
         <h4>How It Works</h4>
         <ol className="help-list numbered">
           <li>Upload source questions or choose test files</li>
@@ -64,7 +57,7 @@ export default function HelpModal({ isOpen, onClose }) {
           <li>
             Click <strong>Send</strong> to start the generation pipeline
           </li>
-          <li>View logs, inspect agent artifacts, and download results when complete</li>
+          <li>Follow the workflow progress and download results when complete</li>
         </ol>
       </div>
     </Modal>

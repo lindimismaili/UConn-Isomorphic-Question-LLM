@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
-import { IconFile } from '../Icons.jsx';
 import { Badge, Button, EmptyState } from '../ui/index.js';
 
 /**
@@ -77,19 +76,7 @@ export default function RubricViewerModal({ isOpen, onClose }) {
       title="Evaluator Rubric"
       large
       modalBodyClassName="modal-body-flush"
-      footer={
-        <div className="modal-footer-row">
-          <div className="output-folder-note modal-file-location">
-            <IconFile />
-            <span>
-              File located in: <code>data/rubric.json</code>
-            </span>
-          </div>
-          <div className="modal-footer-actions">
-            <Button variant="primary" onClick={onClose}>Close</Button>
-          </div>
-        </div>
-      }
+      footer={<Button variant="primary" onClick={onClose}>Close</Button>}
     >
       <div className="rubric-viewer-body">
         {error && (

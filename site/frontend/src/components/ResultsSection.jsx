@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   IconCheckCircle,
-  IconFolder,
   IconDownload,
   IconMonitor,
   IconList,
@@ -16,17 +15,6 @@ import { baseName, collectResultFiles, isPdfFile, isTexFile } from '../utils/fil
 import { useAgentRegistry } from '../hooks/useAgentRegistry';
 
 const AGENT_METADATA_FILE = 'agent_outputs/agent_metadata_output.json';
-
-/**
- * Normalizes the result output-folder label shown to the user.
- *
- * @param {string} folder
- * @returns {string}
- */
-function formatOutputFolderPath(folder) {
-  if (!folder) return 'outputs/';
-  return folder.startsWith('outputs/') ? folder : `outputs/${folder}`;
-}
 
 /**
  * Formats the workflow elapsed time for the summary header.
@@ -159,7 +147,6 @@ export default function ResultsSection({ result }) {
   const files = collectResultFiles(result);
   const { mainFiles, evaluationFiles, agentFiles } = splitDownloadFiles(files);
   const { metadataFiles, agentGroups } = buildAgentOutputSections(agentFiles, registryData);
-  const folderPath = formatOutputFolderPath(result.outputFolder);
   const fileCount = files.length;
   const elapsedText = formatElapsed(result.elapsedTimeSeconds);
   const evaluationReport = result.workflowResult?.evaluation || null;
@@ -363,12 +350,6 @@ export default function ResultsSection({ result }) {
                   )}
                 </div>
               </div>
-            </div>
-            <div className="output-folder-note">
-              <IconFolder />
-              <span>
-                Files saved to: <code>{folderPath}</code>
-              </span>
             </div>
           </div>
         </CardBody>
