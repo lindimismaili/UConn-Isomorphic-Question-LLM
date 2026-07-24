@@ -192,8 +192,10 @@ cd site
 `site/.env` (the backend's resolved repo root) is loaded manually by backend
 code if values aren't already in the environment. `.env` is **tracked in the repo** (the user keeps
 it synced deliberately — do not re-add it to `.gitignore` or flag the
-committed key); `.env.example` documents the full variable list. Local-only
-overrides go in `.env.local` / `.env.*.local`, which stay gitignored.
+committed key); `.env.example` documents the common runtime and dashboard
+variables. For the
+FastAPI server, `.env.local` / `.env.*.local` load first as ignored local
+overrides; shell-provided values still win.
 
 Required for real workflow execution:
 
@@ -437,9 +439,14 @@ Routes live in `site/backend/src/api/` (registered on the app in `server.py`):
 - `GET /api/health`, `GET /api/openai/status`, `GET /api/service-status`, `GET /version.json`
 - `POST /api/visitor/heartbeat` — anonymous five-minute active-visitor estimate;
   stores only a salted identifier hash.
+- `/admin` — React operations dashboard. In production Cloudflare Access must
+  protect `/admin*`; in local development the tracked loopback-only test mode
+  may authenticate it without Cloudflare.
 - `/api/admin/*` — Cloudflare Access JWT-protected operations API (dashboard,
   approved-root file browser/download/ZIP, maintenance/cache/key controls, audit,
   incidents, and Pi probe report); never exposes credentials or arbitrary paths.
+  The approved `data` root is limited to `prompts/*.txt`, `agents.json`,
+  `latex_template.tex`, and `rubric.json`.
 - `POST /api/upload` (5 files max, 20 MB each by default; documents, images,
   text/markdown, and LaTeX — see `ALLOWED_UPLOAD_EXTENSIONS` in `api/state.py`)
 - `GET /api/dropdown`, `GET /api/rubric`, `GET /api/agents`
@@ -569,8 +576,9 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 ## Deployment Notes
 
 Deploy scripts live in `deploy/` (`deploy.sh` for the systemd/uvicorn service,
-`preview.sh` for a local preview build, `DEPLOY.md` for notes). Treat them as
-operational guides, not source of truth for local development.
+`preview.mjs` for cross-platform local preview, `preview.sh` as the Unix-only
+fallback, and `DEPLOY.md` for operations). Treat them as operational guides,
+not source of truth for local development.
 
 - The Pi updater deploys only fetched `origin/main` commits. Do not make
   repository edits on the Pi and expect them to be deployed; push reviewed work
@@ -587,6 +595,9 @@ operational guides, not source of truth for local development.
   use the updater's systemd journal for detailed diagnostics.
 - The installer writes a persistent `config/admin-runtime.env` override and runs
   `${SERVICE_NAME}-operations.timer`; the web service has no shell/systemd access.
+  The systemd unit reads the release `.env` then this persistent override and
+  forcibly sets `ADMIN_LOCAL_DEV_MODE=false`; configure Cloudflare Access and
+  Google separately from the tunnel installer.
 
 ## Agent Warnings / Gotchas
 

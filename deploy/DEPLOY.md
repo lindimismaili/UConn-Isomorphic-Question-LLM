@@ -55,13 +55,19 @@ key rotation survives immutable release switches. Keep `OPENAI_ADMIN_KEY`, SMTP
 settings, the Cloudflare Access audience/team domain, and the admin email
 allowlist only in this Pi-side file, never in a client bundle.
 
+The backend systemd unit explicitly sets `ADMIN_LOCAL_DEV_MODE=false` after
+loading both environment files. This prevents the tracked localhost dashboard
+test default from becoming a production origin bypass.
+
 It also enables `uconn-isomorphic-operations.timer`, which runs every minute as
 a separate systemd job and writes a sanitized report consumed by `/admin`.
 The report contains service/tunnel state, disk/load values, public-health
 reachability, Cloudflare status, and bounded redacted journal excerpts—not shell
 access, credentials, or unrestricted logs.
 Configure Cloudflare Access with Google sign-in for `/admin*` and `/api/admin/*`;
-the FastAPI service verifies each signed Access assertion again.
+the FastAPI service verifies each signed Access assertion again. The tunnel
+installer creates the public route only; it does **not** create the Cloudflare
+Access application, its Google identity provider, or its allow policy.
 
 ## Automatic Updates
 

@@ -85,8 +85,10 @@ If you prefer to keep the backend and frontend dependencies separate, activate t
 ## Environment Variables
 
 The backend loads `.env` from `site/` (its resolved repo root) if present. `.env`
-is tracked in the repo; [site/.env.example](site/.env.example) documents every supported variable.
-Local-only overrides belong in `.env.local` / `.env.*.local` (gitignored).
+is tracked in the repo; [site/.env.example](site/.env.example) documents the common
+runtime, dashboard, and production-override variables.
+For the FastAPI server, ignored `.env.local` / `.env.*.local` overrides load first;
+shell-provided values still take precedence over both files.
 
 Required:
 
@@ -108,6 +110,8 @@ Backend runtime settings:
 - `OPENAI_CONTAINER_ALLOWED_DOMAINS` - comma-separated allowlist for container bootstrap and tools
 - `GUARDRAILS_ENABLED` - toggle the input/content guardrails (overrides the `agents.json` default)
 - `GRADER_MODEL_OVERRIDE` - grade with a different model than the one in `agents.json`
+- `ENABLE_STAGE_CACHE` - reuse an Extracter/Generator result only when its input,
+  model, reasoning setting, and prompt match exactly; defaults to `false`
 
 Optional per-agent turn caps live in `agents.json` as `maxTurns` (default `6`, latexifier `12`).
 
@@ -120,24 +124,24 @@ Frontend dev proxy:
 Run the local backend plus Vite hot-reload UI:
 
 ```bash
-bash deploy/preview.sh --dev
+node deploy/preview.mjs --dev
 ```
 
 Open:
 
-- `http://isomorphic.localhost:5173` for the Vite UI
-- `http://isomorphic.localhost:5173/api/health` for a quick backend check through the dev proxy
+- `http://localhost:5173` for the Vite UI
+- `http://localhost:5173/api/health` for a quick backend check through the dev proxy
 
 To run only the backend API (`--app-dir site` puts `backend` on the import path):
 
 ```bash
-python -m uvicorn backend.src.server:app --app-dir site --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn backend.src.server:app --app-dir site --host 127.0.0.1 --port 8000 --reload
 ```
 
 To serve the built frontend from the backend, build `site/dist/` first:
 
 ```bash
-bash deploy/preview.sh --web
+node deploy/preview.mjs --web
 ```
 
 ## Dev UI
@@ -148,7 +152,7 @@ Run the Vite dev server in a second terminal:
 npm -C site/frontend run dev:ui
 ```
 
-The Vite dev server proxies API requests to the local backend started by `deploy/preview.sh`.
+The Vite dev server proxies API requests to the local backend started by `deploy/preview.mjs`.
 If your backend is elsewhere, set `VITE_BACKEND_URL` before starting Vite.
 
 Useful frontend commands:
@@ -277,7 +281,7 @@ Every Markdown doc tracked in the repo:
 - `crypto.hash is not a function` or Vite says Node 20.19+/22.12+ is required: upgrade Node. Node 21 is not in Vite's allowed range. On Raspberry Pi, run `bash deploy/deploy.sh`; the deploy script installs Node 22 from NodeSource when the current Node is missing or too old.
 - Upload rejected: check the file extension and `MAX_UPLOAD_BYTES`.
 - Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `site/backend/outputs/`.
-- Frontend cannot reach the backend in dev mode: run `bash deploy/preview.sh --dev` and open `http://isomorphic.localhost:5173`.
+- Frontend cannot reach the backend in dev mode: run `node deploy/preview.mjs --dev` and open `http://localhost:5173`.
 
 ## Raspberry Pi Automatic Deployment
 
@@ -295,18 +299,29 @@ rollback.
   `origin/main` changes, so the 60-second timer does not rebuild a known-bad
   commit forever.
 - `GET /api/deployment/status` exposes a sanitized summary and recent bounded
-  deployment events for the future local dashboard. Detailed diagnostics remain
+  deployment events for the operations dashboard. Detailed diagnostics remain
   in `journalctl -u uconn-isomorphic-update.service`.
+- The installer also enables the minute-by-minute operations probe, which feeds
+  sanitized Pi, tunnel, disk, public-health, and Cloudflare status into `/admin`.
 
 ## Secure Operations Dashboard
 
-`/admin` is a protected operations dashboard for output/archive browsing,
-workflow history, evaluations, maintenance mode, stage-cache controls, health
-reports, and incident/audit history. Configure Cloudflare Access to protect
+`/admin` is a protected operations dashboard for archive, uploads, real output
+folders, evaluation artifacts, selected prompts/configuration files, workflow
+history, maintenance/cache controls, health reports, and incident/audit history.
+Its Overview refreshes every 30 seconds without reloading the page and reports
+site reachability, Cloudflare/tunnel state, OpenAI status, active visitors,
+workflows, storage, and incidents. Configure Cloudflare Access to protect
 `/admin*` and `/api/admin/*` with Google sign-in, then set
 `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, and a comma-separated `ADMIN_EMAILS`
 allowlist only on the Pi. The server validates the signed Access assertion
 itself; a Cloudflare page rule alone is not sufficient.
+
+The file browser displays canonical logical paths, such as
+`/site/backend/outputs`. Its `Prompts & configuration` root exposes only
+`data/prompts/*.txt`, `data/agents.json`, `data/latex_template.tex`, and
+`data/rubric.json`; it does not expose arbitrary data files, runtime databases,
+or credentials.
 
 ### Local dashboard testing
 
@@ -335,7 +350,9 @@ admin-replaced `OPENAI_API_KEY` and optional `OPENAI_ADMIN_KEY`; neither is
 returned through the API. Optional SMTP alert settings are `SMTP_HOST`,
 `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, and
 `ALERT_RECIPIENTS`. The operations timer writes a sanitized Pi/cloudflared
-report every minute.
+report every minute. The tunnel installer does not create a Cloudflare Access
+application or Google policy; configure those in Cloudflare Zero Trust after
+the public hostname is available.
 
 Before pushing to `main`, test changes that affect startup, dependencies,
 database/runtime compatibility, uploads, or output artifacts. Runtime-data
