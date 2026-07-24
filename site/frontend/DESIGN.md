@@ -193,7 +193,13 @@ Primary content grids inside `.content-shell`:
   (for example, `/site/backend/outputs`) rather than marketing labels, and its
   live cards refresh on the established 30-second interval. The key-replacement
   field is the documented `.admin-key-input`: a full-width standard-height,
-  tokenized input with the usual primary focus ring.
+  tokenized input with the usual primary focus ring; use it for operational
+  numeric settings that need the same visual treatment. Health summary cards
+  place the existing semantic `StatusDot` in their upper-right corner. File
+  roots and download actions remain standard white secondary buttons; the file
+  name itself opens a folder or preview, while the final table column performs
+  the explicit download. Long audit histories use an internally scrollable
+  table shell rather than extending the page indefinitely.
 
 **Modal-open dimming:** when any modal is open the body gets `.modal-open`,
 which applies `filter: blur(6px)` to `.header`, `.main-content`, and `.footer`
