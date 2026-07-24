@@ -38,6 +38,22 @@ def test_admin_api_fails_closed_without_access_configuration() -> None:
     assert response.status_code == 503
 
 
+def test_local_admin_mode_requires_opt_in_and_loopback(monkeypatch) -> None:
+    from fastapi import Request
+
+    monkeypatch.setenv("ADMIN_LOCAL_DEV_MODE", "true")
+    monkeypatch.setenv("ADMIN_LOCAL_DEV_EMAIL", "local-admin@example.test")
+    local_request = Request({"type": "http", "headers": [], "client": ("127.0.0.1", 49152)})
+    remote_request = Request({"type": "http", "headers": [], "client": ("203.0.113.10", 49152)})
+    assert require_admin(local_request) == "local-admin@example.test"
+    try:
+        require_admin(remote_request)
+    except Exception as exc:
+        assert getattr(exc, "status_code", None) == 503
+    else:
+        raise AssertionError("remote requests must not receive local development access")
+
+
 def test_admin_dashboard_requires_and_accepts_verified_dependency() -> None:
     client = TestClient(app)
     app.dependency_overrides[require_admin] = lambda: "admin@example.edu"

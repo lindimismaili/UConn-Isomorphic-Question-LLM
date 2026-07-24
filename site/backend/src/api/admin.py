@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import os
 import shutil
 import uuid
@@ -36,6 +37,25 @@ _MAX_ZIP_FILES = max(1, int(os.getenv("ADMIN_MAX_ZIP_FILES", "10000")))
 
 def _configured_admins() -> set[str]:
     return {value.strip().lower() for value in os.getenv("ADMIN_EMAILS", "").split(",") if value.strip()}
+
+
+def _local_development_actor(request: Request) -> str | None:
+    """Return an explicitly configured local test identity, never a remote one.
+
+    This exists solely for running the complete dashboard against local files
+    without a Cloudflare tunnel. It requires both an opt-in flag and a direct
+    loopback connection; reverse-proxy headers are deliberately not trusted.
+    """
+    enabled = os.getenv("ADMIN_LOCAL_DEV_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+    email = os.getenv("ADMIN_LOCAL_DEV_EMAIL", "").strip().lower()
+    client_host = request.client.host if request.client else ""
+    try:
+        is_loopback = ipaddress.ip_address(client_host).is_loopback
+    except ValueError:
+        is_loopback = False
+    if enabled and is_loopback and "@" in email and len(email) <= 320:
+        return email
+    return None
 
 
 @lru_cache(maxsize=4)
@@ -80,6 +100,9 @@ def _verify_access_token(token: str) -> str:
 
 
 def require_admin(request: Request) -> str:
+    local_actor = _local_development_actor(request)
+    if local_actor:
+        return local_actor
     return _verify_access_token(request.headers.get("Cf-Access-Jwt-Assertion", ""))
 
 

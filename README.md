@@ -308,6 +308,22 @@ reports, and incident/audit history. Configure Cloudflare Access to protect
 allowlist only on the Pi. The server validates the signed Access assertion
 itself; a Cloudflare page rule alone is not sufficient.
 
+### Local dashboard testing
+
+For a full local dashboard test without Cloudflare, create the ignored
+`site/.env.local` file with a non-production test identity:
+
+```env
+ADMIN_LOCAL_DEV_MODE=true
+ADMIN_LOCAL_DEV_EMAIL=local-admin@example.test
+```
+
+Start the site bound to `127.0.0.1`/`localhost`, then visit
+`http://localhost:8000/admin`. This bypass is accepted only from a direct
+loopback connection and only while both variables are set; it must never be
+placed in the Pi runtime configuration. It exercises the real local file,
+workflow, maintenance, cache, and download controls.
+
 The dashboard stores non-secret state in `runtime/operations.sqlite3`. The Pi
 installer creates a release-independent `admin-runtime.env` override for an
 admin-replaced `OPENAI_API_KEY` and optional `OPENAI_ADMIN_KEY`; neither is

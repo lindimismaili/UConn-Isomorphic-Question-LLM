@@ -29,6 +29,7 @@ from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
 from backend.src.paths import (
     ENV_PATH,
+    LOCAL_ENV_PATH,
     OUTPUTS_DIR,
     RUNTIME_DIR,
     UPLOADS_DIR,
@@ -66,6 +67,10 @@ from backend.src.workflow.resume import (
 )
 from backend.src.workflow.store import WorkflowStore
 
+# A developer's ignored local overrides load before the repository fallback.
+# ``load_dotenv`` preserves values already supplied by the shell, so deployment
+# environment variables always retain the highest precedence.
+_load_dotenv(LOCAL_ENV_PATH)
 _load_dotenv(ENV_PATH)
 
 ALLOWED_UPLOAD_EXTENSIONS = {
