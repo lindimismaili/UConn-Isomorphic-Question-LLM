@@ -3123,9 +3123,9 @@ select option:checked {
   pointer-events: none;
 }
 
-/* The backdrop dims smoothly with opacity. Avoid a page-wide or backdrop blur:
-   browser blur compositing can make the opening frame look like a jump rather
-   than a fluid modal entrance. */
+/* The backdrop dims and blurs smoothly with the panel entrance, keeping the
+   underlying workspace clearly de-emphasized without adding a separate page
+   layer. */
 .modal-backdrop {
   position: absolute;
   top: 0;
@@ -3135,11 +3135,15 @@ select option:checked {
   z-index: 0;
   background: rgba(var(--color-navy-rgb), 0.45);
   opacity: 0;
-  transition: opacity var(--transition-normal);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  transition: opacity var(--transition-normal), backdrop-filter var(--transition-normal);
 }
 
 .modal.is-visible .modal-backdrop {
   opacity: 1;
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
 /* Stacked modals (opened on top of another modal) add no second dim layer; the
@@ -5798,6 +5802,11 @@ button.eval-score-chip.is-clickable:focus-visible {
 
 .admin-table-shell table {
   min-width: 680px;
+}
+
+.admin-table-shell thead,
+.admin-audit-shell thead {
+  border-bottom: 2px solid var(--color-primary);
 }
 
 .admin-audit-shell {
