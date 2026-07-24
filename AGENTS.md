@@ -88,8 +88,10 @@ Frontend:
 
 - `site/frontend/DESIGN.md` — UI element mapping (design tokens, button/modal system,
   consistency rules). **Source of truth before adding any UI; reuse, don't invent.**
-- `site/frontend/src/App.jsx` (chat conversation + Developer-Tools side panel; state via
+- `site/frontend/src/App.jsx` (consumer chat conversation; state via
   `useReducer`, reducer extracted to `src/state/reducer.js`)
+- `site/frontend/src/sections/DeveloperMode.jsx` (protected Admin Dashboard
+  Developer Mode: the same chat workspace plus the admin-only Developer Tools)
 - `site/frontend/src/state/reducer.js` — the extracted reducer (adds a `WORKFLOW_BLOCKED`
   action + `blocked` field); `src/state/transcript.js` projects `state.agents/logs/result/blocked`
   into chat messages + stepper nodes
@@ -287,10 +289,11 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
 ### Frontend
 
 - React 19 + Vite 7; centralized `useReducer` state (reducer in `src/state/reducer.js`),
-  wired in `App.jsx`. The primary view is a **chat conversation**; a header
-  **site-mode dropdown** (User / Teacher / Dev, persisted in `localStorage`
-  `uiMode`) gates the Developer-Tools side panel (dev only) and swaps the
-  empty-conversation hint copy. All modals/features are preserved.
+  wired in `App.jsx`. The consumer primary view is a **chat conversation**; its
+  header site-mode dropdown is **User / Teacher** (persisted in `localStorage`
+  `uiMode`) and only swaps the empty-conversation hint copy. The complete former
+  Dev workspace now lives in the protected Admin Dashboard’s **Developer Mode**
+  tab. All modals/features are preserved.
 - Progress comes from **polling** `GET /api/workflow/{id}/status` (see `useWorkflow.js`),
   which stays authoritative. The frontend no longer consumes the SSE `/stream`
   endpoint — while an agent works, the Stepper cycles a status word
@@ -403,6 +406,12 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   `registry.py`.
 - **All frontend agent data comes from `useAgentRegistry()` / `getDerivedRegistry()`.** 
   Don't declare pipeline keys, labels, or routing maps in JS modules.
+- **Chat/developer synchronization contract.** `App.jsx` is the source of truth
+  for consumer chat behavior. The protected `DeveloperMode.jsx` must compose the
+  same `ChatConversation` component (never a fork) and be verified alongside the
+  consumer chat after shared changes. `DeveloperToolsPanel.jsx` is intentionally
+  admin-only; when changing its controls or workflow wiring, update and verify
+  the protected Developer Mode in the same change.
 - **Frontend follows `site/frontend/DESIGN.md`** (see the Frontend notes above).
 
 ### Pipeline parallelism
@@ -562,7 +571,8 @@ Outputs are nested workflow output folders under a timestamped batch directory.
 | Grader self-improvement proposals | `site/backend/src/tools/meta_evaluator.py`, `.agents/grader-review/SKILL.md` |
 | Judge ↔ professor agreement | `site/backend/src/tools/judge_agreement.py`, `site/backend/src/tools/professor_comparison.py`, `site/backend/data/professor_comparison/` |
 | Frontend UX / state | `site/frontend/src/App.jsx`, `site/frontend/src/state/reducer.js`, `site/frontend/src/state/transcript.js`, `site/frontend/src/hooks/**`, `site/frontend/src/components/**` |
-| Chat surface / process rail | `site/frontend/src/sections/ChatConversation.jsx`, `site/frontend/src/components/ui/Chat.jsx` (Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer), `site/frontend/src/components/ui/Stepper.jsx` (incl. the cycling thinking words + auto-scroll) |
+| Chat surface / process rail | `site/frontend/src/sections/ChatConversation.jsx`, `site/frontend/src/components/ui/Chat.jsx` (Avatar/ChatMessage/ChatTranscript/TypingIndicator/Composer), `site/frontend/src/components/ui/Stepper.jsx` (incl. the cycling thinking words + auto-scroll); compose this shared surface in both `App.jsx` and protected `sections/DeveloperMode.jsx` |
+| Protected developer tools | `site/frontend/src/sections/DeveloperMode.jsx`, `site/frontend/src/components/DeveloperToolsPanel.jsx`, and the matching developer modals/hooks |
 | Frontend styling / design system | `site/frontend/DESIGN.md`, `site/frontend/src/styles/app.css` |
 | Add/extend a UI primitive (template) | `site/frontend/src/components/ui/*` + `ui/index.js`, then `site/frontend/src/design-system/sections/Components.jsx` + `ui/ui.test.jsx` + `site/frontend/DESIGN.md` §14 |
 | Design-system showcase page | `site/frontend/design-system.html`, `site/frontend/src/design-system/**`, `site/frontend/vite.config.js` (multi-page input) |
@@ -616,9 +626,11 @@ not source of truth for local development.
 - The SSE `/stream` endpoint still exists on the backend but is **not consumed by the
   frontend** (the matrix token-stream effect was removed); polling `/status` remains
   the authoritative status source.
-- The site has three modes — **User / Teacher / Dev** — via the header `.mode-select`
-  dropdown (persisted in `localStorage` `uiMode`). Only Dev shows the Developer-Tools
-  side panel; the App smoke test sets `uiMode=dev` before rendering.
+- The consumer site has two modes — **User / Teacher** — via the header `.mode-select`
+  dropdown (persisted in `localStorage` `uiMode`). The complete Developer Tools
+  workspace is available only in the protected Admin Dashboard’s **Developer Mode**
+  tab; keep the shared chat surface and developer workspace synchronized per the
+  frontend contract above.
 - A guardrail-tripped run ends in the terminal **`blocked`** status (distinct from `error`),
   surfaced as a top-level `blocked` field on the status payload.
 - `dist/` is generated by `npm -C site/frontend run build`; it is gitignored.

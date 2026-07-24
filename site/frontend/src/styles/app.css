@@ -2267,6 +2267,7 @@ select option:checked {
 /* The theme selector is a custom Dropdown (size="sm" keeps it on the Attach/Send
    height tier so the composer control row reads as one group, DESIGN.md §1). */
 .composer-theme-select {
+  width: 240px;
   max-width: 240px;
 }
 /* A selected theme never injects text into the composer — the trigger itself

@@ -4,6 +4,11 @@
  * This is the former public Dev mode: a complete chat workspace next to the
  * existing Developer Tools panel. It is mounted only inside the protected
  * admin dashboard, so development controls never appear on the consumer site.
+ *
+ * Synchronization contract: the consumer `PublicApp` is the source of truth
+ * for chat behavior, and both surfaces must compose the same `ChatConversation`
+ * component rather than copying it. DeveloperToolsPanel is intentionally its
+ * own admin-only surface; keep its controls in sync with this workspace.
  */
 
 import { useReducer, useState } from 'react';
