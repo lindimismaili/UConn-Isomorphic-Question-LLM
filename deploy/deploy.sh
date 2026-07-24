@@ -20,6 +20,16 @@ if [[ -f "${DEPLOY_CONFIG_FILE}" ]]; then
   source "${DEPLOY_CONFIG_FILE}"
 fi
 
+# DEPLOY_DIR is the release root, not a mutable working tree. The running app
+# is selected through this symlink so a completed candidate can be activated
+# atomically and the prior release remains available for rollback.
+RELEASES_DIR="${DEPLOY_DIR}/releases"
+CURRENT_RELEASE="${DEPLOY_DIR}/current"
+PERSIST_DIR="${PERSIST_DIR:-/var/lib/${SERVICE_NAME}}"
+PERSIST_RUNTIME_DIR="${PERSIST_DIR}/runtime"
+DEPLOY_STATUS_FILE="${PERSIST_RUNTIME_DIR}/deployment_status.json"
+RELEASE_RETENTION="${RELEASE_RETENTION:-3}"
+
 NGINX_CONF="/etc/nginx/sites-available/${SERVICE_NAME}"
 NGINX_LINK="/etc/nginx/sites-enabled/${SERVICE_NAME}"
 CLOUDFLARED_SERVICE_NAME="${CLOUDFLARED_SERVICE_NAME:-${SERVICE_NAME}-cloudflared}"
@@ -143,6 +153,16 @@ validate_deploy_settings() {
 
   if [[ "${DEPLOY_DIR}" == *[[:space:]]* ]]; then
     err "DEPLOY_DIR cannot contain whitespace because systemd/nginx paths are generated from it: ${DEPLOY_DIR}"
+    exit 1
+  fi
+
+  if [[ "${PERSIST_DIR}" != /* ]] || [[ "${PERSIST_DIR}" == *[[:space:]]* ]]; then
+    err "PERSIST_DIR must be an absolute path without whitespace; got ${PERSIST_DIR}."
+    exit 1
+  fi
+
+  if ! [[ "${RELEASE_RETENTION}" =~ ^[0-9]+$ ]]; then
+    err "RELEASE_RETENTION must be a non-negative integer; got ${RELEASE_RETENTION}."
     exit 1
   fi
 
@@ -526,7 +546,7 @@ ensure_backend_port_available() {
       err "Port ${BACKEND_PORT} is already in use by a non-deploy process:"
       sudo ss -ltnp "sport = :${BACKEND_PORT}" || true
       err "Stop that process or rerun with BACKEND_PORT=<free-port> bash deploy/deploy.sh."
-      exit 1
+      return 1
     fi
   done
 
@@ -548,7 +568,7 @@ ensure_backend_port_available() {
   if [[ "${#pids[@]}" -gt 0 ]]; then
     err "Port ${BACKEND_PORT} is still busy:"
     sudo ss -ltnp "sport = :${BACKEND_PORT}" || true
-    exit 1
+    return 1
   fi
 }
 
@@ -593,12 +613,12 @@ Wants=network-online.target
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=${DEPLOY_DIR}/site
-EnvironmentFile=-${DEPLOY_DIR}/site/.env
+WorkingDirectory=${CURRENT_RELEASE}/site
+EnvironmentFile=-${CURRENT_RELEASE}/site/.env
 Environment=HOST=127.0.0.1
 Environment=PORT=${BACKEND_PORT}
 Environment=ALLOWED_ORIGINS=${allowed_origins}
-ExecStart=${DEPLOY_DIR}/.venv/bin/uvicorn backend.src.server:app --host 127.0.0.1 --port ${BACKEND_PORT}
+ExecStart=${CURRENT_RELEASE}/.venv/bin/uvicorn backend.src.server:app --host 127.0.0.1 --port ${BACKEND_PORT}
 Restart=on-failure
 RestartSec=3
 SyslogIdentifier=${SERVICE_NAME}
@@ -622,11 +642,11 @@ EOF
   if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
     err "${SERVICE_NAME} did not stay running after restart."
     err "Check: sudo journalctl -u ${SERVICE_NAME} -n 50"
-    exit 1
+    return 1
   fi
 
   if ! wait_for_backend_health; then
-    exit 1
+    return 1
   fi
 
   info "Backend service ${SERVICE_NAME} is installed."
@@ -682,7 +702,7 @@ server {
     listen 80${default_server_flag};
     server_name ${server_names};
 
-    root ${DEPLOY_DIR}/site/dist;
+    root ${CURRENT_RELEASE}/site/dist;
     index index.html;
 
     client_max_body_size 100m;
@@ -807,6 +827,8 @@ save_deploy_config() {
   save_config_var "DEPLOY_DIR" "${DEPLOY_DIR}"
   save_config_var "SERVICE_NAME" "${SERVICE_NAME}"
   save_config_var "BACKEND_PORT" "${BACKEND_PORT}"
+  save_config_var "PERSIST_DIR" "${PERSIST_DIR}"
+  save_config_var "RELEASE_RETENTION" "${RELEASE_RETENTION}"
   save_config_var "CLOUDFLARED_SERVICE_NAME" "${CLOUDFLARED_SERVICE_NAME}"
   save_config_var "CLOUDFLARED_CONFIG_FILE" "${CLOUDFLARED_CONFIG_FILE}"
   save_config_var "AUTO_UPDATE" "${AUTO_UPDATE:-0}"
@@ -1429,67 +1451,265 @@ setup_cloudflare() {
   info "Cloudflare tunnel is configured for https://${PUBLIC_HOSTNAME}"
 }
 
+write_deployment_status() {
+  # Arguments: state stage attempted active previous rollback deferred workflows message
+  sudo mkdir -p "${PERSIST_RUNTIME_DIR}"
+  sudo env DEPLOY_STATUS_FILE="${DEPLOY_STATUS_FILE}" python3 - "$@" <<'PY'
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+keys = ("status", "stage", "attempted_commit", "active_commit", "previous_commit", "rollback_succeeded", "deferred", "active_workflows", "message")
+values = dict(zip(keys, sys.argv[1:], strict=False))
+path = Path(os.environ["DEPLOY_STATUS_FILE"])
+try:
+    old = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    old = {}
+events = old.get("events", []) if isinstance(old, dict) and isinstance(old.get("events"), list) else []
+now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+rollback = values["rollback_succeeded"].lower()
+payload = {
+    "status": values["status"], "stage": values["stage"],
+    "attempted_commit": values["attempted_commit"], "active_commit": values["active_commit"],
+    "previous_commit": values["previous_commit"],
+    "rollback_succeeded": True if rollback == "true" else False if rollback == "false" else None,
+    "deferred": values["deferred"].lower() == "true",
+    "active_workflows": int(values["active_workflows"]) if values["active_workflows"].isdigit() else 0,
+    "updated_at": now,
+}
+events.append({"at": now, "state": values["status"], "stage": values["stage"],
+               "commit": values["attempted_commit"], "message": values["message"][:400]})
+payload["events"] = events[-50:]
+tmp = path.with_suffix(".tmp")
+tmp.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+tmp.replace(path)
+PY
+  sudo chown www-data:www-data "${PERSIST_DIR}" "${PERSIST_RUNTIME_DIR}" "${DEPLOY_STATUS_FILE}"
+}
+
+current_release_path() {
+  readlink -f "${CURRENT_RELEASE}" 2>/dev/null || true
+}
+
+current_release_commit() {
+  local current
+  current="$(current_release_path)"
+  [[ -n "${current}" ]] && basename "${current}" || true
+}
+
+active_workflow_count() {
+  local payload
+  payload="$(curl -fsS --max-time 3 "http://127.0.0.1:${BACKEND_PORT}/api/deployment/status" 2>/dev/null || true)"
+  python3 -c 'import json, sys; print(int(json.load(sys.stdin).get("active_workflows", 0)))' <<< "${payload}" 2>/dev/null || printf '%s\n' '-1'
+}
+
+link_persistent_data() {
+  local release_dir="$1"
+  local name
+  for name in uploads outputs runtime; do
+    sudo rm -rf "${release_dir}/site/backend/${name}"
+    sudo ln -s "${PERSIST_DIR}/${name}" "${release_dir}/site/backend/${name}"
+  done
+}
+
+ensure_release_layout() {
+  sudo mkdir -p "${RELEASES_DIR}" "${PERSIST_DIR}/uploads" "${PERSIST_DIR}/outputs" "${PERSIST_RUNTIME_DIR}"
+  local name legacy_dir current legacy_sha
+  current="$(current_release_path)"
+  if [[ -n "${current}" ]]; then
+    return 0
+  fi
+
+  # One-time migration from the legacy mutable directory. Copy first so a
+  # failed migration cannot destroy user content.
+  for name in uploads outputs runtime; do
+    legacy_dir="${DEPLOY_DIR}/site/backend/${name}"
+    if [[ -d "${legacy_dir}" ]]; then
+      sudo rsync -a --ignore-existing "${legacy_dir}/" "${PERSIST_DIR}/${name}/"
+    fi
+  done
+  sudo chown -R www-data:www-data "${PERSIST_DIR}"
+
+  if [[ ! -d "${DEPLOY_DIR}/site" ]]; then
+    return 0
+  fi
+
+  legacy_sha="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("commit", ""))' "${DEPLOY_DIR}/site/dist/version.json" 2>/dev/null || true)"
+  if ! [[ "${legacy_sha}" =~ ^[0-9a-f]{40}$ ]]; then
+    legacy_sha="$(git -C "${REPO_DIR}" rev-parse HEAD 2>/dev/null || true)"
+  fi
+  [[ "${legacy_sha}" =~ ^[0-9a-f]{40}$ ]] || legacy_sha="legacy-$(date -u +%Y%m%d%H%M%S)"
+  current="${RELEASES_DIR}/${legacy_sha}"
+  if [[ ! -d "${current}" ]]; then
+    sudo mkdir -p "${current}"
+    sudo rsync -a --exclude "releases/" --exclude "current" --exclude "persistent/" "${DEPLOY_DIR}/" "${current}/"
+  fi
+  link_persistent_data "${current}"
+  switch_current_release "${current}"
+}
+
+switch_current_release() {
+  local release_dir="$1"
+  local next_link="${DEPLOY_DIR}/.current-next-$$"
+  sudo ln -s "${release_dir}" "${next_link}"
+  sudo mv -Tf "${next_link}" "${CURRENT_RELEASE}"
+}
+
+write_release_version() {
+  local release_dir="$1" commit_sha="$2" commit_time="$3"
+  sudo env RELEASE_DIR="${release_dir}" COMMIT_SHA="${commit_sha}" COMMIT_TIME="${commit_time}" python3 - <<'PY'
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+
+path = Path(os.environ["RELEASE_DIR"]) / "site" / "dist" / "version.json"
+path.write_text(json.dumps({
+    "version": os.environ["COMMIT_SHA"][:7],
+    "commit": os.environ["COMMIT_SHA"],
+    "commit_time": os.environ["COMMIT_TIME"],
+    "published_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+}, indent=2) + "\n", encoding="utf-8")
+PY
+}
+
+build_candidate_release() {
+  local commit_sha="$1" repo_owner="$2" commit_time staging release_dir
+  release_dir="${RELEASES_DIR}/${commit_sha}"
+  if [[ -d "${release_dir}" ]]; then
+    printf '%s\n' "${release_dir}"
+    return 0
+  fi
+  staging="${RELEASES_DIR}/.staging-${commit_sha}-$$"
+  commit_time="$(sudo -u "${repo_owner}" git -C "${REPO_DIR}" log -1 --format=%cI "${commit_sha}")"
+  sudo rm -rf "${staging}"
+  sudo mkdir -p "${staging}"
+  if ! sudo -u "${repo_owner}" git -C "${REPO_DIR}" archive --format=tar "${commit_sha}" | sudo tar -x -C "${staging}"; then
+    sudo rm -rf "${staging}"
+    return 1
+  fi
+  link_persistent_data "${staging}"
+  if ! sudo python3 -m venv "${staging}/.venv" \
+    || ! sudo "${staging}/.venv/bin/pip" install --upgrade pip \
+    || ! sudo "${staging}/.venv/bin/pip" install -r "${staging}/site/backend/requirements.txt"; then
+    sudo rm -rf "${staging}"
+    return 1
+  fi
+  sudo mkdir -p "${staging}/site/dist"
+  sudo chown -R "${repo_owner}:${repo_owner}" "${staging}/site/frontend" "${staging}/site/dist"
+  if ! sudo -H -u "${repo_owner}" npm -C "${staging}/site/frontend" ci --no-audit --no-fund \
+    || ! sudo -H -u "${repo_owner}" npm -C "${staging}/site/frontend" run build \
+    || [[ ! -f "${staging}/site/dist/index.html" ]]; then
+    sudo rm -rf "${staging}"
+    return 1
+  fi
+  write_release_version "${staging}" "${commit_sha}" "${commit_time}"
+  sudo chown -R www-data:www-data "${staging}"
+  sudo mv "${staging}" "${release_dir}"
+  printf '%s\n' "${release_dir}"
+}
+
+release_health_is_valid() {
+  local expected_sha="$1" payload
+  wait_for_backend_health || return 1
+  payload="$(curl -fsS --max-time 5 "http://127.0.0.1:${BACKEND_PORT}/version.json")" || return 1
+  python3 -c 'import json, sys; raise SystemExit(0 if json.load(sys.stdin).get("commit") == sys.argv[1] else 1)' "${expected_sha}" <<< "${payload}"
+}
+
+prune_old_releases() {
+  local active previous=() release
+  active="$(current_release_path)"
+  mapfile -t previous < <(find "${RELEASES_DIR}" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2-)
+  local kept=0
+  for release in "${previous[@]}"; do
+    [[ "${release}" == "${active}" ]] && continue
+    if (( kept < RELEASE_RETENTION )); then
+      ((kept += 1))
+      continue
+    fi
+    sudo rm -rf "${release}"
+  done
+}
+
+last_failed_commit() {
+  python3 -c 'import json, sys; p=json.load(open(sys.argv[1])); print(p.get("attempted_commit", "") if p.get("status") in {"failed", "rolled_back"} else "")' "${DEPLOY_STATUS_FILE}" 2>/dev/null || true
+}
+
+deploy_commit() {
+  local commit_sha="$1" repo_owner="$2" defer_for_workflows="${3:-false}"
+  local previous active release_dir workflow_count
+  previous="$(current_release_path)"
+  active="$(current_release_commit)"
+  if [[ "${active}" == "${commit_sha}" ]]; then
+    write_deployment_status "success" "up_to_date" "${commit_sha}" "${active}" "" "" "false" "0" "Already running requested commit."
+    return 0
+  fi
+  workflow_count="$(active_workflow_count)"
+  if [[ "${defer_for_workflows}" == "true" ]] && (( workflow_count > 0 )); then
+    write_deployment_status "deferred" "active_workflows" "${commit_sha}" "${active}" "${active}" "" "true" "${workflow_count}" "Waiting for active workflows before restarting."
+    return 0
+  fi
+  write_deployment_status "building" "candidate" "${commit_sha}" "${active}" "${active}" "" "false" "0" "Building isolated candidate release."
+  if ! release_dir="$(build_candidate_release "${commit_sha}" "${repo_owner}")"; then
+    write_deployment_status "failed" "build" "${commit_sha}" "${active}" "${active}" "" "false" "0" "Candidate build failed; active release was not changed."
+    return 1
+  fi
+  write_deployment_status "activating" "switch" "${commit_sha}" "${active}" "${active}" "" "false" "0" "Switching the current release."
+  switch_current_release "${release_dir}"
+  if install_backend_service && release_health_is_valid "${commit_sha}"; then
+    prune_old_releases
+    write_deployment_status "success" "healthy" "${commit_sha}" "${commit_sha}" "${active}" "" "false" "0" "Candidate is serving and passed health checks."
+    return 0
+  fi
+  write_deployment_status "failed" "health" "${commit_sha}" "${commit_sha}" "${active}" "" "false" "0" "Candidate failed after activation; rolling back."
+  if [[ -n "${previous}" ]] && [[ -d "${previous}" ]]; then
+    switch_current_release "${previous}"
+    if install_backend_service && release_health_is_valid "${active}"; then
+      write_deployment_status "rolled_back" "rollback" "${commit_sha}" "${active}" "${active}" "true" "false" "0" "Rollback completed and the previous release is healthy."
+    else
+      write_deployment_status "failed" "rollback" "${commit_sha}" "${active}" "${active}" "false" "false" "0" "Rollback could not restore a healthy service."
+    fi
+  fi
+  return 1
+}
+
 run_auto_update() {
-  # Non-interactive path run by the systemd timer. Tracks origin/main and, when
-  # it moves, force-resets the checkout and redeploys the running site.
+  # Fetch only: deployment uses an archived commit, never merges or rewrites
+  # the source checkout. A failed fetch/build therefore cannot alter current.
   require_repo
   validate_deploy_settings
+  exec 9>"/run/lock/${SERVICE_NAME}-update.lock"
+  if ! flock -n 9; then
+    write_deployment_status "deferred" "lock" "" "$(current_release_commit)" "" "" "true" "0" "Another deployment is already running."
+    return 0
+  fi
 
-  local repo_owner
+  local repo_owner remote_sha failed_sha
   repo_owner="$(stat -c '%U' "${REPO_DIR}/.git" 2>/dev/null || echo root)"
-
-  # Run git as the repo owner so its SSH key/credentials are used (the timer
-  # runs as root, which has neither) and to avoid "dubious ownership" errors.
   git_as_owner() { sudo -u "${repo_owner}" git -C "${REPO_DIR}" "$@"; }
-
+  ensure_release_layout
   if ! git_as_owner remote get-url origin >/dev/null 2>&1; then
-    warn "No git origin in ${REPO_DIR}; skipping auto-update."
-    return 0
+    write_deployment_status "failed" "origin" "" "$(current_release_commit)" "" "" "false" "0" "Repository has no origin remote."
+    return 1
   fi
-
   if ! git_as_owner fetch --quiet --force origin main; then
-    warn "git fetch failed (network/auth); will retry next cycle."
+    write_deployment_status "failed" "fetch" "" "$(current_release_commit)" "" "" "false" "0" "git fetch failed; the active release remains unchanged."
+    return 1
+  fi
+  remote_sha="$(git_as_owner rev-parse origin/main 2>/dev/null || true)"
+  if ! [[ "${remote_sha}" =~ ^[0-9a-f]{40}$ ]]; then
+    write_deployment_status "failed" "resolve" "" "$(current_release_commit)" "" "" "false" "0" "Could not resolve origin/main."
+    return 1
+  fi
+  failed_sha="$(last_failed_commit)"
+  if [[ "${failed_sha}" == "${remote_sha}" ]]; then
+    write_deployment_status "deferred" "quarantined" "${remote_sha}" "$(current_release_commit)" "" "" "true" "0" "Commit previously failed; waiting for origin/main to change."
     return 0
   fi
-
-  local local_sha remote_sha
-  local_sha="$(git_as_owner rev-parse HEAD 2>/dev/null || echo unknown)"
-  remote_sha="$(git_as_owner rev-parse origin/main 2>/dev/null || echo unknown)"
-
-  if [[ "${remote_sha}" == "unknown" ]]; then
-    warn "Could not resolve origin/main; skipping auto-update."
-    return 0
-  fi
-
-  if [[ "${local_sha}" == "${remote_sha}" ]]; then
-    return 0   # Up to date — the common 60s case, no rebuild.
-  fi
-
-  info "New commit ${remote_sha:0:7} on origin/main; force-redeploying."
-  # Force the checkout to exactly match origin/main no matter what was edited
-  # locally on the Pi: discard tracked-file edits and untracked junk.
-  #
-  # uploads/ and outputs/ are the only persistent application-data dirs. Keep
-  # ignored copies during checkout cleanup; every other checkout path may be
-  # replaced by origin/main. The live copies under DEPLOY_DIR are separately
-  # protected by sync_repo_to_deploy_dir's rsync excludes.
-  git_as_owner checkout -f main
-  git_as_owner reset --hard origin/main
-  git_as_owner clean -ffd \
-    -e "site/backend/uploads" \
-    -e "site/backend/outputs"
-
-  export DEPLOY_COMMIT_SHA="${remote_sha}"
-  export DEPLOY_COMMIT_SHORT="${remote_sha:0:7}"
-  DEPLOY_COMMIT_TIME="$(git_as_owner log -1 --format=%cI "${remote_sha}")"
-  export DEPLOY_COMMIT_TIME
-
-  require_sudo
-  sync_repo_to_deploy_dir
-  setup_python_venv
-  build_frontend
-  install_backend_service   # Rewrites the unit, restarts, waits on /api/health.
-  info "Auto-update to ${remote_sha:0:7} complete."
+  deploy_commit "${remote_sha}" "${repo_owner}" true
 }
 
 install_auto_update_units() {
@@ -1503,7 +1723,7 @@ install_auto_update_units() {
   repo_owner_home="$(getent passwd "${repo_owner}" | cut -d: -f6)"
   if [[ -z "${repo_owner_home}" ]]; then
     err "Could not determine the home directory for repository owner ${repo_owner}."
-    exit 1
+    return 1
   fi
 
   sudo tee "${service_file}" >/dev/null <<EOF
@@ -1515,6 +1735,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 Environment="HOME=${repo_owner_home}"
+TimeoutStartSec=30min
 ExecStart=/bin/bash ${REPO_DIR}/deploy/deploy.sh --update
 EOF
 
@@ -1524,8 +1745,9 @@ Description=Check origin/main for ${SERVICE_NAME} every 60s
 
 [Timer]
 OnBootSec=60
-OnUnitActiveSec=60
+OnUnitInactiveSec=60
 AccuracySec=1s
+Persistent=true
 
 [Install]
 WantedBy=timers.target
@@ -1534,14 +1756,14 @@ EOF
   sudo chmod 644 "${service_file}" "${timer_file}"
   sudo systemctl daemon-reload
   sudo systemctl enable --now "${SERVICE_NAME}-update.timer"
-  info "Auto-update enabled: checks origin/main every 60s and force-redeploys."
+  info "Auto-update enabled: checks origin/main 60 seconds after each prior check finishes."
   info "Disable later with: sudo systemctl disable --now ${SERVICE_NAME}-update.timer"
 }
 
 main() {
   if [[ "${1:-}" == "--update" ]]; then
     run_auto_update
-    exit 0
+    exit $?
   fi
 
   banner "UConn Isomorphic Question LLM Installer"
@@ -1563,12 +1785,15 @@ main() {
   save_deploy_config
   install_system_packages
   configure_local_domain
-  sync_repo_to_deploy_dir
-  warn_if_openai_key_missing
-  setup_python_venv
-  build_frontend
+  ensure_release_layout
+  repo_owner="$(stat -c '%U' "${REPO_DIR}/.git" 2>/dev/null || echo root)"
+  initial_sha="$(sudo -u "${repo_owner}" git -C "${REPO_DIR}" rev-parse HEAD)"
+  deploy_commit "${initial_sha}" "${repo_owner}" false
+  # deploy_commit installs the service when it activates a new candidate. The
+  # explicit call also upgrades a legacy unit after a one-time migration.
   install_backend_service
   install_nginx_config
+  warn_if_openai_key_missing
   verify_local_site
 
   echo ""

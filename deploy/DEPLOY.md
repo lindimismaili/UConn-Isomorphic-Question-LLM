@@ -60,21 +60,27 @@ When enabled, the installer creates two systemd units:
 - `uconn-isomorphic-update.timer` — fires 60s after boot and every 60s after the
   previous run finishes (a long redeploy can never overlap itself).
 
-Each cycle does a `git fetch` of `origin/main` and compares commits; if nothing
-changed it exits immediately with no rebuild. When `main` has moved it
-**force-redeploys**: the checkout is reset to exactly match `origin/main`
-(`checkout -f` + `reset --hard` + `clean -ffd`, so **any local edits to tracked
-files are discarded**), then it re-syncs to the deploy directory, rebuilds the
-frontend, and restarts the backend (waiting on `/api/health`).
-`dist/version.json` reflects the new short commit SHA once a redeploy completes.
+Each cycle fetches `origin/main` without merging or changing the source
+checkout. If it finds a new commit, it archives and builds that commit in an
+isolated immutable release at
+`/var/www/uconn-isomorphic/releases/<full-commit-sha>/`. The site serves only
+through `/var/www/uconn-isomorphic/current`, an atomic symlink to the active
+release. The updater changes that symlink only after the candidate has built;
+it then restarts the backend and requires `/api/health` plus matching
+`version.json` metadata. Any failure switches back to the prior release and
+verifies it again.
 
-The two persistent data folders are always preserved:
-`site/backend/uploads/` and `site/backend/outputs/`. They are explicit excludes
-in both checkout cleanup and the live deploy `rsync`. The saved live copies are
-under the deploy directory (`/var/www/uconn-isomorphic/...`), which Git never
-touches, so a forced checkout and redeploy cannot overwrite or delete them.
-Every other application path may be replaced by the latest `origin/main`
-version.
+The updater retains the active release plus three prior known-good releases.
+It preserves `site/backend/uploads/`, `site/backend/outputs/`, and
+`site/backend/runtime/` in `/var/lib/uconn-isomorphic/`, linked into every
+release. Generated questions, evaluations, uploads, and workflow history are
+therefore never replaced by a code update. Candidate build files are isolated
+and may safely be removed and rebuilt.
+
+A failed fetch/build/deploy exits the systemd job nonzero and records a
+sanitized report at `GET /api/deployment/status`; detailed logs remain in the
+updater journal. A commit that fails deployment is quarantined until
+`origin/main` advances, preventing a failed build loop every 60 seconds.
 
 **Prerequisite:** the timer pulls non-interactively **as the repository owner**
 (not root), so that user must have working git auth for `origin`. With the
@@ -89,6 +95,7 @@ sudo systemctl status uconn-isomorphic-update.timer
 sudo journalctl -u uconn-isomorphic-update.service -f
 sudo systemctl disable --now uconn-isomorphic-update.timer   # turn off
 sudo systemctl start uconn-isomorphic-update.service          # update now, once
+curl -fsS http://127.0.0.1:3002/api/deployment/status          # latest deploy report
 ```
 
 ## Local Preview

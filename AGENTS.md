@@ -560,6 +560,20 @@ Deploy scripts live in `deploy/` (`deploy.sh` for the systemd/uvicorn service,
 `preview.sh` for a local preview build, `DEPLOY.md` for notes). Treat them as
 operational guides, not source of truth for local development.
 
+- The Pi updater deploys only fetched `origin/main` commits. Do not make
+  repository edits on the Pi and expect them to be deployed; push reviewed work
+  to `main` instead.
+- Production uses immutable releases under `releases/<commit>` plus a `current`
+  symlink. It retains the active release and three prior good releases, and
+  rolls back automatically when the candidate cannot pass the backend health
+  check.
+- `site/backend/uploads/`, `site/backend/outputs/`, and `site/backend/runtime/`
+  are linked to persistent Pi storage in every release. Never delete, rename,
+  or make incompatible schema changes to these paths without an explicit
+  migration and rollback plan.
+- `GET /api/deployment/status` is the sanitized, dashboard-safe deploy report;
+  use the updater's systemd journal for detailed diagnostics.
+
 ## Agent Warnings / Gotchas
 
 - Use `site/backend/src/...` paths — not historical `src/...`.

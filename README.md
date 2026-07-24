@@ -279,6 +279,31 @@ Every Markdown doc tracked in the repo:
 - Workflow appears stuck: check `/api/health`, `/api/openai/status`, and the latest folder in `site/backend/outputs/`.
 - Frontend cannot reach the backend in dev mode: run `bash deploy/preview.sh --dev` and open `http://isomorphic.localhost:5173`.
 
+## Raspberry Pi Automatic Deployment
+
+The Pi deployer treats `origin/main` as the only automatic deployment source.
+It fetches a commit without merging, builds that commit in an isolated release
+directory, then atomically changes the `current` release symlink only after the
+candidate is ready. The prior three known-good releases remain on disk for
+rollback.
+
+- User data survives every deployment under the persistent `uploads/`,
+  `outputs/`, and `runtime/` directories. This includes generated questions,
+  evaluations, uploaded files, and workflow-history SQLite state.
+- A failed fetch, build, restart, or health check leaves the existing release
+  running or restores it automatically. The failed commit is quarantined until
+  `origin/main` changes, so the 60-second timer does not rebuild a known-bad
+  commit forever.
+- `GET /api/deployment/status` exposes a sanitized summary and recent bounded
+  deployment events for the future local dashboard. Detailed diagnostics remain
+  in `journalctl -u uconn-isomorphic-update.service`.
+
+Before pushing to `main`, test changes that affect startup, dependencies,
+database/runtime compatibility, uploads, or output artifacts. Runtime-data
+changes must be backward compatible with the prior release or include an
+explicit migration and rollback path; automatic deployment can roll back code,
+but it cannot safely undo destructive data migrations.
+
 ## Development Notes
 
 - Do not edit files under `site/backend/outputs/` or `site/backend/uploads/`; they are generated runtime data.
