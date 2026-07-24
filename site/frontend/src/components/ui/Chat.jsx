@@ -243,7 +243,7 @@ export function Composer({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
-        rows={2}
+        rows={5}
       />
       <div className="composer-controls">
         <div className="composer-controls-left">

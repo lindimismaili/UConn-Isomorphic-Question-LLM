@@ -226,6 +226,7 @@ export default function ChatConversation({
 
       <ChatTranscript
         count={messages.length}
+        className={messages.length === 0 ? 'is-empty' : ''}
         aria-label="Conversation"
         emptyState={
           <EmptyState>
