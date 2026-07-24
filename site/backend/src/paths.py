@@ -14,6 +14,7 @@ REPO_ROOT = BACKEND_ROOT.parent
 PROJECT_ROOT = REPO_ROOT.parent
 
 ENV_PATH = REPO_ROOT / ".env"
+LOCAL_ENV_PATH = REPO_ROOT / ".env.local"
 
 DATA_DIR = BACKEND_ROOT / "data"
 PROMPTS_DIR = DATA_DIR / "prompts"

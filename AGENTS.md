@@ -221,6 +221,9 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   Cloudflare Access identity verification for `/admin` and `/api/admin/*`.
 - `OPENAI_ADMIN_KEY` — optional Organization Owner key used only server-side for
   cost monitoring; `SMTP_*` + `ALERT_RECIPIENTS` configure incident email.
+- `ADMIN_LOCAL_DEV_MODE`, `ADMIN_LOCAL_DEV_EMAIL` — local test-only dashboard
+  access. Both must be set in ignored `site/.env.local`; the bypass accepts
+  only direct loopback requests and must never be set on the Pi.
 
 ## Architecture
 
