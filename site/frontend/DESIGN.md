@@ -669,7 +669,15 @@ untouched; only the view changed.
   The theme select shares the Attach/Send **36px tier** (one control group, one
   height), and selecting a theme **never injects text into the textarea** — the
   selection is sent as the run's `theme` field and the select gets `.is-active`
-  (primary border + glow) so it's visible that a theme prompt rides along.
+  (primary border + glow) so it's visible that a theme prompt rides along. Its
+  question textarea keeps the documented 180px large-textarea floor (five rows)
+  so composing the request, rather than the empty state, receives the page's
+  visual space.
+- **Empty conversation hint** — `ChatTranscript.is-empty` becomes a compact,
+  non-growing panel. Its `.chat-empty` row places the brain icon on the left,
+  mode-aware guidance in the flexible middle, and the secondary “How it works”
+  button at the right; at the existing ≤700px breakpoint the row stays intact
+  and its guidance uses the smaller text token to preserve the controls.
 
 ### Stepper (process rail)
 

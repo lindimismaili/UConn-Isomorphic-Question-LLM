@@ -97,7 +97,9 @@ describe('App (chat-first) smoke', () => {
 
     // Chat-first surface.
     expect(container.querySelector('.chat-shell')).toBeTruthy();
-    expect(container.querySelector('.chat-transcript')).toBeTruthy();
+    const transcript = container.querySelector('.chat-transcript');
+    expect(transcript).toBeTruthy();
+    expect(transcript.className).toContain('is-empty');
     expect(container.querySelector('.composer')).toBeTruthy();
     expect(container.querySelector('textarea.composer-input')).toBeTruthy();
 
@@ -121,5 +123,7 @@ describe('App (chat-first) smoke', () => {
 
     // Empty conversation state before any run.
     expect(container.querySelector('.chat-empty')).toBeTruthy();
+    expect(container.querySelector('.chat-empty .chat-empty-icon')).toBeTruthy();
+    expect(container.querySelector('.chat-empty button').textContent).toContain('How it works');
   });
 });
