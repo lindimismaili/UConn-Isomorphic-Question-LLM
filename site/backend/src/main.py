@@ -49,7 +49,20 @@ from typing import Any
 from agents.logger import logger
 from openai import OpenAI
 
+from backend.src.bootstrap import configure_private_umask
 from backend.src.bootstrap import load_dotenv as _load_dotenv
+from backend.src.cost_controls import (
+    grader_max_completion_tokens,
+    max_create_data_entries,
+    max_eval_batch_entries,
+    max_eval_batch_items,
+)
+from backend.src.deployment_maintenance import (
+    cli_artifact_access_guard,
+    cli_artifact_mutation_guard,
+    cli_paid_work_guard,
+)
+from backend.src.evaluation import question_level_criteria
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
 from backend.src.paths import (
@@ -57,22 +70,33 @@ from backend.src.paths import (
     EVALUATION_FIXTURES_DIR,
     OUTPUTS_DIR,
     PROMPTS_DIR,
-    QUESTION_DATA_DIR,
 )
+from backend.src.provider_clients import (
+    close_agents_sdk_model_provider,
+    configure_agents_sdk_model_provider,
+    configured_agents_sdk_model_provider,
+)
+from backend.src.provider_timeouts import openai_transport_options
 from backend.src.registry import all_agents as _all_agents
+from backend.src.registry import canonical_theme as _canonical_theme
 from backend.src.registry import default_from_agent as _default_from_agent
+from backend.src.registry import evaluation_agent as _evaluation_agent
 from backend.src.registry import llm_agents as _llm_agents
 from backend.src.registry import promptable_agents as _promptable_agents
 from backend.src.registry import source_file_agents as _source_file_agents
 from backend.src.registry import stoppable_agents as _stoppable_agents
 from backend.src.registry import themes as _themes
-from backend.src.safety import create_unique_run_dir
+from backend.src.safety import (
+    create_unique_run_dir,
+    safe_exception_category,
+    safe_exception_message,
+    validate_instruction_text,
+)
 from backend.src.schemas import AGENT_INPUT_TYPES, WorkflowInput, WorkflowResult
 from backend.src.workflow import run_workflow_async
 
-_load_dotenv(ENV_PATH)
-
 _cli_openai_client: OpenAI | None = None
+configure_private_umask()
 
 # Verbs that consume subcommand parsing; anything else on the front of argv is
 # treated as a bare `run` invocation for backward compatibility.
@@ -96,17 +120,35 @@ _SUBCOMMANDS = frozenset(
 def get_cli_openai_client() -> OpenAI:
     """Lazily create the OpenAI client so `--help` does not need credentials."""
     global _cli_openai_client
+    _load_dotenv(ENV_PATH)
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is required to run the workflow.")
     if _cli_openai_client is None:
-        api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is required to run the workflow.")
-        _cli_openai_client = OpenAI(api_key=api_key)
+        _cli_openai_client = OpenAI(
+            api_key=api_key,
+            **openai_transport_options(),
+        )
+    configure_agents_sdk_model_provider(api_key)
     return _cli_openai_client
 
 
 async def _to_thread(func, /, *args, **kwargs):
     """Run blocking SDK/filesystem calls in the default executor (no semaphore for CLI)."""
     return await asyncio.to_thread(func, *args, **kwargs)
+
+
+async def _run_cli_async(awaitable):
+    """Run one paid CLI coroutine and close both provider clients on its loop."""
+    global _cli_openai_client
+    try:
+        return await awaitable
+    finally:
+        client, _cli_openai_client = _cli_openai_client, None
+        close = getattr(client, "close", None)
+        if callable(close):
+            await asyncio.to_thread(close)
+        await close_agents_sdk_model_provider()
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
@@ -159,6 +201,29 @@ def _resolve_test_files(rel_paths: list[str]) -> list[str]:
     return _resolve_evaluation_fixture_paths(rel_paths, strict=True)
 
 
+def _preflight_cli_sources(
+    file_paths: list[str],
+    *,
+    allowed_extensions: set[str] | None = None,
+    max_files: int | None = None,
+) -> list[str] | None:
+    """Apply the API's source limits before any CLI provider is created."""
+    from backend.src.api.state import (
+        SourceFileAdmissionError,
+        validate_source_file_paths,
+    )
+
+    try:
+        return validate_source_file_paths(
+            file_paths,
+            allowed_extensions=allowed_extensions,
+            max_files=max_files,
+        )
+    except SourceFileAdmissionError as exc:
+        logger.error("%s", exc)
+        return None
+
+
 # ── Core single-run engine wrapper ────────────────────────────────────────────
 
 
@@ -168,7 +233,7 @@ async def run_workflow(
     from_agent: str | None = None,
     agent_input: dict[str, Any] | None = None,
     stop_after: str | None = None,
-    run_evaluation: bool = True,
+    run_evaluation: bool = False,
     theme: str = "",
     resume_source_dir: Path | None = None,
     resume_source_label: str = "",
@@ -181,6 +246,7 @@ async def run_workflow(
     stops the pipeline after the named agent completes. ``theme`` threads the UI
     theme string through the engine.
     """
+    prompt = validate_instruction_text(workflow_input.user_instructions)
     from_agent = from_agent or _default_from_agent()
     client = get_cli_openai_client()
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -193,7 +259,7 @@ async def run_workflow(
         client=client,
         workflow_id=workflow_id,
         workflow=workflow_record,
-        prompt=workflow_input.user_instructions or "",
+        prompt=prompt,
         file_paths=workflow_input.file_paths,
         theme=theme,
         outputs_dir=outputs_dir,
@@ -210,9 +276,17 @@ async def run_workflow(
         input_to_agent_run=agent_input is not None,
         run_evaluation=run_evaluation,
         stop_after_agent=stop_after,
+        model_provider=configured_agents_sdk_model_provider(),
     )
 
     logger.info("Output directory: %s", outputs_dir)
+    if workflow_record.get("status") == "blocked":
+        blocked = workflow_record.get("blocked") or {}
+        raise RuntimeError(
+            "Workflow blocked by "
+            f"{blocked.get('stage', 'unknown')} guardrail "
+            f"({blocked.get('category', 'unspecified')})"
+        )
     return result
 
 
@@ -223,7 +297,7 @@ def _log_workflow_result(result: WorkflowResult) -> None:
     logger.info("Verified questions:  %d", len(result.verified_questions))
     logger.info("Generated questions: %d", len(result.generated_questions))
     for q in result.generated_questions:
-        logger.info("[Q%d] (from source %s): %s", q.id, q.source_id, q.stem[:80])
+        logger.info("[Q%d] generated from source %s", q.id, q.source_id)
 
 
 # ── Subcommand handlers ───────────────────────────────────────────────────────
@@ -231,41 +305,42 @@ def _log_workflow_result(result: WorkflowResult) -> None:
 
 def _cmd_run(args: argparse.Namespace) -> int:
     """Full workflow from the normalizer (POST /api/workflow/start)."""
+    instructions = args.instructions or ""
+    if args.num_questions != 1:
+        instructions = (
+            f"Generate {args.num_questions} questions per source. "
+            + instructions
+        )
+    instructions = validate_instruction_text(instructions)
+
     file_paths: list[str] = list(args.files or [])
     file_paths.extend(_resolve_test_files(args.test_file or []))
 
     from_agent = _default_from_agent()
-    if from_agent in _source_file_agents() and not file_paths:
-        default_file = QUESTION_DATA_DIR / "PDF" / "Quiz_Compilation.pdf"
-        if default_file.exists():
-            file_paths = [str(default_file)]
-            logger.info("Using default file: %s", default_file)
-        else:
-            logger.error("No files provided and default file not found: %s", default_file)
+    if from_agent in _source_file_agents():
+        file_paths = _preflight_cli_sources(file_paths)
+        if file_paths is None:
             return 1
 
-    instructions = args.instructions or ""
-    if args.num_questions != 1:
-        instructions = f"Generate {args.num_questions} questions per source. " + instructions
-
-    theme = args.theme or ""
-    if theme:
-        valid = {str(t.get("label", "")).lower() for t in _themes()}
-        if theme.lower() not in valid:
-            logger.error(
-                "Unknown theme %r. Choices: %s",
-                theme,
-                ", ".join(sorted(str(t.get("label", "")) for t in _themes())),
-            )
-            return 1
+    try:
+        theme = _canonical_theme(args.theme)
+    except ValueError:
+        logger.error(
+            "Unknown theme %r. Choices: %s",
+            args.theme,
+            ", ".join(sorted(str(t.get("label", "")) for t in _themes())),
+        )
+        return 1
 
     workflow_input = WorkflowInput(file_paths=file_paths, user_instructions=instructions)
     result = asyncio.run(
-        run_workflow(
-            workflow_input,
-            stop_after=args.stop_after,
-            run_evaluation=not args.no_eval,
-            theme=theme,
+        _run_cli_async(
+            run_workflow(
+                workflow_input,
+                stop_after=args.stop_after,
+                run_evaluation=args.run_evaluation,
+                theme=theme,
+            )
         )
     )
     _log_workflow_result(result)
@@ -285,6 +360,9 @@ def _cmd_rerun_from_agent(args: argparse.Namespace) -> int:
             start_agent,
         )
         return 1
+    if start_agent == _evaluation_agent() and not args.run_evaluation:
+        logger.error("Starting from evaluation requires the explicit --eval flag.")
+        return 1
 
     source_dir = _resolve_output_folder(args.source)
     source_label = _relative_output_folder(source_dir)
@@ -296,14 +374,21 @@ def _cmd_rerun_from_agent(args: argparse.Namespace) -> int:
             source_label,
         )
         return 1
+    if file_paths:
+        file_paths = _preflight_cli_sources(file_paths)
+        if file_paths is None:
+            return 1
 
     workflow_input = WorkflowInput(file_paths=file_paths, user_instructions=args.instructions or "")
     result = asyncio.run(
-        run_workflow(
-            workflow_input,
-            from_agent=start_agent,
-            resume_source_dir=source_dir,
-            resume_source_label=source_label,
+        _run_cli_async(
+            run_workflow(
+                workflow_input,
+                from_agent=start_agent,
+                resume_source_dir=source_dir,
+                resume_source_label=source_label,
+                run_evaluation=args.run_evaluation,
+            )
         )
     )
     logger.info("Reused cached outputs from %s up to %s", source_label, start_agent)
@@ -324,6 +409,9 @@ def _cmd_from_agent_input(args: argparse.Namespace) -> int:
             start_agent,
         )
         return 1
+    if start_agent == _evaluation_agent() and not args.run_evaluation:
+        logger.error("Starting from evaluation requires the explicit --eval flag.")
+        return 1
 
     input_path = Path(args.input)
     if not input_path.exists():
@@ -331,8 +419,14 @@ def _cmd_from_agent_input(args: argparse.Namespace) -> int:
         return 1
     try:
         agent_input_data = json.loads(input_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.error("Failed to load --input: %s", exc)
+    except json.JSONDecodeError:
+        logger.error("--input must contain valid JSON.")
+        return 1
+    except (OSError, UnicodeError) as exc:
+        logger.error(
+            "Failed to load --input (%s)",
+            safe_exception_category(exc),
+        )
         return 1
 
     # Pre-validate against the agent's declared input schema, mirroring the
@@ -346,15 +440,22 @@ def _cmd_from_agent_input(args: argparse.Namespace) -> int:
     try:
         input_type.model_validate(structured)
     except Exception as exc:
-        logger.error("Schema match invalid for %s input: %s", start_agent, exc)
+        logger.error(
+            "Schema match invalid for %s input (%s)",
+            start_agent,
+            safe_exception_category(exc),
+        )
         return 1
 
     workflow_input = WorkflowInput(file_paths=[], user_instructions=args.instructions or "")
     result = asyncio.run(
-        run_workflow(
-            workflow_input,
-            from_agent=start_agent,
-            agent_input=agent_input_data,
+        _run_cli_async(
+            run_workflow(
+                workflow_input,
+                from_agent=start_agent,
+                agent_input=agent_input_data,
+                run_evaluation=args.run_evaluation,
+            )
         )
     )
     logger.info("Started from %s using %s", start_agent, input_path.name)
@@ -374,13 +475,40 @@ def _cmd_batch(args: argparse.Namespace) -> int:
         run_create_data_batch_async,
     )
 
-    # Force an early credential failure with a clear message.
-    get_cli_openai_client()
+    try:
+        instructions = validate_instruction_text(args.instructions)
+    except ValueError as exc:
+        logger.error("%s", exc)
+        return 1
 
     evaluation_files = _list_evaluation_source_files()
     if not evaluation_files:
         logger.error("No evaluation files found in %s", EVALUATION_FIXTURES_DIR)
         return 1
+    entry_limit = max_create_data_entries()
+    if len(evaluation_files) > entry_limit:
+        logger.error(
+            "Create Data contains %d fixtures, exceeding "
+            "MAX_CREATE_DATA_ENTRIES=%d.",
+            len(evaluation_files),
+            entry_limit,
+        )
+        return 1
+    if _preflight_cli_sources(
+        [str(path) for path in evaluation_files],
+        max_files=entry_limit,
+    ) is None:
+        return 1
+    if not args.confirm_costs:
+        logger.error(
+            "Explicit workflow-cost confirmation is required. Re-run with "
+            "--confirm-costs to start %d full agentic workflows.",
+            len(evaluation_files),
+        )
+        return 1
+
+    # Force an early credential failure only after all local cost preflights.
+    get_cli_openai_client()
 
     used_folder_names: set[str] = set()
     entries: list[dict[str, Any]] = []
@@ -405,7 +533,7 @@ def _cmd_batch(args: argparse.Namespace) -> int:
     now = _workflow_now()
     batch_jobs[batch_id] = {
         "status": "starting",
-        "prompt": (args.instructions or "").strip(),
+        "prompt": instructions,
         "totalFiles": len(entries),
         "completedFiles": 0,
         "failedFiles": 0,
@@ -415,12 +543,13 @@ def _cmd_batch(args: argparse.Namespace) -> int:
         "entries": entries,
         "summaryFile": "",
         "error": "",
+        "projectedWorkflows": len(entries),
         "created_at": now,
         "updated_at": now,
     }
 
     logger.info("Create-data batch %s: %d file(s)", batch_id, len(entries))
-    asyncio.run(run_create_data_batch_async(batch_id))
+    asyncio.run(_run_cli_async(run_create_data_batch_async(batch_id)))
 
     batch = batch_jobs[batch_id]
     logger.info("BATCH COMPLETE (%s)", batch.get("status", "unknown"))
@@ -432,36 +561,64 @@ def _cmd_batch(args: argparse.Namespace) -> int:
         batch.get("failedFiles", 0),
         batch.get("cancelledFiles", 0),
     )
-    for entry in _summarize_batch_entries(batch.get("entries", [])):
-        logger.info("  [%s] %s -> %s", entry["status"], entry["name"], entry["outputFolder"])
+    for index, entry in enumerate(
+        _summarize_batch_entries(batch.get("entries", [])),
+        start=1,
+    ):
+        logger.info("  Entry %d: %s", index, entry["status"])
     return 0 if batch.get("failedFiles", 0) == 0 and batch.get("status") == "completed" else 1
 
 
 def _cmd_eval(args: argparse.Namespace) -> int:
     """Eval-only batch over prior runs or PDF pairs (POST /api/eval-batch/start)."""
+    from backend.src.api.eval_batch import _prior_run_question_count
     from backend.src.api.state import (
         _summarize_eval_batch_entries,
         _workflow_now,
         eval_batch_jobs,
         run_eval_batch_async,
     )
-    from backend.src.safety import safe_stem
-
-    get_cli_openai_client()
 
     now = _workflow_now()
     batch_id = str(uuid.uuid4())
+    entry_limit = max_eval_batch_entries()
+    item_budget = max_eval_batch_items()
+    grader_count = len(question_level_criteria())
 
     if args.runs:
+        if len(args.runs) > entry_limit:
+            logger.error(
+                "Eval batch has %d runs, exceeding MAX_EVAL_BATCH_ENTRIES=%d.",
+                len(args.runs),
+                entry_limit,
+            )
+            return 1
         entries = []
+        seen_labels: set[str] = set()
+        projected_items = 0
         for folder_name in args.runs:
-            clean = safe_stem(str(folder_name), fallback="")
-            if not clean:
-                continue
-            run_dir = OUTPUTS_DIR / clean
-            if not run_dir.is_dir() or not (run_dir / "final_result.json").exists():
+            try:
+                run_dir = _resolve_output_folder(str(folder_name))
+            except (ValueError, FileNotFoundError):
                 logger.error("Run not found (needs final_result.json): %s", folder_name)
                 return 1
+            if not (run_dir / "final_result.json").is_file():
+                logger.error("Run not found (needs final_result.json): %s", folder_name)
+                return 1
+            clean = _relative_output_folder(run_dir)
+            if clean in seen_labels:
+                continue
+            seen_labels.add(clean)
+            try:
+                question_count = _prior_run_question_count(run_dir, clean)
+            except Exception as exc:
+                logger.error(
+                    "Cannot preflight evaluation input %s (%s)",
+                    clean,
+                    safe_exception_category(exc),
+                )
+                return 1
+            projected_items += question_count
             entries.append(
                 {
                     "name": clean,
@@ -471,12 +628,25 @@ def _cmd_eval(args: argparse.Namespace) -> int:
                     "itemsEvaluated": 0,
                     "outputFolder": "",
                     "error": "",
+                    "questionCount": question_count,
                 }
             )
         if not entries:
             logger.error("No valid runs to evaluate")
             return 1
+        if projected_items > item_budget:
+            logger.error(
+                "Selected runs contain %d questions, exceeding "
+                "MAX_EVAL_BATCH_ITEMS=%d.",
+                projected_items,
+                item_budget,
+            )
+            return 1
+        projected_extraction_files = 0
+        projected_extraction_calls = 0
+        projected_bootstrap_calls = 0
         batch = {
+            "id": batch_id,
             "status": "starting",
             "mode": "prior_runs",
             "totalFiles": len(entries),
@@ -487,24 +657,31 @@ def _cmd_eval(args: argparse.Namespace) -> int:
             "outputFolder": "",
             "entries": entries,
             "error": "",
-            "created_at": now,
-            "updated_at": now,
         }
     else:
         pairs = args.pairs or []
         if len(pairs) < 2:
             logger.error("--pairs needs a source PDF followed by one or more generated PDFs")
             return 1
-        source_pdf = Path(pairs[0])
-        if not source_pdf.exists():
-            logger.error("Source PDF not found: %s", source_pdf)
+        if len(pairs) - 1 > entry_limit:
+            logger.error(
+                "Eval batch has %d generated PDFs, exceeding "
+                "MAX_EVAL_BATCH_ENTRIES=%d.",
+                len(pairs) - 1,
+                entry_limit,
+            )
             return 1
+        validated_pdfs = _preflight_cli_sources(
+            [str(path) for path in pairs],
+            allowed_extensions={".pdf"},
+            max_files=entry_limit + 1,
+        )
+        if validated_pdfs is None:
+            return 1
+        source_pdf = Path(validated_pdfs[0])
         entries = []
-        for gen in pairs[1:]:
+        for gen in validated_pdfs[1:]:
             gen_path = Path(gen)
-            if not gen_path.exists():
-                logger.error("Generated PDF not found: %s", gen_path)
-                return 1
             entries.append(
                 {
                     "name": gen_path.name,
@@ -517,7 +694,12 @@ def _cmd_eval(args: argparse.Namespace) -> int:
                     "error": "",
                 }
             )
+        projected_items = item_budget
+        projected_extraction_files = len(entries) + 1
+        projected_extraction_calls = projected_extraction_files * 2
+        projected_bootstrap_calls = projected_extraction_files
         batch = {
+            "id": batch_id,
             "status": "starting",
             "mode": "upload",
             "source_pdf_path": str(source_pdf),
@@ -530,22 +712,54 @@ def _cmd_eval(args: argparse.Namespace) -> int:
             "outputFolder": "",
             "entries": entries,
             "error": "",
+        }
+
+    projected_grader_calls = projected_items * grader_count
+    if not args.confirm_costs:
+        logger.error(
+            "Explicit evaluation-cost confirmation is required. Re-run with "
+            "--confirm-costs to allow up to %d grader calls "
+            "(%d items x %d graders, %d tokens per grader call).",
+            projected_grader_calls,
+            projected_items,
+            grader_count,
+            grader_max_completion_tokens(),
+        )
+        return 1
+
+    batch.update(
+        {
+            "evaluationItemBudget": item_budget,
+            "projectedEvaluationItems": projected_items,
+            "graderCount": grader_count,
+            "graderMaxCompletionTokens": grader_max_completion_tokens(),
+            "projectedGraderCalls": projected_grader_calls,
+            "projectedExtractionFiles": projected_extraction_files,
+            "projectedExtractionCalls": projected_extraction_calls,
+            "projectedBootstrapCalls": projected_bootstrap_calls,
+            "reservedEvaluationItems": 0,
             "created_at": now,
             "updated_at": now,
         }
+    )
 
+    # No provider client is created until all local caps and cost consent pass.
+    get_cli_openai_client()
     eval_batch_jobs[batch_id] = batch
     logger.info("Eval batch %s (%s): %d item(s)", batch_id, batch["mode"], len(entries))
-    asyncio.run(run_eval_batch_async(batch_id))
+    asyncio.run(_run_cli_async(run_eval_batch_async(batch_id)))
 
     batch = eval_batch_jobs[batch_id]
     logger.info("EVAL BATCH COMPLETE (%s)", batch.get("status", "unknown"))
     logger.info("Output folder: %s", batch.get("outputFolder", ""))
-    for entry in _summarize_eval_batch_entries(batch.get("entries", [])):
+    for index, entry in enumerate(
+        _summarize_eval_batch_entries(batch.get("entries", [])),
+        start=1,
+    ):
         logger.info(
-            "  [%s] %s  score=%s  items=%s",
+            "  Entry %d: %s  score=%s  items=%s",
+            index,
             entry["status"],
-            entry["name"],
             entry.get("score"),
             entry.get("itemsEvaluated"),
         )
@@ -605,7 +819,10 @@ def _cmd_show(args: argparse.Namespace) -> int:
     try:
         data = json.loads(result_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        logger.error("Failed to read final_result.json: %s", exc)
+        logger.error(
+            "Failed to read final_result.json (%s)",
+            safe_exception_category(exc),
+        )
         return 1
 
     config = data.get("config") or {}
@@ -629,7 +846,10 @@ def _cmd_show(args: argparse.Namespace) -> int:
             print(f"Evaluation overall_score: {report.get('overall_score')}")
             print(f"Items evaluated: {report.get('items_evaluated')}")
         except Exception as exc:
-            logger.warning("Could not read evaluation report: %s", exc)
+            logger.warning(
+                "Could not read evaluation report (%s)",
+                safe_exception_category(exc),
+            )
     else:
         print("Evaluation: (no report)")
     return 0
@@ -738,8 +958,9 @@ def build_parser() -> argparse.ArgumentParser:
         "-n",
         "--num-questions",
         type=int,
+        choices=range(1, 6),
         default=1,
-        help="Isomorphic questions per source question",
+        help="Isomorphic questions per source question (1-5)",
     )
     p_run.add_argument("--theme", default="", help="Theme label (see `list themes`)")
     p_run.add_argument(
@@ -757,8 +978,20 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="AGENT",
         help="Stop after this stage. Choices: " + ", ".join(stop_choices),
     )
-    p_run.add_argument("--no-eval", dest="no_eval", action="store_true", help="Skip evaluation")
-    p_run.set_defaults(func=_cmd_run)
+    evaluation_group = p_run.add_mutually_exclusive_group()
+    evaluation_group.add_argument(
+        "--eval",
+        dest="run_evaluation",
+        action="store_true",
+        help="Run the paid OpenAI rubric evaluation after generation",
+    )
+    evaluation_group.add_argument(
+        "--no-eval",
+        dest="run_evaluation",
+        action="store_false",
+        help=argparse.SUPPRESS,
+    )
+    p_run.set_defaults(func=_cmd_run, run_evaluation=False)
 
     # rerun-from-agent --------------------------------------------------------
     p_rerun = subparsers.add_parser(
@@ -775,7 +1008,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Start stage. Choices: " + ", ".join(llm_choices),
     )
     p_rerun.add_argument("-i", "--instructions", default="", help="Extra generation instructions")
-    p_rerun.set_defaults(func=_cmd_rerun_from_agent)
+    rerun_evaluation_group = p_rerun.add_mutually_exclusive_group()
+    rerun_evaluation_group.add_argument(
+        "--eval",
+        dest="run_evaluation",
+        action="store_true",
+        help="Run the paid OpenAI rubric evaluation after generation",
+    )
+    rerun_evaluation_group.add_argument(
+        "--no-eval",
+        dest="run_evaluation",
+        action="store_false",
+        help=argparse.SUPPRESS,
+    )
+    p_rerun.set_defaults(func=_cmd_rerun_from_agent, run_evaluation=False)
 
     # from-agent-input --------------------------------------------------------
     p_fai = subparsers.add_parser(
@@ -792,11 +1038,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_fai.add_argument("--input", required=True, metavar="FILE", help="Saved agent-input JSON path")
     p_fai.add_argument("-i", "--instructions", default="", help="Extra generation instructions")
-    p_fai.set_defaults(func=_cmd_from_agent_input)
+    input_evaluation_group = p_fai.add_mutually_exclusive_group()
+    input_evaluation_group.add_argument(
+        "--eval",
+        dest="run_evaluation",
+        action="store_true",
+        help="Run the paid OpenAI rubric evaluation after generation",
+    )
+    input_evaluation_group.add_argument(
+        "--no-eval",
+        dest="run_evaluation",
+        action="store_false",
+        help=argparse.SUPPRESS,
+    )
+    p_fai.set_defaults(func=_cmd_from_agent_input, run_evaluation=False)
 
     # batch -------------------------------------------------------------------
     p_batch = subparsers.add_parser("batch", help="Create-Data batch over data/evaluation")
     p_batch.add_argument("-i", "--instructions", default="", help="Prompt applied to every file")
+    p_batch.add_argument(
+        "--confirm-costs",
+        action="store_true",
+        help="Acknowledge that this starts every bounded fixture workflow",
+    )
     p_batch.set_defaults(func=_cmd_batch)
 
     # eval --------------------------------------------------------------------
@@ -808,6 +1072,11 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         metavar="PDF",
         help="Source PDF followed by one or more generated PDFs",
+    )
+    p_eval.add_argument(
+        "--confirm-costs",
+        action="store_true",
+        help="Acknowledge the bounded Extracter and multi-grader model calls",
     )
     p_eval.set_defaults(func=_cmd_eval)
 
@@ -908,11 +1177,33 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(0)
 
     try:
-        exit_code = func(args)
+        if args.command in {
+            "run",
+            "rerun-from-agent",
+            "from-agent-input",
+            "batch",
+            "eval",
+        }:
+            with cli_paid_work_guard():
+                exit_code = func(args)
+        elif args.command in {"compare-professor", "zip", "improve"}:
+            with cli_artifact_mutation_guard():
+                exit_code = func(args)
+        elif args.command == "show":
+            with cli_artifact_access_guard():
+                exit_code = func(args)
+        else:
+            exit_code = func(args)
     except SystemExit:
         raise
     except Exception as exc:
-        logger.error("%s failed: %s", args.command or "run", exc)
+        logger.error(
+            "%s",
+            safe_exception_message(
+                exc,
+                operation=f"{args.command or 'run'} command",
+            ),
+        )
         raise SystemExit(1) from exc
 
     raise SystemExit(int(exit_code or 0))

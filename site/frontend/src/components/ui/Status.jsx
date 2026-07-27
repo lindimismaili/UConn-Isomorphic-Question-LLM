@@ -64,10 +64,27 @@ export function LogList({ entries = [], emptyText = 'Logs will appear here when 
  * @param {boolean} [props.error] - Adds `.modal-empty-state-error` (modal variant).
  * @param {import('react').ReactNode} props.children
  */
-export function EmptyState({ variant = 'log', error = false, className = '', children }) {
+export function EmptyState({
+  variant = 'log',
+  error = false,
+  className = '',
+  children,
+  role,
+  'aria-live': ariaLive,
+  ...rest
+}) {
   const base = variant === 'modal' ? 'modal-empty-state' : 'log-empty-state';
   const classes = [base, error ? 'modal-empty-state-error' : '', className]
     .filter(Boolean)
     .join(' ');
-  return <div className={classes}>{children}</div>;
+  return (
+    <div
+      className={classes}
+      role={error ? 'alert' : role}
+      aria-live={error ? 'assertive' : ariaLive}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
 }

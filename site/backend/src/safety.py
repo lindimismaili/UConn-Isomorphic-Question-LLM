@@ -10,9 +10,57 @@ from pathlib import Path
 from typing import Any
 
 _SAFE_NAME_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
+_SAFE_OPERATION_PATTERN = re.compile(r"[^A-Za-z0-9 ._/-]+")
 
 LATEX_SUFFIXES = {".tex"}
 PDF_SUFFIXES = {".pdf"}
+MAX_INSTRUCTION_CHARS = 20_000
+
+
+def validate_instruction_text(value: str | None) -> str:
+    """Return a canonical bounded instruction before cost or persistence.
+
+    The same ceiling is enforced again by the input guardrail for direct engine
+    callers. API and CLI boundaries call this first so an oversized form field
+    is never fingerprinted, persisted, or allowed to trigger provider setup.
+    """
+    instruction = (value or "").strip()
+    if len(instruction) > MAX_INSTRUCTION_CHARS:
+        raise ValueError(
+            f"Instruction must be at most {MAX_INSTRUCTION_CHARS} characters."
+        )
+    return instruction
+
+
+def safe_exception_category(exc: BaseException) -> str:
+    """Return a bounded exception class name without rendering its message.
+
+    Provider and model exceptions can embed raw model output, request data, or
+    credentials in ``str(exc)``. Public state, durable artifacts, and routine
+    logs should retain only this diagnostic category.
+    """
+    declared_category = getattr(exc, "safe_category", "")
+    raw_category = (
+        declared_category
+        if isinstance(declared_category, str) and declared_category
+        else type(exc).__name__
+    )
+    category = _SAFE_NAME_PATTERN.sub("", raw_category)[:80]
+    return category or "Exception"
+
+
+def safe_exception_message(exc: BaseException, *, operation: str) -> str:
+    """Describe a failed operation without including exception-controlled text."""
+    safe_operation = _SAFE_OPERATION_PATTERN.sub("", operation).strip()[:120]
+    return f"{safe_operation or 'Operation'} failed ({safe_exception_category(exc)})"
+
+
+class SanitizedProviderError(ValueError):
+    """A provider failure whose message and retained category are safe to surface."""
+
+    def __init__(self, *, operation: str, cause: BaseException) -> None:
+        self.safe_category = safe_exception_category(cause)
+        super().__init__(safe_exception_message(cause, operation=operation))
 
 
 def utc_run_timestamp() -> str:
@@ -117,4 +165,3 @@ def write_json(path: Path, payload: Any) -> None:
     """Write a JSON payload with stable formatting."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-

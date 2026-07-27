@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { homedir } from "node:os";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
@@ -11,10 +11,14 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoDir = resolve(scriptDir, "..");
 const siteDir = join(repoDir, "site");
 const frontendDir = join(siteDir, "frontend");
+const previewOriginsScript = join(scriptDir, "preview_origins.py");
 const isWindows = process.platform === "win32";
 const npmCommand = isWindows ? (process.env.ComSpec ?? "cmd.exe") : "npm";
 const npmArgs = isWindows ? ["/d", "/s", "/c", "npm"] : [];
-const mode = process.argv[2] ?? "--dev";
+let mode = "--dev";
+let frontendHost = "127.0.0.1";
+let lanMode = false;
+let showHelp = false;
 const localDomain = process.env.LOCAL_DOMAIN ?? "localhost";
 const backendHost = process.env.BACKEND_HOST ?? "127.0.0.1";
 const preferredBackendPort = numberFromEnv("BACKEND_PORT", 8000);
@@ -35,12 +39,55 @@ function fail(message) {
   process.exitCode = 1;
 }
 
+function parseArguments(args) {
+  let mode = "--dev";
+  let modeWasSet = false;
+  let lanMode = false;
+  let showHelp = false;
+
+  for (const argument of args) {
+    if (argument === "--dev" || argument === "dev") {
+      if (modeWasSet && mode !== "--dev") throw new Error("Choose only one preview mode.");
+      mode = "--dev";
+      modeWasSet = true;
+    } else if (argument === "--web" || argument === "web") {
+      if (modeWasSet && mode !== "--web") throw new Error("Choose only one preview mode.");
+      mode = "--web";
+      modeWasSet = true;
+    } else if (argument === "--lan") {
+      lanMode = true;
+    } else if (argument === "--help" || argument === "-h") {
+      showHelp = true;
+    } else {
+      throw new Error(`Unknown preview option: ${argument}`);
+    }
+  }
+
+  if (mode === "--web" && lanMode) throw new Error("--lan is only supported with --dev.");
+  return {
+    mode,
+    frontendHost: lanMode ? "0.0.0.0" : "127.0.0.1",
+    lanMode,
+    showHelp,
+  };
+}
+
 function numberFromEnv(name, fallback) {
   const value = Number.parseInt(process.env[name] ?? `${fallback}`, 10);
   if (!Number.isInteger(value) || value < 1 || value > 65535) {
     throw new Error(`${name} must be a port number from 1 to 65535.`);
   }
   return value;
+}
+
+function requireLoopbackBackendHost() {
+  const normalizedHost = backendHost.trim().toLowerCase().replace(/^\[|\]$/g, "");
+  if (!["127.0.0.1", "::1", "localhost"].includes(normalizedHost)) {
+    throw new Error(
+      "BACKEND_HOST must remain loopback-only for preview. "
+      + "Use --lan to expose the Vite proxy with an exact origin and Access Gate token.",
+    );
+  }
 }
 
 function commandWorks(command, args = ["--version"]) {
@@ -53,44 +100,46 @@ function pythonExecutable(venvDir) {
 
 function pythonCandidates() {
   const candidates = [];
-  if (process.env.VIRTUAL_ENV) {
-    candidates.push({ command: pythonExecutable(process.env.VIRTUAL_ENV), args: [], managed: true });
-  }
-
-  candidates.push({ command: pythonExecutable(join(siteDir, ".venv")), args: [], managed: true });
-  candidates.push({ command: pythonExecutable(join(repoDir, ".venv")), args: [], managed: true });
-
-  const envsDir = join(homedir(), "envs");
-  if (existsSync(envsDir)) {
-    const sharedEnvironments = readdirSync(envsDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && entry.name.startsWith("main_py"))
-      .map((entry) => entry.name)
-      .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }));
-    for (const environmentName of sharedEnvironments) {
-      candidates.push({ command: pythonExecutable(join(envsDir, environmentName)), args: [], managed: true });
-    }
-  }
-
   if (isWindows) {
-    candidates.push({ command: "py", args: ["-3.12"], managed: false });
-    candidates.push({ command: "py", args: ["-3"], managed: false });
+    candidates.push({ command: "py", args: ["-3.12"] });
+    candidates.push({ command: "py", args: ["-3"] });
   }
-  candidates.push({ command: "python3.12", args: [], managed: false });
-  candidates.push({ command: "python3", args: [], managed: false });
-  candidates.push({ command: "python", args: [], managed: false });
+  candidates.push({ command: "python3.12", args: [] });
+  candidates.push({ command: "python3", args: [] });
+  candidates.push({ command: "python", args: [] });
   return candidates;
 }
 
-function findPython() {
+function findBootstrapPython() {
+  const versionProbe = [
+    "-c",
+    "import sys; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] < (3, 14) else 1)",
+  ];
   for (const candidate of pythonCandidates()) {
-    if ((candidate.command.includes("/") || candidate.command.includes("\\")) && !existsSync(candidate.command)) {
-      continue;
-    }
-    if (commandWorks(candidate.command, [...candidate.args, "--version"])) {
+    if (commandWorks(candidate.command, [...candidate.args, ...versionProbe])) {
       return candidate;
     }
   }
-  throw new Error("Python 3 was not found. Install Python 3.12, then run the preview task again.");
+  throw new Error(
+    "Python 3.10-3.13 was not found. Install Python 3.12, then run the preview task again.",
+  );
+}
+
+function projectPython() {
+  const venvDir = join(siteDir, ".venv");
+  const python = { command: pythonExecutable(venvDir), args: [] };
+  if (existsSync(python.command) && commandWorks(python.command, ["--version"])) return python;
+
+  info(`Creating project virtual environment at ${venvDir}.`);
+  if (commandWorks("uv")) {
+    runSync("uv", ["venv", "--python", "3.12", venvDir]);
+  } else {
+    pythonRunSync(findBootstrapPython(), ["-m", "venv", venvDir]);
+  }
+  if (!existsSync(python.command) || !commandWorks(python.command, ["--version"])) {
+    throw new Error(`Project virtual environment creation failed at ${venvDir}.`);
+  }
+  return python;
 }
 
 function runSync(command, args, options = {}) {
@@ -110,36 +159,75 @@ function pythonRunSync(python, args, options = {}) {
 }
 
 function pythonHasBackendDependencies(python) {
-  const result = spawnSync(
+  const importResult = spawnSync(
     python.command,
     [...python.args, "-c", "import fastapi, uvicorn; from agents.exceptions import ModelRefusalError"],
+    { cwd: siteDir, env: process.env, stdio: "ignore", shell: false },
+  );
+  const checkResult = spawnSync(
+    python.command,
+    [...python.args, "-m", "pip", "check"],
+    { cwd: siteDir, env: process.env, stdio: "ignore", shell: false },
+  );
+  return importResult.status === 0 && checkResult.status === 0;
+}
+
+function fileDigest(path) {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+function pythonHasOpenAIKey(python) {
+  const probe = [
+    "import os",
+    "from backend.src.bootstrap import load_dotenv",
+    "from backend.src.paths import ENV_PATH",
+    "load_dotenv(ENV_PATH)",
+    "raise SystemExit(0 if os.getenv('OPENAI_API_KEY') else 1)",
+  ].join("; ");
+  const result = spawnSync(
+    python.command,
+    [...python.args, "-c", probe],
     { cwd: siteDir, env: process.env, stdio: "ignore", shell: false },
   );
   return result.status === 0;
 }
 
 function ensureDependencies() {
-  if (!existsSync(join(frontendDir, "node_modules"))) {
-    const installCommand = existsSync(join(frontendDir, "package-lock.json")) ? "ci" : "install";
-    info("Installing frontend dependencies.");
-    runSync(npmCommand, [...npmArgs, "-C", frontendDir, installCommand, "--no-audit", "--no-fund"]);
+  const frontendLock = join(frontendDir, "package-lock.json");
+  const frontendMarker = join(frontendDir, "node_modules", ".package-lock.sha256");
+  const frontendDigest = fileDigest(frontendLock);
+  const frontendCurrent = existsSync(frontendMarker)
+    && readFileSync(frontendMarker, "utf8").trim() === frontendDigest;
+  if (!frontendCurrent) {
+    info("Installing locked frontend dependencies.");
+    runSync(npmCommand, [...npmArgs, "-C", frontendDir, "ci", "--no-audit", "--no-fund"]);
+    writeFileSync(frontendMarker, `${frontendDigest}\n`, { encoding: "utf8", mode: 0o600 });
   }
 
-  let python = findPython();
-  if (!pythonHasBackendDependencies(python)) {
-    if (!python.managed) {
-      const venvDir = join(siteDir, ".venv");
-      info(`Creating project virtual environment at ${venvDir}.`);
-      pythonRunSync(python, ["-m", "venv", venvDir]);
-      python = { command: pythonExecutable(venvDir), args: [], managed: true };
+  const python = projectPython();
+  const backendLock = join(siteDir, "backend", "requirements.txt");
+  const backendMarker = join(siteDir, ".venv", ".requirements.sha256");
+  const backendDigest = fileDigest(backendLock);
+  const backendCurrent = existsSync(backendMarker)
+    && readFileSync(backendMarker, "utf8").trim() === backendDigest
+    && pythonHasBackendDependencies(python);
+  if (!backendCurrent) {
+    info("Installing locked backend dependencies into site/.venv.");
+    pythonRunSync(
+      python,
+      ["-m", "pip", "install", "--require-hashes", "--requirement", backendLock],
+    );
+    if (!pythonHasBackendDependencies(python)) {
+      throw new Error("The project virtual environment failed its dependency consistency check.");
     }
-    info("Installing backend dependencies into the selected virtual environment.");
-    pythonRunSync(python, ["-m", "pip", "install", "-r", join(siteDir, "backend", "requirements.txt")]);
+    writeFileSync(backendMarker, `${backendDigest}\n`, { encoding: "utf8", mode: 0o600 });
   }
 
-  const envPath = join(siteDir, ".env");
-  if (!existsSync(envPath) || !/^OPENAI_API_KEY=.+$/m.test(readFileSync(envPath, "utf8"))) {
-    warn("site/.env is missing OPENAI_API_KEY. The site can start, but workflows will fail until it is set.");
+  if (!pythonHasOpenAIKey(python)) {
+    warn(
+      "OPENAI_API_KEY is not configured in the process environment, site/.env.local, or site/.env. " +
+      "The site can start, but workflows will fail until it is set.",
+    );
   }
   return python;
 }
@@ -214,9 +302,48 @@ async function waitForBackend(port) {
   throw new Error(`Backend did not become healthy at ${url}.`);
 }
 
-function allowedOrigins(devPort, webPort) {
-  const previewOrigins = [`http://${localDomain}:${devPort}`, `http://${localDomain}:${webPort}`];
-  return [process.env.ALLOWED_ORIGINS, ...previewOrigins].filter(Boolean).join(",");
+function previewOriginConfig(python, devPort, webPort, includeLanOrigins) {
+  const args = [
+    ...python.args,
+    previewOriginsScript,
+    "--site-dir",
+    siteDir,
+    "--local-domain",
+    localDomain,
+    "--dev-port",
+    `${devPort}`,
+    "--web-port",
+    `${webPort}`,
+  ];
+  if (includeLanOrigins) args.push("--lan");
+  const result = spawnSync(python.command, args, {
+    cwd: repoDir,
+    env: process.env,
+    encoding: "utf8",
+    shell: false,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.trim() || `Preview origin validation exited with code ${result.status}.`,
+    );
+  }
+  let config;
+  try {
+    config = JSON.parse(result.stdout);
+  } catch {
+    throw new Error("Preview origin validation returned invalid JSON.");
+  }
+  if (
+    typeof config?.allowedOriginsValue !== "string"
+    || !Array.isArray(config?.lanOrigins)
+    || config.lanOrigins.some((origin) => typeof origin !== "string")
+    || typeof config?.accessToken !== "string"
+    || typeof config?.accessTokenGenerated !== "boolean"
+  ) {
+    throw new Error("Preview origin validation returned an invalid configuration.");
+  }
+  return config;
 }
 
 async function runDevPreview() {
@@ -224,21 +351,44 @@ async function runDevPreview() {
   const backendPort = await selectPort(preferredBackendPort, "backend");
   const devPort = await selectPort(preferredDevPort, "dev preview");
   const webPort = preferredWebPort;
-  const env = { ...process.env, ALLOWED_ORIGINS: allowedOrigins(devPort, webPort) };
+  const originConfig = previewOriginConfig(python, devPort, webPort, lanMode);
+  const backendEnv = {
+    ...process.env,
+    ALLOWED_ORIGINS: originConfig.allowedOriginsValue,
+  };
+  if (lanMode) backendEnv.APP_ACCESS_TOKEN = originConfig.accessToken;
 
   info(`Starting backend at http://${localDomain}:${backendPort}.`);
   const backend = spawnChild(
     python.command,
     [...python.args, "-m", "uvicorn", "backend.src.server:app", "--host", backendHost, "--port", `${backendPort}`, "--reload"],
-    { cwd: siteDir, env },
+    { cwd: siteDir, env: backendEnv },
   );
   await waitForBackend(backendPort);
 
+  if (lanMode) {
+    warn("LAN mode enabled: Vite will listen on all interfaces. Use only on a trusted network.");
+    for (const origin of originConfig.lanOrigins) {
+      info(`LAN preview URL: ${origin}`);
+    }
+    if (originConfig.accessTokenGenerated) {
+      warn("No APP_ACCESS_TOKEN was configured; generated a one-session LAN access token.");
+      info(`One-time Access Gate token: ${originConfig.accessToken}`);
+      info("Paste that token into the browser Access Gate. It expires when this preview stops.");
+    } else {
+      info("Access Gate: use the configured APP_ACCESS_TOKEN (its value is not displayed).");
+    }
+  }
   info(`Starting hot reload dev preview at http://${localDomain}:${devPort}.`);
+  const frontendEnv = {
+    ...process.env,
+    VITE_BACKEND_URL: `http://${backendHost}:${backendPort}`,
+  };
+  delete frontendEnv.APP_ACCESS_TOKEN;
   const frontend = spawnChild(
     npmCommand,
-    [...npmArgs, "-C", frontendDir, "run", "dev:ui", "--", "--host", "0.0.0.0", "--port", `${devPort}`, "--strictPort", "--force"],
-    { env: { ...env, VITE_BACKEND_URL: `http://${backendHost}:${backendPort}` } },
+    [...npmArgs, "-C", frontendDir, "run", "dev:ui", "--", "--host", frontendHost, "--port", `${devPort}`, "--strictPort", "--force"],
+    { env: frontendEnv },
   );
   try {
     await waitForExit(frontend);
@@ -252,11 +402,17 @@ async function runWebPreview() {
   info(`Building frontend into ${join(siteDir, "dist")}.`);
   runSync(npmCommand, [...npmArgs, "-C", frontendDir, "run", "build"]);
   const webPort = await selectPort(preferredWebPort, "built web preview");
+  const originConfig = previewOriginConfig(
+    python,
+    preferredDevPort,
+    webPort,
+    false,
+  );
   const env = {
     ...process.env,
     HOST: backendHost,
     PORT: `${webPort}`,
-    ALLOWED_ORIGINS: allowedOrigins(preferredDevPort, webPort),
+    ALLOWED_ORIGINS: originConfig.allowedOriginsValue,
   };
 
   info(`Starting built web preview at http://${localDomain}:${webPort}.`);
@@ -265,9 +421,13 @@ async function runWebPreview() {
 }
 
 function printHelp() {
-  console.log("Usage: node deploy/preview.mjs [--dev|--web]");
+  console.log("Usage: node deploy/preview.mjs [--dev|--web] [--lan]");
   console.log(`  --dev  Run backend plus Vite hot reload at http://${localDomain}:${preferredDevPort}`);
   console.log(`  --web  Build frontend and serve it through FastAPI at http://${localDomain}:${preferredWebPort}`);
+  console.log("  --lan  Bind the Vite dev server to all interfaces (dev only; trusted networks only)");
+  console.log("         The launcher prints and authorizes the exact detected LAN URL and enforces an Access Gate token.");
+  console.log("         Set PREVIEW_LAN_HOST to a reachable LAN hostname or IPv4 address if detection fails.");
+  console.log("         Without --lan, preview servers listen on 127.0.0.1 only.");
 }
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
@@ -279,10 +439,13 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 process.on("exit", stopChildren);
 
 try {
-  if (mode === "--dev" || mode === "dev") await runDevPreview();
-  else if (mode === "--web" || mode === "web") await runWebPreview();
-  else if (mode === "--help" || mode === "-h") printHelp();
-  else throw new Error(`Unknown preview mode: ${mode}`);
+  ({ mode, frontendHost, lanMode, showHelp } = parseArguments(process.argv.slice(2)));
+  if (showHelp) printHelp();
+  else {
+    requireLoopbackBackendHost();
+    if (mode === "--dev") await runDevPreview();
+    else if (mode === "--web") await runWebPreview();
+  }
 } catch (error) {
   stopChildren();
   fail(error instanceof Error ? error.message : String(error));

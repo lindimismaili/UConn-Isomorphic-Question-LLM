@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import AgentCard from '../../components/AgentCard.jsx';
 import {
   Avatar,
   Banner,
-  Button,
   Card,
   CardBody,
   CardHeader,
@@ -17,54 +15,11 @@ import {
   TypingIndicator,
 } from '../../components/ui/index.js';
 import { HEADER_MOTIF, UConnMark } from '../../sections/SiteChrome.jsx';
-import { IconSend, IconUpload } from '../../components/Icons.jsx';
-import { Row, Spec, Stack } from '../Specimen.jsx';
-import { MANIFEST } from '../manifest.jsx';
+import { Spec, Stack } from '../Specimen.jsx';
+import { MANIFEST, STEPPER_NODES } from '../manifest.jsx';
 
 /** Reuse the Modal entry's live Specimen (manifest.jsx) instead of duplicating an opener. */
 const ModalSpecimen = MANIFEST.find((entry) => entry.name === 'Modal').Specimen;
-
-/** A 10-node pipeline fixture (with guardrails) for the chat-first pattern. */
-const CHAT_STEPPER_NODES = [
-  { key: 'setup', label: 'Setup', status: 'completed', kind: 'runtime' },
-  { key: 'input_guardrail', label: 'Input Guardrail', status: 'completed', kind: 'guardrail' },
-  { key: 'normalizer', label: 'Normalizer', status: 'completed', kind: 'agent' },
-  { key: 'extracter', label: 'Extracter', status: 'completed', kind: 'agent' },
-  { key: 'content_guardrail', label: 'Content Guardrail', status: 'completed', kind: 'guardrail' },
-  { key: 'verifier', label: 'Verifier', status: 'completed', kind: 'agent' },
-  { key: 'generator', label: 'Generator', status: 'thinking', kind: 'agent' },
-  { key: 'latexifier', label: 'Latexifier', status: 'queued', kind: 'agent' },
-  { key: 'evaluation', label: 'Evaluation', status: 'queued', kind: 'agent' },
-  { key: 'output', label: 'Output', status: 'queued', kind: 'runtime' },
-];
-
-const AGENT_FIXTURES = [
-  {
-    status: 'completed',
-    name: 'Extracter',
-    description: 'Reads uploaded files and extracts source questions.',
-    kind: 'agent',
-    model: 'gpt-5.5',
-    reasoningLevel: 'medium',
-    executionTime: 8.42,
-  },
-  {
-    status: 'thinking',
-    name: 'Generator',
-    description: 'Creates isomorphic questions from the verified set.',
-    kind: 'agent',
-    model: 'gpt-5.5',
-    reasoningLevel: 'medium',
-  },
-  {
-    status: 'errored',
-    name: 'Latexifier',
-    description: 'Produces LaTeX and compiles the PDF.',
-    kind: 'agent',
-    model: 'gpt-5.5',
-    reasoningLevel: 'medium',
-  },
-];
 
 const SAMPLE_LOGS = [
   { id: 1, level: 'info', time: '12:00:01', message: 'Workflow started.' },
@@ -86,7 +41,7 @@ export default function Patterns() {
           <div className="chat-shell">
             <div className="chat-rail">
               <Stepper
-                nodes={CHAT_STEPPER_NODES}
+                nodes={STEPPER_NODES}
                 onNodeClick={() => {}}
                 activeKey="generator"
               />
@@ -165,31 +120,6 @@ export default function Patterns() {
               </div>
             </Spec>
           </Stack>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader title="Prompt actions row" subtitle="Theme select + Upload + Send share one 56px tier and never stack." />
-        <CardBody>
-          <div className="prompt-actions-row" style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
-            <Button variant="secondary" icon={<IconUpload className="btn-icon" />}>
-              <span className="btn-label">Upload Files</span>
-            </Button>
-            <Button variant="primary" icon={<IconSend className="btn-icon" />}>
-              <span>Send</span>
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader title="Agent pipeline node" subtitle="The clickable .agent-card — the one card that lifts on hover. Status drives border/glow/icon." />
-        <CardBody>
-          <Row gap="var(--spacing-lg)" style={{ paddingTop: 8 }}>
-            {AGENT_FIXTURES.map((agent, i) => (
-              <AgentCard key={i} agentKey={`demo-${i}`} agent={agent} onClick={() => {}} />
-            ))}
-          </Row>
         </CardBody>
       </Card>
 

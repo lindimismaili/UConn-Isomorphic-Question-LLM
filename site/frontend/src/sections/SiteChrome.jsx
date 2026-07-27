@@ -7,15 +7,16 @@
  */
 
 import { Banner, PageHeader, Footer, Dropdown } from '../components/ui/index.js';
+import { getSafeDonationUrl } from '../utils/donation.js';
 
 /** Physics-academic motif surfaced behind the navy masthead. */
 export const HEADER_MOTIF = '/assets/physics-motif.svg';
 
-/** The three site modes surfaced by the header mode dropdown. */
+/** Presentation-only views surfaced by the header dropdown. */
 const SITE_MODES = [
-  { value: 'user', label: 'User Mode' },
-  { value: 'teacher', label: 'Teacher Mode' },
-  { value: 'dev', label: 'Dev Mode' },
+  { value: 'user', label: 'User View' },
+  { value: 'teacher', label: 'Teacher View' },
+  { value: 'dev', label: 'Dev View' },
 ];
 
 /** The UConn Physics Research brand mark (right slot of the masthead). */
@@ -36,8 +37,8 @@ export function UConnMark() {
  * @param {object} [props]
  * @param {string} [props.title]
  * @param {import('react').ReactNode} [props.aside] - Override the right slot.
- * @param {'user'|'teacher'|'dev'} [props.mode] - Current site mode.
- * @param {(mode: string) => void} [props.onModeChange] - Renders the mode
+ * @param {'user'|'teacher'|'dev'} [props.mode] - Current presentation view.
+ * @param {(mode: string) => void} [props.onModeChange] - Renders the view
  *   dropdown right after the title when provided.
  */
 export function SiteHeader({ title = 'Isomorphic Question Generator', aside, mode, onModeChange }) {
@@ -53,7 +54,8 @@ export function SiteHeader({ title = 'Isomorphic Question Generator', aside, mod
               className="mode-select"
               variant="onDark"
               size="sm"
-              aria-label="Site mode"
+              aria-label="Interface view; this does not change access permissions"
+              title="Changes the interface view only; it does not grant access"
               value={mode}
               onChange={onModeChange}
               options={SITE_MODES}
@@ -80,18 +82,31 @@ export function SiteBanner({ show, children, detail }) {
 }
 
 /**
- * SiteFooter — the standard footer (attribution + version line).
+ * SiteFooter — the standard footer with an optional PayPal-hosted donation link.
  *
  * @param {object} props
  * @param {import('react').ReactNode} [props.version]
+ * @param {string} [props.donationUrl]
  */
-export function SiteFooter({ version }) {
+export function SiteFooter({ version, donationUrl }) {
+  const safeDonationUrl = getSafeDonationUrl(donationUrl);
   return (
     <Footer>
       <p className="footer-primary">
         UCONN Physics Research - Dr. Xian Wu (2025 - 2026)
       </p>
       <p className="footer-primary">Created by Lindim Ismaili</p>
+      {safeDonationUrl ? (
+        <p className="footer-secondary">
+          <a
+            href={safeDonationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Support this project with PayPal
+          </a>
+        </p>
+      ) : null}
       {version != null ? <p className="footer-secondary">{version}</p> : null}
       {import.meta.env.DEV ? (
         <p className="footer-secondary">

@@ -1,71 +1,77 @@
 ---
 name: run-tests
-description: Run the full test and lint suite for this repo (backend pytest + ruff, frontend vitest + eslint). Use after any code change before committing, or when the user asks to verify tests pass. Reports pass/fail for each suite and surfaces any failures with context.
+description: Run and report this repository's backend tests and lint, frontend tests and lint, production build, and deploy-script syntax checks. Use before commits, releases, or handoff verification.
 ---
+
+```toml
+id = "84c6a249131df963fefc95157786caf5"
+```
 
 # Run full test + lint suite
 
-This repo has two independent test suites that must both pass before committing.
-Run them together; surface any failures with file + line context.
+Run commands from `site/` unless a step explicitly returns to the repository
+root. Use `site/.venv`; do not silently use a shared or global environment.
 
-## Step 1 — Activate the Python environment
-
-```bash
-# From repo root. Use the project venv (py3.12) unless another is active.
-source .venv/bin/activate 2>/dev/null || true
-```
-
-## Step 2 — Backend: pytest + ruff
+## Preflight
 
 ```bash
-# Run from repo root with absolute imports active
-python -m pytest -x --tb=short 2>&1
-python -m ruff check . 2>&1
+cd site
+test -x .venv/bin/python
+test -d frontend/node_modules
 ```
 
-- `pytest` target: all tests under `backend/` (auto-discovered via `pyproject.toml`).
-- `-x` stops on first failure — avoids burying the signal in a long output.
-- `ruff check .` enforces line-length 110, target py310 (see `pyproject.toml`).
+For a clean clone, establish dependencies first with the documented setup:
+Python 3.12 in `site/.venv`,
+`.venv/bin/python -m pip install --require-hashes -r backend/requirements-dev.txt`,
+and `npm -C frontend ci`. The development lock includes the production
+dependencies plus pytest, Ruff, and audit tooling. Do not install project
+packages globally.
 
-## Step 3 — Frontend: vitest + eslint
+The deploy-script lint gate also requires the host `shellcheck` executable.
+CI installs it on the Ubuntu runner. For a local handoff audit, verify
+`command -v shellcheck` first; if it is absent, report that gate as not run
+rather than silently installing an operating-system package.
+
+## Run every gate
 
 ```bash
-npm -C frontend test 2>&1
-npm -C frontend run lint 2>&1
+OPENAI_API_KEY= APP_ACCESS_TOKEN= .venv/bin/python -m pytest
+.venv/bin/python -m ruff check .
+.venv/bin/python -m pip check
+.venv/bin/pip-audit --disable-pip --requirement backend/requirements.txt
+npm -C frontend test
+npm -C frontend run lint -- --max-warnings=0
+npm -C frontend run build
+npm -C frontend audit --omit=dev --audit-level=low
+npm -C frontend audit --audit-level=low
+
+cd ..
+bash -n deploy/deploy.sh deploy/preview.sh
+shellcheck -x deploy/deploy.sh deploy/preview.sh
+node --check deploy/preview.mjs
+site/.venv/bin/python -m py_compile \
+  deploy/backup_restore.py \
+  deploy/preview_origins.py \
+  deploy/runtime_env.py
+git diff --check
+git diff --cached --check
 ```
 
-- `vitest run` (single pass, no watch).
-- Some pre-existing `react-hooks` warnings in `BatchEvalModal.jsx`,
-  `InputToAgentModal.jsx`, and `useBatchEval.js` are not yours — diff to
-  confirm you haven't introduced new ones. Lint must report **0 errors**.
+Forcing both `OPENAI_API_KEY` and `APP_ACCESS_TOKEN` empty is deliberate: local
+environment files must never make an offline test run contact paid provider
+APIs or accidentally exercise an authenticated deployment boundary. Live
+OpenAI and PayPal checks are separate, explicit, operator-authorized handoff
+steps.
 
-## Step 4 — Build check (optional but recommended after CSS/JSX changes)
-
-```bash
-npm -C frontend run build 2>&1 | tail -10
-```
-
-A clean Vite build (exit 0, `✓ built`) confirms no dead imports or syntax errors
-slipped through.
+Do not suppress warnings as “pre-existing” without verifying the current
+baseline. Do not stop after the first backend failure if the user requested a
+complete release report; run independent gates so every failing surface is
+known.
 
 ## Reporting results
 
-Report the counts for each suite:
-
-```
-Backend pytest:  57/57 passed   ✓
-Backend ruff:    clean           ✓
-Frontend vitest: 8/8 passed     ✓
-Frontend eslint: clean          ✓
-Frontend build:  74 modules     ✓
-```
-
-If anything fails, quote the failing test name, file, and first error line.
-Do not mark the task done until all four suites are clean.
-
-## Notes
-
-- Tests run from **repo root** (`from backend.src.x import ...` requires it).
-- There is no root `package.json`; use `npm -C frontend <cmd>`, not `npm run`.
-- The backend needs no running server to test — all tests are unit/integration
-  with no HTTP calls to the live FastAPI app.
+Report each command, exit status, current pass count when the tool reports one,
+and the first actionable error with file/line context. Avoid durable test-count
+examples because the suite changes frequently. Distinguish skipped live OpenAI
+execution, PayPal donation checkout, and scratch-Pi validation from locally
+verified tests.

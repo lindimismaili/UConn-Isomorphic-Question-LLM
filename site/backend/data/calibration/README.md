@@ -20,11 +20,14 @@ additionally computes, per criterion:
 - raw agreement,
 - grader-inflated count (reference=fail, grader=pass) and grader-missed count
   (reference=pass, grader=fail),
-- a **PASS/FAIL gate** against `--kappa-floor` (default 0.4).
+- a **PASS/FAIL gate** against `--kappa-floor` (default 0.4), requiring at
+  least `--min-kappa-samples` non-N/A comparisons per criterion (default 5).
 
 A criterion that FAILs the gate yields a `data/rubric.json:<criterion>`
 calibration proposal — a low-kappa criterion means the *grader/rubric* disagrees
 with the reference, i.e. a grader problem, not a generator problem.
+Insufficient or all-N/A evidence also fails the gate but does **not** produce a
+rubric-change proposal; gather more independent labels instead.
 
 ## File format
 
@@ -42,7 +45,7 @@ One JSON object per line (JSONL). One record = one graded (item, criterion) pair
 |---|---|---|
 | `source_id` | string/int | the item's source question id (matches the eval item's `source_id`) |
 | `criterion` | string | rubric criterion name, e.g. `physics_correctness` (must match `rubric.json` `criteria[].name`) |
-| `human_or_reference_label` | `0` \| `1` \| `-1`/`"na"` | the reference label: 1=pass, 0=fail, -1/`"na"`=N/A. May be a professor label OR a label produced by the latest trusted grader. |
+| `human_or_reference_label` | `0` \| `1` \| `-1`/`"na"` | the independently reviewed reference label: 1=pass, 0=fail, -1/`"na"`=N/A. Prefer professor labels; a grader-produced label is not independent validation of that grader. |
 | `grader_label` | `0` \| `1` \| `-1`/`"na"` | the label the grader-under-test produced for this pair |
 | `dataset_version` | string | version tag for this calibration set (recorded in the report + experiment ledger) |
 
@@ -67,7 +70,11 @@ penalized for a declared-N/A the reference also declared.
   measured kappa can be traced to the exact `(prompt_version, rubric_version,
   dataset_version)` triple.
 - Prefer a stable `source_id`-based join over spreadsheet row order.
-- To seed a dataset from the professor workbook (`Other/Evaluation.xlsx`), export
+- Reports record `prompt_version` and `rubric_version` as SHA-256 content
+  hashes, including dirty working-tree content. This makes a result traceable
+  even before prompt/rubric edits are committed.
+- To seed a dataset from the professor workbook
+  (`backend/data/professor_comparison/Evaluation.xlsx`), export
   each (source_id, criterion) cell as one record with `human_or_reference_label`
   = the professor cell and `grader_label` = the matching grader result; keep the
   join exact (error loudly on mismatch rather than falling back to row order).
@@ -78,9 +85,10 @@ From `site/`:
 
 ```bash
 .venv/bin/python -m backend.src.tools.meta_evaluator \
-  --eval-dir outputs/<ts>/evaluation_outputs \
-  --labels data/calibration/<name>.jsonl \
-  --kappa-floor 0.4
+  --eval-dir backend/outputs/<ts>/evaluation_outputs \
+  --labels backend/data/calibration/<name>.jsonl \
+  --kappa-floor 0.4 \
+  --min-kappa-samples 5
 ```
 
 The command exits non-zero when the overall kappa gate FAILs (CI-friendly).

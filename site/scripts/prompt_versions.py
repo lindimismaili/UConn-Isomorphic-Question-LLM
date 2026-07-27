@@ -59,7 +59,8 @@ def ensure_clean_prompt_worktree(root: Path, force: bool) -> None:
 
     raise SystemExit(
         "Prompt files already have uncommitted changes. Run "
-        "`python scripts/prompt_versions.py snapshot` first, or rerun restore with --force."
+        "`.venv/bin/python scripts/prompt_versions.py snapshot` first, "
+        "or rerun restore with --force."
     )
 
 

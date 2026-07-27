@@ -7,7 +7,7 @@ Usage:
     python -m backend.src.cli_agents list
     python -m backend.src.cli_agents schema <agent>
     python -m backend.src.cli_agents validate <agent> --input <file>
-    python -m backend.src.cli_agents run <agent> --input <file> [--stop-after <agent>] [--no-eval]
+    python -m backend.src.cli_agents run <agent> --input <file> [--stop-after <agent>] [--eval]
     python -m backend.src.cli_agents run-one <agent> --input <file> [--output <file>]
 
 The `run` subcommand starts from <agent> and continues the full pipeline
@@ -33,31 +33,47 @@ from openai import OpenAI
 from pydantic import ValidationError
 
 from backend.src.artifacts import AGENT_DISPLAY_NAMES, WORKFLOW_AGENT_SEQUENCE
+from backend.src.bootstrap import configure_private_umask
 from backend.src.bootstrap import load_dotenv as _load_dotenv
+from backend.src.deployment_maintenance import cli_paid_work_guard
 from backend.src.evaluation import rubric_model as _load_rubric_model
 from backend.src.evaluation import rubric_payload as _load_rubric_payload
 from backend.src.paths import ENV_PATH, OUTPUTS_DIR
+from backend.src.provider_clients import (
+    close_agents_sdk_model_provider,
+    configure_agents_sdk_model_provider,
+    configured_agents_sdk_model_provider,
+)
+from backend.src.provider_timeouts import openai_transport_options
 from backend.src.registry import agent_result_field as _agent_result_field
 from backend.src.registry import cli_descriptions as _cli_descriptions
+from backend.src.registry import evaluation_agent as _evaluation_agent
 from backend.src.registry import llm_agents as _llm_agents
-from backend.src.safety import create_unique_run_dir
+from backend.src.registry import stoppable_agents as _stoppable_agents
+from backend.src.safety import (
+    create_unique_run_dir,
+    safe_exception_message,
+)
 from backend.src.schemas import AGENT_INPUT_TYPES, WorkflowResult
 from backend.src.workflow import run_workflow_async
 
-_load_dotenv(ENV_PATH)
-
-
 _cli_client: OpenAI | None = None
+configure_private_umask()
 
 
 def _get_client() -> OpenAI:
     """Lazily create the OpenAI client so subcommands that don't need it stay fast."""
     global _cli_client
+    _load_dotenv(ENV_PATH)
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is required for run/run-one subcommands.")
     if _cli_client is None:
-        api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is required for run/run-one subcommands.")
-        _cli_client = OpenAI(api_key=api_key)
+        _cli_client = OpenAI(
+            api_key=api_key,
+            **openai_transport_options(),
+        )
+    configure_agents_sdk_model_provider(api_key)
     return _cli_client
 
 
@@ -75,6 +91,19 @@ def _new_workflow_record() -> dict[str, Any]:
 
 async def _to_thread(func, /, *args, **kwargs):
     return await asyncio.to_thread(func, *args, **kwargs)
+
+
+async def _run_cli_async(awaitable):
+    """Run one paid agent command and close provider clients on its event loop."""
+    global _cli_client
+    try:
+        return await awaitable
+    finally:
+        client, _cli_client = _cli_client, None
+        close = getattr(client, "close", None)
+        if callable(close):
+            await asyncio.to_thread(close)
+        await close_agents_sdk_model_provider()
 
 
 def _load_input_json(path: str) -> dict[str, Any]:
@@ -187,7 +216,15 @@ async def _run_from_agent(
         input_to_agent_run=True,
         run_evaluation=run_evaluation,
         stop_after_agent=stop_after,
+        model_provider=configured_agents_sdk_model_provider(),
     )
+    if workflow_record.get("status") == "blocked":
+        blocked = workflow_record.get("blocked") or {}
+        raise RuntimeError(
+            "Workflow blocked by "
+            f"{blocked.get('stage', 'unknown')} guardrail "
+            f"({blocked.get('category', 'unspecified')})"
+        )
 
     print(f"\nOutput directory: {outputs_dir}")
     if stop_after:
@@ -222,15 +259,22 @@ def _print_partial(data: dict[str, Any], label: str) -> None:
 def cmd_run(args: argparse.Namespace) -> None:
     """Start pipeline from <agent> using a saved input JSON."""
     stop_after = getattr(args, "stop_after", None)
-    run_evaluation = not getattr(args, "no_eval", False)
+    llm_sequence = list(_llm_agents())
+    run_evaluation = bool(getattr(args, "run_evaluation", False))
+    if args.agent == _evaluation_agent() and not run_evaluation:
+        raise ValueError("Starting from evaluation requires the explicit --eval flag")
+    if stop_after and llm_sequence.index(stop_after) < llm_sequence.index(args.agent):
+        raise ValueError("--stop-after must be the starting agent or a later pipeline agent")
     output_path = getattr(args, "output", None)
     asyncio.run(
-        _run_from_agent(
-            agent=args.agent,
-            input_path=args.input,
-            stop_after=stop_after,
-            run_evaluation=run_evaluation,
-            output_path=output_path,
+        _run_cli_async(
+            _run_from_agent(
+                agent=args.agent,
+                input_path=args.input,
+                stop_after=stop_after,
+                run_evaluation=run_evaluation,
+                output_path=output_path,
+            )
         )
     )
 
@@ -239,12 +283,14 @@ def cmd_run_one(args: argparse.Namespace) -> None:
     """Run exactly one agent and print its output."""
     output_path = getattr(args, "output", None)
     asyncio.run(
-        _run_from_agent(
-            agent=args.agent,
-            input_path=args.input,
-            stop_after=args.agent,
-            run_evaluation=False,
-            output_path=output_path,
+        _run_cli_async(
+            _run_from_agent(
+                agent=args.agent,
+                input_path=args.input,
+                stop_after=args.agent,
+                run_evaluation=False,
+                output_path=output_path,
+            )
         )
     )
 
@@ -283,17 +329,25 @@ def _build_parser() -> argparse.ArgumentParser:
     p_run.add_argument(
         "--stop-after",
         dest="stop_after",
-        choices=list(_llm_agents()),
+        choices=list(_stoppable_agents()),
         default=None,
         metavar="AGENT",
         help="Stop the pipeline after this agent (must be at or after <agent>)",
     )
-    p_run.add_argument(
-        "--no-eval",
-        dest="no_eval",
+    evaluation_group = p_run.add_mutually_exclusive_group()
+    evaluation_group.add_argument(
+        "--eval",
+        dest="run_evaluation",
         action="store_true",
-        help="Skip the evaluation stage",
+        help="Run the paid OpenAI rubric evaluation after generation",
     )
+    evaluation_group.add_argument(
+        "--no-eval",
+        dest="run_evaluation",
+        action="store_false",
+        help=argparse.SUPPRESS,
+    )
+    p_run.set_defaults(run_evaluation=False)
     p_run.add_argument(
         "--output",
         metavar="FILE",
@@ -306,7 +360,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "run-one",
         help="Run exactly one agent and print/save its output (equivalent to run --stop-after <agent>)",
     )
-    p_one.add_argument("agent", choices=list(_llm_agents()), help="Agent to run")
+    p_one.add_argument("agent", choices=list(_stoppable_agents()), help="Agent to run")
     p_one.add_argument("--input", required=True, metavar="FILE", help="Path to input JSON")
     p_one.add_argument(
         "--output",
@@ -331,14 +385,21 @@ def main() -> None:
     }
 
     try:
-        dispatch[args.subcommand](args)
+        if args.subcommand in {"run", "run-one"}:
+            with cli_paid_work_guard():
+                dispatch[args.subcommand](args)
+        else:
+            dispatch[args.subcommand](args)
     except SystemExit:
         raise
     except KeyboardInterrupt:
         print("\nInterrupted.")
         raise SystemExit(130) from None
     except Exception as exc:
-        logger.error("cli_agents error: %s", exc)
+        logger.error(
+            "%s",
+            safe_exception_message(exc, operation="cli_agents command"),
+        )
         raise SystemExit(1) from exc
 
 

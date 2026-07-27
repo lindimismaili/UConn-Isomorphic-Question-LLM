@@ -1,6 +1,6 @@
 """Unit tests for pure helpers in ``backend.src.helpers``.
 
-Covers prompt loading/rendering (placeholder substitution + leftover warning),
+Covers strict prompt loading/rendering (placeholder substitution + validation),
 ``build_json_message`` structure, and the metadata/question-type reconciliation
 helpers. All offline, no OpenAI client.
 """
@@ -46,14 +46,21 @@ class PromptPathTests(unittest.TestCase):
             self.assertEqual(resolve_prompt_path(root, "normalizer"), root / "normalizer.txt")
             self.assertIsNone(resolve_prompt_path(root, "missing"))
 
-    def test_load_prompt_returns_text_or_empty(self) -> None:
+    def test_load_prompt_returns_required_text_or_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "p.txt").write_text("Prompt body", encoding="utf-8")
             log = _CapturingLogger()
             self.assertEqual(load_prompt(root, log, "p"), "Prompt body")
-            self.assertEqual(load_prompt(root, log, "nope"), "")
-            self.assertTrue(log.warnings)
+            with self.assertRaises(FileNotFoundError):
+                load_prompt(root, log, "nope")
+
+    def test_load_prompt_rejects_empty_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "p.txt").write_text(" \n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "empty"):
+                load_prompt(root, _CapturingLogger(), "p")
 
 
 class RenderPromptTests(unittest.TestCase):
@@ -69,14 +76,19 @@ class RenderPromptTests(unittest.TestCase):
             self.assertEqual(out, "Hello world, run 3 times.")
             self.assertFalse(log.warnings)
 
-    def test_warns_on_unsubstituted_placeholder(self) -> None:
+    def test_rejects_unsubstituted_placeholder(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "t.txt").write_text("Value {present} but {leftover} remains.", encoding="utf-8")
-            log = _CapturingLogger()
-            out = render_prompt(root, log, "t", present="ok")
-            self.assertIn("{leftover}", out)
-            self.assertTrue(any("unsubstituted" in w for w in log.warnings))
+            with self.assertRaisesRegex(ValueError, r"\{leftover\}"):
+                render_prompt(root, _CapturingLogger(), "t", present="ok")
+
+    def test_rejects_missing_required_placeholder_in_template(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "t.txt").write_text("No runtime placeholder.", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, r"\{expected\}"):
+                render_prompt(root, _CapturingLogger(), "t", expected="value")
 
     def test_braces_in_prose_are_not_format_errors(self) -> None:
         # render_prompt uses plain replacement, so LaTeX/shell braces are safe.

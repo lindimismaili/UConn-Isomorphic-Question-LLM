@@ -18,8 +18,19 @@ export default function DeveloperToolsPanel({
   onShowTestFiles,
   runEvaluations,
   onRunEvaluationsChange,
+  evaluationPolicy = {
+    maxItems: 100,
+    graderCount: 8,
+    graderMaxCompletionTokens: 4096,
+  },
   logs,
 }) {
+  const maximumGraderCalls =
+    Number(evaluationPolicy.maxItems || 100) *
+    Number(evaluationPolicy.graderCount || 8);
+  const graderMaxCompletionTokens = Number(
+    evaluationPolicy.graderMaxCompletionTokens || 4096
+  );
   return (
     <Card variant="developer-tools">
       <CardHeader
@@ -33,7 +44,7 @@ export default function DeveloperToolsPanel({
             checked={runEvaluations}
             onChange={onRunEvaluationsChange}
             disabled={isRunning}
-            label="Run Evaluations"
+            label={`Evaluate the next run only (approve up to ${maximumGraderCalls} grader calls, ${graderMaxCompletionTokens} generated tokens each)`}
           />
 
           <Button
