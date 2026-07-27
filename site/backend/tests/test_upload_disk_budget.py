@@ -19,7 +19,7 @@ from backend.src.api import files as files_module
 from backend.src.api import state
 from backend.src.api import workflows as workflows_module
 from backend.src.api.upload_budget import UploadDiskBudget, upload_disk_budget
-from backend.src.server import app
+from backend.src.server import create_app
 from backend.tests.support import IdempotentTestClient as TestClient
 
 
@@ -237,7 +237,7 @@ def test_upload_route_counts_abandoned_sessions_between_cleanup_passes(
         root = Path(tmp)
         monkeypatch.setattr(files_module, "UPLOADS_DIR", root)
         monkeypatch.setattr(files_module, "UPLOAD_MAX_BYTES", 10_000)
-        client = TestClient(app)
+        client = TestClient(create_app())
 
         first = client.post(
             "/api/upload",
@@ -318,7 +318,7 @@ def test_input_to_agent_source_upload_uses_shared_disk_capacity(
             (stored / "existing.txt").write_bytes(b"x" * 10)
             monkeypatch.setattr(state, "UPLOADS_DIR", root)
             monkeypatch.setattr(state, "UPLOAD_MAX_BYTES", 10)
-            client = TestClient(app)
+            client = TestClient(create_app())
             with patch.object(
                 workflows_module,
                 "get_openai_client",
@@ -350,7 +350,7 @@ def test_eval_pdf_upload_uses_shared_disk_capacity(
             (stored / "existing.pdf").write_bytes(b"x" * 10)
             monkeypatch.setattr(eval_batch_module, "UPLOADS_DIR", root)
             monkeypatch.setattr(eval_batch_module, "UPLOAD_MAX_BYTES", 10)
-            client = TestClient(app)
+            client = TestClient(create_app())
             with (
                 patch.object(
                     eval_batch_module,

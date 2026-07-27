@@ -1158,7 +1158,7 @@ def test_maintenance_callers_persist_their_exact_recovery_reason() -> None:
     assert layout.count('enter_deployment_maintenance "ownership_migration"') == 2
     assert 'enter_deployment_maintenance "runtime_config"' in runtime
     calls = re.findall(
-        r'^\s+enter_deployment_maintenance "[a-z_]+"\S*(?:\s+\S+)*$',
+        r'^[ \t]+enter_deployment_maintenance "[a-z_]+"[^\r\n]*$',
         script,
         flags=re.MULTILINE,
     )

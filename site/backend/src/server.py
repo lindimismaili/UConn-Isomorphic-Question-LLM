@@ -64,8 +64,12 @@ class SPAStaticFiles(StaticFiles):
             # the original ASGI path here so encoded traversal attempts cannot
             # lose their ``/api/`` prefix and become browser-route fallbacks.
             relative_path = str(scope.get("path", path)).replace("\\", "/").lstrip("/")
+            is_disabled_schema_route = relative_path in {"docs", "redoc", "openapi.json"}
             is_browser_route = (
-                exc.status_code == 404 and not relative_path.startswith("api/") and not Path(relative_path).suffix
+                exc.status_code == 404
+                and not relative_path.startswith("api/")
+                and not Path(relative_path).suffix
+                and not is_disabled_schema_route
             )
             if not is_browser_route:
                 raise

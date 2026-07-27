@@ -19,6 +19,7 @@ from backend.tests.support import IdempotentTestClient as TestClient
 class AccessBoundaryTests(unittest.TestCase):
     token = "test-access-token-with-at-least-32-characters"
     trusted_origin = "https://professor.example"
+    idempotency_key = "rate-limit-test-key-0000000000000001"
 
     def _client(
         self,
@@ -165,8 +166,13 @@ class AccessBoundaryTests(unittest.TestCase):
             "backend.src.api.workflows.get_openai_client",
             side_effect=RuntimeError("offline"),
         ):
-            first = client.post(endpoint, headers={"X-App-Access-Token": self.token})
-            second = client.post(endpoint, headers={"X-App-Access-Token": self.token})
+            headers = {
+                "X-App-Access-Token": self.token,
+                "X-Idempotency-Key": self.idempotency_key,
+            }
+            request_data = {"testFiles": '["short_set.pdf"]'}
+            first = client.post(endpoint, headers=headers, data=request_data)
+            second = client.post(endpoint, headers=headers, data=request_data)
 
         self.assertEqual(first.status_code, 503)
         self.assertEqual(second.status_code, 429)
@@ -178,8 +184,10 @@ class AccessBoundaryTests(unittest.TestCase):
             "backend.src.api.workflows.get_openai_client",
             side_effect=RuntimeError("offline"),
         ):
-            first = client.post("/api/workflow/start")
-            second = client.post("/api/workflow/start")
+            headers = {"X-Idempotency-Key": self.idempotency_key}
+            request_data = {"testFiles": '["short_set.pdf"]'}
+            first = client.post("/api/workflow/start", headers=headers, data=request_data)
+            second = client.post("/api/workflow/start", headers=headers, data=request_data)
         self.assertEqual(first.status_code, 503)
         self.assertEqual(second.status_code, 429)
 
@@ -189,7 +197,10 @@ class AccessBoundaryTests(unittest.TestCase):
             rate_limit_requests=1,
             rate_limit_window_seconds=60,
         )
-        headers = {"X-App-Access-Token": self.token}
+        headers = {
+            "X-App-Access-Token": self.token,
+            "X-Idempotency-Key": self.idempotency_key,
+        }
         with (
             patch(
                 "backend.src.api.workflows.get_openai_client",
@@ -200,8 +211,16 @@ class AccessBoundaryTests(unittest.TestCase):
                 side_effect=RuntimeError("offline"),
             ),
         ):
-            workflow = client.post("/api/workflow/start", headers=headers)
-            create_data = client.post("/api/create-data/start", headers=headers)
+            workflow = client.post(
+                "/api/workflow/start",
+                headers=headers,
+                data={"testFiles": '["short_set.pdf"]'},
+            )
+            create_data = client.post(
+                "/api/create-data/start",
+                headers=headers,
+                data={"confirmWorkflowCosts": "true"},
+            )
         self.assertEqual(workflow.status_code, 503)
         self.assertEqual(create_data.status_code, 503)
 

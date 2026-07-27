@@ -132,7 +132,18 @@ def test_latex_compile_tool_drains_worker_before_cancellation() -> None:
         worker_finished.set()
         return MagicMock(as_dict=lambda: {"pdf_filename": "output.pdf"})
 
-    runtime.compile_latex = blocking_compile  # type: ignore[method-assign]
+    async def blocking_compile_async(
+        latex_source: str,
+        output_basename: str,
+    ):
+        return await container.await_cancellation_safe_blocking_call(
+            asyncio.to_thread,
+            blocking_compile,
+            latex_source,
+            output_basename,
+        )
+
+    runtime.compile_latex_async = blocking_compile_async  # type: ignore[method-assign]
     tool = runtime.build_compile_latex_tool()
 
     async def _exercise() -> None:

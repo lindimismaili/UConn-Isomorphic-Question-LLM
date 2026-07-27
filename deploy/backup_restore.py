@@ -25,7 +25,7 @@ import time
 import urllib.request
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlsplit
@@ -1172,7 +1172,7 @@ def _archive_manifest(
 ) -> dict[str, Any]:
     return {
         "schema": 2,
-        "created_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "created_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "active_commit": commit,
         "update_remote_url": config.update_remote_url,
         "roots": [path.as_posix() for path in ARCHIVE_ROOTS],
@@ -1528,7 +1528,7 @@ def backup(destination: Path) -> tuple[Path, Path]:
                     raise BackupRestoreError(
                         "active release changed while entering backup maintenance"
                     )
-                stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
                 archive_name = f"{SERVICE}-{stamp}-{commit}.tgz"
                 checksum_name = f"{archive_name}.sha256"
                 archive_tmp_fd, archive_tmp_name = _create_partial_at(
@@ -1878,7 +1878,7 @@ def _transaction_id(manifest: dict[str, Any], digest: str) -> str:
     timestamp = datetime.strptime(
         manifest["created_utc"],
         "%Y-%m-%dT%H:%M:%SZ",
-    ).replace(tzinfo=UTC)
+    ).replace(tzinfo=timezone.utc)
     return f"{timestamp.strftime('%Y%m%dT%H%M%SZ')}-{digest[:16]}"
 
 
@@ -3185,7 +3185,7 @@ def finalize_restore(transaction_id: str) -> Path:
                 "schema": 1,
                 "transaction_id": transaction_id,
                 "commit": active_commit,
-                "finalized_utc": datetime.now(UTC)
+                "finalized_utc": datetime.now(timezone.utc)
                 .replace(microsecond=0)
                 .isoformat()
                 .replace("+00:00", "Z"),
