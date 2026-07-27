@@ -51,6 +51,9 @@ def safe_exception_category(exc: BaseException) -> str:
 
 def safe_exception_message(exc: BaseException, *, operation: str) -> str:
     """Describe a failed operation without including exception-controlled text."""
+    safe_message = getattr(exc, "safe_message", "")
+    if isinstance(safe_message, str) and safe_message:
+        return safe_message
     safe_operation = _SAFE_OPERATION_PATTERN.sub("", operation).strip()[:120]
     return f"{safe_operation or 'Operation'} failed ({safe_exception_category(exc)})"
 
@@ -61,6 +64,15 @@ class SanitizedProviderError(ValueError):
     def __init__(self, *, operation: str, cause: BaseException) -> None:
         self.safe_category = safe_exception_category(cause)
         super().__init__(safe_exception_message(cause, operation=operation))
+
+
+class SafeConfigurationError(ValueError):
+    """An application-authored configuration error safe for public status output."""
+
+    def __init__(self, *, message: str, category: str = "ConfigurationError") -> None:
+        self.safe_message = message
+        self.safe_category = category
+        super().__init__(message)
 
 
 def utc_run_timestamp() -> str:

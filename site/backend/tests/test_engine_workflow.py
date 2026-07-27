@@ -442,6 +442,27 @@ class EngineWorkflowTests(unittest.TestCase):
             ]
             self.assertEqual(len(generator_calls), 1)
 
+    def test_container_network_policy_denial_has_actionable_error(self) -> None:
+        provider_error = RuntimeError(
+            "Network policy 'allowlist' is not permitted because the organization policy "
+            "disables container network access."
+        )
+        provider_error.code = "invalid_value"  # type: ignore[attr-defined]
+        provider_error.param = "network_policy.type"  # type: ignore[attr-defined]
+        client = MagicMock()
+        client.containers.create.side_effect = provider_error
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(engine.SafeConfigurationError) as raised:
+                self._run(
+                    outputs_dir=Path(tmp) / "network-policy-denied",
+                    workflow=_new_workflow_record(),
+                    _client=client,
+                    run_evaluation=False,
+                )
+
+        self.assertIn("organization admin", str(raised.exception))
+
     def test_latex_container_expiry_recreates_only_clean_downstream_scope(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             _FakeRuntime.reset_metrics()

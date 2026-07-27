@@ -8,8 +8,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.src.safety import (
+    SafeConfigurationError,
     create_unique_run_dir,
     ensure_child_path,
+    safe_exception_message,
     safe_filename,
     unique_child_name,
 )
@@ -17,6 +19,16 @@ from backend.src.workflow.store import WorkflowStore
 
 
 class SafetyStoreTests(unittest.TestCase):
+    def test_safe_configuration_error_exposes_only_authored_guidance(self) -> None:
+        error = SafeConfigurationError(
+            category="ContainerNetworkAccessDisabled",
+            message="An organization admin must enable container networking.",
+        )
+        self.assertEqual(
+            safe_exception_message(error, operation="Workflow"),
+            "An organization admin must enable container networking.",
+        )
+
     def test_safe_filename_rejects_traversal_and_suffix_mismatch(self) -> None:
         self.assertEqual(
             safe_filename("../bad/name.pdf", fallback="isomorphic_questions.tex", allowed_suffixes={".tex"}),
