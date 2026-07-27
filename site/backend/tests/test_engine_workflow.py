@@ -421,6 +421,11 @@ class EngineWorkflowTests(unittest.TestCase):
             self.assertEqual(len(create_calls), 2)
             self.assertEqual(create_calls[0].kwargs["file_ids"], [])
             self.assertEqual(create_calls[1].kwargs["file_ids"], [])
+            extracter_call = next(
+                call for call in self.runner_calls if call.args[0].stage == "extracter"
+            )
+            extracter_content = extracter_call.kwargs["input"][0]["content"]
+            self.assertEqual([part["type"] for part in extracter_content], ["input_text"])
             self.assertLess(
                 _FakeRuntime.events.index("delete:cntr_extract"),
                 _FakeRuntime.events.index("agent:verifier:cntr_downstream"),
