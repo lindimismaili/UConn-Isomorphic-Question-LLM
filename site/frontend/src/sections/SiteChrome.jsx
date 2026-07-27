@@ -6,7 +6,8 @@
  * here, so the header/footer/banner exist once, not duplicated as raw markup.
  */
 
-import { Banner, PageHeader, Footer, Dropdown } from '../components/ui/index.js';
+import { Banner, Button, PageHeader, Footer, Dropdown } from '../components/ui/index.js';
+import { PAYPAL_DONATION_URL } from '../config/site.js';
 
 /** Physics-academic motif surfaced behind the navy masthead. */
 export const HEADER_MOTIF = '/assets/physics-motif.svg';
@@ -38,8 +39,34 @@ export function UConnMark() {
  * @param {'user'|'teacher'} [props.mode] - Current site mode.
  * @param {(mode: string) => void} [props.onModeChange] - Renders the mode
  *   dropdown right after the title when provided.
+ * @param {boolean} [props.showDonation] - Show the public PayPal donation link
+ *   beside the UConn mark.
  */
-export function SiteHeader({ title = 'Isomorphic Question Generator', aside, mode, onModeChange }) {
+export function SiteHeader({
+  title = 'Isomorphic Question Generator',
+  aside,
+  mode,
+  onModeChange,
+  showDonation = false,
+}) {
+  const defaultAside = showDonation ? (
+    <div className="header-actions">
+      <Button
+        variant="primary"
+        size="sm"
+        href={PAYPAL_DONATION_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Donate to support this project with PayPal"
+      >
+        Donate via PayPal
+      </Button>
+      <UConnMark />
+    </div>
+  ) : (
+    <UConnMark />
+  );
+
   return (
     <PageHeader
       motif={HEADER_MOTIF}
@@ -60,7 +87,7 @@ export function SiteHeader({ title = 'Isomorphic Question Generator', aside, mod
           ) : null}
         </div>
       }
-      aside={aside ?? <UConnMark />}
+      aside={aside ?? defaultAside}
     />
   );
 }

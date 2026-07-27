@@ -79,6 +79,19 @@ describe('Button', () => {
     expect(container.querySelector('button').className).toContain('btn-error-feedback');
   });
 
+  it('renders an anchor with button styling when href is provided', () => {
+    render(
+      <Button href="https://example.com/donate" target="_blank" rel="noopener noreferrer">
+        Donate
+      </Button>,
+    );
+    const link = container.querySelector('a');
+    expect(link.className).toBe('btn btn-secondary');
+    expect(link.getAttribute('href')).toBe('https://example.com/donate');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
   it('IconButton renders the standalone .btn-icon-only square', () => {
     render(<IconButton aria-label="close">×</IconButton>);
     const btn = container.querySelector('button');

@@ -102,6 +102,8 @@ Frontend:
   `useAgents.js` (triggers registry load), `useCreateData.js`, `useFileUpload.js`
 - `site/frontend/src/utils/` — shared `api.js` (HTTP client), `abortableSleep.js`,
   `ids.js`, `files.js` (file `getViewerType` dispatch + download URL helpers)
+- `site/frontend/src/config/site.js` — public site configuration, including the
+  PayPal donation recipient and URL builder
 - `site/frontend/src/components/modals/` (one `Modal.jsx` shell; `eval/` holds the
   split Evaluator-results pieces; `useFileViewer.jsx` wires the generic file viewers)
 - `site/frontend/src/styles/app.css` (design tokens in `:root`)
@@ -406,6 +408,13 @@ Optional app/runtime vars (see `.env.example` for the full list + defaults):
   `registry.py`.
 - **All frontend agent data comes from `useAgentRegistry()` / `getDerivedRegistry()`.** 
   Don't declare pipeline keys, labels, or routing maps in JS modules.
+- **PayPal donation configuration.** The main-site header's Donate action uses
+  `PAYPAL_DONATION_EMAIL` / `PAYPAL_DONATION_URL` from
+  `site/frontend/src/config/site.js`. To transfer donations to a professor or
+  another maintainer, change `DEFAULT_PAYPAL_DONATION_EMAIL` there or set the
+  public build-time `VITE_PAYPAL_DONATION_EMAIL` override, then rebuild the
+  frontend. Keep the recipient out of component markup so this remains a
+  one-value change.
 - **Chat/developer synchronization contract.** `App.jsx` is the source of truth
   for consumer chat behavior. The protected `DeveloperMode.jsx` must compose the
   same `ChatConversation` component (never a fork) and be verified alongside the
@@ -667,26 +676,53 @@ not source of truth for local development.
 - Don't store agent constants (sequences, names, model ids, theme lists) in
   Python or JS files — they belong in `agents.json` and `registry.py`.
 
-## Local Visual Debugging
+## Visual Changes, Mobile Review, And Cleanup
 
-Quick one-shot screenshot of the built app:
+Every frontend visual change must be verified in the real rendered site. This
+applies equally to desktop Codex, Codex Mobile, remote sessions, and similar
+harnesses.
 
-```bash
-npx playwright install chromium
-npx playwright screenshot --browser=chromium --full-page http://127.0.0.1:8000 /tmp/app.png
-```
+- Read `site/frontend/DESIGN.md`, run the relevant frontend tests, and drive the
+  changed UI in a real browser. Use browser DOM measurements such as
+  `getBoundingClientRect()` and `getComputedStyle()` for layout-sensitive
+  behavior; screenshots are review evidence, not the only correctness check.
+- When working through Codex Mobile, another remote client, or whenever the user
+  asks to see the result, capture two to four focused screenshots that make the
+  changed behavior easy to review on a phone. Include a phone viewport
+  (`390x844`) and a desktop viewport (`1440x900`) unless the change is
+  intentionally single-size.
+- **Attach the screenshot image data directly to the chat.** A local filename,
+  path, or statement that a screenshot was taken is not sufficient. With a
+  Node-backed Playwright session, emit the screenshot buffer with
+  `await nodeRepl.emitImage(buffer)`; with another browser tool, return its image
+  result to the conversation. Caption each image with its route, viewport, and
+  UI state.
+- Exercise the exact affected state: open the relevant modal or tab and check
+  hover, focus, loading, empty, error, completed, or responsive behavior when
+  applicable. Verify both consumer chat and protected Developer Mode when a
+  shared `ChatConversation` change can affect both.
 
-For iterating on CSS/layout, run the Vite dev server (`npm -C site/frontend run dev:ui`)
-and drive it with the Playwright MCP — `browser_resize` to test the §3 breakpoints
-and `browser_evaluate` with `getBoundingClientRect()`/`getComputedStyle()` to
-*measure* element heights rather than eyeballing screenshots (how the dev-tools
-log-clipping and prompt-row-wrapping bugs were pinned down). Notes:
+For local preview, `npm -C site/frontend run dev:ui -- --host 127.0.0.1` is
+enough for static layout work. Registry/API-backed surfaces also need the
+backend running from `site/` on `127.0.0.1:8000`. The cross-platform full
+preview launcher is `node deploy/preview.mjs --dev`.
 
-- The dev server needs the **backend up on `:8000`** for `/api/agents`,
-  `/api/dropdown`, etc.; without it the agent pipeline stays on its empty
-  placeholder (the top panels and dev-tools still render for layout work).
-- Vite auto-picks the next free port if `5173` is taken (another local project may
-  hold it). To verify a hover-only style without a live run, inject a throwaway
-  `.agent-card` into the DOM via `browser_evaluate`, hover it, and read the
-  computed `transform`/`border-color`.
-- Put screenshots in a workspace `tmp/` and delete them when done.
+Browser and process cleanup is a required final step, including after a failed
+test or debugging attempt:
+
+- Before launching anything, note the relevant existing browser windows,
+  listeners, and processes. Track the exact browser handles, PIDs, and ports
+  created during the task.
+- Close every page, context, browser window, and browser process opened for the
+  task. When controlling the user's existing Chrome, close only the tabs or
+  windows created by the agent; preserve the user's pre-existing session.
+- Stop every frontend, backend, preview launcher, watcher, and helper process
+  started for the task. Terminate the recorded process tree when a launcher
+  created child processes. Never kill a process merely because it occupies a
+  familiar port.
+- Confirm the recorded PIDs exited and that no new listener or browser window
+  remains. If cleanup cannot be completed, report the exact remaining PID,
+  port, tab, or window.
+- Keep temporary screenshots only until they have been attached and inspected,
+  then remove them unless the user explicitly asks to retain downloadable
+  copies.

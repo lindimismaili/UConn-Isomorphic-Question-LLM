@@ -106,6 +106,15 @@ describe('App (chat-first) smoke', () => {
     expect(modeTrigger).toBeTruthy();
     expect(modeTrigger.textContent).toContain('User Mode');
 
+    // Main-site donation action points at the configurable PayPal recipient.
+    const donationLink = container.querySelector('.header-actions a');
+    expect(donationLink).toBeTruthy();
+    expect(donationLink.textContent).toContain('Donate via PayPal');
+    expect(donationLink.getAttribute('target')).toBe('_blank');
+    expect(new URL(donationLink.href).searchParams.get('business')).toBe(
+      'Lindim.ismaili0001@gmail.com',
+    );
+
     // All 10 registry nodes render in the stepper (incl. guardrail + runtime).
     expect(container.querySelectorAll('.stepper-node')).toHaveLength(PIPELINE_KEYS.length);
     expect(container.querySelector('.stepper-node[data-node-kind="guardrail"]')).toBeTruthy();

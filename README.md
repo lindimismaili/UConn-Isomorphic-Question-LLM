@@ -118,6 +118,22 @@ Optional per-agent turn caps live in `agents.json` as `maxTurns` (default `6`, l
 Frontend dev proxy:
 
 - `VITE_BACKEND_URL` - backend URL used by the Vite dev server proxy, default `http://127.0.0.1:8000`
+- `VITE_PAYPAL_DONATION_EMAIL` - public build-time PayPal recipient used by the
+  main header's Donate button; defaults to `Lindim.ismaili0001@gmail.com`
+
+### PayPal donation recipient
+
+The main-site header links to PayPal using the confirmed account email in
+`site/frontend/src/config/site.js`. To transfer the donation button to a
+professor or another maintainer, either:
+
+1. Change `DEFAULT_PAYPAL_DONATION_EMAIL` in that file, or
+2. Set `VITE_PAYPAL_DONATION_EMAIL=professor@example.edu` in the frontend build
+   environment.
+
+Rebuild the frontend after changing either value. This address is intentionally
+public because Vite embeds it in the browser bundle and PayPal donation URL; do
+not use it for a secret value.
 
 ## Local Server
 
