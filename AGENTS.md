@@ -10,9 +10,9 @@ Primary maintained documents:
 
 - [README.md](README.md) — human-facing setup, environment, run/CLI/output reference
 - [CLAUDE.md](CLAUDE.md) — Claude Code entry point; a pointer straight to this file
-- [docs/PROFESSOR_HANDOFF.md](docs/PROFESSOR_HANDOFF.md) — professor setup, access/cost controls,
+- [deploy/PROFESSOR_HANDOFF.md](deploy/PROFESSOR_HANDOFF.md) — professor setup, access/cost controls,
   Raspberry Pi operations, backup boundaries, limitations, and release checklist
-- [SECURITY.md](SECURITY.md) — deployment boundary, secrets, abuse limits, privacy, and reporting
+- [site/SECURITY.md](site/SECURITY.md) — deployment boundary, secrets, abuse limits, privacy, and reporting
 - [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend reference: what every file does,
   key functions, the 10-node workflow, the HTTP API routes, `data/` files, and tests
 - [site/frontend/DESIGN.md](site/frontend/DESIGN.md) — frontend design system: tokens, layout,
@@ -20,8 +20,9 @@ Primary maintained documents:
 - [deploy/DEPLOY.md](deploy/DEPLOY.md) — deployment + local preview scripts (operational, not source of truth)
 - [deploy/BACKUP_RESTORE.md](deploy/BACKUP_RESTORE.md) — executable Pi backup,
   restore, interrupted-transaction recovery, and rehearsal runbook
-- [plan/PLAN.md](plan/PLAN.md) — dated audit and proposed roadmap; not proof that dashboard features shipped
 - [archive/ARCHIVE.md](archive/ARCHIVE.md) — historical GPT Builder/question-source/report inventory
+- [site/backend/data/calibration/README.md](site/backend/data/calibration/README.md) — evaluation
+  calibration artifact format and maintenance notes
 
 ## What This Repo Is
 

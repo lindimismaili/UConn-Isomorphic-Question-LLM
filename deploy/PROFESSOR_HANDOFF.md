@@ -418,7 +418,7 @@ records before those limits can remove them.
 
 Before an update or schema-changing release, run the installed
 `uconn-isomorphic-backup-restore backup` command from
-[../deploy/BACKUP_RESTORE.md](../deploy/BACKUP_RESTORE.md). It takes the shared
+[BACKUP_RESTORE.md](BACKUP_RESTORE.md). It takes the shared
 deployment lock, enters maintenance, requires an exact-zero active-work count,
 stops remaining writers, records the exact release commit, validates the
 archive, and restarts/health-checks the prior service before reopening it. The
@@ -540,8 +540,8 @@ equivalent checks:
   readiness;
 - recorded release commit and remaining limitations.
 
-See [../SECURITY.md](../SECURITY.md) for security boundaries and
-[../deploy/DEPLOY.md](../deploy/DEPLOY.md) for installer operations. Use the
-separate [../deploy/BACKUP_RESTORE.md](../deploy/BACKUP_RESTORE.md) runbook for
+See [../site/SECURITY.md](../site/SECURITY.md) for security boundaries and
+[DEPLOY.md](DEPLOY.md) for installer operations. Use the separate
+[BACKUP_RESTORE.md](BACKUP_RESTORE.md) runbook for
 backup creation, archive verification, spare-device restore, and interrupted
 restore recovery.
