@@ -1,5 +1,10 @@
 # 05 — Site & Backend Controls (status, live/local, online/offline, domain, Cloudflare)
 
+> **Status — proposed dashboard controls, not implemented; status warning added
+> July 27, 2026.** Existing deployment/status behavior is documented in
+> [`deploy/DEPLOY.md`](../deploy/DEPLOY.md); current handoff limitations are in
+> [`docs/PROFESSOR_HANDOFF.md`](../docs/PROFESSOR_HANDOFF.md).
+
 > The professor wants to: check site status & backend status, see whether the site is
 > **live vs local**, take it **online/offline** (and bring it back), see the **domain**
 > it's hosted on, and view **Cloudflare** info. This doc maps each to what exists and
@@ -10,24 +15,29 @@
 
 ## 0. What already exists (reuse it)
 
-- `GET /api/health` — healthy flag, OpenAI-key-configured, upload/output dir
-  writability ([health.py:27](../site/backend/src/api/health.py#L27)).
+- `GET /api/health` — intentionally minimal public liveness only.
+- Authenticated `GET /api/readiness` — access-boundary and OpenAI-key-configured
+  booleans without secret values or filesystem paths.
 - `GET /api/openai/status` — upstream OpenAI outage indicator.
 - `GET /version.json` — deployed commit SHA / publish time.
 - systemd is the process manager. Units:
-  **`uconn-isomorphic`** (backend, uvicorn @ `127.0.0.1:3002`, user `www-data`),
+  **`uconn-isomorphic`** (backend, uvicorn @ `127.0.0.1:3002` by default,
+  locked user `uconn-isomorphic`),
   **`nginx`** (serves `dist/`, proxies `/api/`), **`uconn-isomorphic-cloudflared`**
   (public tunnel), **`uconn-isomorphic-update.timer`** (auto-update).
-- **`.deploy.env`** (gitignored, `600`) holds `PUBLIC_HOSTNAME`, `LOCAL_DOMAIN`,
-  `LOCAL_HOSTNAME`, `SERVICE_NAME`, `BACKEND_PORT`, `TUNNEL_NAME`, `TUNNEL_UUID`,
-  `AUTO_UPDATE`. **This is the authoritative source of domain/tunnel facts.**
+- Root-owned **`/etc/uconn-isomorphic/deploy.conf`** holds an allowlisted set
+  of non-secret deployment facts such as `PUBLIC_HOSTNAME`, local names,
+  service/port, tunnel metadata, pinned update remote, and feature choices.
+  It is parsed as data, never sourced as shell code.
+- Root-owned mode-`0600` **`/etc/uconn-isomorphic/environment`** holds server
+  secrets and runtime policy. A dashboard must never read or return it.
 - Cloudflare config: `/etc/cloudflared/uconn-isomorphic.yml` (`644`); credential JSON
   is `600` (never expose it).
 
 **Key limitation:** the backend only ever sees `127.0.0.1` — **it does not
-intrinsically know its own public URL**. Public identity comes from `.deploy.env`,
-not from the request. So "am I live?" is answered by reading `.deploy.env` + probing
-the tunnel, not by introspection.
+intrinsically know its own public URL**. Public identity comes from sanitized
+deployment status plus allowlisted `deploy.conf` fields, not from the request.
+So "am I live?" requires those facts plus an external tunnel probe.
 
 ---
 
@@ -53,7 +63,8 @@ Implementation: `systemctl is-active <unit>` (read-only, no sudo needed) via
 few seconds to avoid hammering systemd on dashboard polls.
 
 ### 1b. Live vs local — **SAFE**
-Derive from `.deploy.env` + a probe:
+Derive from sanitized deployment status/allowlisted `deploy.conf` fields plus
+a probe:
 - If `PUBLIC_HOSTNAME` is set **and** `uconn-isomorphic-cloudflared` is active **and**
   an outbound `GET https://{PUBLIC_HOSTNAME}/api/health` succeeds → **LIVE** (publicly
   reachable). Show the public URL.
@@ -62,7 +73,8 @@ Derive from `.deploy.env` + a probe:
 - Surface both addresses and the probe result + timestamp.
 
 ### 1c. Domain & Cloudflare info — **SAFE (display-only, redacted)**
-`GET /api/admin/deploy-info` reads `.deploy.env` and the cloudflared `.yml`:
+`GET /api/admin/deploy-info` reads only allowlisted non-secret deployment
+fields and sanitized status:
 - Public hostname, local domain/hostname, backend port, service names.
 - Tunnel **name** and **UUID last-4 only** (never the full UUID or credential file).
 - Auto-update on/off, deployed commit.
@@ -102,23 +114,16 @@ redeploy doesn't wipe a live demo mid-class.
 
 ## 2. Privilege model (the crux)
 
-The backend runs as **`www-data`**, which cannot `systemctl start/stop/restart`
-without rights. Grant the **minimum**:
-
-```
-# /etc/sudoers.d/uconn-isomorphic-admin  (installed by deploy.sh, mode 440, visudo-checked)
-www-data ALL=(root) NOPASSWD: /usr/bin/systemctl start uconn-isomorphic-cloudflared, \
-  /usr/bin/systemctl stop uconn-isomorphic-cloudflared, \
-  /usr/bin/systemctl start uconn-isomorphic-update.timer, \
-  /usr/bin/systemctl stop uconn-isomorphic-update.timer, \
-  /usr/bin/systemctl disable uconn-isomorphic-update.timer, \
-  /usr/bin/systemctl enable uconn-isomorphic-update.timer, \
-  /usr/bin/systemctl start uconn-isomorphic-restart.service
-```
+The backend runs as the locked **`uconn-isomorphic`** account and must remain
+unable to invoke arbitrary `systemctl`, sudo, shells, or host commands. Do not
+grant the web process a general `NOPASSWD` sudoers entry. If host mutation is
+accepted for a future dashboard, put each supported action behind a separately
+reviewed root-owned oneshot/broker with a fixed action vocabulary and an
+explicit authorization channel. Keeping the dashboard read-only is safer.
 
 Rules:
-- **Exact commands only** — no wildcards, no `systemctl *`, no shell. Each allowed
-  invocation is a full literal command line.
+- **Exact actions only** — no wildcards, no arbitrary unit names, no
+  `systemctl *`, and no shell. Each allowed invocation maps to a fixed command.
 - Read-only `is-active`/`is-enabled` do **not** need sudo — keep them out of the
   allowlist.
 - Every mutating call goes through one Python wrapper that maps a small **enum of
@@ -131,11 +136,13 @@ Rules:
 
 ## 3. Windows/dev note
 
-`systemctl`, `.deploy.env`, and cloudflared exist **only on the deployed Pi**. On the
-dev machine (Windows) these controls must **degrade gracefully**: `/api/admin/status`
+`systemctl`, the root-owned deploy config, and cloudflared exist **only on the
+deployed Pi**. On other development machines these controls must **degrade
+gracefully**: `/api/admin/status`
 reports `unsupported_platform` for the systemd tiles, the toggle/restart buttons show
-as disabled with an explanatory tooltip, and `deploy-info` returns whatever
-`.deploy.env` exists or an empty/dev placeholder. Guard every `subprocess`/systemd
+as disabled with an explanatory tooltip, and `deploy-info` returns an
+explicit local/unsupported result rather than inventing host data. Guard every
+`subprocess`/systemd
 path behind a platform check so the dashboard still renders in local dev.
 
 ---

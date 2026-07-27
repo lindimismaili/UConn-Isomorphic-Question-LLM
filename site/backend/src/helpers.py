@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, Optional
@@ -11,65 +12,98 @@ from openai import OpenAI
 
 from .schemas import ExtracterOutput, NewQuestionItem, NormalizerOutput, SourceQuestionItem
 
+OPENAI_FILE_EXPIRES_MIN_SECONDS = 60 * 60
+OPENAI_FILE_EXPIRES_MAX_SECONDS = 30 * 24 * 60 * 60
+OPENAI_FILE_EXPIRES_DEFAULT_SECONDS = 24 * 60 * 60
 
-def load_agents_config(config_path: Path, logger: Any) -> dict[str, Any]:
-    """Load the agent configuration JSON.
 
-    Args:
-        config_path: Path to the `agents.json` file.
-        logger: Logger used to report missing or malformed configuration.
-
-    Returns:
-        Parsed configuration mapping, or an empty dict when the file is missing
-        or cannot be decoded.
-    """
-
-    if not config_path.exists():
-        logger.warning("Agents config not found: %s", config_path)
-        return {}
+def openai_file_expires_after() -> dict[str, int | str]:
+    """Return the bounded provider-side expiry policy for uploaded files."""
+    raw = (
+        os.getenv(
+            "OPENAI_FILE_EXPIRES_SECONDS",
+            str(OPENAI_FILE_EXPIRES_DEFAULT_SECONDS),
+        )
+        or ""
+    ).strip()
     try:
-        return json.loads(config_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.warning("Failed to load agents config: %s", exc)
-        return {}
+        seconds = int(raw)
+    except ValueError as exc:
+        raise ValueError(
+            "OPENAI_FILE_EXPIRES_SECONDS must be an integer from "
+            f"{OPENAI_FILE_EXPIRES_MIN_SECONDS} to {OPENAI_FILE_EXPIRES_MAX_SECONDS}"
+        ) from exc
+    if not OPENAI_FILE_EXPIRES_MIN_SECONDS <= seconds <= OPENAI_FILE_EXPIRES_MAX_SECONDS:
+        raise ValueError(
+            "OPENAI_FILE_EXPIRES_SECONDS must be an integer from "
+            f"{OPENAI_FILE_EXPIRES_MIN_SECONDS} to {OPENAI_FILE_EXPIRES_MAX_SECONDS}"
+        )
+    return {"anchor": "created_at", "seconds": seconds}
 
 
 def resolve_prompt_path(prompts_dir: Path, name: str) -> Path | None:
     """Return the prompt file path for a prompt name, or None if missing."""
     candidate = prompts_dir / f"{name}.txt"
-    return candidate if candidate.exists() else None
+    return candidate if candidate.is_file() else None
 
 
 def load_prompt(prompts_dir: Path, logger: Any, name: str) -> str:
-    """Load a named prompt template from disk.
+    """Load a required, non-empty prompt template from disk.
 
-    Returns the prompt text, or an empty string when no usable file is found.
+    Prompt files are executable workflow configuration. Missing, unreadable, or
+    empty files therefore fail fast instead of silently creating an agent with
+    blank instructions. ``logger`` remains in the signature for compatibility
+    with existing callers.
     """
+    _ = logger
     prompt_path = resolve_prompt_path(prompts_dir, name)
     if prompt_path is None:
-        logger.warning("Prompt file not found for %s in %s", name, prompts_dir)
-        return ""
+        raise FileNotFoundError(f"Required prompt file not found: {prompts_dir / f'{name}.txt'}")
     try:
-        return prompt_path.read_text(encoding="utf-8")
-    except Exception as exc:
-        logger.warning("Failed to load prompt %s from %s: %s", name, prompt_path, exc)
-        return ""
+        prompt = prompt_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"Required prompt file is unreadable: {prompt_path}") from exc
+    if not prompt.strip():
+        raise ValueError(f"Required prompt file is empty: {prompt_path}")
+    return prompt
+
+
+def _runtime_prompt_placeholders(template: str) -> set[str]:
+    """Return runtime placeholders while ignoring simple LaTeX command arguments."""
+    placeholders: set[str] = set()
+    for match in re.finditer(r"{([a-z_][a-z0-9_]*)}", template):
+        line_start = template.rfind("\n", 0, match.start()) + 1
+        line_prefix = template[line_start : match.start()]
+        if re.search(r"\\[A-Za-z]+(?:\{[^{}\n]*\})*$", line_prefix):
+            continue
+        placeholders.add(match.group(1))
+    return placeholders
 
 
 def render_prompt(prompts_dir: Path, logger: Any, name: str, **variables: Any) -> str:
     """Load a prompt template and substitute its `{key}` placeholders.
 
     Plain string replacement (not str.format) so braces in prompt prose,
-    shell snippets, or LaTeX never need escaping. Unknown placeholders are
-    left as-is and logged so a typo in a template is visible.
+    shell snippets, or LaTeX never need escaping. Placeholder discovery ignores
+    simple LaTeX command arguments (for example ``\\begin{document}``). Every
+    discovered runtime placeholder must have a value, and every supplied value
+    must correspond to a placeholder.
     """
     template = load_prompt(prompts_dir, logger, name)
+    placeholders = _runtime_prompt_placeholders(template)
+    supplied = set(variables)
+    missing_values = sorted(placeholders - supplied)
+    missing_placeholders = sorted(supplied - placeholders)
+    if missing_values:
+        names = ", ".join(f"{{{key}}}" for key in missing_values)
+        raise ValueError(f"Prompt {name} has unresolved required placeholder(s): {names}")
+    if missing_placeholders:
+        names = ", ".join(f"{{{key}}}" for key in missing_placeholders)
+        raise ValueError(f"Prompt {name} is missing required placeholder(s): {names}")
+
     rendered = template
     for key, value in variables.items():
         rendered = rendered.replace("{" + key + "}", str(value))
-    leftover = re.findall(r"{[a-z_][a-z0-9_]*}", rendered)
-    if leftover:
-        logger.warning("Prompt %s has unsubstituted placeholders: %s", name, sorted(set(leftover)))
     return rendered.strip()
 
 
@@ -86,8 +120,12 @@ def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:
     """
 
     with open(file_path, "rb") as f:
-        response = client.files.create(file=f, purpose="assistants")
-    logger.info("Uploaded file %s -> %s", file_path.name, response.id)
+        response = client.files.create(
+            file=f,
+            purpose="assistants",
+            expires_after=openai_file_expires_after(),
+        )
+    logger.info("Uploaded a temporary provider file")
     return response.id
 
 

@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { fetchWithAbort } from '../utils/api.js';
 
 // ── Module-level cache ────────────────────────────────────────────────────────
 let _registry = null;
@@ -74,7 +75,7 @@ export async function loadAgentRegistry() {
 
   _promise = (async () => {
     try {
-      const res = await fetch('/api/agents');
+      const res = await fetchWithAbort('/api/agents');
       if (!res.ok) return null;
       const raw = await res.json();
       const agentEntries = Object.entries(raw)

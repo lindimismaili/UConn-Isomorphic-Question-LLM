@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchWithAbort } from '../utils/api.js';
 
 /**
  * Fetches raw text content from a URL when the modal is open.
@@ -23,7 +24,7 @@ export default function useFileContent(url, isOpen) {
 
     const controller = new AbortController();
 
-    fetch(key, { signal: controller.signal, cache: 'no-store' })
+    fetchWithAbort(key, { cache: 'no-store' }, controller.signal)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.text();

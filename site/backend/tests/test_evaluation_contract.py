@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import csv
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
+from pydantic import ValidationError
+
+from backend.src import evaluation
 from backend.src.evaluation import (
     EVALUATION_DATASET_FILENAME,
     EVALUATION_ITEMS_FILENAME,
@@ -16,6 +22,7 @@ from backend.src.evaluation import (
     rubric_reasoning_effort,
     run_openai_output_evaluation,
 )
+from backend.src.schemas import NormalizerOutput
 
 
 class FailingFiles:
@@ -28,7 +35,217 @@ class FailingEvalClient:
     evals = object()
 
 
+class _FakeFiles:
+    def __init__(self) -> None:
+        self.deleted: list[str] = []
+        self.created: list[dict[str, object]] = []
+
+    def create(self, **kwargs: object) -> object:
+        self.created.append(kwargs)
+        return SimpleNamespace(id="file_eval")
+
+    def delete(self, file_id: str) -> None:
+        self.deleted.append(file_id)
+
+
+class _FakeOutputItem:
+    def __init__(self, item: dict, results: list[SimpleNamespace]) -> None:
+        self.datasource_item = item
+        self.results = results
+
+    def model_dump(self, *args, **kwargs) -> dict:
+        return {
+            "datasource_item": self.datasource_item,
+            "results": [
+                {
+                    "name": result.name,
+                    "score": result.score,
+                }
+                for result in self.results
+            ],
+        }
+
+
+class _FakeOutputPages:
+    def __init__(self, output_items: list[_FakeOutputItem]) -> None:
+        self.output_items = output_items
+
+    def iter_pages(self):
+        yield SimpleNamespace(data=self.output_items)
+
+
+class _FakeOutputItems:
+    def __init__(self, output_items: list[_FakeOutputItem]) -> None:
+        self.output_items = output_items
+
+    def list(self, **_: object) -> _FakeOutputPages:
+        return _FakeOutputPages(self.output_items)
+
+
+class _FakeRuns:
+    def __init__(self, *, status: str, output_items: list[_FakeOutputItem]) -> None:
+        self.status = status
+        self.output_items = _FakeOutputItems(output_items)
+        self.created = 0
+        self.cancelled: list[tuple[str, str]] = []
+        self.deleted: list[tuple[str, str]] = []
+
+    def create(self, **_: object) -> object:
+        self.created += 1
+        return SimpleNamespace(id="run_eval")
+
+    def retrieve(self, **_: object) -> object:
+        return SimpleNamespace(id="run_eval", status=self.status)
+
+    def cancel(self, *, eval_id: str, run_id: str) -> None:
+        self.cancelled.append((eval_id, run_id))
+
+    def delete(self, run_id: str, *, eval_id: str) -> None:
+        self.deleted.append((eval_id, run_id))
+
+
+class _FakeEvals:
+    def __init__(self, *, status: str, output_items: list[_FakeOutputItem]) -> None:
+        self.runs = _FakeRuns(status=status, output_items=output_items)
+        self.created = 0
+        self.deleted: list[str] = []
+
+    def create(self, **_: object) -> object:
+        self.created += 1
+        return SimpleNamespace(id="eval_test")
+
+    def delete(self, eval_id: str) -> None:
+        self.deleted.append(eval_id)
+
+
+class _FakeEvalClient:
+    def __init__(self, *, status: str, output_items: list[_FakeOutputItem]) -> None:
+        self.files = _FakeFiles()
+        self.evals = _FakeEvals(status=status, output_items=output_items)
+
+
+def _question_pair(source_id: str, *, generated_stem: str) -> tuple[dict, dict]:
+    source = {
+        "source_id": source_id,
+        "source_raw": f"Original {source_id}",
+        "stem": f"Source {source_id}",
+        "question_type": "multiple_choice",
+        "answer": "B",
+        "group_context": "Use the shared setup.",
+        "options": [
+            {
+                "key": "A",
+                "text": "wrong",
+                "is_correct": False,
+                "explanation": "sign error",
+                "distractor_logic": "sign_error",
+            },
+            {
+                "key": "B",
+                "text": "right",
+                "is_correct": True,
+                "explanation": "correct",
+                "distractor_logic": "",
+            },
+        ],
+    }
+    generated = {
+        "id": 1,
+        "source_id": source_id,
+        "stem": generated_stem,
+        "question_type": "open_ended",
+        "answer": "42",
+        "options": [],
+        "parts": [],
+        "skipped": False,
+    }
+    return source, generated
+
+
 class EvaluationContractTests(unittest.TestCase):
+    def test_normalizer_question_count_is_bounded(self) -> None:
+        self.assertEqual(NormalizerOutput(new_questions_per_question=1).new_questions_per_question, 1)
+        self.assertEqual(NormalizerOutput(new_questions_per_question=5).new_questions_per_question, 5)
+        for value in (0, -1, 6, 1_000_000):
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                NormalizerOutput(new_questions_per_question=value)
+
+    def test_evaluation_item_limit_fails_before_remote_eval_creation(self) -> None:
+        source_one, generated_one = _question_pair("S1", generated_stem="Generated one")
+        source_two, generated_two = _question_pair("S2", generated_stem="Generated two")
+        client = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(evaluation, "max_evaluation_items", return_value=1):
+                report = run_openai_output_evaluation(
+                    client,
+                    {
+                        "verified_questions": [source_one, source_two],
+                        "generated_questions": [generated_one, generated_two],
+                    },
+                    Path(tmp),
+                )
+
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["items_submitted"], 2)
+        self.assertIn("MAX_EVALUATION_ITEMS=1", report["reason"])
+        client.files.create.assert_not_called()
+        client.evals.create.assert_not_called()
+
+    def test_evaluation_upload_has_crash_safe_provider_expiry(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        output = _FakeOutputItem(
+            {
+                "source_id": "S1",
+                "source_question_text": "Source",
+                "generated_question_text": "Generated",
+            },
+            [],
+        )
+        client = _FakeEvalClient(status="completed", output_items=[output])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            run_openai_output_evaluation(
+                client,
+                {
+                    "verified_questions": [source],
+                    "generated_questions": [generated],
+                },
+                Path(tmp),
+                poll_interval_seconds=0,
+                max_wait_seconds=0,
+            )
+
+        self.assertEqual(client.files.created[0]["purpose"], "evals")
+        self.assertEqual(
+            client.files.created[0]["expires_after"],
+            {"anchor": "created_at", "seconds": 86400},
+        )
+
+    def test_evaluation_csv_escapes_formula_like_untrusted_text(self) -> None:
+        dataset_item = {
+            "source_id": "=HYPERLINK(\"https://attacker.example\")",
+            "source_question_text": " \t+SUM(1,1)",
+            "generated_question_text": "@malicious",
+            "source_distractor_logic": "",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            spreadsheet = Path(tmp) / "evaluation.csv"
+            self.assertTrue(
+                evaluation._write_evaluation_spreadsheet(
+                    spreadsheet,
+                    [dataset_item],
+                    [],
+                    1.0,
+                )
+            )
+            with spreadsheet.open(encoding="utf-8", newline="") as handle:
+                row = next(csv.DictReader(handle))
+
+        self.assertTrue(row["source_id"].startswith("'="))
+        self.assertTrue(row["source_question_text"].startswith("'"))
+        self.assertTrue(row["generated_question_text"].startswith("'@"))
+
     def test_rendering_includes_correctness_explanations_and_answers(self) -> None:
         rendered = _render_generated_question_text(
             {
@@ -83,6 +300,286 @@ class EvaluationContractTests(unittest.TestCase):
         )
         self.assertIn("Shared context: For questions 1-3, consider a particle in a box.", rendered)
         self.assertIn("What is the maximum measurable energy?", rendered)
+
+    def test_source_rendering_keeps_raw_and_verified_structure(self) -> None:
+        source, _ = _question_pair("S1", generated_stem="Generated")
+        rendered = evaluation._render_source_question_text(source)
+        self.assertIn("Original source text:\nOriginal S1", rendered)
+        self.assertIn("Verified structured record:", rendered)
+        self.assertIn("Shared context: Use the shared setup.", rendered)
+        self.assertIn("A. wrong [incorrect] Explanation: sign error", rendered)
+        self.assertIn("Answer: B", rendered)
+        self.assertEqual(
+            evaluation._summarize_source_distractor_logic(source),
+            "option A: sign_error",
+        )
+
+    def test_partial_eval_is_incomplete_and_csv_keeps_every_submission(self) -> None:
+        source_one, generated_one = _question_pair("S1", generated_stem="Generated one")
+        source_two, generated_two = _question_pair("S2", generated_stem="Generated two")
+        output_item_data = {
+            "source_id": "S1",
+            "source_question_text": evaluation._render_source_question_text(source_one),
+            "generated_question_text": evaluation._render_generated_question_text(generated_one),
+            "source_distractor_logic": evaluation._summarize_source_distractor_logic(source_one),
+        }
+        results = [
+            SimpleNamespace(name=criterion["name"], score=1.0)
+            for criterion in evaluation.question_level_criteria()
+        ]
+        client = _FakeEvalClient(
+            status="completed",
+            output_items=[_FakeOutputItem(output_item_data, results)],
+        )
+        final_result = {
+            "verified_questions": [source_one, source_two],
+            "generated_questions": [generated_one, generated_two],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            report = run_openai_output_evaluation(
+                client,
+                final_result,
+                root,
+                grader_model="test-model",
+                poll_interval_seconds=0,
+                max_wait_seconds=0,
+            )
+            spreadsheet = (
+                root
+                / EVALUATION_OUTPUTS_DIRNAME
+                / "evaluation_spreadsheet.csv"
+            )
+            with spreadsheet.open(encoding="utf-8", newline="") as handle:
+                csv_rows = list(csv.DictReader(handle))
+
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["items_submitted"], 2)
+        self.assertEqual(report["items_received"], 1)
+        self.assertEqual(report["items_scored"], 1)
+        self.assertEqual(report["items_evaluated"], 1)
+        self.assertEqual(len(csv_rows), 2)
+        self.assertEqual(client.files.deleted, ["file_eval"])
+        self.assertEqual(client.evals.runs.deleted, [("eval_test", "run_eval")])
+        self.assertEqual(client.evals.deleted, ["eval_test"])
+
+    def test_missing_criterion_and_unknown_source_force_incomplete(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        unknown = {**generated, "id": 2, "source_id": "UNKNOWN"}
+        item = {
+            "source_id": "S1",
+            "source_question_text": evaluation._render_source_question_text(source),
+            "generated_question_text": evaluation._render_generated_question_text(generated),
+            "source_distractor_logic": evaluation._summarize_source_distractor_logic(source),
+        }
+        criteria = evaluation.question_level_criteria()
+        results = [
+            SimpleNamespace(name=criterion["name"], score=1.0)
+            for criterion in criteria[:-1]
+        ]
+        client = _FakeEvalClient(
+            status="completed",
+            output_items=[_FakeOutputItem(item, results)],
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = run_openai_output_evaluation(
+                client,
+                {
+                    "verified_questions": [source],
+                    "generated_questions": [generated, unknown],
+                },
+                Path(temp_dir),
+                grader_model="test-model",
+                poll_interval_seconds=0,
+                max_wait_seconds=0,
+            )
+
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["items_submitted"], 1)
+        self.assertEqual(report["items_received"], 1)
+        self.assertEqual(report["items_scored"], 0)
+        self.assertEqual(
+            report["deterministic_checks"]["evaluation_input_coverage"]["unknown_source_ids"],
+            ["UNKNOWN"],
+        )
+        self.assertIn("criterion_coverage_mismatch", report["deterministic_checks"])
+
+    def test_american_canceled_status_is_terminal(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        client = _FakeEvalClient(status="canceled", output_items=[])
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = run_openai_output_evaluation(
+                client,
+                {
+                    "verified_questions": [source],
+                    "generated_questions": [generated],
+                },
+                Path(temp_dir),
+                grader_model="test-model",
+                poll_interval_seconds=0,
+                max_wait_seconds=0,
+            )
+
+        self.assertEqual(report["status"], "cancelled")
+        self.assertEqual(report["run_status"], "canceled")
+        self.assertEqual(report["items_evaluated"], 0)
+
+    def test_cooperative_cancellation_stops_polling_and_cancels_remote_run(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        client = _FakeEvalClient(status="running", output_items=[])
+        cancellation_checks = iter((False, False, False, True))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = run_openai_output_evaluation(
+                client,
+                {
+                    "verified_questions": [source],
+                    "generated_questions": [generated],
+                },
+                Path(temp_dir),
+                grader_model="test-model",
+                poll_interval_seconds=10,
+                max_wait_seconds=900,
+                should_cancel=lambda: next(cancellation_checks),
+            )
+
+        self.assertEqual(report["status"], "cancelled")
+        self.assertEqual(report["run_status"], "cancelled")
+        self.assertEqual(
+            client.evals.runs.cancelled,
+            [("eval_test", "run_eval")],
+        )
+
+    def test_immediate_cancellation_creates_no_remote_resources(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        client = _FakeEvalClient(status="running", output_items=[])
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = run_openai_output_evaluation(
+                client,
+                {
+                    "verified_questions": [source],
+                    "generated_questions": [generated],
+                },
+                Path(temp_dir),
+                grader_model="test-model",
+                should_cancel=lambda: True,
+            )
+
+        self.assertEqual(report["status"], "cancelled")
+        self.assertEqual(client.files.created, [])
+        self.assertEqual(client.evals.created, 0)
+        self.assertEqual(client.evals.runs.created, 0)
+        self.assertEqual(client.evals.runs.cancelled, [])
+
+    def test_timeout_cancels_remote_run_and_reports_incomplete(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        client = _FakeEvalClient(status="running", output_items=[])
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = run_openai_output_evaluation(
+                client,
+                {
+                    "verified_questions": [source],
+                    "generated_questions": [generated],
+                },
+                Path(temp_dir),
+                grader_model="test-model",
+                poll_interval_seconds=0,
+                max_wait_seconds=0,
+            )
+
+        self.assertEqual(report["status"], "incomplete")
+        self.assertIn("did not reach a terminal state", report["reason"])
+        self.assertEqual(
+            client.evals.runs.cancelled,
+            [("eval_test", "run_eval")],
+        )
+
+    def test_poll_exception_attempts_cancel_without_masking_primary_error(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        client = _FakeEvalClient(status="running", output_items=[])
+        poll_secret = "EVAL_POLL_SECRET_dfc6"
+        cancel_secret = "EVAL_CANCEL_SECRET_4b19"
+        client.evals.runs.retrieve = MagicMock(
+            side_effect=RuntimeError(poll_secret)
+        )
+        client.evals.runs.cancel = MagicMock(
+            side_effect=RuntimeError(cancel_secret)
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertLogs(evaluation.logger.name, level="WARNING") as captured:
+                report = run_openai_output_evaluation(
+                    client,
+                    {
+                        "verified_questions": [source],
+                        "generated_questions": [generated],
+                    },
+                    Path(temp_dir),
+                    grader_model="test-model",
+                    poll_interval_seconds=0,
+                    max_wait_seconds=0,
+                )
+            persisted_report = json.loads(
+                (
+                    Path(temp_dir)
+                    / evaluation.EVALUATION_OUTPUTS_DIRNAME
+                    / evaluation.EVALUATION_REPORT_FILENAME
+                ).read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["error"], "Evaluation run failed (RuntimeError)")
+        self.assertEqual(report["error_type"], "RuntimeError")
+        serialized = json.dumps(persisted_report)
+        logs = "\n".join(captured.output)
+        self.assertNotIn(poll_secret, serialized)
+        self.assertNotIn(cancel_secret, serialized)
+        self.assertNotIn(poll_secret, logs)
+        self.assertNotIn(cancel_secret, logs)
+        client.evals.runs.cancel.assert_called_once_with(
+            eval_id="eval_test",
+            run_id="run_eval",
+        )
+
+    def test_remote_cleanup_failures_do_not_mask_completed_report(self) -> None:
+        source, generated = _question_pair("S1", generated_stem="Generated")
+        item = {
+            "source_id": "S1",
+            "source_question_text": evaluation._render_source_question_text(source),
+            "generated_question_text": evaluation._render_generated_question_text(generated),
+            "source_distractor_logic": evaluation._summarize_source_distractor_logic(source),
+        }
+        results = [
+            SimpleNamespace(name=criterion["name"], score=1.0)
+            for criterion in evaluation.question_level_criteria()
+        ]
+        client = _FakeEvalClient(
+            status="completed",
+            output_items=[_FakeOutputItem(item, results)],
+        )
+        client.evals.runs.delete = MagicMock(side_effect=RuntimeError("run cleanup failed"))
+        client.evals.delete = MagicMock(side_effect=RuntimeError("eval cleanup failed"))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = run_openai_output_evaluation(
+                client,
+                {
+                    "verified_questions": [source],
+                    "generated_questions": [generated],
+                },
+                Path(temp_dir),
+                grader_model="test-model",
+                poll_interval_seconds=0,
+                max_wait_seconds=0,
+            )
+
+        self.assertEqual(report["status"], "complete")
+        client.evals.runs.delete.assert_called_once_with(
+            "run_eval",
+            eval_id="eval_test",
+        )
+        client.evals.delete.assert_called_once_with("eval_test")
+        self.assertEqual(client.files.deleted, ["file_eval"])
 
     def test_figure_skip_placeholders_are_excluded_from_score_model_dataset(self) -> None:
         final_result = {
@@ -179,7 +676,11 @@ class EvaluationContractTests(unittest.TestCase):
     def test_score_model_eval_uses_per_criterion_reasoning_effort(self) -> None:
         # Reasoning effort is now resolved per criterion (its own rubric ``reasoning``
         # field, falling back to the global default), not a single global value.
-        criteria = _build_testing_criteria(model="test-model")
+        with patch.dict(
+            "os.environ",
+            {"GRADER_MAX_COMPLETION_TOKENS": "4096"},
+        ):
+            criteria = _build_testing_criteria(model="test-model")
 
         self.assertGreater(len(criteria), 0)
         by_name = {criterion["name"]: criterion for criterion in criteria}
@@ -201,6 +702,10 @@ class EvaluationContractTests(unittest.TestCase):
         # Every grader is seeded for reproducibility.
         for criterion in criteria:
             self.assertEqual(criterion["sampling_params"].get("seed"), GRADER_SEED)
+            self.assertEqual(
+                criterion["sampling_params"].get("max_completions_tokens"),
+                4096,
+            )
 
     def test_score_model_uses_pass_fail_range(self) -> None:
         criteria = _build_testing_criteria(model="test-model")

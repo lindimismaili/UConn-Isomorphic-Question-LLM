@@ -21,9 +21,8 @@ export function IconComputer({ className }) {
 }
 
 /**
- * Brain icon used for LLM agent nodes and the idle workflow placeholder.
- * Forwards `style`/extra props so callers can stagger animations (e.g. the
- * ghost-brain `animationDelay` in AgentPipeline).
+ * Brain icon used for LLM agent nodes and workflow states. Forwards
+ * `style`/extra props so callers can customize individual instances.
  *
  * @param {{className?: string}} props
  */

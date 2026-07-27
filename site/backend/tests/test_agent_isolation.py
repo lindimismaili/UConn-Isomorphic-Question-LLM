@@ -29,6 +29,7 @@ from backend.src.schemas import (
     VerifierOutput,
 )
 from backend.src.workflow import engine
+from backend.src.workflow.guardrails import GuardrailDecision
 
 # ---------- shared fixtures ----------
 
@@ -104,6 +105,9 @@ class _FakeRuntime:
             response_id="resp",
         )
 
+    async def compile_latex_async(self, latex_source, output_basename):
+        return self.compile_latex(latex_source, output_basename)
+
 
 def _fake_agents(**_kwargs) -> dict[str, object]:
     return {
@@ -157,6 +161,16 @@ def _run_isolated(
         patch.object(engine, "SharedWorkflowRuntime", _FakeRuntime),
         patch.object(engine, "upload_file_to_openai", return_value="fid_isolation"),
         patch.object(engine, "run_openai_output_evaluation", return_value={}),
+        patch.object(
+            engine,
+            "check_input_guardrails",
+            AsyncMock(return_value=GuardrailDecision(allowed=True, stage="input")),
+        ),
+        patch.object(
+            engine,
+            "check_content_guardrails",
+            AsyncMock(return_value=GuardrailDecision(allowed=True, stage="content")),
+        ),
         patch.object(engine, "Runner") as runner,
     ):
         runner.run = AsyncMock(side_effect=runner_side_effect)

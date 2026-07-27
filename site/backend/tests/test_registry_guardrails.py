@@ -33,13 +33,13 @@ class GuardrailSequenceTests(unittest.TestCase):
             registry.guardrail_nodes(), ["input_guardrail", "content_guardrail"]
         )
 
-    def test_input_to_agent_sequence_excludes_guardrails(self) -> None:
+    def test_input_to_agent_sequence_contains_only_model_agents(self) -> None:
         runnable = registry.input_to_agent_sequence()
         self.assertNotIn("input_guardrail", runnable)
         self.assertNotIn("content_guardrail", runnable)
-        # And it excludes the terminal "output" node.
         self.assertNotIn("output", runnable)
-        self.assertIn("setup", runnable)
+        self.assertNotIn("setup", runnable)
+        self.assertIn("normalizer", runnable)
         self.assertIn("evaluation", runnable)
 
     def test_llm_agents_exclude_guardrails(self) -> None:
@@ -75,6 +75,7 @@ class GuardrailConfigAccessorTests(unittest.TestCase):
         self.assertTrue(registry.guardrail_moderation_model())
         self.assertTrue(registry.guardrail_model())
         self.assertTrue(registry.guardrail_reasoning())
+        self.assertEqual(registry.guardrail_max_output_tokens(), 2048)
 
     def test_guardrails_enabled_env_override(self) -> None:
         import os
@@ -84,6 +85,9 @@ class GuardrailConfigAccessorTests(unittest.TestCase):
             self.assertFalse(registry.guardrails_enabled())
         with patch.dict(os.environ, {"GUARDRAILS_ENABLED": "yes"}):
             self.assertTrue(registry.guardrails_enabled())
+        with patch.dict(os.environ, {"GUARDRAILS_ENABLED": "sometimes"}):
+            with self.assertRaises(ValueError):
+                registry.guardrails_enabled()
 
     def test_physics_min_confidence_is_a_probability(self) -> None:
         value = registry.guardrail_physics_min_confidence()

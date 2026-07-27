@@ -50,7 +50,11 @@ def deployment_status_payload(*, active_workflows: int) -> dict[str, Any]:
     if not isinstance(raw, dict):
         return fallback
 
-    events = [_event(item) for item in raw.get("events", []) if _event(item) is not None]
+    events = []
+    for item in raw.get("events", []):
+        sanitized_event = _event(item)
+        if sanitized_event is not None:
+            events.append(sanitized_event)
     return {
         "status": _text(raw.get("status"), limit=64) or "unknown",
         "stage": _text(raw.get("stage"), limit=64) or "unknown",

@@ -172,7 +172,7 @@ function EvaluationTab({ evaluation, onViewInDepth }) {
           </Button>
         )}
         {hasScore && (
-          <span className="viewer-eval-score">{(evaluation.overall_score * 100).toFixed(0)}%</span>
+          <span className="viewer-eval-score">{evaluation.overall_score.toFixed(0)}%</span>
         )}
       </div>
     </div>
@@ -184,8 +184,17 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
   const [activeTab, setActiveTab] = useState(TABS[0]);
 
   let data = null;
-  if (text) {
-    try { data = JSON.parse(text); } catch { /* ignore */ }
+  let parseError = '';
+  if (text !== null) {
+    try {
+      const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new TypeError('Expected a JSON object.');
+      }
+      data = parsed;
+    } catch {
+      parseError = 'This results file is not valid JSON. Download the file to inspect it or run the workflow again.';
+    }
   }
 
   // Verified questions are the source questions after the Verifier fills in
@@ -241,6 +250,9 @@ export default function FinalResultModal({ isOpen, onClose, fileName, url, onDow
     >
       {loading && <EmptyState variant="modal">Loading…</EmptyState>}
       {error && <EmptyState variant="modal" error>{error}</EmptyState>}
+      {!loading && !error && parseError && (
+        <EmptyState variant="modal" error>{parseError}</EmptyState>
+      )}
       {!loading && !error && data && (
         <>
           <Tabs

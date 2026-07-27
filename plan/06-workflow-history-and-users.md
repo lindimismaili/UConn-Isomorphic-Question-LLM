@@ -1,5 +1,10 @@
 # 06 — Workflow History & User Identity (query by day / time / user / IP)
 
+> **Status — proposed identity/query layer, not implemented; status warning added
+> July 27, 2026.** The current shared access token is not user identity. Reverify
+> store behavior before implementing this design; see
+> [`docs/PROFESSOR_HANDOFF.md`](../docs/PROFESSOR_HANDOFF.md).
+
 > The professor wants to view completed workflows **organized by day / time / user /
 > ip**, since students *and* teachers will use the site. This requires two things the
 > repo doesn't have yet: **a way to know who ran a workflow**, and **a queryable store**.

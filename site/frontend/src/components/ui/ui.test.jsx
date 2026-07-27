@@ -2,7 +2,7 @@
 
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   AppShell,
   Avatar,
@@ -14,6 +14,7 @@ import {
   CardHeader,
   ChatMessage,
   ChatTranscript,
+  Checkbox,
   Chip,
   Composer,
   DataTable,
@@ -63,12 +64,12 @@ afterEach(() => {
 describe('Button', () => {
   it('emits .btn + variant + modifiers and forwards rest props', () => {
     render(
-      <Button variant="primary" size="sm" fixedWidth className="send-action" title="go">
+      <Button variant="primary" size="sm" fixedWidth className="btn-download" title="go">
         Send
       </Button>,
     );
     const btn = container.querySelector('button');
-    expect(btn.className).toBe('btn btn-primary btn-sm btn-fixed-width send-action');
+    expect(btn.className).toBe('btn btn-primary btn-sm btn-fixed-width btn-download');
     expect(btn.getAttribute('type')).toBe('button');
     expect(btn.getAttribute('title')).toBe('go');
     expect(btn.textContent).toBe('Send');
@@ -106,6 +107,11 @@ describe('form controls', () => {
     expect(container.querySelector('input').getAttribute('type')).toBe('text');
   });
 
+  it('TextInput maps controlSize to the documented large control class', () => {
+    render(<TextInput controlSize="lg" value="" onChange={() => {}} />);
+    expect(container.querySelector('input').className).toBe('prompt-dropdown-select');
+  });
+
   it('TextArea uses .prompt-input', () => {
     render(<TextArea value="" onChange={() => {}} />);
     expect(container.querySelector('textarea').className).toBe('prompt-input');
@@ -124,11 +130,47 @@ describe('form controls', () => {
     );
     const root = container.querySelector('.dropdown');
     const trigger = root.querySelector('button.dropdown-trigger');
+    expect(trigger.getAttribute('role')).toBe('combobox');
     expect(trigger.getAttribute('aria-haspopup')).toBe('listbox');
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger.hasAttribute('aria-activedescendant')).toBe(false);
     expect(trigger.querySelector('.dropdown-trigger-label.is-placeholder').textContent).toBe('Pick');
     // Closed → no portaled listbox yet.
     expect(document.body.querySelector('[role="listbox"]')).toBeNull();
+  });
+
+  it('Dropdown tracks listbox focus through the combobox active descendant', () => {
+    render(
+      <Dropdown
+        aria-label="Question theme"
+        value=""
+        onChange={() => {}}
+        options={[
+          { value: 'a', label: 'Alpha' },
+          { value: 'b', label: 'Beta' },
+        ]}
+      />,
+    );
+    const trigger = container.querySelector('.dropdown-trigger');
+    trigger.focus();
+
+    act(() => {
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    });
+
+    const listbox = document.body.querySelector('[role="listbox"]');
+    const options = listbox.querySelectorAll('[role="option"]');
+    expect(trigger.getAttribute('role')).toBe('combobox');
+    expect(trigger.getAttribute('aria-controls')).toBe(listbox.id);
+    expect(trigger.getAttribute('aria-activedescendant')).toBe(options[0].id);
+    expect(listbox.getAttribute('aria-label')).toBe('Question theme');
+    expect(document.activeElement).toBe(trigger);
+
+    act(() => {
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    });
+    expect(trigger.getAttribute('aria-activedescendant')).toBe(options[1].id);
+    expect(document.activeElement).toBe(trigger);
   });
 
   it('Dropdown opens on click (portaled) and commits the chosen value', () => {
@@ -164,6 +206,25 @@ describe('ToggleSwitch', () => {
     expect(container.querySelector('.developer-toggle-track .developer-toggle-thumb')).toBeTruthy();
     expect(container.querySelector('input[type="checkbox"]').checked).toBe(true);
     expect(container.querySelector('.developer-toggle-label').textContent).toBe('On');
+  });
+});
+
+describe('Checkbox', () => {
+  it('emits one native checkbox and reports its checked state', () => {
+    let checked = false;
+    render(
+      <Checkbox
+        checked={false}
+        onChange={(nextChecked) => {
+          checked = nextChecked;
+        }}
+        aria-label="Select run"
+      />,
+    );
+    const input = container.querySelector('input[type="checkbox"]');
+    expect(input).toBeTruthy();
+    act(() => input.click());
+    expect(checked).toBe(true);
   });
 });
 
@@ -238,16 +299,31 @@ describe('status + feedback', () => {
     expect(container.querySelector('.log-time').textContent).toBe('[12:00]');
     act(() => root.render(<EmptyState variant="modal" error>none</EmptyState>));
     expect(container.querySelector('div').className).toBe('modal-empty-state modal-empty-state-error');
+    expect(container.querySelector('div').getAttribute('role')).toBe('alert');
+    expect(container.querySelector('div').getAttribute('aria-live')).toBe('assertive');
   });
 });
 
 describe('Tabs + tables', () => {
   it('Tabs marks the active tab', () => {
-    render(<Tabs value="b" onChange={() => {}} tabs={[{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]} />);
+    const onChange = vi.fn();
+    render(<Tabs value="b" onChange={onChange} tabs={[{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]} />);
     const tabs = container.querySelectorAll('.viewer-tab');
     expect(tabs[0].className).toBe('viewer-tab');
     expect(tabs[1].className).toBe('viewer-tab is-active');
     expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].tabIndex).toBe(-1);
+    expect(tabs[1].tabIndex).toBe(0);
+
+    act(() => {
+      tabs[1].focus();
+      tabs[1].dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+      }));
+    });
+    expect(onChange).toHaveBeenCalledWith('a');
+    expect(document.activeElement).toBe(tabs[0]);
   });
 
   it('DataTable selects the variant class', () => {
@@ -379,12 +455,16 @@ describe('chat primitives', () => {
         onChange={() => {}}
         onSend={onSend}
         onAttach={() => {}}
+        maxLength={20000}
         attachLabel="Upload"
         themeSelect={{ value: '', onChange: () => {}, options: [{ value: 'a', label: 'A' }], placeholder: 'Theme' }}
       />,
     );
     expect(container.querySelector('.composer')).toBeTruthy();
-    expect(container.querySelector('textarea.composer-input')).toBeTruthy();
+    const composerInput = container.querySelector('textarea.composer-input');
+    expect(composerInput).toBeTruthy();
+    expect(composerInput.getAttribute('aria-label')).toBe('Workflow instructions');
+    expect(composerInput.maxLength).toBe(20000);
     expect(container.querySelector('.composer-send')).toBeTruthy();
     expect(container.querySelector('.composer-attach')).toBeTruthy();
     // The theme selector is the custom Dropdown (a trigger button, not a native select).
@@ -404,6 +484,21 @@ describe('chat primitives', () => {
       ),
     );
     expect(container.querySelector('.composer-theme-select').className).toContain('is-active');
+  });
+
+  it('Composer forwards a custom accessible name to its textarea', () => {
+    render(
+      <Composer
+        aria-label="Describe the question transformation"
+        value=""
+        onChange={() => {}}
+        onSend={() => {}}
+      />,
+    );
+    expect(container.querySelector('textarea.composer-input').getAttribute('aria-label')).toBe(
+      'Describe the question transformation',
+    );
+    expect(container.querySelector('.composer').hasAttribute('aria-label')).toBe(false);
   });
 
   it('Composer send button flips to Stop while running', () => {

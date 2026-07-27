@@ -1,5 +1,10 @@
 # 04 — Admin Authentication & Security
 
+> **Status — proposed architecture, not current authentication; status warning added
+> July 27, 2026.** The current release uses an optional shared
+> `APP_ACCESS_TOKEN`, not the professor account/session system below. See
+> [`SECURITY.md`](../SECURITY.md) for the implemented boundary.
+
 > Professor signs in with a username/password **he** sets. This doc specifies how
 > that login works given the repo's realities, plus the security hardening the admin
 > surface forces us to confront.
@@ -8,14 +13,17 @@
 
 ## 0. Hard constraints discovered in the codebase
 
-1. **There is no authentication anywhere today.** Every `/api/*` route is open to
-   anyone who can reach the host or the Cloudflare tunnel. The only "protection" is
-   the CORS allowlist and network scoping. Confirmed by searching
-   `site/backend/src/**` for any auth primitive — zero matches.
-2. **`site/.env` is git-tracked on purpose** (`.gitignore:45`, `AGENTS.md`). The
+1. **The current release has an optional shared-token boundary, not professor
+   authentication.** `APP_ACCESS_TOKEN` protects API routes when configured,
+   but it does not establish a professor identity, role, session, or per-user
+   authorization. The account/session architecture proposed below remains
+   unimplemented.
+2. **A secret-bearing `site/.env` has historically been tracked.** The current
    runtime loader ([bootstrap.py](../site/backend/src/bootstrap.py) `load_dotenv`)
-   reads **only** `site/.env` — it does **not** load `.env.local`. And the
-   `OPENAI_API_KEY` is already committed to git history.
+   loads ignored `site/.env.local` before tracked non-secret defaults, while
+   process/systemd values win. Do not infer that any historical value is live;
+   rotate any key that was ever committed and keep active values in ignored or
+   server-only configuration.
    → **Therefore the admin password must NOT live in `site/.env`.** Committing it
    would publish it. It belongs in the systemd unit's `Environment=` /
    `EnvironmentFile=` pointing at a `600`-perm file **outside** the git checkout.
@@ -31,8 +39,9 @@
 
 ## 1. Where admin credentials live
 
-**Recommended (prod):** systemd unit `Environment=` lines, written by `deploy.sh`
-from a prompt or from `.deploy.env` (which is gitignored, `chmod 600`):
+**Recommended (prod):** values written by `deploy.sh` to the existing
+root-owned mode-`0600` `/etc/uconn-isomorphic/environment` file, which systemd
+already loads outside the Git checkout:
 
 ```ini
 # added to install_backend_service() heredoc in deploy.sh
@@ -44,8 +53,8 @@ Environment=SESSION_SECRET=...          # 32+ random bytes for cookie signing
 - Store a **hash**, not the plaintext password. Use `passlib[bcrypt]` (add to
   requirements) or stdlib `hashlib.scrypt`. `deploy.sh` prompts for the password
   once, hashes it, and writes only the hash.
-- `SESSION_SECRET` is generated once (`openssl rand -hex 32`) and persisted to
-  `.deploy.env` so sessions survive restarts.
+- `SESSION_SECRET` is generated once (`openssl rand -hex 32`) and persisted in
+  `/etc/uconn-isomorphic/environment` so sessions survive restarts.
 - **Local dev:** allow the same vars via `.env.local` support (add `.env.local` to the
   loader, gitignored) **or** just export them in the shell. Document that the admin
   area is disabled if `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` are unset.
@@ -105,9 +114,9 @@ fits. Fall back to Basic only if we want the absolute minimum for a first spike.
 
 | # | Issue | Action |
 |---|---|---|
-| S1 | **`OPENAI_API_KEY` is committed to git.** Anyone with repo access has the live key. | **Rotate the key**, move it out of the tracked `.env` into systemd `EnvironmentFile` (600, outside git), and scrub history if the repo is or ever becomes public. This is the highest-severity finding in the whole review. |
-| S2 | Admin endpoints can **read `.deploy.env`, cloudflared config, run `systemctl`** | Everything under `require_admin`; never expose these on unauthenticated routes. Return **redacted** values (tunnel UUID last-4, never credential JSON). |
-| S3 | Host mutation (restart/offline) needs elevated rights | Narrow **NOPASSWD sudoers allowlist** for `www-data` limited to exact `systemctl start/stop/restart <the three units>`. No shell, no wildcards. See [05-site-controls.md](05-site-controls.md). |
+| S1 | A tracked secret-bearing `.env` can expose an OpenAI key. | Rotate any key that was ever committed, keep active values in ignored/server-only configuration, and assess history cleanup if the repository is or becomes public. Never claim a historical value is currently live without verifying it securely. |
+| S2 | Admin endpoints may read allowlisted deployment status/config and fixed `systemctl` state | Everything stays behind `require_admin`; never return environment files, Cloudflare credentials, raw journals, or arbitrary host paths. |
+| S3 | Host mutation (restart/offline) needs elevated rights | Keep the `uconn-isomorphic` app account unprivileged. Use a root-owned, fixed-action oneshot/helper with a narrow authorization boundary; no shell, wildcards, user-supplied unit names, or direct secret-file access. See [05-site-controls.md](05-site-controls.md). |
 | S4 | Cookie/session secrets | `HttpOnly`+`Secure`+`SameSite=Strict`; `SESSION_SECRET` ≥ 32 bytes; rotate on demand. |
 | S5 | Audit trail | New `admin_audit` ledger row for every admin action (login, toggle, restart, rating override, config change) with `who/when/ip/action/args`. |
 | S6 | CORS | Keep `allow_credentials=False` unless cookies must cross origin; in prod the dashboard is same-origin so leave it. If dev needs it, add a dev-only exact-origin + credentials config path. |

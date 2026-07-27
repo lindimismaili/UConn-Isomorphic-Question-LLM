@@ -154,7 +154,8 @@ function unlockBodyScroll() {
  * Base modal wrapper for all in-app dialogs.
  *
  * Handles backdrop clicks, Escape-to-close, scroll locking, and portal
- * rendering into `document.body`.
+ * rendering into `document.body`. Set `dismissible={false}` only for a
+ * required gate that must be completed before the application can be used.
  *
  * @param {object} props
  * @returns {JSX.Element}
@@ -228,9 +229,10 @@ export default function Modal({
     };
   }, [bodyClassName, isOpen]);
 
-  // Close on Escape key
+  // Only the top modal owns Escape and focus trapping. A required gate can set
+  // `dismissible={false}` while retaining Tab containment.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isTopModal) return;
     const handler = (e) => {
       if (e.key === 'Escape' && dismissible) {
         onClose();
@@ -259,7 +261,7 @@ export default function Modal({
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [dismissible, isOpen, onClose]);
+  }, [dismissible, isOpen, isTopModal, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -297,7 +299,9 @@ export default function Modal({
       >
         <div className="modal-header">
           <h3 id={titleId}>{title}</h3>
-          {dismissible ? <IconButton onClick={onClose} aria-label="Close" icon={<IconClose />} /> : null}
+          {dismissible ? (
+            <IconButton onClick={onClose} aria-label="Close" icon={<IconClose />} />
+          ) : null}
         </div>
         <div className={`modal-body${modalBodyClassName ? ` ${modalBodyClassName}` : ''}`}>
           {children}

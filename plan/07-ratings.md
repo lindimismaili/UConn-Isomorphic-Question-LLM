@@ -1,5 +1,10 @@
 # 07 — Output Ratings (good / bad, saved into workflow data)
 
+> **Status — proposed, not implemented; status warning added July 27, 2026.** No
+> rating route, persistence contract, or professor ratings UI should be assumed
+> from this document. See
+> [`docs/PROFESSOR_HANDOFF.md`](../docs/PROFESSOR_HANDOFF.md).
+
 > Let users (and the professor) rate an output **good or bad**, and persist that rating
 > into the workflow's data so it feeds the existing grader/prompt-tuning loop.
 

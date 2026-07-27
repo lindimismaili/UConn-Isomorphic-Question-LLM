@@ -3,6 +3,7 @@ import Modal from './Modal.jsx';
 import { IconFile } from '../Icons.jsx';
 import { generateId } from '../../utils/ids';
 import { Button, EmptyState } from '../ui/index.js';
+import { fetchWithAbort } from '../../utils/api.js';
 
 /** Mirrors the main upload limit for test-file selections. */
 const MAX_FILES = 5;
@@ -34,7 +35,7 @@ export default function TestFilesModal({ isOpen, onClose, files, dispatch, isRun
       .then(() => {
         setLoading(true);
         setError('');
-        return fetch('/api/evaluation/files');
+        return fetchWithAbort('/api/evaluation/files');
       })
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load test files (${res.status})`);

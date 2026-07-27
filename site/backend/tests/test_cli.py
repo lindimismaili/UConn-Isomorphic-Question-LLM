@@ -15,11 +15,12 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from backend.src import main
 from backend.src.api import state as api_state
-from backend.src.registry import llm_agents, stoppable_agents
+from backend.src.registry import evaluation_agent, llm_agents, stoppable_agents
 from backend.src.schemas import NormalizerOutput, WorkflowResult
 from backend.src.tools import meta_evaluator
 
@@ -66,6 +67,34 @@ class NormalizeArgvShimTests(unittest.TestCase):
         self.assertEqual(args.num_questions, 3)
         self.assertIs(args.func, main._cmd_run)
 
+    def test_paid_evaluation_is_explicit_opt_in(self) -> None:
+        parser = main.build_parser()
+        self.assertFalse(parser.parse_args(["run", "some.pdf"]).run_evaluation)
+        self.assertTrue(parser.parse_args(["run", "some.pdf", "--eval"]).run_evaluation)
+        self.assertFalse(
+            parser.parse_args(
+                ["rerun-from-agent", "--source", "prior", "--from", evaluation_agent()]
+            ).run_evaluation
+        )
+        self.assertTrue(
+            parser.parse_args(
+                [
+                    "from-agent-input",
+                    "--from",
+                    evaluation_agent(),
+                    "--input",
+                    "input.json",
+                    "--eval",
+                ]
+            ).run_evaluation
+        )
+
+    def test_question_count_is_bounded_before_workflow_start(self) -> None:
+        parser = main.build_parser()
+        for value in ("0", "6", "1000000"):
+            with self.subTest(value=value), self.assertRaises(SystemExit):
+                parser.parse_args(["run", "some.pdf", "-n", value])
+
 
 class RunCommandTests(unittest.TestCase):
     """`run` must thread files/theme/stop-after/eval into the engine call.
@@ -79,6 +108,8 @@ class RunCommandTests(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self._outputs_patch = patch.object(main, "OUTPUTS_DIR", Path(self._tmp.name))
         self._outputs_patch.start()
+        self.source_pdf = Path(self._tmp.name) / "one.pdf"
+        self.source_pdf.write_bytes(b"%PDF-1.4 source")
 
     def tearDown(self) -> None:
         self._outputs_patch.stop()
@@ -97,21 +128,89 @@ class RunCommandTests(unittest.TestCase):
         ):
             code = main._cmd_run(
                 main.build_parser().parse_args(
-                    ["run", "one.pdf", "-n", "2", "--no-eval", "--stop-after", "generator"]
+                    [
+                        "run",
+                        str(self.source_pdf),
+                        "-n",
+                        "2",
+                        "--no-eval",
+                        "--stop-after",
+                        "generator",
+                    ]
                 )
             )
         self.assertEqual(code, 0)
         engine.assert_awaited_once()
-        self.assertEqual(captured["file_paths"], ["one.pdf"])
+        self.assertEqual(captured["file_paths"], [str(self.source_pdf.resolve())])
         self.assertFalse(captured["run_evaluation"])
         self.assertEqual(captured["stop_after_agent"], "generator")
         # -n 2 is folded into the prompt sent to the normalizer.
         self.assertIn("Generate 2 questions per source", captured["prompt"])
 
+    def test_run_requires_an_explicit_source_file(self) -> None:
+        with (
+            patch.object(main, "run_workflow_async", new=AsyncMock()) as engine,
+            patch.object(main, "get_cli_openai_client") as provider,
+        ):
+            code = main._cmd_run(main.build_parser().parse_args(["run"]))
+        self.assertEqual(code, 1)
+        provider.assert_not_called()
+        engine.assert_not_awaited()
+
+    def test_run_rejects_missing_source_before_provider(self) -> None:
+        missing = Path(self._tmp.name) / "missing.pdf"
+        with (
+            patch.object(main, "run_workflow_async", new=AsyncMock()) as engine,
+            patch.object(main, "get_cli_openai_client") as provider,
+        ):
+            code = main._cmd_run(
+                main.build_parser().parse_args(["run", str(missing)])
+            )
+        self.assertEqual(code, 1)
+        provider.assert_not_called()
+        engine.assert_not_awaited()
+
+    def test_run_rejects_oversized_instruction_before_provider(self) -> None:
+        with (
+            patch.object(main, "run_workflow_async", new=AsyncMock()) as engine,
+            patch.object(main, "get_cli_openai_client") as provider,
+            self.assertRaisesRegex(ValueError, "at most 20000"),
+        ):
+            main._cmd_run(
+                main.build_parser().parse_args(
+                    ["run", str(self.source_pdf), "-i", "x" * 20_001]
+                )
+            )
+        provider.assert_not_called()
+        engine.assert_not_awaited()
+
+    def test_guardrail_blocked_run_is_not_reported_as_complete(self) -> None:
+        async def _blocked_engine(**kwargs):
+            kwargs["workflow"]["status"] = "blocked"
+            kwargs["workflow"]["blocked"] = {
+                "stage": "input",
+                "category": "prompt_injection",
+                "reason": "unsafe instructions",
+            }
+            return _fake_result()
+
+        with (
+            patch.object(main, "run_workflow_async", side_effect=_blocked_engine),
+            patch.object(main, "get_cli_openai_client", return_value=object()),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Workflow blocked by input guardrail"):
+                main._cmd_run(
+                    main.build_parser().parse_args(
+                        ["run", str(self.source_pdf)]
+                    )
+                )
+
     def test_run_rejects_unknown_theme(self) -> None:
         with patch.object(main, "get_cli_openai_client", return_value=object()):
             code = main._cmd_run(
-                main.build_parser().parse_args(["run", "one.pdf", "--theme", "NotATheme"])
+                main.build_parser().parse_args(
+                    ["run", str(self.source_pdf), "--theme", "NotATheme"]
+                )
             )
         self.assertEqual(code, 1)
 
@@ -127,10 +226,29 @@ class RunCommandTests(unittest.TestCase):
             patch.object(main, "get_cli_openai_client", return_value=object()),
         ):
             code = main._cmd_run(
-                main.build_parser().parse_args(["run", "one.pdf", "--theme", "Physics"])
+                main.build_parser().parse_args(
+                    ["run", str(self.source_pdf), "--theme", "Physics"]
+                )
             )
         self.assertEqual(code, 0)
-        self.assertEqual(captured["theme"], "Physics")
+        self.assertEqual(captured["theme"], main._canonical_theme("Physics"))
+
+    def test_completion_log_does_not_expose_question_text(self) -> None:
+        secret_stem = "PRIVATE_COURSE_QUESTION_TEXT"
+        result = _fake_result().model_copy(
+            update={
+                "generated_questions": [
+                    SimpleNamespace(
+                        id=1,
+                        source_id="S1",
+                        stem=secret_stem,
+                    )
+                ]
+            }
+        )
+        with self.assertLogs(main.logger.name, level="INFO") as captured:
+            main._log_workflow_result(result)
+        self.assertNotIn(secret_stem, "\n".join(captured.output))
 
 
 class RerunFromAgentTests(unittest.TestCase):
@@ -157,6 +275,9 @@ class RerunFromAgentTests(unittest.TestCase):
             return _fake_result()
 
         source_dir = main.OUTPUTS_DIR / "06-30-2026" / "12-00-00"
+        source_path = source_dir / "input_files" / "source.pdf"
+        source_path.parent.mkdir(parents=True)
+        source_path.write_bytes(b"%PDF-1.4 source")
         with (
             patch.object(main, "run_workflow_async", side_effect=_fake_engine),
             patch.object(main, "get_cli_openai_client", return_value=object()),
@@ -164,7 +285,7 @@ class RerunFromAgentTests(unittest.TestCase):
             patch.object(main, "_relative_output_folder", return_value="06-30-2026/12-00-00"),
             patch(
                 "backend.src.artifacts.load_source_file_paths",
-                return_value=["/tmp/source.pdf"],
+                return_value=[str(source_path)],
             ),
         ):
             code = main._cmd_rerun_from_agent(
@@ -176,7 +297,10 @@ class RerunFromAgentTests(unittest.TestCase):
         self.assertEqual(captured["resume_from_agent"], "generator")
         self.assertEqual(captured["resume_source_dir"], source_dir)
         self.assertEqual(captured["resume_source_label"], "06-30-2026/12-00-00")
-        self.assertEqual(captured["file_paths"], ["/tmp/source.pdf"])
+        self.assertEqual(
+            captured["file_paths"],
+            [str(source_path.resolve())],
+        )
 
     def test_rejects_non_runnable_stage(self) -> None:
         """A guardrail/runtime node like `setup` is not a valid --from target.
@@ -354,6 +478,18 @@ class RegistryDrivenChoicesTests(unittest.TestCase):
             args = parser.parse_args(["rerun-from-agent", "--source", "x", "--from", agent])
             self.assertEqual(args.from_agent, agent)
 
+    def test_evaluation_resume_requires_explicit_paid_opt_in(self) -> None:
+        parser = main.build_parser()
+        rerun_args = parser.parse_args(
+            ["rerun-from-agent", "--source", "x", "--from", evaluation_agent()]
+        )
+        input_args = parser.parse_args(
+            ["from-agent-input", "--from", evaluation_agent(), "--input", "x.json"]
+        )
+
+        self.assertEqual(main._cmd_rerun_from_agent(rerun_args), 1)
+        self.assertEqual(main._cmd_from_agent_input(input_args), 1)
+
 
 class BatchCommandTests(unittest.TestCase):
     """`batch` must delegate to state.run_create_data_batch_async and mirror
@@ -394,7 +530,7 @@ class BatchCommandTests(unittest.TestCase):
                 patch.object(api_state, "run_create_data_batch_async", new=_fake_run),
             ):
                 with self.assertRaises(SystemExit) as ctx:
-                    main.main(["batch"])
+                    main.main(["batch", "--confirm-costs"])
             self.assertEqual(ctx.exception.code, 0)
 
     def test_exits_one_when_batch_has_failures(self) -> None:
@@ -416,7 +552,7 @@ class BatchCommandTests(unittest.TestCase):
                 patch.object(api_state, "run_create_data_batch_async", new=_fake_run),
             ):
                 with self.assertRaises(SystemExit) as ctx:
-                    main.main(["batch"])
+                    main.main(["batch", "--confirm-costs"])
             self.assertEqual(ctx.exception.code, 1)
 
     def test_exits_one_when_no_evaluation_files(self) -> None:
@@ -455,18 +591,27 @@ class EvalCommandTests(unittest.TestCase):
     def test_runs_mode_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs_dir = Path(tmp)
-            run_dir = outputs_dir / "run1"
-            run_dir.mkdir()
-            (run_dir / "final_result.json").write_text("{}", encoding="utf-8")
+            label = "07-27-2026/12-34-56"
+            run_dir = outputs_dir / label
+            run_dir.mkdir(parents=True)
+            (run_dir / "final_result.json").write_text(
+                '{"generated_questions":[{"source_id":"S1"}]}',
+                encoding="utf-8",
+            )
 
             with (
                 patch.object(main, "get_cli_openai_client", return_value=object()),
                 patch.object(main, "OUTPUTS_DIR", outputs_dir),
+                patch.object(api_state, "OUTPUTS_DIR", outputs_dir),
                 patch.object(api_state, "run_eval_batch_async", new=self._fake_run_completed),
             ):
                 with self.assertRaises(SystemExit) as ctx:
-                    main.main(["eval", "--runs", "run1"])
+                    main.main(
+                        ["eval", "--runs", label, "--confirm-costs"]
+                    )
             self.assertEqual(ctx.exception.code, 0)
+            batch = next(iter(api_state.eval_batch_jobs.values()))
+            self.assertEqual(batch["entries"][0]["folder"], label)
 
     def test_runs_mode_missing_final_result_is_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -475,6 +620,7 @@ class EvalCommandTests(unittest.TestCase):
             with (
                 patch.object(main, "get_cli_openai_client", return_value=object()),
                 patch.object(main, "OUTPUTS_DIR", outputs_dir),
+                patch.object(api_state, "OUTPUTS_DIR", outputs_dir),
             ):
                 with self.assertRaises(SystemExit) as ctx:
                     main.main(["eval", "--runs", "run-empty"])
@@ -493,7 +639,15 @@ class EvalCommandTests(unittest.TestCase):
                 patch.object(api_state, "run_eval_batch_async", new=self._fake_run_completed),
             ):
                 with self.assertRaises(SystemExit) as ctx:
-                    main.main(["eval", "--pairs", str(source_pdf), str(gen_pdf)])
+                    main.main(
+                        [
+                            "eval",
+                            "--pairs",
+                            str(source_pdf),
+                            str(gen_pdf),
+                            "--confirm-costs",
+                        ]
+                    )
             self.assertEqual(ctx.exception.code, 0)
 
     def test_pairs_mode_missing_path_is_error(self) -> None:
@@ -505,6 +659,26 @@ class EvalCommandTests(unittest.TestCase):
                 with self.assertRaises(SystemExit) as ctx:
                     main.main(["eval", "--pairs", str(source_pdf), str(missing_gen)])
             self.assertEqual(ctx.exception.code, 1)
+
+    def test_pairs_mode_rejects_disguised_pdf_before_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source_pdf = Path(tmp) / "source.pdf"
+            source_pdf.write_bytes(b"not a pdf")
+            generated_pdf = Path(tmp) / "generated.pdf"
+            generated_pdf.write_bytes(b"%PDF-1.4 generated")
+            with patch.object(main, "get_cli_openai_client") as provider:
+                with self.assertRaises(SystemExit) as ctx:
+                    main.main(
+                        [
+                            "eval",
+                            "--pairs",
+                            str(source_pdf),
+                            str(generated_pdf),
+                            "--confirm-costs",
+                        ]
+                    )
+            self.assertEqual(ctx.exception.code, 1)
+            provider.assert_not_called()
 
 
 class ImproveCommandTests(unittest.TestCase):

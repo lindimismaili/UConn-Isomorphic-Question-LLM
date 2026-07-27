@@ -2,46 +2,148 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import threading
+import time
+from datetime import datetime, timezone
+from urllib.error import URLError
+from urllib.request import Request as URLRequest
+from urllib.request import urlopen
 
-from fastapi import APIRouter
+from agents.logger import logger
+from fastapi import APIRouter, Request
 
 from backend.src.api.deployment_status import deployment_status_payload
 from backend.src.api.state import (
     OPENAI_STATUS_TIMEOUT_SECONDS,
-    TERMINAL_STATUSES,
+    OPENAI_STATUS_URL,
+    _active_record_or_task_ids,
     _has_openai_api_key,
+    batch_jobs,
+    batch_tasks,
+    eval_batch_jobs,
+    eval_batch_tasks,
+    workflow_tasks,
     workflows,
 )
-from backend.src.operations import fetch_openai_status, operations
-from backend.src.paths import (
-    OUTPUTS_DIR,
-    UPLOADS_DIR,
-    VERSION_PATHS,
-)
+from backend.src.operations import operations
+from backend.src.paths import VERSION_PATHS
+from backend.src.safety import safe_exception_category
 
 router = APIRouter()
+
+_DEFAULT_OPENAI_STATUS_CACHE_SECONDS = 60.0
+_MAX_OPENAI_STATUS_CACHE_SECONDS = 300.0
+_openai_status_cache_lock = threading.Lock()
+_openai_status_cache: dict | None = None
+_openai_status_cache_expires_at = 0.0
+
+
+def _openai_status_cache_seconds() -> float:
+    """Return a bounded cache duration, falling back safely on bad config."""
+    raw = (
+        os.getenv(
+            "OPENAI_STATUS_CACHE_SECONDS",
+            str(_DEFAULT_OPENAI_STATUS_CACHE_SECONDS),
+        )
+        or ""
+    ).strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        return _DEFAULT_OPENAI_STATUS_CACHE_SECONDS
+    return min(_MAX_OPENAI_STATUS_CACHE_SECONDS, max(5.0, value))
+
+
+def _fetch_openai_status() -> dict:
+    """Fetch the public status payload without running blocking I/O in the loop."""
+    request = URLRequest(
+        OPENAI_STATUS_URL,
+        headers={"User-Agent": "IsomorphicQuestionGenerator/1.0"},
+    )
+    with urlopen(request, timeout=OPENAI_STATUS_TIMEOUT_SECONDS) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return payload if isinstance(payload, dict) else {}
+
+
+def _fresh_openai_status_result() -> dict:
+    """Fetch and sanitize one provider-status result, including failures."""
+    checked_at = datetime.now(timezone.utc).isoformat()
+    try:
+        payload = _fetch_openai_status()
+        status_payload = payload.get("status", {})
+        indicator = str(status_payload.get("indicator", "unknown")).lower()
+        description = str(status_payload.get("description", "Unknown"))
+        return {
+            "status": "ok",
+            "openai_down": indicator in {"major", "critical"},
+            "indicator": indicator,
+            "description": description,
+            "checked_at": checked_at,
+        }
+    except (URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+        logger.warning(
+            "OpenAI status check failed (%s)",
+            safe_exception_category(exc),
+        )
+        return {
+            "status": "unknown",
+            "openai_down": False,
+            "indicator": "unknown",
+            "description": "Unable to verify OpenAI status right now.",
+            "checked_at": checked_at,
+        }
+
+
+def _cached_openai_status_result() -> dict:
+    """Single-flight status lookup with a short success-and-failure cache."""
+    global _openai_status_cache, _openai_status_cache_expires_at
+    now = time.monotonic()
+    with _openai_status_cache_lock:
+        if _openai_status_cache is not None and now < _openai_status_cache_expires_at:
+            return dict(_openai_status_cache)
+        result = _fresh_openai_status_result()
+        _openai_status_cache = result
+        _openai_status_cache_expires_at = time.monotonic() + _openai_status_cache_seconds()
+        return dict(result)
+
+
+def _reset_openai_status_cache() -> None:
+    """Clear status state for deterministic tests."""
+    global _openai_status_cache, _openai_status_cache_expires_at
+    with _openai_status_cache_lock:
+        _openai_status_cache = None
+        _openai_status_cache_expires_at = 0.0
 
 
 @router.get("/api/deployment/status")
 async def deployment_status():
-    """Return the sanitized status written by the Pi release updater."""
-    active_workflows = sum(1 for workflow in workflows.values() if workflow.get("status") not in TERMINAL_STATUSES)
+    """Return updater status plus every record or task still owning live work."""
+    active_workflows = sum(
+        len(_active_record_or_task_ids(records, tasks))
+        for records, tasks in (
+            (workflows, workflow_tasks),
+            (batch_jobs, batch_tasks),
+            (eval_batch_jobs, eval_batch_tasks),
+        )
+    )
     return deployment_status_payload(active_workflows=active_workflows)
+
 
 @router.get("/api/health")
 async def health_check():
-    """Health check endpoint for debugging connectivity issues."""
+    """Return public liveness without filesystem or secret-state details."""
+    return {"status": "healthy"}
+
+
+@router.get("/api/readiness")
+async def readiness_check(request: Request):
+    """Return authenticated readiness details without paths or secret values."""
     return {
-        "status": "healthy",
-        "openai_api_key_configured": _has_openai_api_key(),
-        "uploads_dir": str(UPLOADS_DIR),
-        "uploads_dir_exists": UPLOADS_DIR.exists(),
-        "uploads_dir_writable": os.access(UPLOADS_DIR, os.W_OK),
-        "outputs_dir": str(OUTPUTS_DIR),
-        "outputs_dir_exists": OUTPUTS_DIR.exists(),
-        "outputs_dir_writable": os.access(OUTPUTS_DIR, os.W_OK),
+        "authenticated": bool(getattr(request.state, "authenticated", False)),
+        "openaiApiKeyConfigured": _has_openai_api_key(),
     }
 
 
@@ -57,6 +159,7 @@ async def visitor_heartbeat(payload: dict):
     operations.record_visitor(str(payload.get("visitorId", "")))
     return {"ok": True}
 
+
 @router.get("/api/openai/status")
 async def openai_status():
     """
@@ -65,7 +168,7 @@ async def openai_status():
     Uses OpenAI's public status page API and marks the site as inactive only
     when indicator is major/critical outage.
     """
-    return fetch_openai_status(OPENAI_STATUS_TIMEOUT_SECONDS)
+    return await asyncio.to_thread(_cached_openai_status_result)
 
 @router.get("/version.json")
 async def get_version_json():

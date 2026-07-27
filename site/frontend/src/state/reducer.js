@@ -64,6 +64,8 @@ export function makeLog(message, level) {
 
 export const INITIAL_STATE = {
   files: [],
+  uploadWarning: "",
+  pendingFileIds: [],
   agents: {},
   isRunning: false,
   workflowId: null,
@@ -71,6 +73,7 @@ export const INITIAL_STATE = {
   result: null,
   error: null,
   errorFolder: "",
+  monitoringWarning: "",
   activeModal: null,
   activeAgentKey: null,
   // Inputs of the most recent run (prompt + file names), captured at start so
@@ -135,16 +138,24 @@ export function queueAgents(agents, excludeKeys = []) {
 export function reducer(state, action) {
   switch (action.type) {
     case "ADD_FILES":
-      return { ...state, files: [...state.files, ...action.files] };
+      return {
+        ...state,
+        files: [...state.files, ...action.files],
+        uploadWarning: "",
+      };
     case "REMOVE_FILE":
       return {
         ...state,
         files: state.files.filter((f) => f.id !== action.fileId),
       };
     case "CLEAR_FILES":
-      return { ...state, files: [] };
+      return { ...state, files: [], uploadWarning: "" };
     case "UPLOAD_WARNING":
-      return state;
+      return {
+        ...state,
+        uploadWarning:
+          action.message || "Some selected files could not be attached.",
+      };
 
     case "OPEN_MODAL":
       return {
@@ -203,8 +214,9 @@ export function reducer(state, action) {
         result: null,
         error: null,
         errorFolder: "",
-        files: [],
+        monitoringWarning: "",
         blocked: null,
+        pendingFileIds: action.fileIds || [],
         runInputs: {
           prompt: action.prompt || "",
           files: action.fileNames || [],
@@ -216,8 +228,63 @@ export function reducer(state, action) {
 
     case "WORKFLOW_REGISTERED":
       // The backend accepted the run; the Starter node stays "thinking" while
-      // the shared runtime (OpenAI container) is created and bootstrapped.
-      return { ...state, workflowId: action.workflowId };
+      // the required isolated provider runtime is created and bootstrapped.
+      return {
+        ...state,
+        workflowId: action.workflowId,
+        files: state.files.filter(
+          (file) => !new Set(state.pendingFileIds).has(file.id),
+        ),
+        uploadWarning: "",
+        pendingFileIds: [],
+      };
+
+    case "WORKFLOW_RECONNECT": {
+      const isSameActiveWorkflow =
+        state.isRunning && state.workflowId === action.workflowId;
+      return {
+        ...state,
+        agents: isSameActiveWorkflow
+          ? state.agents
+          : queueAgents(resetAgents(state.agents)),
+        isRunning: true,
+        workflowId: action.workflowId,
+        result: null,
+        error: null,
+        errorFolder: "",
+        monitoringWarning: "",
+        blocked: null,
+        pendingFileIds: [],
+        logs: [
+          ...state.logs,
+          makeLog(`Reconnecting to workflow ${action.workflowId}…`, "info"),
+        ].slice(-MAX_LOGS),
+      };
+    }
+
+    case "WORKFLOW_MONITORING_INTERRUPTED": {
+      const message =
+        action.message ||
+        "Workflow monitoring was interrupted; retrying automatically.";
+      if (state.monitoringWarning === message) return state;
+      return {
+        ...state,
+        isRunning: true,
+        monitoringWarning: message,
+        logs: [...state.logs, makeLog(message, "warning")].slice(-MAX_LOGS),
+      };
+    }
+
+    case "WORKFLOW_MONITORING_RESUMED":
+      if (!state.monitoringWarning) return state;
+      return {
+        ...state,
+        monitoringWarning: "",
+        logs: [
+          ...state.logs,
+          makeLog("Workflow monitoring resumed.", "success"),
+        ].slice(-MAX_LOGS),
+      };
 
     case "SETUP_COMPLETE": {
       // Fired once the backend reports the first real agent has started (or the
@@ -313,6 +380,8 @@ export function reducer(state, action) {
         agents,
         result: action.result,
         error: null,
+        monitoringWarning: "",
+        pendingFileIds: [],
         logs: [
           ...state.logs,
           makeLog(`Workflow completed${elapsed}`, "success"),
@@ -350,7 +419,9 @@ export function reducer(state, action) {
         error:
           `Workflow failed before completion.\n${action.message || ""}`.trim(),
         errorFolder: action.outputFolder || "",
+        monitoringWarning: "",
         result: null,
+        pendingFileIds: [],
         logs: [
           ...state.logs,
           ...errorLogs,
@@ -392,7 +463,9 @@ export function reducer(state, action) {
         isRunning: false,
         agents,
         result: null,
+        pendingFileIds: [],
         error: null,
+        monitoringWarning: "",
         blocked: {
           category: blocked.category || "",
           reason,
@@ -406,16 +479,31 @@ export function reducer(state, action) {
     }
 
     case "WORKFLOW_ABORTED":
-      return { ...state, isRunning: false };
+      return {
+        ...state,
+        isRunning: false,
+        workflowId: action.clearWorkflowId ? null : state.workflowId,
+        monitoringWarning: "",
+        pendingFileIds: [],
+      };
 
     case "CLEAR_INPUTS":
-      return { ...state, files: [], result: null, error: null, blocked: null };
+      return {
+        ...state,
+        files: [],
+        uploadWarning: "",
+        result: null,
+        error: null,
+        monitoringWarning: "",
+        blocked: null,
+      };
     case "CLEAR_AGENTS":
       return {
         ...state,
         agents: resetAgents(state.agents),
         result: null,
         error: null,
+        monitoringWarning: "",
         blocked: null,
       };
     case "CLEAR_LOGS":

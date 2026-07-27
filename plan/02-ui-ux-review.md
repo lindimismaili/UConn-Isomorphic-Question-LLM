@@ -1,5 +1,10 @@
 # 02 — Frontend UI/UX Review
 
+> **Status — dated audit; status warning added July 27, 2026.** Findings describe
+> evidence at review time, not guaranteed current behavior. Reverify each item
+> against the code and tests before acting; current handoff status lives in
+> [`docs/PROFESSOR_HANDOFF.md`](../docs/PROFESSOR_HANDOFF.md).
+
 Findings from a deep read of `site/frontend/src/` against `site/frontend/DESIGN.md`.
 Grouped by severity with `file:line` anchors. **[blocks admin]** marks items that shape
 how the admin dashboard must be built.
@@ -35,7 +40,7 @@ transcript. Move "Clear" to its own affordance with a confirm.
 The User/Teacher/Dev distinction is a client-side `localStorage.uiMode` string with zero
 enforcement ([App.jsx:43-50](../site/frontend/src/App.jsx#L43-L50),
 [App.jsx:223-245](../site/frontend/src/App.jsx#L223-L245),
-[SiteChrome.jsx:15-19](../site/frontend/src/components/SiteChrome.jsx#L15-L19)). Anyone
+[SiteChrome.jsx](../site/frontend/src/sections/SiteChrome.jsx)). Anyone
 can set `localStorage.uiMode='dev'` (or a future `'admin'`) in devtools and get the
 gated surface. Dev mode is low-stakes today, but **an admin/professor dashboard must be
 gated server-side** (authenticated endpoint / role), never by `uiMode`. Treat the header
@@ -94,7 +99,7 @@ dropdown as a view switch, not authorization. → See
   children (map over files) and hold stale `aria-labelledby`. Gate heavy modal children
   on `isOpen` before adding more.
 - **L3 — `handleZipDownload` clicks a detached anchor without append/cleanup**
-  ([ResultsSection.jsx:190-196](../site/frontend/src/sections/ResultsSection.jsx#L190-L196)) —
+  ([ResultsSection.jsx](../site/frontend/src/components/ResultsSection.jsx)) —
   ignored in some browsers. Reuse the `useFileViewer` download path.
 - **L4 — `Stepper` both reads `rest['aria-label']` and spreads `{...rest}`**
   ([Stepper.jsx:107,130-136](../site/frontend/src/components/ui/Stepper.jsx#L107)) —
@@ -133,7 +138,7 @@ for the confirmed state. Full design → [07-ratings.md](07-ratings.md).
 There is **no router**; the app is a single `AppShell` ([App.jsx:199-247](../site/frontend/src/App.jsx#L199-L247))
 and the design-system showcase is a *second Vite HTML entry* (`design-system.html`).
 Recommended: **in-app mode** — add `{value:'admin',label:'Admin'}` to `SITE_MODES`
-([SiteChrome.jsx:15-19](../site/frontend/src/components/SiteChrome.jsx#L15-L19)), accept
+([SiteChrome.jsx](../site/frontend/src/sections/SiteChrome.jsx)), accept
 it in the `mode` coercion, and branch in `App.jsx:209-222` to render `<AdminDashboard/>`
 in place of `ChatConversation` (mirroring how dev mode swaps the aside). Compose from
 `ui/` primitives (`Card`, `DataTable`, `Tabs`, `StatusChip`). **Gate on real auth (H3),

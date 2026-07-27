@@ -15,6 +15,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -93,10 +95,44 @@ def _ns(**kwargs):
         "eval_dir": [],
         "labels": None,
         "kappa_floor": me.DEFAULT_KAPPA_FLOOR,
+        "minimum_kappa_samples": me.DEFAULT_MIN_KAPPA_SAMPLES,
         "created_at": "2026-06-30T00:00:00+00:00",
     }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
+
+
+# --------------------------------------------------------------------------- #
+# Input validation
+# --------------------------------------------------------------------------- #
+
+
+def test_missing_and_invalid_eval_dirs_fail_clearly(tmp_path: Path):
+    missing = tmp_path / "missing"
+    with pytest.raises(me.MetaEvaluationInputError, match="does not exist"):
+        analyze_eval_dirs([missing])
+
+    invalid = tmp_path / "invalid" / "evaluation_outputs"
+    invalid.mkdir(parents=True)
+    (invalid / "evaluation_report.json").write_text("{not json", encoding="utf-8")
+    with pytest.raises(me.MetaEvaluationInputError, match="invalid evaluation report JSON"):
+        analyze_eval_dirs([invalid])
+
+
+def test_invalid_eval_items_are_not_silently_dropped(tmp_path: Path):
+    eval_dir = _write_eval_dir(tmp_path, [])
+    (eval_dir / "evaluation_agents.jsonl").write_text(
+        '{"results": []}\nnot-json',
+        encoding="utf-8",
+    )
+    with pytest.raises(me.MetaEvaluationInputError, match="invalid evaluation grader items JSON"):
+        analyze_eval_dirs([eval_dir])
+
+
+def test_empty_eval_report_fails_instead_of_returning_no_proposals(tmp_path: Path):
+    eval_dir = _write_eval_dir(tmp_path, [])
+    with pytest.raises(me.MetaEvaluationInputError, match="no grader evidence"):
+        analyze_eval_dirs([eval_dir])
 
 
 # --------------------------------------------------------------------------- #
@@ -163,6 +199,8 @@ def test_tag_maps_to_expected_target_files(tmp_path: Path):
     # Every proposal cites a corroborating signal + a criterion.
     for p in proposals:
         assert p.corroborating_signal == "failure_tag"
+        assert p.evidence_provenance == "grader_self_report"
+        assert p.independently_corroborated is False
         assert p.criterion == "distractor_structure_preservation"
 
 
@@ -195,6 +233,8 @@ def test_deterministic_finding_produces_proposal(tmp_path: Path):
     proposals = build_proposals(analysis, None, me.DEFAULT_KAPPA_FLOOR)
     det = [p for p in proposals if p.corroborating_signal == "deterministic_check"]
     assert det
+    assert det[0].evidence_provenance == "independent_pipeline_check"
+    assert det[0].independently_corroborated is True
     # deterministic proposals should outrank the (absent) tag proposals here.
     assert det[0].rank_score > 0
 
@@ -271,6 +311,120 @@ def _write_labels(path: Path, rows: list[dict], dataset_version: str = "v1") -> 
         row = {**row, "dataset_version": dataset_version}
         lines.append(json.dumps(row))
     path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def test_calibration_file_validation_is_strict(tmp_path: Path):
+    missing = tmp_path / "missing.jsonl"
+    with pytest.raises(me.MetaEvaluationInputError, match="missing calibration labels"):
+        load_calibration_labels(missing)
+
+    empty = tmp_path / "empty.jsonl"
+    empty.write_text("\n", encoding="utf-8")
+    with pytest.raises(me.MetaEvaluationInputError, match="is empty"):
+        load_calibration_labels(empty)
+
+    invalid = tmp_path / "invalid.jsonl"
+    invalid.write_text('{"source_id": "q1"}\n', encoding="utf-8")
+    with pytest.raises(me.MetaEvaluationInputError, match="is missing"):
+        load_calibration_labels(invalid)
+
+    unknown_label = tmp_path / "unknown.jsonl"
+    _write_labels(
+        unknown_label,
+        [
+            {
+                "source_id": "q1",
+                "criterion": "physics_correctness",
+                "human_or_reference_label": "maybe",
+                "grader_label": 1,
+            }
+        ],
+    )
+    with pytest.raises(me.MetaEvaluationInputError, match="must be 0, 1, or N/A"):
+        load_calibration_labels(unknown_label)
+
+
+def test_calibration_rejects_mixed_dataset_versions(tmp_path: Path):
+    labels = tmp_path / "mixed.jsonl"
+    rows = [
+        {
+            "source_id": "q1",
+            "criterion": "physics_correctness",
+            "human_or_reference_label": 1,
+            "grader_label": 1,
+            "dataset_version": "v1",
+        },
+        {
+            "source_id": "q2",
+            "criterion": "physics_correctness",
+            "human_or_reference_label": 0,
+            "grader_label": 0,
+            "dataset_version": "v2",
+        },
+    ]
+    labels.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    with pytest.raises(me.MetaEvaluationInputError, match="mix dataset_version"):
+        load_calibration_labels(labels)
+
+
+def test_kappa_settings_and_minimum_evidence_are_enforced():
+    records = [
+        {
+            "source_id": "q1",
+            "criterion": "physics_correctness",
+            "human_or_reference_label": 0,
+            "grader_label": 0,
+        },
+        {
+            "source_id": "q2",
+            "criterion": "physics_correctness",
+            "human_or_reference_label": 1,
+            "grader_label": 1,
+        },
+    ]
+    with pytest.raises(me.MetaEvaluationInputError, match="between 0 and 1"):
+        compute_kappa_gate(records, -0.1)
+    with pytest.raises(me.MetaEvaluationInputError, match="between 0 and 1"):
+        compute_kappa_gate(records, float("nan"))
+    with pytest.raises(me.MetaEvaluationInputError, match="at least 2"):
+        compute_kappa_gate(records, 0.4, minimum_samples=1)
+
+    gate = compute_kappa_gate(records, 0.4)
+    row = gate["physics_correctness"]
+    assert row["cohen_kappa"] == 1.0
+    assert row["evidence_status"] == "insufficient_samples"
+    assert row["gate"] == "FAIL"
+
+
+def test_all_na_calibration_never_passes(tmp_path: Path):
+    labels = tmp_path / "all-na.jsonl"
+    rows = [
+        {
+            "source_id": f"q{i}",
+            "criterion": "numerical_variation",
+            "human_or_reference_label": "na",
+            "grader_label": 1,
+        }
+        for i in range(6)
+    ]
+    _write_labels(labels, rows)
+    records, version = load_calibration_labels(labels)
+    gate = compute_kappa_gate(records, me.DEFAULT_KAPPA_FLOOR)
+    assert gate["numerical_variation"]["n_compared"] == 0
+    assert gate["numerical_variation"]["n_na_excluded"] == 6
+    assert gate["numerical_variation"]["gate"] == "FAIL"
+
+    report = build_report(
+        {"criteria": {}, "deterministic_findings": [], "dirs_read": [], "threshold": 1.0},
+        [],
+        gate,
+        kappa_floor=me.DEFAULT_KAPPA_FLOOR,
+        dataset_version=version,
+    )
+    assert report["kappa_gate_summary"]["overall_gate"] == "FAIL"
+    assert report["kappa_gate_summary"]["criteria_with_insufficient_evidence"] == [
+        "numerical_variation"
+    ]
 
 
 def test_kappa_gate_pass_and_fail(tmp_path: Path):
@@ -351,6 +505,8 @@ def test_kappa_failing_criterion_yields_calibration_proposal(tmp_path: Path):
     proposals = build_proposals(empty_analysis, gate, me.DEFAULT_KAPPA_FLOOR)
     kappa_props = [p for p in proposals if p.corroborating_signal == "kappa_gap"]
     assert kappa_props
+    assert kappa_props[0].evidence_provenance == "independent_reference_labels"
+    assert kappa_props[0].independently_corroborated is True
     assert kappa_props[0].target_file == "data/rubric.json:scenario_variation"
     # kappa_gap outranks a hypothetical tag proposal (highest signal weight).
     assert kappa_props[0].rank_score > 0
@@ -363,6 +519,50 @@ def test_kappa_failing_criterion_yields_calibration_proposal(tmp_path: Path):
     assert report["kappa_gate_summary"]["overall_gate"] == "FAIL"
     assert "scenario_variation" in report["kappa_gate_summary"]["criteria_failing_gate"]
     assert report["dataset_version"] == "v1"
+
+
+# --------------------------------------------------------------------------- #
+# Reproducibility hashes + ledger
+# --------------------------------------------------------------------------- #
+
+
+def test_effective_input_hashes_include_dirty_content(tmp_path: Path, monkeypatch):
+    prompts = tmp_path / "prompts"
+    prompts.mkdir()
+    generator = prompts / "generator.txt"
+    evaluator = prompts / "evaluator.txt"
+    generator.write_text("generator v1\n", encoding="utf-8")
+    evaluator.write_text("evaluator v1\n", encoding="utf-8")
+    rubric = tmp_path / "rubric.json"
+    rubric.write_text('{"criteria": []}\n', encoding="utf-8")
+    monkeypatch.setattr(me, "PROMPTS_DIR", prompts)
+    monkeypatch.setattr(me, "RUBRIC_PATH", rubric)
+
+    prompt_v1 = me.prompt_version_hash()
+    rubric_v1 = me.rubric_version_hash()
+    assert prompt_v1.startswith("sha256:")
+    assert rubric_v1.startswith("sha256:")
+
+    generator.write_text("generator dirty edit\n", encoding="utf-8")
+    rubric.write_text('{"criteria": [{"name": "dirty"}]}\n', encoding="utf-8")
+    assert me.prompt_version_hash() != prompt_v1
+    assert me.rubric_version_hash() != rubric_v1
+
+
+def test_ledger_appends_remain_valid_under_concurrency(tmp_path: Path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    ledger = tmp_path / "ledger.jsonl"
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(
+            pool.map(
+                lambda index: me.append_ledger_entry(ledger, {"index": index}),
+                range(16),
+            )
+        )
+    records = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+    assert len(records) == 16
+    assert {record["index"] for record in records} == set(range(16))
 
 
 # --------------------------------------------------------------------------- #

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from ..paths import AGENTS_CONFIG_PATH
 from .agents import (
-    AGENTS_CONFIG_PATH,
     PROMPTS_DIR,
     any_agent_uses_code_interpreter,
     container_expires_minutes,

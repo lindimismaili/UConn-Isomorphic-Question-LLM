@@ -8,9 +8,11 @@ import { loadAgentRegistry } from './useAgentRegistry';
  * module owns the fetch so all consumers share a single cached response.
  *
  * @param {Function} dispatch - App reducer dispatcher.
+ * @param {boolean} enabled - Wait until the application access gate is open.
  */
-export function useAgents(dispatch) {
+export function useAgents(dispatch, enabled = true) {
   useEffect(() => {
+    if (!enabled) return undefined;
     let cancelled = false;
     loadAgentRegistry().then((config) => {
       if (!cancelled && config) {
@@ -20,5 +22,5 @@ export function useAgents(dispatch) {
     return () => {
       cancelled = true;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dispatch, enabled]);
 }

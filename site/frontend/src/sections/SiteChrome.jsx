@@ -8,6 +8,7 @@
 
 import { Banner, Button, PageHeader, Footer, Dropdown } from '../components/ui/index.js';
 import { PAYPAL_DONATION_URL } from '../config/site.js';
+import { getSafeDonationUrl } from '../utils/donation.js';
 
 /** Physics-academic motif surfaced behind the navy masthead. */
 export const HEADER_MOTIF = '/assets/physics-motif.svg';
@@ -79,7 +80,8 @@ export function SiteHeader({
               className="mode-select"
               variant="onDark"
               size="sm"
-              aria-label="Site mode"
+              aria-label="Interface view; this does not change access permissions"
+              title="Changes the interface view only; it does not grant access"
               value={mode}
               onChange={onModeChange}
               options={SITE_MODES}
@@ -106,18 +108,31 @@ export function SiteBanner({ show, children, detail }) {
 }
 
 /**
- * SiteFooter — the standard footer (attribution + version line).
+ * SiteFooter — the standard footer with an optional PayPal-hosted donation link.
  *
  * @param {object} props
  * @param {import('react').ReactNode} [props.version]
+ * @param {string} [props.donationUrl]
  */
-export function SiteFooter({ version }) {
+export function SiteFooter({ version, donationUrl }) {
+  const safeDonationUrl = getSafeDonationUrl(donationUrl);
   return (
     <Footer>
       <p className="footer-primary">
         UCONN Physics Research - Dr. Xian Wu (2025 - 2026)
       </p>
       <p className="footer-primary">Created by Lindim Ismaili</p>
+      {safeDonationUrl ? (
+        <p className="footer-secondary">
+          <a
+            href={safeDonationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Support this project with PayPal
+          </a>
+        </p>
+      ) : null}
       {version != null ? <p className="footer-secondary">{version}</p> : null}
       {import.meta.env.DEV ? (
         <p className="footer-secondary">

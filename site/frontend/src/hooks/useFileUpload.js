@@ -52,22 +52,48 @@ export function useFileUpload(files, dispatch) {
     const available = MAX_FILES - files.length;
 
     if (available <= 0) {
-      dispatch({ type: 'UPLOAD_WARNING' });
+      dispatch({
+        type: 'UPLOAD_WARNING',
+        message: `You can attach at most ${MAX_FILES} files.`,
+      });
       event.target.value = '';
       return;
     }
 
-    const allowed = selected.filter(isAllowedSourceFile).slice(0, available);
+    const supported = selected.filter(isAllowedSourceFile);
+    const allowed = supported.slice(0, available);
     const newFiles = allowed
       .filter((f) => !files.some((existing) => existing.name === f.name && existing.size === f.size))
       .map((f) => ({ id: generateId(), name: f.name, size: f.size, type: f.type, file: f }));
 
-    if (selected.length > allowed.length || selected.some((file) => !isAllowedSourceFile(file))) {
-      dispatch({ type: 'UPLOAD_WARNING' });
-    }
-
     if (newFiles.length > 0) {
       dispatch({ type: 'ADD_FILES', files: newFiles });
+    }
+
+    const unsupportedCount = selected.length - supported.length;
+    const overflowCount = Math.max(0, supported.length - available);
+    const duplicateCount = allowed.length - newFiles.length;
+    const warningParts = [];
+    if (unsupportedCount > 0) {
+      warningParts.push(
+        `${unsupportedCount} unsupported file${unsupportedCount === 1 ? '' : 's'}`,
+      );
+    }
+    if (overflowCount > 0) {
+      warningParts.push(
+        `${overflowCount} file${overflowCount === 1 ? '' : 's'} over the ${MAX_FILES}-file limit`,
+      );
+    }
+    if (duplicateCount > 0) {
+      warningParts.push(
+        `${duplicateCount} duplicate file${duplicateCount === 1 ? '' : 's'}`,
+      );
+    }
+    if (warningParts.length > 0) {
+      dispatch({
+        type: 'UPLOAD_WARNING',
+        message: `Not attached: ${warningParts.join(', ')}.`,
+      });
     }
 
     event.target.value = '';

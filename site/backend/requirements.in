@@ -1,0 +1,13 @@
+# Direct production dependencies for the FastAPI service.
+# Regenerate requirements.txt from site/ with:
+#   uv pip compile --universal --python-version 3.10 --generate-hashes \
+#     --custom-compile-command "uv pip compile backend/requirements.in --universal --python-version 3.10 --generate-hashes -o backend/requirements.txt" \
+#     backend/requirements.in -o backend/requirements.txt
+
+fastapi
+openai
+openai-agents
+openpyxl
+pydantic
+python-multipart
+uvicorn[standard]
