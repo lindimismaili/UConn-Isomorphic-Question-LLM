@@ -42,8 +42,8 @@ export default function HelpModal({ isOpen, onClose }) {
             verified for correctness
           </li>
           <li>
-            <strong>Question Type Support</strong> — Supports multiple-choice,
-            open-ended, and multi-part questions
+            <strong>Question Type Support</strong> — Generates multiple-choice
+            physics questions with verified answer options
           </li>
           <li>
             <strong>Education-Ready Output</strong> — Questions are formatted for
@@ -54,7 +54,7 @@ export default function HelpModal({ isOpen, onClose }) {
         <div className="output-folder-note modal-file-location help-file-location">
           <IconFile />
           <span>
-            File located in: <code>data/template.tex</code>
+            File located in: <code>backend/data/latex_template.tex</code>
           </span>
         </div>
         <h4>How It Works</h4>

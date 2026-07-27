@@ -68,6 +68,18 @@ def test_testing_criteria_carry_seed_and_per_criterion_reasoning():
     assert by_name["scenario_variation"]["sampling_params"]["reasoning_effort"] == global_effort
 
 
+def test_testing_criteria_apply_configured_completion_token_cap(monkeypatch):
+    monkeypatch.setenv("GRADER_MAX_COMPLETION_TOKENS", "768")
+
+    criteria = evaluation._build_testing_criteria(model="test-grader")
+
+    assert criteria
+    assert all(
+        criterion["sampling_params"]["max_completions_tokens"] == 768
+        for criterion in criteria
+    )
+
+
 def test_reasoning_effort_by_criterion_map():
     effort = evaluation.reasoning_effort_by_criterion()
     assert effort["physics_correctness"] == "high"

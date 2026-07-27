@@ -42,10 +42,12 @@ baseline-*.png
 Thumbs.db
 Desktop.ini
 
-# Local configuration and tool state (.env itself is tracked intentionally)
+# Local configuration and tool state
 .deploy.env
-.env.local
-.env.*.local
+.env
+.env.*
+!.env.example
+!**/.env.example
 .upload
 .remember/
 

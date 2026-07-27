@@ -154,7 +154,8 @@ function unlockBodyScroll() {
  * Base modal wrapper for all in-app dialogs.
  *
  * Handles backdrop clicks, Escape-to-close, scroll locking, and portal
- * rendering into `document.body`.
+ * rendering into `document.body`. Set `dismissible={false}` only for a
+ * required gate that must be completed before the application can be used.
  *
  * @param {object} props
  * @returns {JSX.Element}
@@ -169,6 +170,7 @@ export default function Modal({
   bodyClassName = '',
   contentClassName = '',
   modalBodyClassName = '',
+  dismissible = true,
   children,
   footer,
 }) {
@@ -233,11 +235,12 @@ export default function Modal({
     };
   }, [bodyClassName, isOpen]);
 
-  // Close on Escape key
+  // Only the top modal owns Escape and focus trapping. A required gate can set
+  // `dismissible={false}` while retaining Tab containment.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isTopModal) return;
     const handler = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && dismissible) {
         onClose();
         return;
       }
@@ -264,7 +267,7 @@ export default function Modal({
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
+  }, [dismissible, isOpen, isTopModal, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -293,7 +296,7 @@ export default function Modal({
     >
       <div
         className={`modal-backdrop${stackIndex > 0 ? ' is-stacked' : ''}`}
-        onClick={isOpen && isTopModal ? onClose : undefined}
+        onClick={isOpen && isTopModal && dismissible ? onClose : undefined}
       />
       <div
         className={`modal-content${modalSizeClass}${contentClassName ? ` ${contentClassName}` : ''}`}
@@ -302,7 +305,9 @@ export default function Modal({
       >
         <div className="modal-header">
           <h3 id={titleId}>{title}</h3>
-          <IconButton onClick={onClose} aria-label="Close" icon={<IconClose />} />
+          {dismissible ? (
+            <IconButton onClick={onClose} aria-label="Close" icon={<IconClose />} />
+          ) : null}
         </div>
         <div className={`modal-body${modalBodyClassName ? ` ${modalBodyClassName}` : ''}`}>
           {children}

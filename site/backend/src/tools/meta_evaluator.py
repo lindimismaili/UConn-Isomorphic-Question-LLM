@@ -13,10 +13,12 @@ Design constraints (encoded here):
 - **PROPOSE-ONLY.** It never edits ``data/prompts/*.txt`` or ``data/rubric.json``;
   those are hand-curated and prompt-versioned via ``scripts/prompt_versions.py``.
   It only writes a report (``meta_evaluation_report.json``) + a ledger entry.
-- **Reward-hacking guard.** Every proposal must cite a corroborating signal (a
-  deterministic-check failure, a dominant failure tag with concrete examples, or
-  a labeled-mode kappa/agreement gap). A proposal whose only expected effect is
-  raising the judge's pass rate is filtered out. See ``_passes_reward_hack_guard``.
+- **Reward-hacking guard.** Every proposal must cite an evidence signal (a
+  deterministic-check failure, a grader self-tag with concrete examples, or a
+  labeled-mode kappa/agreement gap). Reports explicitly distinguish grader
+  self-report from independently corroborated evidence. A proposal whose only
+  expected effect is raising the judge's pass rate is filtered out. See
+  ``_passes_reward_hack_guard``.
 - **Optional labeled mode.** When a calibration dataset graded by the latest
   grader (or professor labels) is supplied via ``--labels``, it computes per
   criterion Cohen's kappa + inflate/miss confusion by REUSING
@@ -38,8 +40,12 @@ CLI (run from ``site/``)::
 from __future__ import annotations
 
 import argparse
+import fcntl
+import hashlib
 import json
-import subprocess
+import math
+import os
+import sys
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -52,7 +58,7 @@ from backend.src.evaluation import (
     FAILURE_TAGS,
     parse_sample_steps,
 )
-from backend.src.paths import REPO_ROOT, RUNTIME_DIR
+from backend.src.paths import PROMPTS_DIR, RUBRIC_PATH, RUNTIME_DIR
 from backend.src.tools.judge_agreement import cohen_kappa
 
 # --------------------------------------------------------------------------- #
@@ -65,6 +71,11 @@ LEDGER_FILENAME = "meta_eval_ledger.jsonl"
 # Default kappa floor for the labeled-mode gate. 0.4 is the Landis-Koch "fair"
 # ceiling; below it the grader is not trustworthy for that criterion.
 DEFAULT_KAPPA_FLOOR = 0.4
+DEFAULT_MIN_KAPPA_SAMPLES = 5
+
+
+class MetaEvaluationInputError(ValueError):
+    """Raised when evaluation or calibration input is missing or malformed."""
 
 # Failure tag -> target files mapping. This is the documented "attribution"
 # table: a dominant failure tag on a criterion routes a proposal to the
@@ -256,10 +267,24 @@ class Proposal:
     expected_metric_moved: str
     suggested_text: str
     confidence: float
-    # The corroborating signal that lets this proposal past the reward-hacking
-    # guard. One of: "deterministic_check", "failure_tag", "kappa_gap".
+    # The evidence signal that lets this proposal past the reward-hacking guard.
+    # ``failure_tag`` is the grader's own diagnosis; ``deterministic_check`` and
+    # ``kappa_gap`` are independently corroborated.
     corroborating_signal: str
     rank_score: float = 0.0
+
+    @property
+    def evidence_provenance(self) -> str:
+        """Describe whether evidence comes from the grader or an independent source."""
+        return {
+            "failure_tag": "grader_self_report",
+            "deterministic_check": "independent_pipeline_check",
+            "kappa_gap": "independent_reference_labels",
+        }.get(self.corroborating_signal, "unknown")
+
+    @property
+    def independently_corroborated(self) -> bool:
+        return self.corroborating_signal in {"deterministic_check", "kappa_gap"}
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -272,6 +297,8 @@ class Proposal:
             "suggested_text": self.suggested_text,
             "confidence": round(self.confidence, 4),
             "corroborating_signal": self.corroborating_signal,
+            "evidence_provenance": self.evidence_provenance,
+            "independently_corroborated": self.independently_corroborated,
             "rank_score": round(self.rank_score, 4),
         }
 
@@ -287,39 +314,70 @@ def _resolve_eval_report_and_items(eval_dir: Path) -> tuple[Path, Path]:
     Accepts either the ``evaluation_outputs`` dir directly, or a run dir that
     contains it (``<outputs>/<ts>`` or ``<outputs>/<ts>/evaluation_outputs``).
     """
+    if not eval_dir.exists():
+        raise MetaEvaluationInputError(f"evaluation path does not exist: {eval_dir}")
+    if not eval_dir.is_dir():
+        raise MetaEvaluationInputError(f"evaluation path is not a directory: {eval_dir}")
+
     candidates = [eval_dir, eval_dir / "evaluation_outputs"]
     for base in candidates:
         report = base / EVALUATION_REPORT_FILENAME
-        if report.exists():
+        if report.is_file():
             return report, base / EVALUATION_ITEMS_FILENAME
-    # Fall back to the direct path so the caller gets a clear "missing" error.
-    return eval_dir / EVALUATION_REPORT_FILENAME, eval_dir / EVALUATION_ITEMS_FILENAME
+    expected = " or ".join(str(base / EVALUATION_REPORT_FILENAME) for base in candidates)
+    raise MetaEvaluationInputError(f"missing evaluation report; expected {expected}")
 
 
-def _load_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
+def _load_json(path: Path, *, description: str) -> dict[str, Any]:
+    """Load one required JSON object and preserve parse context in errors."""
+    if not path.is_file():
+        raise MetaEvaluationInputError(f"missing {description}: {path}")
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError as exc:
+        raise MetaEvaluationInputError(
+            f"invalid {description} JSON at {path}:{exc.lineno}:{exc.colno}: {exc.msg}"
+        ) from exc
+    except OSError as exc:
+        raise MetaEvaluationInputError(f"could not read {description} {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise MetaEvaluationInputError(f"{description} must contain a JSON object: {path}")
+    return data
 
 
-def _load_jsonl(path: Path) -> list[dict[str, Any]]:
+def _load_jsonl(
+    path: Path,
+    *,
+    description: str,
+    required: bool = False,
+) -> list[dict[str, Any]]:
+    """Load JSONL objects, failing on malformed records instead of dropping them."""
     if not path.exists():
+        if required:
+            raise MetaEvaluationInputError(f"missing {description}: {path}")
         return []
+    if not path.is_file():
+        raise MetaEvaluationInputError(f"{description} is not a file: {path}")
     records: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise MetaEvaluationInputError(f"could not read {description} {path}: {exc}") from exc
+    for line_number, line in enumerate(lines, start=1):
         line = line.strip()
         if not line:
             continue
         try:
             obj = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(obj, dict):
-            records.append(obj)
+        except json.JSONDecodeError as exc:
+            raise MetaEvaluationInputError(
+                f"invalid {description} JSON at {path}:{line_number}:{exc.colno}: {exc.msg}"
+            ) from exc
+        if not isinstance(obj, dict):
+            raise MetaEvaluationInputError(
+                f"{description} record at {path}:{line_number} must be a JSON object"
+            )
+        records.append(obj)
     return records
 
 
@@ -361,37 +419,79 @@ def analyze_eval_dirs(eval_dirs: Iterable[Path]) -> dict[str, Any]:
     Returns a dict with ``criteria`` (name -> CriterionAnalysis), aggregated
     ``deterministic_checks`` findings, and bookkeeping (dirs read, threshold).
     """
+    requested_dirs = [Path(eval_dir) for eval_dir in eval_dirs]
+    if not requested_dirs:
+        raise MetaEvaluationInputError("at least one --eval-dir is required")
+
     criteria: dict[str, CriterionAnalysis] = {}
     deterministic_findings: list[dict[str, Any]] = []
     dirs_read: list[str] = []
-    threshold = 1.0
+    threshold: Optional[float] = None
+    reports_seen: set[Path] = set()
 
-    for eval_dir in eval_dirs:
-        eval_dir = Path(eval_dir)
+    for eval_dir in requested_dirs:
         report_path, items_path = _resolve_eval_report_and_items(eval_dir)
-        report = _load_json(report_path)
-        if not report:
-            continue
-        dirs_read.append(str(report_path.parent))
-        threshold = float(report.get("passing_score_threshold", threshold) or threshold)
+        resolved_report = report_path.resolve()
+        if resolved_report in reports_seen:
+            raise MetaEvaluationInputError(f"duplicate evaluation directory: {report_path.parent}")
+        reports_seen.add(resolved_report)
 
-        # Deterministic checks: fold in any non-passing signal as a first-class
-        # corroborating source for reward-hack-safe proposals.
+        report = _load_json(report_path, description="evaluation report")
+        report_status = str(report.get("status", "")).strip().lower()
+        if report_status and report_status not in {"complete", "completed"}:
+            raise MetaEvaluationInputError(
+                f"evaluation report is not complete ({report_status!r}): {report_path}"
+            )
+        dirs_read.append(str(report_path.parent))
+        raw_threshold = report.get("passing_score_threshold", 1.0)
+        try:
+            report_threshold = float(raw_threshold)
+        except (TypeError, ValueError) as exc:
+            raise MetaEvaluationInputError(
+                f"invalid passing_score_threshold in {report_path}: {raw_threshold!r}"
+            ) from exc
+        if not math.isfinite(report_threshold) or not 0.0 <= report_threshold <= 100.0:
+            raise MetaEvaluationInputError(
+                f"passing_score_threshold must be between 0 and 100 in {report_path}"
+            )
+        if threshold is None:
+            threshold = report_threshold
+        elif not math.isclose(threshold, report_threshold):
+            raise MetaEvaluationInputError(
+                "evaluation reports use different passing_score_threshold values: "
+                f"{threshold} and {report_threshold}"
+            )
+
+        # Deterministic checks: fold in any non-passing signal as independent
+        # evidence for reward-hack-safe proposals.
+        before_findings = len(deterministic_findings)
         deterministic_findings.extend(_extract_deterministic_findings(report, report_path))
+        before_scores = sum(
+            entry.items_scored + entry.na_count for entry in criteria.values()
+        )
 
         # Prefer mining raw grader items (they carry the sample rationale). Fall
         # back to the report's precomputed criterion_scores when items absent.
-        items = _load_jsonl(items_path)
+        items = _load_jsonl(items_path, description="evaluation grader items")
         if items:
-            _mine_items(items, criteria, threshold)
+            _mine_items(items, criteria, report_threshold)
         else:
             _mine_report_scores(report, criteria)
+
+        after_scores = sum(
+            entry.items_scored + entry.na_count for entry in criteria.values()
+        )
+        if after_scores == before_scores and len(deterministic_findings) == before_findings:
+            raise MetaEvaluationInputError(
+                f"evaluation directory contains no grader evidence or deterministic findings: "
+                f"{report_path.parent}"
+            )
 
     return {
         "criteria": criteria,
         "deterministic_findings": deterministic_findings,
         "dirs_read": dirs_read,
-        "threshold": threshold,
+        "threshold": threshold if threshold is not None else 1.0,
     }
 
 
@@ -409,17 +509,32 @@ def _mine_items(
     threshold: float,
 ) -> None:
     """Mine per-item grader results: pass/fail counts + failure tags + evidence."""
-    for item in items:
+    for item_index, item in enumerate(items, start=1):
+        results = item.get("results")
+        if not isinstance(results, list):
+            raise MetaEvaluationInputError(
+                f"evaluation grader item {item_index} has no valid results array"
+            )
         datasource = item.get("datasource_item") or item.get("item") or {}
         source_id = str(datasource.get("source_id", "")) if isinstance(datasource, dict) else ""
-        for result in item.get("results", []) or []:
+        for result_index, result in enumerate(results, start=1):
             if not isinstance(result, dict):
-                continue
+                raise MetaEvaluationInputError(
+                    f"evaluation grader item {item_index} result {result_index} must be an object"
+                )
             name = _base_criterion_name(result.get("name", ""))
             if not name:
-                continue
+                raise MetaEvaluationInputError(
+                    f"evaluation grader item {item_index} result {result_index} has no criterion name"
+                )
+            score = result.get("score")
+            if not isinstance(score, (int, float)) or isinstance(score, bool):
+                raise MetaEvaluationInputError(
+                    f"evaluation grader item {item_index} result {result_index} has invalid score "
+                    f"{score!r}"
+                )
             entry = _get_criterion(criteria, name)
-            fail = _is_fail_score(result.get("score"), threshold)
+            fail = _is_fail_score(score, threshold)
             if fail is None:
                 entry.na_count += 1
                 continue
@@ -470,25 +585,55 @@ def _mine_report_scores(report: dict[str, Any], criteria: dict[str, CriterionAna
     taxonomy landed), just without per-item source-id evidence.
     """
     scores = report.get("criterion_scores")
+    if scores is not None and not isinstance(scores, dict):
+        raise MetaEvaluationInputError("evaluation report criterion_scores must be an object")
     if not isinstance(scores, dict):
         return
     for name, block in scores.items():
+        if not str(name).strip():
+            raise MetaEvaluationInputError("evaluation report contains an empty criterion name")
         if not isinstance(block, dict):
-            continue
+            raise MetaEvaluationInputError(
+                f"evaluation report criterion_scores[{name!r}] must be an object"
+            )
         entry = _get_criterion(criteria, name)
-        items_scored = int(block.get("items_scored", 0) or 0)
-        items_passed = int(block.get("items_passed", 0) or 0)
+        try:
+            items_scored = int(block.get("items_scored", 0) or 0)
+            items_passed = int(block.get("items_passed", 0) or 0)
+            na_count = int(block.get("na_count", 0) or 0)
+        except (TypeError, ValueError) as exc:
+            raise MetaEvaluationInputError(
+                f"evaluation report criterion_scores[{name!r}] has invalid counts"
+            ) from exc
+        if min(items_scored, items_passed, na_count) < 0 or items_passed > items_scored:
+            raise MetaEvaluationInputError(
+                f"evaluation report criterion_scores[{name!r}] has inconsistent counts"
+            )
         entry.items_scored += items_scored
         entry.items_passed += items_passed
         entry.items_failed += max(items_scored - items_passed, 0)
-        entry.na_count += int(block.get("na_count", 0) or 0)
+        entry.na_count += na_count
         tag_counts = block.get("failure_tag_counts")
+        if tag_counts is not None and not isinstance(tag_counts, dict):
+            raise MetaEvaluationInputError(
+                f"evaluation report criterion_scores[{name!r}].failure_tag_counts "
+                "must be an object"
+            )
         if isinstance(tag_counts, dict):
             for tag, count in tag_counts.items():
                 try:
-                    entry.failure_tag_counts[str(tag)] += int(count)
+                    parsed_count = int(count)
                 except (ValueError, TypeError):
-                    continue
+                    raise MetaEvaluationInputError(
+                        f"evaluation report criterion_scores[{name!r}] has invalid "
+                        f"failure tag count for {tag!r}"
+                    ) from None
+                if parsed_count < 0:
+                    raise MetaEvaluationInputError(
+                        f"evaluation report criterion_scores[{name!r}] has a negative "
+                        f"failure tag count for {tag!r}"
+                    )
+                entry.failure_tag_counts[str(tag)] += parsed_count
 
 
 def _extract_deterministic_findings(report: dict[str, Any], report_path: Path) -> list[dict[str, Any]]:
@@ -548,26 +693,82 @@ def load_calibration_labels(path: Path) -> tuple[list[dict[str, Any]], Optional[
     dataset_version}``. Labels are 0/1/'na' (or -1 for N/A). Returns
     (records, dataset_version).
     """
-    records: list[dict[str, Any]] = []
-    dataset_version: Optional[str] = None
-    for obj in _load_jsonl(path):
-        if "dataset_version" in obj and dataset_version is None:
-            dataset_version = str(obj.get("dataset_version"))
-        records.append(obj)
-    return records, dataset_version
+    path = Path(path)
+    records = _load_jsonl(path, description="calibration labels", required=True)
+    if not records:
+        raise MetaEvaluationInputError(f"calibration labels file is empty: {path}")
+
+    dataset_versions: set[str] = set()
+    seen_keys: set[tuple[str, str]] = set()
+    required_fields = {
+        "source_id",
+        "criterion",
+        "human_or_reference_label",
+        "grader_label",
+        "dataset_version",
+    }
+    for index, obj in enumerate(records, start=1):
+        missing = sorted(required_fields - obj.keys())
+        if missing:
+            raise MetaEvaluationInputError(
+                f"calibration record {index} in {path} is missing: {', '.join(missing)}"
+            )
+        source_id = str(obj.get("source_id", "")).strip()
+        criterion = str(obj.get("criterion", "")).strip()
+        version = obj.get("dataset_version")
+        if not source_id:
+            raise MetaEvaluationInputError(
+                f"calibration record {index} in {path} has an empty source_id"
+            )
+        if not criterion:
+            raise MetaEvaluationInputError(
+                f"calibration record {index} in {path} has an empty criterion"
+            )
+        if not isinstance(version, str) or not version.strip():
+            raise MetaEvaluationInputError(
+                f"calibration record {index} in {path} has an invalid dataset_version"
+            )
+        _norm_label(
+            obj.get("human_or_reference_label"),
+            context=f"calibration record {index} human_or_reference_label",
+        )
+        _norm_label(
+            obj.get("grader_label"),
+            context=f"calibration record {index} grader_label",
+        )
+        key = (source_id, criterion)
+        if key in seen_keys:
+            raise MetaEvaluationInputError(
+                f"duplicate calibration pair in {path}: source_id={source_id!r}, "
+                f"criterion={criterion!r}"
+            )
+        seen_keys.add(key)
+        dataset_versions.add(version.strip())
+
+    if len(dataset_versions) != 1:
+        versions = ", ".join(sorted(dataset_versions))
+        raise MetaEvaluationInputError(
+            f"calibration labels mix dataset_version values: {versions}"
+        )
+    return records, next(iter(dataset_versions))
 
 
-def _norm_label(value: Any) -> Any:
-    """Normalize a calibration label to 0, 1, or 'na'."""
+def _norm_label(value: Any, *, context: str = "calibration label") -> Any:
+    """Normalize a calibration label to 0, 1, or ``"na"``; reject ambiguity."""
     if value is None:
         return "na"
     if isinstance(value, bool):
         return 1 if value else 0
     if isinstance(value, (int, float)):
-        v = int(value)
-        if v < 0:
+        if not math.isfinite(float(value)):
+            raise MetaEvaluationInputError(f"{context} must be 0, 1, or N/A; got {value!r}")
+        if float(value) == -1.0:
             return "na"
-        return 1 if v >= 1 else 0
+        if float(value) == 0.0:
+            return 0
+        if float(value) == 1.0:
+            return 1
+        raise MetaEvaluationInputError(f"{context} must be 0, 1, or N/A; got {value!r}")
     text = str(value).strip().lower()
     if text in {"", "na", "n/a", "-1"}:
         return "na"
@@ -575,29 +776,64 @@ def _norm_label(value: Any) -> Any:
         return 1
     if text in {"0", "fail", "failed", "false", "no"}:
         return 0
-    return "na"
+    raise MetaEvaluationInputError(f"{context} must be 0, 1, or N/A; got {value!r}")
+
+
+def _validate_kappa_settings(kappa_floor: float, minimum_samples: int) -> None:
+    if (
+        isinstance(kappa_floor, bool)
+        or not isinstance(kappa_floor, (int, float))
+        or not math.isfinite(float(kappa_floor))
+        or not 0.0 <= float(kappa_floor) <= 1.0
+    ):
+        raise MetaEvaluationInputError(
+            f"kappa floor must be a finite number between 0 and 1; got {kappa_floor!r}"
+        )
+    if isinstance(minimum_samples, bool) or not isinstance(minimum_samples, int) or minimum_samples < 2:
+        raise MetaEvaluationInputError(
+            f"minimum kappa samples must be an integer of at least 2; got {minimum_samples!r}"
+        )
 
 
 def compute_kappa_gate(
     records: list[dict[str, Any]],
     kappa_floor: float,
+    minimum_samples: int = DEFAULT_MIN_KAPPA_SAMPLES,
 ) -> dict[str, dict[str, Any]]:
     """Per-criterion Cohen's kappa + inflate/miss confusion + PASS/FAIL gate.
 
     Reuses ``judge_agreement.cohen_kappa``. Reference label vs grader label; N/A
     on either side excludes the pair (mirrors judge_agreement).
     """
+    _validate_kappa_settings(kappa_floor, minimum_samples)
+    if not records:
+        raise MetaEvaluationInputError("calibration dataset contains no records")
+
     by_criterion: dict[str, list[tuple[int, int]]] = {}
+    criteria_seen: set[str] = set()
     inflate: Counter = Counter()  # ref=0, grader=1 (grader inflates)
     miss: Counter = Counter()  # ref=1, grader=0 (grader misses)
     na_excluded: Counter = Counter()
 
-    for rec in records:
+    for index, rec in enumerate(records, start=1):
+        if not isinstance(rec, dict):
+            raise MetaEvaluationInputError(
+                f"calibration record {index} must be a JSON object"
+            )
         criterion = str(rec.get("criterion", "")).strip()
         if not criterion:
-            continue
-        ref = _norm_label(rec.get("human_or_reference_label"))
-        grader = _norm_label(rec.get("grader_label"))
+            raise MetaEvaluationInputError(
+                f"calibration record {index} has an empty criterion"
+            )
+        criteria_seen.add(criterion)
+        ref = _norm_label(
+            rec.get("human_or_reference_label"),
+            context=f"calibration record {index} human_or_reference_label",
+        )
+        grader = _norm_label(
+            rec.get("grader_label"),
+            context=f"calibration record {index} grader_label",
+        )
         if ref == "na" or grader == "na":
             na_excluded[criterion] += 1
             continue
@@ -608,11 +844,13 @@ def compute_kappa_gate(
             miss[criterion] += 1
 
     gate: dict[str, dict[str, Any]] = {}
-    for criterion, pairs in by_criterion.items():
+    for criterion in sorted(criteria_seen):
+        pairs = by_criterion.get(criterion, [])
         kappa = cohen_kappa(pairs)
         agree = sum(1 for a, b in pairs if a == b)
         raw_agreement = round(agree / len(pairs), 4) if pairs else None
-        passed = kappa is not None and kappa >= kappa_floor
+        sufficient_evidence = len(pairs) >= minimum_samples
+        passed = sufficient_evidence and kappa is not None and kappa >= kappa_floor
         gate[criterion] = {
             "n_compared": len(pairs),
             "n_na_excluded": na_excluded.get(criterion, 0),
@@ -621,6 +859,8 @@ def compute_kappa_gate(
             "grader_inflated_count": inflate.get(criterion, 0),
             "grader_missed_count": miss.get(criterion, 0),
             "kappa_floor": kappa_floor,
+            "minimum_samples": minimum_samples,
+            "evidence_status": "sufficient" if sufficient_evidence else "insufficient_samples",
             "gate": "PASS" if passed else "FAIL",
         }
     return gate
@@ -632,13 +872,13 @@ def compute_kappa_gate(
 
 
 def _passes_reward_hack_guard(proposal: Proposal) -> bool:
-    """Reject any proposal that is not backed by a corroborating signal.
+    """Reject any proposal that is not backed by a concrete evidence signal.
 
     REWARD-HACKING GUARD: a proposal whose only expected effect is raising the
-    judge's pass rate (i.e. with no deterministic-check failure, no dominant
-    failure tag with concrete examples, and no kappa/agreement gap) is a grade-
-    inflation risk and MUST be filtered out. Every accepted proposal cites one
-    of three corroborating signals.
+    judge's pass rate (i.e. with no deterministic-check failure, no grader
+    self-tag with concrete examples, and no kappa/agreement gap) is a grade-
+    inflation risk and MUST be filtered out. Output metadata makes clear that a
+    grader self-tag is diagnostic evidence, not independent corroboration.
     """
     if proposal.corroborating_signal not in {"deterministic_check", "failure_tag", "kappa_gap"}:
         return False
@@ -649,7 +889,10 @@ def _passes_reward_hack_guard(proposal: Proposal) -> bool:
     if proposal.corroborating_signal == "deterministic_check":
         return bool(evidence.get("check"))
     if proposal.corroborating_signal == "kappa_gap":
-        return evidence.get("cohen_kappa") is not None
+        return (
+            evidence.get("cohen_kappa") is not None
+            and evidence.get("evidence_status") == "sufficient"
+        )
     return False
 
 
@@ -756,6 +999,11 @@ def _kappa_proposals(gate: dict[str, dict[str, Any]], kappa_floor: float) -> lis
     for criterion, row in gate.items():
         if row.get("gate") != "FAIL":
             continue
+        # Insufficient calibration evidence must fail the gate, but it is not
+        # evidence that rubric guidance is wrong. Do not propose a rubric edit
+        # until the minimum number of independently labeled comparisons exists.
+        if row.get("evidence_status") != "sufficient":
+            continue
         inflated = int(row.get("grader_inflated_count", 0))
         missed = int(row.get("grader_missed_count", 0))
         direction = "inflates (marks bad items pass)" if inflated >= missed else "misses (fails good items)"
@@ -774,6 +1022,7 @@ def _kappa_proposals(gate: dict[str, dict[str, Any]], kappa_floor: float) -> lis
                     "grader_inflated_count": inflated,
                     "grader_missed_count": missed,
                     "n_compared": row.get("n_compared"),
+                    "evidence_status": row.get("evidence_status"),
                 },
                 expected_metric_moved=f"{criterion} cohen_kappa",
                 suggested_text=(
@@ -822,8 +1071,8 @@ def build_proposals(
     if kappa_gate:
         raw.extend(_kappa_proposals(kappa_gate, kappa_floor))
 
-    # REWARD-HACKING FILTER: drop any proposal not backed by a corroborating
-    # signal (see _passes_reward_hack_guard). This is the explicit guard.
+    # REWARD-HACKING FILTER: drop any proposal not backed by concrete evidence
+    # (see _passes_reward_hack_guard). This is the explicit guard.
     filtered = [p for p in raw if _passes_reward_hack_guard(p)]
     return _rank_proposals(filtered, criteria)
 
@@ -834,56 +1083,52 @@ def build_proposals(
 
 
 def prompt_version_hash() -> str:
-    """Return a short git hash of the most recent prompts commit, or 'unknown'.
-
-    Shells out to git for the last commit touching ``site/backend/data/prompts``
-    (the unit ``scripts/prompt_versions.py`` snapshots). No import-time call.
-    """
-    try:
-        result = subprocess.run(
-            [
-                "git",
-                "log",
-                "-1",
-                "--pretty=format:%h",
-                "--",
-                "site/backend/data/prompts",
-            ],
-            cwd=str(REPO_ROOT.parent),
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-    except (subprocess.SubprocessError, OSError, FileNotFoundError):
-        return "unknown"
-    value = (result.stdout or "").strip()
-    return value or "unknown"
+    """Hash the effective prompt files, including uncommitted content."""
+    if not PROMPTS_DIR.is_dir():
+        raise MetaEvaluationInputError(f"prompts directory does not exist: {PROMPTS_DIR}")
+    prompt_paths = sorted(path for path in PROMPTS_DIR.rglob("*.txt") if path.is_file())
+    if not prompt_paths:
+        raise MetaEvaluationInputError(f"prompts directory contains no .txt files: {PROMPTS_DIR}")
+    return _content_hash(prompt_paths, base=PROMPTS_DIR)
 
 
 def rubric_version_hash() -> str:
-    """Return a short git hash of the most recent rubric.json commit, or 'unknown'."""
+    """Hash the effective rubric file, including uncommitted content."""
+    if not RUBRIC_PATH.is_file():
+        raise MetaEvaluationInputError(f"rubric file does not exist: {RUBRIC_PATH}")
+    return _content_hash([RUBRIC_PATH], base=RUBRIC_PATH.parent)
+
+
+def _content_hash(paths: Iterable[Path], *, base: Path) -> str:
+    """Return a stable SHA-256 over relative names and exact file bytes."""
+    digest = hashlib.sha256()
+    digest.update(b"uconn-meta-evaluator-input-v1\0")
     try:
-        result = subprocess.run(
-            ["git", "log", "-1", "--pretty=format:%h", "--", "site/backend/data/rubric.json"],
-            cwd=str(REPO_ROOT.parent),
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-    except (subprocess.SubprocessError, OSError, FileNotFoundError):
-        return "unknown"
-    value = (result.stdout or "").strip()
-    return value or "unknown"
+        for path in sorted((Path(path) for path in paths), key=lambda item: item.as_posix()):
+            relative = path.relative_to(base).as_posix()
+            digest.update(relative.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(path.read_bytes())
+            digest.update(b"\0")
+    except (OSError, ValueError) as exc:
+        raise MetaEvaluationInputError(f"could not hash effective grader inputs: {exc}") from exc
+    return f"sha256:{digest.hexdigest()}"
 
 
 def append_ledger_entry(
     ledger_path: Path,
     entry: dict[str, Any],
 ) -> None:
-    """Append one JSONL record to the experiment ledger (creates parent dir)."""
+    """Append one locked, durable JSONL record to the experiment ledger."""
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     with ledger_path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def _now_iso() -> str:
@@ -902,6 +1147,7 @@ def build_report(
     *,
     kappa_floor: float,
     dataset_version: Optional[str],
+    minimum_kappa_samples: int = DEFAULT_MIN_KAPPA_SAMPLES,
     created_at: Optional[str] = None,
 ) -> dict[str, Any]:
     """Assemble the full meta-evaluation report dict."""
@@ -910,10 +1156,22 @@ def build_report(
     gate_summary: Optional[dict[str, Any]] = None
     if kappa_gate is not None:
         failing = [c for c, r in kappa_gate.items() if r.get("gate") == "FAIL"]
+        insufficient = [
+            c for c, r in kappa_gate.items() if r.get("evidence_status") != "sufficient"
+        ]
         gate_summary = {
             "kappa_floor": kappa_floor,
+            "minimum_samples_per_criterion": minimum_kappa_samples,
             "criteria_failing_gate": sorted(failing),
-            "overall_gate": "FAIL" if failing else "PASS",
+            "criteria_with_insufficient_evidence": sorted(insufficient),
+            "overall_gate": "FAIL" if failing or not kappa_gate else "PASS",
+            "gate_reason": (
+                "no calibration criteria were available"
+                if not kappa_gate
+                else "one or more criteria failed or lacked minimum evidence"
+                if failing
+                else "all criteria met the kappa floor with sufficient evidence"
+            ),
         }
     return {
         "created_at": created,
@@ -959,16 +1217,22 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.append("## Kappa gate (labeled mode)")
         lines.append("")
         lines.append(f"- floor: {gate_summary['kappa_floor']}")
+        lines.append(
+            f"- minimum comparisons per criterion: "
+            f"{gate_summary['minimum_samples_per_criterion']}"
+        )
         lines.append(f"- overall gate: **{gate_summary['overall_gate']}**")
+        lines.append(f"- reason: {gate_summary['gate_reason']}")
         failing = gate_summary["criteria_failing_gate"]
         lines.append(f"- criteria failing gate: {', '.join(failing) if failing else '(none)'}")
         lines.append("")
         gate = report.get("kappa_gate") or {}
-        lines.append("| criterion | n | kappa | gate | inflated | missed |")
-        lines.append("|---|---|---|---|---|---|")
+        lines.append("| criterion | n | evidence | kappa | gate | inflated | missed |")
+        lines.append("|---|---|---|---|---|---|---|")
         for criterion, row in sorted(gate.items()):
             lines.append(
-                f"| {criterion} | {row['n_compared']} | {row['cohen_kappa']} | "
+                f"| {criterion} | {row['n_compared']} | {row['evidence_status']} | "
+                f"{row['cohen_kappa']} | "
                 f"{row['gate']} | {row['grader_inflated_count']} | {row['grader_missed_count']} |"
             )
         lines.append("")
@@ -984,7 +1248,10 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines.append(f"## Ranked proposals ({report['proposal_count']}) — review, do NOT auto-apply")
     lines.append("")
     if not report["proposals"]:
-        lines.append("_No corroborated proposals. (Proposals with only pass-rate effect are filtered.)_")
+        lines.append(
+            "_No sufficiently evidenced proposals. "
+            "(Proposals with only pass-rate effect are filtered.)_"
+        )
     for idx, proposal in enumerate(report["proposals"], start=1):
         lines.append(
             f"### {idx}. `{proposal['target_file']}` — {proposal['change_type']} "
@@ -992,6 +1259,11 @@ def render_markdown(report: dict[str, Any]) -> str:
         )
         lines.append(f"- criterion: `{proposal['criterion']}`")
         lines.append(f"- signal: `{proposal['corroborating_signal']}`")
+        lines.append(f"- evidence provenance: `{proposal['evidence_provenance']}`")
+        lines.append(
+            f"- independently corroborated: "
+            f"{'yes' if proposal['independently_corroborated'] else 'no'}"
+        )
         lines.append(f"- rationale: {proposal['rationale']}")
         lines.append(f"- expected metric moved: {proposal['expected_metric_moved']}")
         lines.append(f"- suggested text: {proposal['suggested_text']}")
@@ -1007,13 +1279,21 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 def run_meta_evaluation(args: argparse.Namespace) -> dict[str, Any]:
     """Core pipeline usable from tests: analyze -> gate -> propose -> report."""
+    minimum_kappa_samples = getattr(
+        args, "minimum_kappa_samples", DEFAULT_MIN_KAPPA_SAMPLES
+    )
+    _validate_kappa_settings(args.kappa_floor, minimum_kappa_samples)
     analysis = analyze_eval_dirs(args.eval_dir)
 
     kappa_gate: Optional[dict[str, dict[str, Any]]] = None
     dataset_version: Optional[str] = None
     if args.labels:
         records, dataset_version = load_calibration_labels(Path(args.labels))
-        kappa_gate = compute_kappa_gate(records, args.kappa_floor)
+        kappa_gate = compute_kappa_gate(
+            records,
+            args.kappa_floor,
+            minimum_samples=minimum_kappa_samples,
+        )
 
     proposals = build_proposals(analysis, kappa_gate, args.kappa_floor)
     report = build_report(
@@ -1022,6 +1302,7 @@ def run_meta_evaluation(args: argparse.Namespace) -> dict[str, Any]:
         kappa_gate,
         kappa_floor=args.kappa_floor,
         dataset_version=dataset_version,
+        minimum_kappa_samples=minimum_kappa_samples,
         created_at=getattr(args, "created_at", None),
     )
     return report
@@ -1056,6 +1337,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         help=f"Per-criterion Cohen's kappa floor for the labeled-mode gate (default {DEFAULT_KAPPA_FLOOR}).",
     )
     parser.add_argument(
+        "--min-kappa-samples",
+        dest="minimum_kappa_samples",
+        type=int,
+        default=DEFAULT_MIN_KAPPA_SAMPLES,
+        help=(
+            "Minimum non-N/A comparisons required for a criterion to pass the "
+            f"kappa gate (default {DEFAULT_MIN_KAPPA_SAMPLES})."
+        ),
+    )
+    parser.add_argument(
         "--json-out",
         dest="json_out",
         type=Path,
@@ -1084,7 +1375,11 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = parse_args(argv)
-    report = run_meta_evaluation(args)
+    try:
+        report = run_meta_evaluation(args)
+    except MetaEvaluationInputError as exc:
+        print(f"meta-evaluator input error: {exc}", file=sys.stderr)
+        return 2
 
     # Resolve output paths.
     default_dir = Path(args.eval_dir[0])

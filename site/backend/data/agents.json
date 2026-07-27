@@ -41,9 +41,10 @@
       "model": "gpt-5.6-luna",
       "moderationModel": "omni-moderation-latest",
       "reasoning": "medium",
+      "maxOutputTokens": 2048,
       "physicsMinConfidence": 0.75,
       "blockOffTopic": true,
-      "failClosed": false,
+      "failClosed": true,
       "maxQuestionsSampled": 40,
       "inputNode": "input_guardrail",
       "contentNode": "content_guardrail"
@@ -52,9 +53,10 @@
   "setup": {
     "sequence": 0,
     "name": "Starter",
-    "description": "Prepares the shared workflow runtime",
+    "description": "Owns isolated extraction and downstream runtimes",
     "model": "gpt-5.6-luna",
     "reasoning": "none",
+    "maxOutputTokens": 4096,
     "kind": "runtime",
     "isLLM": false,
     "hasPrompt": false,
@@ -65,7 +67,7 @@
     "aliases": [],
     "inputFrom": "User",
     "outputTo": "Normalizer",
-    "cliDescription": "Bootstrap the shared container and upload source files",
+    "cliDescription": "Create isolated provider scopes only as stages require",
     "allowedDomains": [
       "archive.ubuntu.com",
       "security.ubuntu.com",
@@ -75,11 +77,10 @@
       "files.pythonhosted.org"
     ],
     "containerPythonPackages": [
-      "pymupdf",
-      "pdf2image",
-      "pdfplumber",
-      "PyPDF2",
-      "python-docx"
+      "pdf2image==1.17.0",
+      "pdfplumber==0.11.9",
+      "pypdf==6.4.0",
+      "python-docx==1.2.0"
     ]
   },
   "input_guardrail": {
@@ -106,6 +107,7 @@
     "description": "Parses user request into configuration",
     "model": "gpt-5.6-luna",
     "reasoning": "none",
+    "maxOutputTokens": 2048,
     "kind": "agent",
     "isLLM": true,
     "hasPrompt": true,
@@ -125,6 +127,7 @@
     "description": "Reads files and extracts questions",
     "model": "gpt-5.6-luna",
     "reasoning": "none",
+    "maxOutputTokens": 32768,
     "kind": "agent",
     "isLLM": true,
     "hasPrompt": true,
@@ -163,6 +166,7 @@
     "description": "Validates answers and adds explanations",
     "model": "gpt-5.6-luna",
     "reasoning": "low",
+    "maxOutputTokens": 32768,
     "kind": "agent",
     "isLLM": true,
     "hasPrompt": true,
@@ -183,6 +187,7 @@
     "description": "Creates isomorphic questions",
     "model": "gpt-5.6-terra",
     "reasoning": "high",
+    "maxOutputTokens": 65536,
     "kind": "agent",
     "isLLM": true,
     "hasPrompt": true,
@@ -203,6 +208,7 @@
     "description": "Converts questions to LaTeX format",
     "model": "gpt-5.6-luna",
     "reasoning": "medium",
+    "maxOutputTokens": 65536,
     "kind": "agent",
     "isLLM": true,
     "hasPrompt": true,

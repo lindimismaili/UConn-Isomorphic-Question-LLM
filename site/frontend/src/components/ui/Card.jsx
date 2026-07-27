@@ -1,7 +1,6 @@
 /**
  * Card primitives (DESIGN.md §7). `.card` + optional documented status/context
- * variant. Cards never lift on hover (the clickable `.agent-card` is the one
- * documented exception and is NOT this primitive).
+ * variant. Cards never lift on hover.
  */
 
 const CARD_VARIANTS = {

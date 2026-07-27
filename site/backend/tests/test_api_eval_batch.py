@@ -17,11 +17,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
-
 from backend.src.api import eval_batch as eval_batch_module
 from backend.src.api import state
 from backend.src.server import app
+from backend.tests.support import IdempotentTestClient as TestClient
 
 
 class EvalBatchRouteTestBase(unittest.TestCase):
@@ -30,14 +29,93 @@ class EvalBatchRouteTestBase(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
         self._saved = dict(state.eval_batch_jobs)
+        self._saved_create_batches = dict(state.batch_jobs)
         state.eval_batch_jobs.clear()
+        state.batch_jobs.clear()
 
     def tearDown(self) -> None:
         state.eval_batch_jobs.clear()
         state.eval_batch_jobs.update(self._saved)
+        state.batch_jobs.clear()
+        state.batch_jobs.update(self._saved_create_batches)
 
 
 class StartEvalBatchPriorRunsTests(EvalBatchRouteTestBase):
+    def test_requires_explicit_projected_grader_call_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            run_dir = outputs_dir / "run-ok"
+            run_dir.mkdir()
+            (run_dir / "final_result.json").write_text(
+                '{"generated_questions":[{"source_id":"S1"}]}',
+                encoding="utf-8",
+            )
+            with (
+                patch.object(eval_batch_module, "get_openai_client", return_value=object()),
+                patch.object(eval_batch_module, "OUTPUTS_DIR", outputs_dir),
+            ):
+                response = self.client.post(
+                    "/api/eval-batch/start",
+                    data={"mode": "prior_runs", "folders": '["run-ok"]'},
+                )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("projected grader calls", response.text)
+        self.assertEqual(state.eval_batch_jobs, {})
+
+    def test_rejects_aggregate_items_before_scheduling(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            for name in ("one", "two"):
+                run_dir = outputs_dir / name
+                run_dir.mkdir()
+                (run_dir / "final_result.json").write_text(
+                    '{"generated_questions":[{"source_id":"S1"},{"source_id":"S2"}]}',
+                    encoding="utf-8",
+                )
+            with (
+                patch.object(eval_batch_module, "get_openai_client", return_value=object()),
+                patch.object(eval_batch_module, "OUTPUTS_DIR", outputs_dir),
+                patch.object(eval_batch_module, "MAX_EVAL_BATCH_ITEMS", 3),
+            ):
+                response = self.client.post(
+                    "/api/eval-batch/start",
+                    data={
+                        "mode": "prior_runs",
+                        "folders": '["one","two"]',
+                        "confirm_grader_calls": "true",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("MAX_EVAL_BATCH_ITEMS=3", response.text)
+        self.assertEqual(state.eval_batch_jobs, {})
+
+    def test_rejects_second_active_batch_across_batch_types(self) -> None:
+        state.batch_jobs["active-create-data"] = {"status": "running"}
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            run_dir = outputs_dir / "run-ok"
+            run_dir.mkdir()
+            (run_dir / "final_result.json").write_text(
+                '{"generated_questions":[{"source_id":"S1"}]}',
+                encoding="utf-8",
+            )
+            with (
+                patch.object(eval_batch_module, "get_openai_client", return_value=object()),
+                patch.object(eval_batch_module, "OUTPUTS_DIR", outputs_dir),
+            ):
+                response = self.client.post(
+                    "/api/eval-batch/start",
+                    data={
+                        "mode": "prior_runs",
+                        "folders": '["run-ok"]',
+                        "confirm_grader_calls": "true",
+                    },
+                )
+
+        self.assertEqual(response.status_code, 429)
+
     def test_404_when_selected_run_has_no_final_result(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs_dir = Path(tmp)
@@ -57,7 +135,10 @@ class StartEvalBatchPriorRunsTests(EvalBatchRouteTestBase):
             outputs_dir = Path(tmp)
             run_dir = outputs_dir / "run-ok"
             run_dir.mkdir()
-            (run_dir / "final_result.json").write_text("{}", encoding="utf-8")
+            (run_dir / "final_result.json").write_text(
+                '{"generated_questions":[{"source_id":"S1"}]}',
+                encoding="utf-8",
+            )
 
             async def _noop(_batch_id: str) -> None:
                 return None
@@ -69,7 +150,11 @@ class StartEvalBatchPriorRunsTests(EvalBatchRouteTestBase):
             ):
                 resp = self.client.post(
                     "/api/eval-batch/start",
-                    data={"mode": "prior_runs", "folders": json.dumps(["run-ok"])},
+                    data={
+                        "mode": "prior_runs",
+                        "folders": json.dumps(["run-ok"]),
+                        "confirm_grader_calls": "true",
+                    },
                 )
 
         self.assertEqual(resp.status_code, 200, resp.text)
@@ -77,6 +162,15 @@ class StartEvalBatchPriorRunsTests(EvalBatchRouteTestBase):
         self.assertTrue(body["success"])
         self.assertEqual(body["mode"], "prior_runs")
         self.assertEqual(body["totalFiles"], 1)
+        self.assertEqual(body["projectedExtractionFiles"], 0)
+        self.assertEqual(body["projectedExtractionCalls"], 0)
+        self.assertEqual(body["projectedBootstrapCalls"], 0)
+        status = self.client.get(
+            f"/api/eval-batch/{body['batchId']}/status"
+        ).json()
+        self.assertEqual(status["projectedExtractionFiles"], 0)
+        self.assertEqual(status["projectedExtractionCalls"], 0)
+        self.assertEqual(status["projectedBootstrapCalls"], 0)
 
         batch = state.eval_batch_jobs[body["batchId"]]
         self.assertEqual(batch["mode"], "prior_runs")
@@ -86,6 +180,46 @@ class StartEvalBatchPriorRunsTests(EvalBatchRouteTestBase):
 
 
 class StartEvalBatchUploadTests(EvalBatchRouteTestBase):
+    def test_cost_confirmation_discloses_isolated_extraction_and_bootstrap_calls(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch.object(
+                    eval_batch_module,
+                    "get_openai_client",
+                    return_value=object(),
+                ),
+                patch.object(eval_batch_module, "UPLOADS_DIR", Path(tmp)),
+            ):
+                response = self.client.post(
+                    "/api/eval-batch/start",
+                    data={"mode": "upload"},
+                    files=[
+                        (
+                            "source_file",
+                            ("source.pdf", b"%PDF-1.4 src", "application/pdf"),
+                        ),
+                        (
+                            "generated_files",
+                            ("gen1.pdf", b"%PDF-1.4 g1", "application/pdf"),
+                        ),
+                        (
+                            "generated_files",
+                            ("gen2.pdf", b"%PDF-1.4 g2", "application/pdf"),
+                        ),
+                    ],
+                )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("isolates 3 PDF(s)", response.text)
+        self.assertIn("3 document-dependency bootstrap call(s)", response.text)
+        self.assertIn("up to 6 Extracter agent call(s)", response.text)
+        self.assertIn(
+            "Safety moderation and content-classifier checks also run",
+            response.text,
+        )
+
     def test_413_when_source_file_too_large(self) -> None:
         with (
             patch.object(eval_batch_module, "get_openai_client", return_value=object()),
@@ -93,7 +227,7 @@ class StartEvalBatchUploadTests(EvalBatchRouteTestBase):
         ):
             resp = self.client.post(
                 "/api/eval-batch/start",
-                data={"mode": "upload"},
+                data={"mode": "upload", "confirm_grader_calls": "true"},
                 files=[
                     ("source_file", ("source.pdf", b"%PDF-1.4 this source is too big", "application/pdf")),
                     ("generated_files", ("gen.pdf", b"%PDF-1.4 gen", "application/pdf")),
@@ -115,7 +249,7 @@ class StartEvalBatchUploadTests(EvalBatchRouteTestBase):
             ):
                 resp = self.client.post(
                     "/api/eval-batch/start",
-                    data={"mode": "upload"},
+                    data={"mode": "upload", "confirm_grader_calls": "true"},
                     files=[
                         ("source_file", ("source.pdf", b"%PDF-1.4 src", "application/pdf")),
                         ("generated_files", ("gen1.pdf", b"%PDF-1.4 g1", "application/pdf")),
@@ -128,9 +262,22 @@ class StartEvalBatchUploadTests(EvalBatchRouteTestBase):
         self.assertTrue(body["success"])
         self.assertEqual(body["mode"], "upload")
         self.assertEqual(body["totalFiles"], 2)
+        self.assertEqual(body["projectedExtractionFiles"], 3)
+        self.assertEqual(body["projectedExtractionCalls"], 6)
+        self.assertEqual(body["projectedBootstrapCalls"], 3)
+        status = self.client.get(
+            f"/api/eval-batch/{body['batchId']}/status"
+        ).json()
+        self.assertEqual(status["projectedExtractionFiles"], 3)
+        self.assertEqual(status["projectedExtractionCalls"], 6)
+        self.assertEqual(status["projectedBootstrapCalls"], 3)
 
         batch = state.eval_batch_jobs[body["batchId"]]
         self.assertEqual(batch["source_name"], "source.pdf")
+        self.assertEqual(batch["uploadFolder"], f"eval_batch_{body['batchId']}")
+        self.assertEqual(batch["projectedExtractionFiles"], 3)
+        self.assertEqual(batch["projectedExtractionCalls"], 6)
+        self.assertEqual(batch["projectedBootstrapCalls"], 3)
         names = {e["name"] for e in batch["entries"]}
         self.assertEqual(names, {"gen1.pdf", "gen2.pdf"})
         for entry in batch["entries"]:
@@ -151,6 +298,18 @@ class ListEvalOutputsTests(EvalBatchRouteTestBase):
         body = resp.json()
         self.assertEqual(body["runs"], fake_runs)
         self.assertEqual(body["total"], 1)
+        self.assertEqual(
+            body["policy"]["maxUploadExtractionFiles"],
+            eval_batch_module.MAX_EVAL_SELECTIONS + 1,
+        )
+        self.assertEqual(
+            body["policy"]["maxUploadExtractionCalls"],
+            (eval_batch_module.MAX_EVAL_SELECTIONS + 1) * 2,
+        )
+        self.assertEqual(
+            body["policy"]["maxUploadBootstrapCalls"],
+            eval_batch_module.MAX_EVAL_SELECTIONS + 1,
+        )
 
 
 class EvalBatchStatusResultStopTests(EvalBatchRouteTestBase):

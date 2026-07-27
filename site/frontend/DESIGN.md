@@ -11,7 +11,13 @@ from raw `<button className="btn …">` / `<input>` / ad-hoc class strings. If a
 genuinely new element is needed, add it as a `ui/` primitive (and to the
 showcase) **first**, then use it. The live catalog of every building block is the
 **design-system showcase** at `design-system.html`
-(`npm -C frontend run dev` → `/design-system.html`).
+(`npm -C site/frontend run dev` from the repository root →
+`/design-system.html`).
+
+Hidden native `<input type="file">` elements are the one implementation seam:
+they may sit behind a visible `Button` or upload surface solely to open the
+browser file picker. They must remain hidden, be labeled through the visible
+control, and must not become a general exception for user-visible raw inputs.
 
 All values live as CSS custom properties in [`src/styles/app.css`](src/styles/app.css)
 `:root`. Reference the tokens — never hardcode hex, px, rem, or ms.
@@ -95,8 +101,8 @@ render at jittery 32/33/35 px. Larger tiers are opt-in **per group**.
 
 **Consistency rule:** every button in the same visual group uses the **same
 height tier**. A row of related buttons must share one tier (don't mix 36 and
-56). Set the tier on the container (e.g. `.prompt-actions-row > .btn`), not
-per-button.
+56). Set the tier on the group container (for example `.composer-controls` or
+`.developer-tools-row`), not per button.
 
 ### Spacing
 
@@ -138,7 +144,11 @@ blue-tinted canvas with near-white surfaces, UConn navy (`#000E2F`) for the
 masthead/footer + brand + emphasis text, and a vivid readable UConn-blue accent
 (`#0A5BC4`) for interaction. Serif headings carry the academic signal; a subtle
 physics motif sits behind the navy masthead. There is no dark mode and no
-runtime theme switch. All text pairs are verified **WCAG-AA**.
+runtime theme switch. Automated contrast tests currently prove AA normal-text
+contrast for warning text on its documented surfaces, white text at every
+primary-gradient stop, and success/error score badges. That focused test is not
+a blanket certification of every rendered state; run the real-browser
+accessibility workflow before shipping UI changes.
 
 - "Theme" in the UI copy refers to the **question theme** dropdown
   (`.prompt-theme-row` / `.prompt-dropdown-select`), not a color scheme.
@@ -167,7 +177,7 @@ with `#root` and `body` as `flex` columns filling `min-height: 100vh`.
 | Outage notice | `.outage-banner` (+ `.outage-banner-detail`) | Full-width tinted-error strip above the header; only rendered during an outage. Render via the `Banner` primitive (§14) |
 | Header / hero | `.header` (+ `.has-hero` + `.header-motif`) → `.header-content` | Sticky (`top: 0`, `z-index: var(--z-header)`), `--gradient-surface` (navy) masthead with a physics motif behind (`.header-motif`, pointer-inert); holds `.logo` (title + `.mode-select` site-mode dropdown, §15) + `.uconn-mark`. Render via the `PageHeader` primitive |
 | Main | `.main-content` → `.content-shell` | Centered to `--site-max-width`; `clamp()` padding; `.content-shell` stacks sections with `--section-gap` |
-| Footer | `.footer` → `.footer-content` | `--gradient-surface` (navy), top accent border, centered. Render via the `Footer` primitive |
+| Footer | `.footer` → `.footer-content` | `--gradient-surface` (navy), top accent border, centered. May include the optional validated PayPal donation link documented in §15. Render via the `Footer` primitive |
 
 The whole scaffold is composed by the **`AppShell`** primitive (§14):
 `AppShell` takes `banner` / `header` / `footer` slots + children (main content).
@@ -175,28 +185,28 @@ The whole scaffold is composed by the **`AppShell`** primitive (§14):
 `src/sections/SiteChrome.jsx` (`SiteHeader` / `SiteBanner` / `SiteFooter`) — the
 header/footer/banner exist once, never as duplicated raw markup.
 
-Primary content grids inside `.content-shell`:
+Primary content grid inside `.content-shell`:
 
-- `.top-panels` — two equal columns (`1fr 1fr`, `--layout-gap`) for the prompt
-  card + developer-tools card. Collapses to one column at **≤1100px**. The
-  developer-tools card's flex body (`flex: 1 1 0`) gets its height from
-  `align-items: stretch` matching the taller prompt card; **once stacked it has
-  no sibling to stretch against**, so the ≤1100px rules give it a `min-height`
-  floor + content-sized body (`flex: 1 1 auto`) + a log-area `min-height` — without
-  these the body collapses and `overflow: hidden` clips the log entirely.
-- `.pipeline-split` — workflow panel + log panel (`~1.9fr` / `minmax(300px,1fr)`).
-  Collapses to one column at **≤1100px**.
+- `.workspace` — chat-first workflow surface (`minmax(0,1.9fr)`) plus the Dev
+  tools sidebar (`minmax(320px,1fr)`). User and Teacher views add
+  `.workspace.is-single` and do not render the sidebar. Dev mode stretches both
+  columns to a shared height; the log well scrolls inside the sidebar rather
+  than inflating the grid. The workspace collapses to one column at
+  **≤1100px**.
+- `.chat-shell` — transcript, pinned Composer, and horizontally scrollable
+  ten-node Stepper footer. The transcript scrolls within a `60vh` maximum and
+  the Stepper owns horizontal overflow so no registry node becomes
+  unreachable.
 
 **Modal-open dimming:** when any modal is open the body gets `.modal-open`,
 which applies `filter: blur(6px)` to `.header`, `.main-content`, and `.footer`
 (transition `--transition-normal`) and locks page scroll (see §8).
 
 **Responsive breakpoints** (mobile-last, `max-width`): `1200` (downloads → one
-column), `1100` (top-panels & pipeline → one column), `900` (dev-tools tiles
-wrap; prompt actions **shrink to stay on one row**, never stack — theme select,
-Upload, and Send share the row at every width), `820` (eval modal stacks),
-`768` (header stacks), `700` (modal footers, create-data rows, agent modal
-stack). Reuse these — don't add new arbitrary breakpoints.
+column), `1100` (workspace → one column), `900` (Dev-tool tiles wrap and
+Stepper nodes/connectors compact; Composer controls remain one group), `820`
+(eval modal stacks), `768` (header stacks), `700` (modal footers, create-data
+rows, agent modal stack). Reuse these — don't add new arbitrary breakpoints.
 
 ---
 
@@ -229,9 +239,11 @@ Modifiers (stack on top of a variant):
 
 Size tiers are applied by **container context**, per the consistency rule:
 
-- Prompt action row → `--control-height-lg` (56) via `.prompt-actions-row > .btn`.
+- Composer theme/Attach/Send controls → `--control-height-sm` (36) via
+  `.composer-controls`.
 - Developer-tools tiles → `--control-height-lg` (56) via `.developer-tools-row`.
-- Everything else → default `--control-height` (44), or `.btn-sm` (36).
+- Other `.btn` controls have a 36px floor; documented row/modal contexts may
+  promote a whole group to 44px. `.btn-sm` is explicitly 36px.
 
 Developer-tools tiles get narrow (4 across on a half-width card), so inside
 `.developer-tools-row` the icon is pinned left + vertically centered and the
@@ -281,7 +293,13 @@ CSS" rule:
 
 ---
 
-## 6. Toggle switches
+## 6. Selection checkboxes and toggle switches
+
+Use the `Checkbox` primitive for independent list selections such as choosing
+prior runs. It emits the native checkbox so the browser preserves familiar
+semantics and keyboard behavior; supply an accessible label through its
+surrounding `<label>` or `aria-label`. Do not emit a visible raw checkbox from
+feature code.
 
 For boolean settings (e.g. the developer-tools options), use
 `.developer-toggle` — a label-wrapped checkbox styled as a switch, **not** a
@@ -307,8 +325,7 @@ never pushes the track out of the control.
 - `.card` → `--gradient-card`, `--color-border`, `--radius-lg`, `--shadow-md`,
   `--blur-md`; transitions border/shadow/background on `--transition-normal`.
   **Cards do not lift or scale on hover** (`transform: none` is intentional) —
-  only color/shadow may shift. **One documented exception:** the clickable
-  `.agent-card` (§9) lifts `translateY(-4px)` with a white outline on hover.
+  only color/shadow may shift.
 - `.card-header` → header band with bottom border. Title is `h2`
   (`--color-primary`, soft glow); optional `.subtitle` (`--color-text-secondary`)
   and `.card-header-row` / `.header-buttons` for a title + actions row.
@@ -346,6 +363,7 @@ hand-roll an overlay.
 |---|---|
 | `isOpen` | Toggles `.is-visible`; drives mount/scroll-lock |
 | `onClose` | Called on backdrop click and Escape |
+| `dismissible` | Defaults to `true`; set `false` only for a required access/readiness gate |
 | `title` | Rendered in `.modal-header` h3 (wired to `aria-labelledby`) |
 | `large` | Adds `.modal-large` (800px) |
 | `size` | Adds `.modal-{size}` (e.g. `full`); takes precedence over `large` |
@@ -413,43 +431,31 @@ Code-style viewers (`.tex` and JSON) share one line-numbered shell:
 `.json-key` / `.json-string` / `.json-number` / `.json-bool` / `.json-null` /
 `.json-punct` for JSON. Reuse these classes for any new code/source viewer.
 
-The three **rich domain modals** — `FinalResultModal` ("Final Result"),
+The three **rich domain modals** — `FinalResultModal` ("Results"),
 `EvalResultsModal` ("Evaluations"), `WorkflowAgentsModal` ("Agents") — are *not*
 file-type dispatched. They are opened by the explicit View Results / View
 Evaluations / View Agents buttons in `ResultsSection` and rendered alongside
-`viewerModals`. Their full-size variants extend `.modal-full` (§8 width table).
+`viewerModals`. `WorkflowAgentsModal` and other raw prompt/input/output views are
+Dev-view-only (§15); this is an information-minimization rule, not a substitute
+for the application access-token gate. Their full-size variants extend
+`.modal-full` (§8 width table).
 
 ---
 
-## 9. Agent pipeline
+## 9. Workflow process rail
 
-The workflow visualization is a horizontal track of fixed agent cards with an
-SVG connector layer behind them.
+The production workflow visualization is the registry-derived `Stepper` in the
+chat footer; the retired standalone agent-card pipeline is not a supported
+surface. It always renders all ten nodes in order and uses horizontal scrolling
+plus active-node centering rather than hiding future stages.
 
-- `.agent-card` — fixed **220×224**, `--gradient-card`; status drives the border
-  + glow via `[data-status]` (`queued`/`thinking`/`warning`,
-  `completed`/`success`, `errored`/`error`, `cancelled`). Cards reveal with
-  `.is-revealed` (fade + rise + scale). Because cards are clickable they are the
-  one `.card` that **lifts on hover**: `translateY(-4px)` + white outline
-  (`rgba(255,255,255,0.85)`) + `--shadow-lg`. The `-4px` lift stays inside the
-  scroll container's 34px top padding, so it isn't clipped by
-  `.agents-scroll { overflow-y: hidden }`.
-- `.agent-icon` cross-fades four stacked SVGs (default / thinking / success /
-  error) by status; the thinking icon pulses (`iconPulse`).
-- `.agent-connector-path` (inside `.agent-turn-connector`) recolors to the
-  status color and fades in via `data-visible` / `data-status`.
-- `.agent-placeholder` (with pulsing `.agent-placeholder-brain`s — **6** of them,
-  matching the visible pipeline length) holds the empty state until the first
-  card reveals (`.is-hidden` fades it out).
-- `.agent-node-ghost` — dashed card-sized skeleton blocks shown *while a run is
-  active*, padding the row ahead of the revealed cards. `AgentPipeline.jsx`
-  computes the count as "fill the visible row for the current viewport width,
-  **plus one** peeking past the edge to hint the next stage," capped at the
-  pipeline stages still to come (`slotsBeforeScroll - visibleKeys.length + 1`,
-  clamped to `remainingPipelineSlots`). They taper to zero at the final agent.
-
-Reuse the `[data-status]` convention for any new pipeline state rather than
-inventing per-state classes.
+Status is carried by `data-status` on `.stepper-node`,
+`.stepper-node-badge`, and `.stepper-connector` (`queued`, `thinking`,
+`completed`, `errored`, `cancelled`, `blocked`). Node kind is carried by
+`data-node-kind`; guardrails use a square shield badge, runtime nodes a computer
+affordance, and normal stages the agent affordance. Reuse these attributes for
+new state styling. See §15 for interaction, thinking-word, and auto-scroll
+behavior.
 
 ---
 
@@ -487,10 +493,10 @@ The named keyframes already in the system (reuse before adding new ones):
 
 | Keyframe | Where |
 |---|---|
-| `fadeInSlide` | Section entrance (`.agents-section`) |
 | `pulse` | Thinking status dot |
-| `iconPulse` | Thinking agent icon |
-| `brainIdlePulse` | Idle placeholder brains |
+| `chatMessageIn` | Conversation turn entrance |
+| `chatTyping` | Working-indicator dots |
+| `stepperWordIn` | Cycling active-node status word |
 | `createDataStatusPulse` / `createDataRowPulse` | Running create-data pill / row |
 | `logoPulse` | Logo glow (defined; currently opt-in) |
 
@@ -531,10 +537,11 @@ These are global and themed — don't override per component:
 1. Reuse a documented `.btn` variant — no new `*-btn` classes.
 2. Buttons in one group share a height tier (set on the container).
 3. Inputs/selects use `--control-height` + `--radius-sm` + the standard focus ring.
-4. Boolean settings use `.developer-toggle`, not a raw checkbox.
+4. List selections use `Checkbox`; immediate boolean settings use
+   `ToggleSwitch` / `.developer-toggle`. Feature code emits neither as a raw
+   checkbox.
 5. Modals go through `Modal.jsx`; pick a size variant, don't hand-roll widths.
-6. Panels/cards use `.card` + a documented status variant; no hover lift — the
-   clickable `.agent-card` is the one documented exception (§9).
+6. Panels/cards use `.card` + a documented status variant; no hover lift.
 7. Status uses the semantic color + glow (chips/pills/dots), never a raw hex.
 8. Colors/spacing/radius/motion/layout come from tokens, not literals.
 9. Transitions use the motion tokens and only animate safe properties; reuse the
@@ -554,11 +561,11 @@ The whole UI is composed from a small set of reusable **primitives** in
 
 ```js
 import { Button, Card, CardHeader, CardBody, TextInput, Select, TextArea,
-         ToggleSwitch, Badge, StatusChip, ScoreChip, Pill, Chip, StatusDot,
-         LogItem, LogList, EmptyState, Tabs, DataTable, KeyValueTable, IconButton,
-         SectionHeading, AppShell, PageHeader, Banner, Footer, Modal,
-         Avatar, ChatMessage, ChatTranscript, TypingIndicator, Composer,
-         Stepper }
+         Dropdown, Checkbox, ToggleSwitch, Badge, StatusChip, ScoreChip, Pill,
+         Chip, StatusDot, LogItem, LogList, EmptyState, Tabs, DataTable,
+         KeyValueTable, IconButton, SectionHeading, AppShell, PageHeader,
+         Banner, Footer, Modal, Avatar, ChatMessage, ChatTranscript,
+         TypingIndicator, Composer, Stepper }
   from './components/ui';
 ```
 
@@ -571,8 +578,9 @@ construction rather than by review.
 |---|---|---|
 | `Button` | §4 `.btn` + variant | `variant` (`primary\|secondary\|ghost\|danger`), `size` (`sm`), `icon`, `fixedWidth`, `feedbackState` (`success\|error`), `className` (premade sub-variants), `...rest` |
 | `IconButton` | §4 `.btn-icon-only` | `icon`, `aria-label` |
-| `TextInput` / `TextArea` / `Select` | §5 controls | native props; `Select` takes `options`/`placeholder` |
+| `TextInput` / `TextArea` / `Select` | §5 controls | native props; `TextInput controlSize="lg"` reuses the large control treatment; `Select` takes `options`/`placeholder` |
 | `Dropdown` | §5 `.dropdown*` (custom listbox) | `value`, `onChange(value)`, `options` (`{value,label,disabled?}`), `placeholder`, `size` (`sm`), `variant` (`onDark`), `disabled`, `aria-label`, `id` |
+| `Checkbox` | §6 native selection checkbox | `checked`, `onChange(checked)`, `disabled`, native labeling props |
 | `ToggleSwitch` | §6 `.developer-toggle` | `checked`, `onChange`, `label`, `disabled` |
 | `Card` / `CardHeader` / `CardBody` / `SectionHeading` | §7 `.card` | `variant` (`completed\|failed\|main\|developer-tools\|workflow\|log-panel`), `title`, `subtitle`, `actions`, `disclaimer` |
 | `Badge` / `StatusChip` / `ScoreChip` / `Pill` | §10 chips/pills | `kind`/`tone`/`status`/`state` → the documented `is-*` / `eval-*` classes |
@@ -628,7 +636,8 @@ assembled in [`src/sections/ChatConversation.jsx`](src/sections/ChatConversation
 which **projects** the presentation-agnostic reducer state
 (`state.agents` / `state.logs` / `state.result` / `state.blocked`) into messages
 via [`src/state/transcript.js`](src/state/transcript.js). The reducer is
-untouched; only the view changed.
+the authoritative client-state transition layer; keep presentation projection
+out of it.
 
 ### Chat primitives
 
@@ -647,8 +656,8 @@ untouched; only the view changed.
   has scrolled up (pins within 80px of the bottom).
 - `.chat-typing` (`.chat-typing-dots` → three `.chat-typing-dot`) — the
   animated "working" indicator (`TypingIndicator`).
-- `.composer` — the pinned input that **supersedes** the old
-  `.prompt-actions-row`: a `.composer-input` textarea + `.composer-controls`
+- `.composer` — the pinned chat input: a `.composer-input` textarea +
+  `.composer-controls`
   (theme `.composer-theme-select` on the left, `.composer-attach` +
   `.composer-send` on the right). Ctrl/⌘+Enter sends. `Composer` composes from
   `Button`/`Field` primitives, so it stays inside the templates-first contract.
@@ -656,16 +665,23 @@ untouched; only the view changed.
   height), and selecting a theme **never injects text into the textarea** — the
   selection is sent as the run's `theme` field and the select gets `.is-active`
   (primary border + glow) so it's visible that a theme prompt rides along.
+  Selected attachments are always reviewable before Send (name, size, and a
+  remove action). Rejected type/count/size warnings render inline as accessible
+  feedback; they are never silently discarded or shown only through `alert()`.
+  Keep accepted attachments available until the server accepts the run so a
+  start failure can be retried.
 
 ### Stepper (process rail)
 
 - `.stepper` — a compact inline rail rendering **all** registry nodes in order
   (`.stepper-node` + `.stepper-connector`), with a per-node status
   (`data-status`) and kind affordance (`data-node-kind`: runtime, `guardrail`
-  gets the square shield badge, agent). Clicking a node fires `onNodeClick(key)`
-  so the host opens that node's modal (runtime → `setup`/`output`;
-  guardrail/agent → the agent detail modal). The node list is **caller-supplied
-  from the registry** (`deriveStepperNodes`) — the Stepper never hardcodes keys.
+  gets the square shield badge, agent). In Dev view, clicking a node fires
+  `onNodeClick(key)` so the host opens that node's modal (runtime →
+  `setup`/`output`; guardrail/agent → the agent detail modal). User and Teacher
+  views keep the rail status-only and never expose raw prompts, agent inputs, or
+  outputs. The node list is **caller-supplied from the registry**
+  (`deriveStepperNodes`) — the Stepper never hardcodes keys.
 - **Thinking word** — while a node is `thinking`, a cycling status word
   ("Thinking…", "Combobulating…", …) renders in the `.stepper-node-word` slot
   above its icon (`.stepper-node-word-text` fades in per word via
@@ -681,19 +697,55 @@ untouched; only the view changed.
 
 ### Site modes & the header mode select
 
-The header carries a **site-mode dropdown** (`.mode-select`, a `Select`
+The header carries a **site-mode dropdown** (`.mode-select`, a `Dropdown`
 sub-variant) right after the title: **User / Teacher / Dev**. It uses the
 light-on-navy masthead treatment (translucent white fill, white text/chevron,
-36px tier); the popup list stays white/navy via the global `select option`
-rule. Dev mode shows the developer-tools side panel (`.workspace` two-column);
+36px tier); the portaled popup list stays on the standard light surface. Dev
+mode shows the developer-tools side panel (`.workspace` two-column);
 user/teacher modes hide it (`.workspace.is-single`) and swap the
 empty-conversation hint text. The choice persists in `localStorage` (`uiMode`).
+
+These modes are **presentation preferences, not authentication or roles**.
+Choosing Dev never bypasses the application access-token gate or grants API
+access. When `APP_ACCESS_TOKEN` is configured, it protects state-changing and
+artifact-bearing API requests; shared/LAN deployments must configure it.
+Authenticated readiness is boolean-only and never returns either secret. The
+token must not be stored in `localStorage`, placed in URLs, or written to logs.
+Dev view reduces accidental exposure by being the only view that renders raw
+agent details, but the server-side access gate remains the security boundary.
+The Dev panel is a workflow/developer surface, not a host-admin dashboard; it
+does not mutate server secrets, models/prompts, systemd, backups, Cloudflare, or
+financial limits.
+
+### Professor handoff and operational safety
+
+- **Readiness:** the OpenAI API key remains server-side. The browser may receive
+  only readiness state and actionable setup guidance, never the key itself.
+  When the server reports that the key is missing, every workflow, Create Data,
+  and Batch Eval start control is disabled. Local readiness is distinct from
+  the public OpenAI service-status banner.
+- **Stop lifecycle:** Stop requests real server-side cancellation and enters a
+  visible `stopping` state. Keep the transcript and identifiers while the
+  request settles; show `cancelled` only after server acknowledgement. Aborting
+  browser polling alone is never presented as stopping a run.
+- **Polling and reconnect:** poll immediately after start, then every 1.5
+  seconds while visible or 7.5 seconds while the tab is hidden. Transient
+  read errors use a bounded 1/2/5/10-second retry schedule. Store only the
+  active workflow identifier in `sessionStorage`; after reload, reconnect to
+  server-authoritative status and clear the record when the run is terminal or
+  no longer exists.
+- **Donation:** the footer may render one optional, backend-configured PayPal
+  donation link. Hide missing or invalid values; accept only HTTPS URLs whose
+  hostname is `paypal.com`, a subdomain of `paypal.com`, `paypal.me`, or a
+  subdomain of `paypal.me`. External links use clear accessible text,
+  `target="_blank"`, and `rel="noopener noreferrer"`. No PayPal credential or
+  secret is stored in the frontend.
 
 ### Blocked runs
 
 A workflow can end in the terminal **`blocked`** status (a guardrail tripped).
 The status payload carries a top-level `blocked` = `{category, reason, stage}`.
 `useWorkflow` dispatches `WORKFLOW_BLOCKED`; the reducer marks the tripped
-guardrail node `blocked` (status dot / `.stepper-node` / `.agent-card` all
-support `data-status="blocked"` — warning-tinted) and records the block, and the
-transcript shows a `.chat-message-blocked` bubble explaining the reason/category.
+guardrail node `blocked` (the status dot and `.stepper-node` use the
+warning-tinted `data-status="blocked"` state), records the block, and the
+transcript shows a blocked assistant bubble explaining the reason/category.

@@ -22,6 +22,8 @@ from backend.src.paths import OUTPUTS_DIR  # noqa: E402
 from backend.src.tools.professor_comparison import (  # noqa: E402
     ProfessorComparisonError,
     create_xlsx,
+    load_pdf_grid,
+    parse_cell,
     run_professor_comparison,
     source_classification,
 )
@@ -131,6 +133,26 @@ class TestCreateXlsx:
         with pytest.raises(FileNotFoundError):
             create_xlsx(empty)
 
+    def test_missing_or_malformed_grade_is_na(self):
+        assert parse_cell("", "") == "na"
+        assert parse_cell("not-a-score", "") == "na"
+
+    def test_duplicate_source_id_is_rejected(self, tmp_path: Path):
+        entry = tmp_path / "entry"
+        _write_entry_csv(
+            entry,
+            [
+                {"source_id": 1},
+                {"source_id": 1},
+            ],
+        )
+
+        with pytest.raises(ProfessorComparisonError, match="duplicate source_id 1"):
+            load_pdf_grid(
+                entry / "evaluation_outputs" / "evaluation_spreadsheet.csv",
+                CRITERIA_NAMES,
+            )
+
 
 class TestRunProfessorComparison:
     def test_end_to_end_writes_report_and_agreement_sheet(self, tmp_path: Path):
@@ -145,6 +167,7 @@ class TestRunProfessorComparison:
         assert outcome["pdfs_compared"] == ["entry-1", "entry-2"]
         summary = outcome["report"]["summary"]
         assert 0 <= summary["mean_raw_agreement"] <= 1
+        assert outcome["report"]["coverage"]["complete"] is True
 
         wb = load_workbook(outcome["xlsx_path"])
         assert wb.sheetnames.count("Agreement") == 1
@@ -153,6 +176,18 @@ class TestRunProfessorComparison:
         outcome2 = run_professor_comparison(batch, professor)
         wb2 = load_workbook(outcome2["xlsx_path"])
         assert wb2.sheetnames.count("Agreement") == 1
+
+    def test_reports_incomplete_sheet_coverage(self, tmp_path: Path):
+        batch = tmp_path / "batch"
+        _make_batch(batch, ["entry-1"])
+        professor = tmp_path / "professor.xlsx"
+        _write_professor_workbook(professor, ["entry-1", "professor-only"])
+
+        outcome = run_professor_comparison(batch, professor)
+
+        coverage = outcome["report"]["coverage"]
+        assert coverage["complete"] is False
+        assert coverage["missing_pdfs_from_judge"] == ["professor-only"]
 
     def test_missing_professor_workbook_raises(self, tmp_path: Path):
         batch = tmp_path / "batch"

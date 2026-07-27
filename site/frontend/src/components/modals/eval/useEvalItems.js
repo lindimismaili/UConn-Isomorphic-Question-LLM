@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { EMPTY_ITEMS, parseJsonl } from './evalData.js';
+import { fetchWithAbort } from '../../../utils/api.js';
 
 /**
  * Loads and parses the evaluation items JSONL for an open modal.
@@ -16,7 +17,7 @@ export function useEvalItems(isOpen, itemsUrl) {
     if (!isOpen || !itemsUrl) return undefined;
 
     const controller = new AbortController();
-    fetch(itemsUrl, { signal: controller.signal, cache: 'no-store' })
+    fetchWithAbort(itemsUrl, { cache: 'no-store' }, controller.signal)
       .then((response) => {
         if (!response.ok) throw new Error(`Unable to load eval items (${response.status})`);
         return response.text();

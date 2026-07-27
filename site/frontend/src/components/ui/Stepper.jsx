@@ -155,7 +155,12 @@ export function Stepper({ nodes = [], onNodeClick, activeKey, className = '', ..
               data-node-kind={kind}
               data-node-key={node.key}
               onClick={() => onNodeClick?.(node.key)}
-              title={`${node.label} — ${status}`}
+              disabled={!onNodeClick}
+              title={
+                onNodeClick
+                  ? `${node.label} — ${status}`
+                  : `${node.label} — ${status} (status only in this view)`
+              }
               aria-label={`${node.label} (${status})`}
             >
               <span className="stepper-node-word" aria-hidden="true">

@@ -176,10 +176,9 @@ export function TypingIndicator({ label, className = '', ...rest }) {
 }
 
 /**
- * Composer — the pinned chat input (`.composer`). Supersedes the old
- * `.prompt-actions-row`: a multiline `TextArea` with an attach control, a theme
- * `Select`, and a primary send button. Composed from the Button/Field
- * primitives so it stays inside the templates-first contract.
+ * Composer — the pinned chat input (`.composer`): a multiline `TextArea` with
+ * an attach control, a theme `Select`, and a primary send button. Composed from
+ * the Button/Field primitives so it stays inside the templates-first contract.
  *
  * @param {object} props
  * @param {string} props.value - Textarea value.
@@ -187,6 +186,8 @@ export function TypingIndicator({ label, className = '', ...rest }) {
  * @param {() => void} props.onSend - Fired by the send button / Ctrl+Enter.
  * @param {() => void} [props.onAttach] - Fired by the attach button.
  * @param {string} [props.placeholder]
+ * @param {string} [props['aria-label']] - Textarea accessible name; defaults to "Workflow instructions".
+ * @param {number} [props.maxLength] - Native textarea character limit.
  * @param {boolean} [props.disabled] - Disables the textarea + controls.
  * @param {boolean} [props.sendDisabled] - Disables only the send button.
  * @param {boolean} [props.isRunning] - Renders the send button as a Stop action.
@@ -208,6 +209,8 @@ export function Composer({
   onSend,
   onAttach,
   placeholder,
+  'aria-label': ariaLabel = 'Workflow instructions',
+  maxLength,
   disabled = false,
   sendDisabled = false,
   isRunning = false,
@@ -242,6 +245,8 @@ export function Composer({
         onChange={(event) => onChange?.(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        aria-label={ariaLabel}
+        maxLength={maxLength}
         disabled={disabled}
         rows={2}
       />

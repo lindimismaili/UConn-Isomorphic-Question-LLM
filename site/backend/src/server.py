@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import asyncio
 import os
 from contextlib import asynccontextmanager
+from dataclasses import replace
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,6 +33,7 @@ from backend.src.api.files import router as files_router
 from backend.src.api.health import router as health_router
 from backend.src.api.professor_comparison import router as professor_comparison_router
 from backend.src.api.workflows import router as workflows_router
+from backend.src.auth import AccessBoundaryConfig, AccessBoundaryMiddleware
 from backend.src.paths import DIST_DIR
 from backend.src.registry import api_description as _api_description
 from backend.src.registry import api_title as _api_title
@@ -40,6 +42,7 @@ from backend.src.registry import api_title as _api_title
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Run registry/artifact pruning on an interval instead of on every request."""
+    state.reconcile_persisted_state()
     prune_task = asyncio.create_task(state.pruning_loop())
     try:
         yield
@@ -49,42 +52,61 @@ async def lifespan(_app: FastAPI):
             await prune_task
         except asyncio.CancelledError:
             pass
+        await state.shutdown_runtime_tasks()
 
 
-app = FastAPI(
-    title=_api_title(),
-    description=_api_description(),
-    version="1.0.0",
-    lifespan=lifespan,
-)
+def create_app(*, access_config: AccessBoundaryConfig | None = None) -> FastAPI:
+    """Build the API with an optional token boundary for production deployments."""
+    configured_origins = tuple(dict.fromkeys(state._configured_allowed_origins()))
+    if access_config is None:
+        config = AccessBoundaryConfig.from_env(trusted_origins=configured_origins)
+    elif access_config.trusted_origins:
+        config = access_config
+    else:
+        config = replace(access_config, trusted_origins=configured_origins)
+    docs_url = None if config.auth_required else "/docs"
+    redoc_url = None if config.auth_required else "/redoc"
+    openapi_url = None if config.auth_required else "/openapi.json"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=state._configured_allowed_origins(),
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    application = FastAPI(
+        title=_api_title(),
+        description=_api_description(),
+        version="1.0.0",
+        lifespan=lifespan,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
+    )
+    application.state.auth_required = config.auth_required
 
-# Domain routers (registered before the catch-all static mount).
-app.include_router(health_router)
-app.include_router(config_router)
-app.include_router(files_router)
-app.include_router(workflows_router)
-app.include_router(batch_router)
-app.include_router(eval_batch_router)
-app.include_router(professor_comparison_router)
+    application.add_middleware(AccessBoundaryMiddleware, config=config)
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(config.trusted_origins),
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
+    # Domain routers (registered before the catch-all static mount).
+    application.include_router(health_router)
+    application.include_router(config_router)
+    application.include_router(files_router)
+    application.include_router(workflows_router)
+    application.include_router(batch_router)
+    application.include_router(eval_batch_router)
+    application.include_router(professor_comparison_router)
 
-# Mount static files last so API routes win.
-if DIST_DIR.is_dir() and (DIST_DIR / "index.html").is_file():
-    app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="static")
-else:
-    @app.get("/", include_in_schema=False)
-    async def root():
-        """Return a diagnostic landing page when the frontend has not been built."""
-        return HTMLResponse(
-            """
+    # Mount static files last so API routes win.
+    if DIST_DIR.is_dir() and (DIST_DIR / "index.html").is_file():
+        application.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="static")
+    else:
+
+        @application.get("/", include_in_schema=False)
+        async def root():
+            """Return a diagnostic landing page when the frontend has not been built."""
+            return HTMLResponse(
+                """
 <!doctype html>
 <html lang="en">
   <head>
@@ -95,18 +117,23 @@ else:
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;">
     <h2>Frontend not built</h2>
     <p>This FastAPI server is running, but <code>dist/index.html</code> was not found.</p>
-    <p>Dev UI: run <code>npm -C frontend run dev:ui</code> (then open the Vite URL).</p>
-    <p>Prod UI: run <code>npm -C frontend run build</code>, then refresh this page.</p>
+    <p>Dev UI: run <code>cd site &amp;&amp; npm -C frontend run dev:ui</code> (then open the Vite URL).</p>
+    <p>Prod UI: run <code>cd site &amp;&amp; npm -C frontend run build</code>, then refresh this page.</p>
     <p>API health: <a href="/api/health">/api/health</a></p>
   </body>
 </html>
-            """.strip()
-        )
+                """.strip()
+            )
+
+    return application
+
+
+app = create_app()
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    host = os.getenv("HOST", "0.0.0.0")
+    host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run(app, host=host, port=port)

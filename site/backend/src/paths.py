@@ -30,5 +30,3 @@ RUNTIME_DIR = BACKEND_ROOT / "runtime"
 
 DIST_DIR = REPO_ROOT / "dist"
 VERSION_PATHS = (REPO_ROOT / "version.json", DIST_DIR / "version.json")
-
-QUESTION_DATA_DIR = REPO_ROOT / "Question Data Files"

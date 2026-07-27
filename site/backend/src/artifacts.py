@@ -342,10 +342,16 @@ def write_workflow_metadata(
     source_file_metadata = []
     for raw_path in source_files or []:
         path = Path(raw_path)
+        try:
+            stored_path = path.resolve().relative_to(outputs_dir.resolve()).as_posix()
+        except ValueError:
+            # Backward-compatible fallback for direct callers. The workflow
+            # engine passes its portable input snapshots here.
+            stored_path = str(path)
         source_file_metadata.append(
             {
                 "name": path.name,
-                "path": str(path),
+                "path": stored_path,
                 "exists": path.exists(),
             }
         )
@@ -381,17 +387,39 @@ def load_workflow_metadata(outputs_dir: Path) -> dict[str, Any]:
 
 
 def load_source_file_paths(outputs_dir: Path) -> list[str]:
-    """Return existing source file paths recorded in workflow metadata."""
+    """Return only contained, regular input snapshots from workflow metadata."""
     metadata = load_workflow_metadata(outputs_dir)
     source_files = metadata.get("source_files", [])
     paths: list[str] = []
+    output_root = outputs_dir.resolve()
     if isinstance(source_files, list):
         for item in source_files:
             if not isinstance(item, dict):
                 continue
             path = item.get("path")
-            if isinstance(path, str) and Path(path).exists():
-                paths.append(path)
+            if not isinstance(path, str):
+                continue
+            relative_path = Path(path)
+            if (
+                relative_path.is_absolute()
+                or not relative_path.parts
+                or relative_path.parts[0] != "input_files"
+                or any(
+                    part in {"", ".", ".."}
+                    for part in relative_path.parts
+                )
+            ):
+                continue
+            unresolved = outputs_dir / relative_path
+            try:
+                if unresolved.is_symlink():
+                    continue
+                candidate = unresolved.resolve(strict=True)
+                candidate.relative_to(output_root)
+            except (OSError, ValueError):
+                continue
+            if candidate.is_file():
+                paths.append(str(candidate))
     return paths
 
 

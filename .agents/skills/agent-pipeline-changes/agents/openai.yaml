@@ -1,0 +1,9 @@
+interface:
+  display_name: "Agent Pipeline Changes"
+  short_description: "Safely change the ten-node agent pipeline"
+  default_prompt: "Use $agent-pipeline-changes to make and verify the requested pipeline change without hardcoding registry data."
+  icon_small: "./assets/small-logo.svg"
+  icon_large: "./assets/large-logo.svg"
+  brand_color: "#FFFFFF"
+policy:
+  allow_implicit_invocation: true

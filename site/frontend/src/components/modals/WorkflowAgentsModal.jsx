@@ -32,6 +32,24 @@ function formatSeconds(value) {
   return typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(2)}s` : null;
 }
 
+function buildQuestionCountSummaries(agents, finalResult, registryData) {
+  const recordsByKey = new Map(agents.map((agent) => [agent.agent_key, agent]));
+  return (registryData?.pipelineKeys ?? []).flatMap((agentKey) => {
+    const entry = registryData?.registry?.[agentKey];
+    if (!entry?.countLabel) return [];
+
+    const recordedCount = recordsByKey.get(agentKey)?.questions_count;
+    const resultItems = entry.resultField ? finalResult?.[entry.resultField] : null;
+    const count = typeof recordedCount === 'number'
+      ? recordedCount
+      : Array.isArray(resultItems) ? resultItems.length : null;
+
+    return count === null
+      ? []
+      : [{ key: agentKey, label: `Questions ${entry.countLabel}`, count }];
+  });
+}
+
 /** Capitalizes a raw word (status values, fallback node keys). */
 function capitalize(value) {
   if (!value || typeof value !== 'string') return value;
@@ -142,16 +160,35 @@ export default function WorkflowAgentsModal({
 }) {
   const { text, loading, error } = useFileContent(url, isOpen);
   const { text: finalResultText } = useFileContent(finalResultUrl, isOpen);
-  const pipelineOrder = useAgentRegistry()?.pipelineKeys ?? [];
+  const registryData = useAgentRegistry();
+  const pipelineOrder = registryData?.pipelineKeys ?? [];
   const [promptTarget, setPromptTarget] = useState(null);
 
   let data = null;
-  if (text) {
-    try { data = JSON.parse(text); } catch { /* ignore */ }
+  let dataParseError = '';
+  if (text !== null) {
+    try {
+      const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new TypeError('Expected a JSON object.');
+      }
+      data = parsed;
+    } catch {
+      dataParseError = 'The agent metadata file is not valid JSON. Download the file to inspect it or run the workflow again.';
+    }
   }
   let finalResult = null;
-  if (finalResultText) {
-    try { finalResult = JSON.parse(finalResultText); } catch { /* ignore */ }
+  let finalResultParseError = '';
+  if (finalResultText !== null) {
+    try {
+      const parsed = JSON.parse(finalResultText);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new TypeError('Expected a JSON object.');
+      }
+      finalResult = parsed;
+    } catch {
+      finalResultParseError = 'The final results file is not valid JSON, so configuration and fallback counts are unavailable.';
+    }
   }
 
   const agents = data
@@ -165,13 +202,11 @@ export default function WorkflowAgentsModal({
   const config = finalResult?.config && typeof finalResult.config === 'object'
     ? finalResult.config
     : null;
-
-  const countFor = (agentKey) => {
-    const record = agents.find((a) => a.agent_key === agentKey);
-    return typeof record?.questions_count === 'number' ? record.questions_count : null;
-  };
-  const extractedCount = countFor('extracter') ?? finalResult?.source_questions?.length ?? null;
-  const generatedCount = countFor('generator') ?? finalResult?.generated_questions?.length ?? null;
+  const questionCounts = buildQuestionCountSummaries(
+    agents,
+    finalResult,
+    registryData,
+  );
 
   return (
     <>
@@ -203,8 +238,14 @@ export default function WorkflowAgentsModal({
       >
         {loading && <EmptyState variant="modal">Loading…</EmptyState>}
         {error && <EmptyState variant="modal" error>{error}</EmptyState>}
+        {!loading && !error && dataParseError && (
+          <EmptyState variant="modal" error>{dataParseError}</EmptyState>
+        )}
         {!loading && !error && data && (
           <div className="viewer-body-stack">
+            {finalResultParseError && (
+              <EmptyState variant="modal" error>{finalResultParseError}</EmptyState>
+            )}
             <div className="workflow-agents-summary">
               {workflowId && (
                 <div className="workflow-agents-summary-item">
@@ -222,18 +263,12 @@ export default function WorkflowAgentsModal({
                 <label>Agents</label>
                 <span>{agents.length}</span>
               </div>
-              {extractedCount !== null && (
-                <div className="workflow-agents-summary-item">
-                  <label>Questions Extracted</label>
-                  <span>{extractedCount}</span>
+              {questionCounts.map((summary) => (
+                <div className="workflow-agents-summary-item" key={summary.key}>
+                  <label>{summary.label}</label>
+                  <span>{summary.count}</span>
                 </div>
-              )}
-              {generatedCount !== null && (
-                <div className="workflow-agents-summary-item">
-                  <label>Questions Generated</label>
-                  <span>{generatedCount}</span>
-                </div>
-              )}
+              ))}
             </div>
 
             {(sourceFiles.length > 0 || config) && (

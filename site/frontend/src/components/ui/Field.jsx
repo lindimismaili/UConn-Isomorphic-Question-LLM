@@ -8,9 +8,19 @@
  * Single-line text input. Inherits the global `input` styling.
  *
  * @param {object} props - Standard input props (`value`, `onChange`, `type`, …).
+ * `controlSize="lg"` applies the existing large control treatment.
  */
-export function TextInput({ className = '', type = 'text', ...rest }) {
-  return <input type={type} className={className} {...rest} />;
+export function TextInput({
+  className = '',
+  type = 'text',
+  controlSize,
+  ...rest
+}) {
+  const classes = [
+    controlSize === 'lg' ? 'prompt-dropdown-select' : '',
+    className,
+  ].filter(Boolean).join(' ');
+  return <input type={type} className={classes} {...rest} />;
 }
 
 /**

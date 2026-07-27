@@ -93,6 +93,21 @@ class PipelineValidationTests(unittest.TestCase):
         report = validate_verifier_output([source], VerifierOutput(questions=[verified]))
         self.assertTrue(report.valid)
 
+    def test_verifier_rejects_duplicate_ids_and_reordering(self) -> None:
+        q1 = source_question("q1")
+        q2 = source_question("q2")
+        duplicate = validate_verifier_output(
+            [q1, q2],
+            VerifierOutput(questions=[source_question("q1"), source_question("q1")]),
+        )
+        reordered = validate_verifier_output(
+            [q1, q2],
+            VerifierOutput(questions=[source_question("q2"), source_question("q1")]),
+        )
+
+        self.assertIn("duplicate source_id q1", duplicate.summary())
+        self.assertIn("changed source question order", reordered.summary())
+
     def test_generator_requires_exact_count_after_style_review(self) -> None:
         report = validate_generator_output(
             [source_question("q1")],
@@ -116,6 +131,19 @@ class PipelineValidationTests(unittest.TestCase):
         report = validate_generator_output([source_question("q1")], GeneratorOutput(isomorphic_questions=[generated]), 1)
         self.assertFalse(report.valid)
         self.assertIn("missing option explanations", report.summary())
+
+    def test_generator_rejects_duplicate_ids_and_source_reordering(self) -> None:
+        first = generated_question("q1")
+        second = generated_question("q2")
+        second.id = first.id
+        report = validate_generator_output(
+            [source_question("q1"), source_question("q2")],
+            GeneratorOutput(isomorphic_questions=[second, first]),
+            1,
+        )
+
+        self.assertIn("duplicate question id", report.summary())
+        self.assertIn("changed source question order", report.summary())
 
 
 if __name__ == "__main__":

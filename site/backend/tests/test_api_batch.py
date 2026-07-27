@@ -18,11 +18,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
-
 from backend.src.api import batch as batch_module
 from backend.src.api import state
 from backend.src.server import app
+from backend.tests.support import IdempotentTestClient as TestClient
 
 
 class BatchRouteTestBase(unittest.TestCase):
@@ -31,13 +30,17 @@ class BatchRouteTestBase(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
         self._saved_batches = dict(state.batch_jobs)
+        self._saved_eval_batches = dict(state.eval_batch_jobs)
         self._saved_workflows = dict(state.workflows)
         state.batch_jobs.clear()
+        state.eval_batch_jobs.clear()
         state.workflows.clear()
 
     def tearDown(self) -> None:
         state.batch_jobs.clear()
         state.batch_jobs.update(self._saved_batches)
+        state.eval_batch_jobs.clear()
+        state.eval_batch_jobs.update(self._saved_eval_batches)
         state.workflows.clear()
         state.workflows.update(self._saved_workflows)
 
@@ -45,7 +48,10 @@ class BatchRouteTestBase(unittest.TestCase):
 class StartCreateDataTests(BatchRouteTestBase):
     def test_returns_503_when_openai_client_unavailable(self) -> None:
         with patch.object(batch_module, "get_openai_client", side_effect=RuntimeError("no key")):
-            resp = self.client.post("/api/create-data/start")
+            resp = self.client.post(
+                "/api/create-data/start",
+                data={"confirmWorkflowCosts": "true"},
+            )
         self.assertEqual(resp.status_code, 503)
 
     def test_start_success_shape(self) -> None:
@@ -67,13 +73,20 @@ class StartCreateDataTests(BatchRouteTestBase):
                 patch.object(batch_module, "_list_evaluation_source_files", return_value=fake_files),
                 patch.object(batch_module, "run_create_data_batch_async", new=_noop),
             ):
-                resp = self.client.post("/api/create-data/start", data={"prompt": "make it harder"})
+                resp = self.client.post(
+                    "/api/create-data/start",
+                    data={
+                        "prompt": "make it harder",
+                        "confirmWorkflowCosts": "true",
+                    },
+                )
 
         self.assertEqual(resp.status_code, 200, resp.text)
         body = resp.json()
         self.assertTrue(body["success"])
         self.assertIn("batchId", body)
         self.assertEqual(body["totalFiles"], 2)
+        self.assertEqual(body["projectedWorkflows"], 2)
 
         batch_id = body["batchId"]
         self.assertIn(batch_id, state.batch_jobs)
@@ -102,6 +115,50 @@ class StartCreateDataTests(BatchRouteTestBase):
         ):
             resp = self.client.post("/api/create-data/start")
         self.assertEqual(resp.status_code, 404)
+
+    def test_rejects_fixture_count_above_configured_cost_cap(self) -> None:
+        fake_files = [Path(f"fixture-{index}.pdf") for index in range(3)]
+        with (
+            patch.object(batch_module, "get_openai_client", return_value=object()),
+            patch.object(
+                batch_module,
+                "_list_evaluation_source_files",
+                return_value=fake_files,
+            ),
+            patch.object(batch_module, "max_create_data_entries", return_value=2),
+        ):
+            response = self.client.post("/api/create-data/start")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("MAX_CREATE_DATA_ENTRIES=2", response.text)
+
+    def test_requires_explicit_full_workflow_cost_confirmation(self) -> None:
+        with (
+            patch.object(batch_module, "get_openai_client", return_value=object()),
+            patch.object(
+                batch_module,
+                "_list_evaluation_source_files",
+                return_value=[Path("fixture-a.pdf"), Path("fixture-b.pdf")],
+            ),
+        ):
+            response = self.client.post("/api/create-data/start")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("2 full agentic workflows", response.text)
+
+    def test_rejects_when_an_eval_batch_is_already_active(self) -> None:
+        state.eval_batch_jobs["active-eval"] = {"status": "running"}
+        with (
+            patch.object(batch_module, "get_openai_client", return_value=object()),
+            patch.object(
+                batch_module,
+                "_list_evaluation_source_files",
+                return_value=[Path("fixture.pdf")],
+            ),
+        ):
+            response = self.client.post(
+                "/api/create-data/start",
+                data={"confirmWorkflowCosts": "true"},
+            )
+        self.assertEqual(response.status_code, 429)
 
 
 class StopCreateDataTests(BatchRouteTestBase):
@@ -272,6 +329,7 @@ class BatchConcurrencyTests(unittest.TestCase):
                 patch.object(state, "OUTPUTS_DIR", outputs_dir),
                 patch.object(state, "EVALUATION_DIR", eval_dir),
                 patch.object(state, "BATCH_WORKFLOW_CONCURRENCY", 2),
+                patch.object(state, "max_create_data_entries", return_value=6),
                 patch.object(state, "_execute_workflow", fake_execute_workflow),
                 patch.object(state, "_persist_workflow"),
                 patch.object(state, "_persist_batch"),

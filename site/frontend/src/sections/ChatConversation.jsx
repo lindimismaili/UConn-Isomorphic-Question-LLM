@@ -23,10 +23,11 @@ import {
   Stepper,
   TypingIndicator,
 } from '../components/ui/index.js';
-import { IconInfo, IconBrain } from '../components/Icons.jsx';
+import { IconInfo, IconBrain, IconFile } from '../components/Icons.jsx';
 import ResultsSection from '../components/ResultsSection.jsx';
 import FailureSection from '../components/FailureSection.jsx';
 import { deriveTranscript, deriveStepperNodes, activeAgentKey } from '../state/transcript.js';
+import { fetchWithAbort } from '../utils/api.js';
 
 /** Normalizes the `/api/dropdown` payload (label + prompt; value is derived). */
 function normalizeDropdownItems(raw) {
@@ -83,10 +84,14 @@ export default function ChatConversation({
   dispatch,
   prompt,
   onPromptChange,
+  maxInstructionChars = 20000,
   isRunning,
   serviceInactive,
+  serviceMessage,
+  isStopping = false,
   onSend,
   onNodeClick,
+  onReviewFiles,
   onShowHelp,
   mode = 'user',
 }) {
@@ -94,16 +99,12 @@ export default function ChatConversation({
   const fileInputRef = useRef(null);
   const [dropdownItems, setDropdownItems] = useState([]);
   const [selectedDropdownValue, setSelectedDropdownValue] = useState('');
-  const [uploadWarning, setUploadWarning] = useState(false);
-  const uploadWarningTimer = useRef(null);
 
   const { handleFileSelect, limitReached } = useFileUpload(state.files, dispatch);
 
-  useEffect(() => () => clearTimeout(uploadWarningTimer.current), []);
-
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/dropdown', { cache: 'no-store' })
+    fetchWithAbort('/api/dropdown', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled) setDropdownItems(normalizeDropdownItems(data));
@@ -139,7 +140,7 @@ export default function ChatConversation({
       return;
     }
     if (serviceInactive) {
-      alert('OpenAI servers are down. This site is currently inactive.');
+      alert(serviceMessage || 'The application server is not ready to start workflows.');
       return;
     }
     if (!prompt.trim() && state.files.length === 0) {
@@ -152,26 +153,24 @@ export default function ChatConversation({
 
   const handleAttach = () => {
     if (limitReached) {
-      setUploadWarning(true);
-      clearTimeout(uploadWarningTimer.current);
-      uploadWarningTimer.current = setTimeout(() => setUploadWarning(false), 1600);
-      dispatch({ type: 'UPLOAD_WARNING' });
+      dispatch({
+        type: 'UPLOAD_WARNING',
+        message: 'You can attach at most 5 files. Review or remove an attachment first.',
+      });
       return;
     }
     fileInputRef.current?.click();
   };
 
-  const attachLabel = uploadWarning
-    ? 'Unsupported or too many files!'
-    : state.files.length > 0
-      ? `Attach - ${state.files.length}`
-      : 'Attach';
+  const attachLabel = state.files.length > 0
+    ? `Attach - ${state.files.length}`
+    : 'Attach';
 
   const renderMessageContent = (message) => {
     if (message.kind === 'result') {
       // Nest the full ResultsSection (owns its file viewers + Results/Eval/Agents
       // modals) inside the assistant bubble — every existing feature preserved.
-      return <ResultsSection result={message.result} />;
+      return <ResultsSection result={message.result} mode={mode} />;
     }
     if (message.kind === 'error') {
       return <FailureSection error={message.error} outputFolder={message.errorFolder} />;
@@ -266,13 +265,15 @@ export default function ChatConversation({
       <Composer
         value={prompt}
         onChange={onPromptChange}
+        maxLength={maxInstructionChars}
         onSend={handleSend}
         onAttach={handleAttach}
         attachLabel={attachLabel}
-        attachFeedback={uploadWarning ? 'error' : undefined}
+        attachFeedback={state.uploadWarning ? 'error' : undefined}
         disabled={serviceInactive && !isRunning}
-        sendDisabled={!isRunning && serviceInactive}
+        sendDisabled={isStopping || (!isRunning && serviceInactive)}
         isRunning={isRunning}
+        sendLabel={isStopping ? 'Stopping…' : undefined}
         placeholder="Describe the questions to generate… (Ctrl+Enter to send)"
         themeSelect={{
           value: selectedDropdownValue,
@@ -281,7 +282,23 @@ export default function ChatConversation({
           placeholder: 'Select a theme… (none)',
           disabled: isRunning || serviceInactive || dropdownItems.length === 0,
         }}
-      />
+      >
+        {state.uploadWarning ? (
+          <span className="disclaimer-text" role="alert">
+            {state.uploadWarning}
+          </span>
+        ) : null}
+        {state.files.length > 0 ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onReviewFiles}
+            icon={<IconFile className="btn-icon" />}
+          >
+            Review files ({state.files.length})
+          </Button>
+        ) : null}
+      </Composer>
 
       {/* The pipeline process-rail sits beneath the conversation + composer as a
           status footer (it used to sit above the chat). It reads as inactive
@@ -298,7 +315,7 @@ export default function ChatConversation({
         </div>
         <Stepper
           nodes={stepperNodes}
-          onNodeClick={onNodeClick}
+          onNodeClick={mode === 'dev' ? onNodeClick : undefined}
           activeKey={thinkingKey || undefined}
         />
       </div>
