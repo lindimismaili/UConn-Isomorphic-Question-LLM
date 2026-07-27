@@ -191,7 +191,7 @@ The repository does not schedule automatic backups.
 
 Before deployment or data-schema changes, use the installed root-owned
 `uconn-isomorphic-backup-restore backup` command documented in
-[`deploy/BACKUP_RESTORE.md`](deploy/BACKUP_RESTORE.md). It owns the deployment
+[`deploy/BACKUP_RESTORE.md`](../deploy/BACKUP_RESTORE.md). It owns the deployment
 lock, enters maintenance before its exact-zero active-work check, rejects
 remaining writers and nested mounts, validates the selected release, and
 publishes mode-`0600` archive/checksum files through the validated destination

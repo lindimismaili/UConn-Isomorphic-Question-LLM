@@ -6,7 +6,7 @@ verifies source questions, generates new questions, and formats LaTeX. Paid
 rubric evaluation is optional and disabled by default.
 
 Professor/operators should begin with
-[docs/PROFESSOR_HANDOFF.md](docs/PROFESSOR_HANDOFF.md). Do not expose the site
+[deploy/PROFESSOR_HANDOFF.md](deploy/PROFESSOR_HANDOFF.md). Do not expose the site
 beyond localhost until the server-only API key, shared browser access token,
 rate limiting, backup, and release checks in that guide are complete.
 
@@ -45,21 +45,40 @@ and only then creates a clean downstream container without source attachments.
 Both the server and CLI drive this same engine in
 `site/backend/src/workflow/engine.py`.
 
-## Primary Documentation
+## Documentation
 
-The primary maintained documents are:
+This is the complete index of maintained repository Markdown. Start with the
+section that matches your role; every project documentation file is linked
+below.
+
+### Start here
 
 - [README.md](README.md) — this file: setup, environment, run/CLI/output reference, and troubleshooting.
-- [AGENTS.md](AGENTS.md) — the single source of truth for coding-agent onboarding: repo conventions, full architecture tour, source-of-truth paths, the commands that work, and the data contracts. ([CLAUDE.md](CLAUDE.md) is a pointer to it.)
-- [docs/PROFESSOR_HANDOFF.md](docs/PROFESSOR_HANDOFF.md) — professor setup, access, cost, Raspberry Pi, backup, and release checklist.
-- [SECURITY.md](SECURITY.md) — deployment boundary, secret handling, abuse limits, and vulnerability reporting.
-- [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend reference: what every file does, the important functions, the 10-node workflow, the HTTP API routes, the `data/` files, and the tests.
-- [site/frontend/DESIGN.md](site/frontend/DESIGN.md) — frontend design system: tokens, the reusable component primitives, modals/stacking, motion, and the single-page design-system showcase. **Read before any UI change.**
-- [deploy/DEPLOY.md](deploy/DEPLOY.md) — deployment and local-preview scripts (operational guide, not a source of truth).
-- [deploy/BACKUP_RESTORE.md](deploy/BACKUP_RESTORE.md) — executable Pi backup,
-  phase-journaled restore/recovery, and physical acceptance-drill runbook.
-- [plan/PLAN.md](plan/PLAN.md) — dated audit/roadmap material. It is not proof that the proposed admin dashboard is implemented.
+- [AGENTS.md](AGENTS.md) — coding-agent source of truth: conventions, architecture, source-of-truth paths, commands, and data contracts.
+- [CLAUDE.md](CLAUDE.md) — Claude Code entry point; a pointer to `AGENTS.md`.
+
+### Professor and deployment operations
+
+- [deploy/PROFESSOR_HANDOFF.md](deploy/PROFESSOR_HANDOFF.md) — professor setup, access, cost controls, Raspberry Pi operations, backup boundaries, limitations, and release checklist.
+- [deploy/DEPLOY.md](deploy/DEPLOY.md) — deployment and local-preview operations.
+- [deploy/BACKUP_RESTORE.md](deploy/BACKUP_RESTORE.md) — executable Pi backup, phase-journaled restore/recovery, and acceptance-drill runbook.
+- [site/SECURITY.md](site/SECURITY.md) — deployment boundary, secret handling, abuse limits, privacy, and vulnerability reporting.
+
+### Application references
+
+- [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend files, functions, workflow, API routes, data, and tests.
+- [site/frontend/DESIGN.md](site/frontend/DESIGN.md) — frontend design system, reusable primitives, modal stacking, motion, and design-system showcase. **Read before any UI change.**
+- [site/backend/data/calibration/README.md](site/backend/data/calibration/README.md) — evaluation calibration artifact format and maintenance notes.
+
+### History and agent workflows
+
 - [archive/ARCHIVE.md](archive/ARCHIVE.md) — historical GPT Builder, question-source, and report inventory.
+- [Agent pipeline changes](.agents/skills/agent-pipeline-changes/SKILL.md) — safely change or validate the 10-node pipeline and registry metadata.
+- [Agent registry checks](.agents/skills/check-agents-registry/SKILL.md) — validate registry ordering, metadata, filtered sets, and prompts.
+- [Grader review](.agents/skills/grader-review/SKILL.md) — review evaluation artifacts and prepare proposal-only grader improvements.
+- [Professor handoff readiness](.agents/skills/handoff-readiness/SKILL.md) — audit a release candidate for professor handoff.
+- [Test runner](.agents/skills/run-tests/SKILL.md) — run backend and frontend verification.
+- [Frontend UI verification](.agents/skills/verify-frontend-ui/SKILL.md) — verify React chat, stepper, developer tools, and modal surfaces.
 
 ## Repository Layout
 
