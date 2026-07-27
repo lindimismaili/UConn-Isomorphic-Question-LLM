@@ -1894,17 +1894,15 @@ async def _run_pipeline_body(
                         container_id=extraction_context.container_id,
                         file_id=file_id,
                     )
-            file_refs = [
-                {"type": "input_file", "file_id": file_id}
-                for file_id in file_ids
-            ]
+            # The file is now present in the Extracter's explicitly owned
+            # Code Interpreter container. Do not also attach it to the
+            # Responses input: that duplicates untrusted source material
+            # across two provider paths and can be rejected by the current
+            # Responses request validation.
             extracter_input = (
                 uploaded_agent_input
                 if uploaded_extracter_input
-                else build_json_message(
-                    extracter_input_payload,
-                    file_refs=file_refs,
-                )
+                else build_json_message(extracter_input_payload)
             )
             extracter_model = agents["extracter"].model
             extracter_reasoning = agent_reasoning_level(agents["extracter"])
@@ -1919,10 +1917,7 @@ async def _run_pipeline_body(
             )
             if file_ids and not extracter_output.questions:
                 retry_extract_payload = build_extracter_retry_input(file_names, normalizer_output)
-                retry_extract_input = build_json_message(
-                    retry_extract_payload,
-                    file_refs=file_refs,
-                )
+                retry_extract_input = build_json_message(retry_extract_payload)
                 extracter_input = retry_extract_input
                 extracter_input_payload = retry_extract_payload
                 extracter_output = await run_llm_stage(

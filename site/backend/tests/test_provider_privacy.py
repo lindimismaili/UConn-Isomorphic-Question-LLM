@@ -178,7 +178,7 @@ def test_workflow_file_upload_has_crash_safe_provider_expiry() -> None:
         path.write_bytes(b"%PDF-1.4\n")
         helpers.upload_file_to_openai(client, path, MagicMock())
 
-    assert client.files.create.call_args.kwargs["purpose"] == "assistants"
+    assert client.files.create.call_args.kwargs["purpose"] == "user_data"
     assert client.files.create.call_args.kwargs["expires_after"] == {
         "anchor": "created_at",
         "seconds": 86400,

@@ -122,7 +122,9 @@ def upload_file_to_openai(client: OpenAI, file_path: Path, logger: Any) -> str:
     with open(file_path, "rb") as f:
         response = client.files.create(
             file=f,
-            purpose="assistants",
+            # This workflow uses the Responses API and explicitly owned Code
+            # Interpreter containers, not the legacy Assistants API.
+            purpose="user_data",
             expires_after=openai_file_expires_after(),
         )
     logger.info("Uploaded a temporary provider file")
