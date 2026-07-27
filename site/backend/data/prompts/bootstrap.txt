@@ -10,9 +10,8 @@ LaTeX package here.
 1. Run `set -euxo pipefail`.
 2. Run `apt-get update`.
 3. Run `apt-get install -y ghostscript poppler-utils python3-pip`.
-4. Run `python3 -m pip install --upgrade pip`.
-5. Run `python3 -m pip install {packages}`.
-6. Verify with:
+4. Run `python3 -m pip install --disable-pip-version-check {packages}`.
+5. Verify with:
    `pdftotext -v`
    `python3 -c "import pdf2image, pdfplumber, pypdf, docx; print('document-python-deps-ok')"`
-7. Finish with a short summary.
+6. Finish with a short summary.
