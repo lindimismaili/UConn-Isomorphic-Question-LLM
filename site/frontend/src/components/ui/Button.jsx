@@ -15,6 +15,8 @@
  * @param {boolean} [props.fixedWidth] - Adds `.btn-fixed-width` (144px).
  * @param {'success'|'error'} [props.feedbackState] - Transient post-click lock
  *   (`.btn-feedback` / `.btn-error-feedback`).
+ * @param {string} [props.href] - When provided, renders an anchor with the same
+ *   button classes so navigation keeps link semantics.
  * @param {string} [props.className] - Extra classes (use for premade sub-variants
  *   like `developer-tool-btn`, `help-btn`, `btn-download`).
  * @param {import('react').ReactNode} [props.children] - Button label/content.
@@ -26,6 +28,7 @@ export function Button({
   iconOnly = false,
   fixedWidth = false,
   feedbackState,
+  href,
   className = '',
   type = 'button',
   children,
@@ -53,10 +56,24 @@ export function Button({
     .filter(Boolean)
     .join(' ');
 
-  return (
-    <button type={type} className={classes} {...rest}>
+  const content = (
+    <>
       {icon}
       {children}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} className={classes} {...rest}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type={type} className={classes} {...rest}>
+      {content}
     </button>
   );
 }

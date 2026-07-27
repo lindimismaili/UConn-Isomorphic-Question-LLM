@@ -165,7 +165,7 @@ with `#root` and `body` as `flex` columns filling `min-height: 100vh`.
 | Region | Class | Notes |
 |---|---|---|
 | Outage notice | `.outage-banner` (+ `.outage-banner-detail`) | Full-width tinted-error strip above the header; only rendered during an outage. Render via the `Banner` primitive (§14) |
-| Header / hero | `.header` (+ `.has-hero` + `.header-motif`) → `.header-content` | Sticky (`top: 0`, `z-index: var(--z-header)`), `--gradient-surface` (navy) masthead with a physics motif behind (`.header-motif`, pointer-inert); holds `.logo` (title + `.mode-select` site-mode dropdown, §15) + `.uconn-mark`. Render via the `PageHeader` primitive |
+| Header / hero | `.header` (+ `.has-hero` + `.header-motif`) → `.header-content` | Sticky (`top: 0`, `z-index: var(--z-header)`), `--gradient-surface` (navy) masthead with a physics motif behind (`.header-motif`, pointer-inert); holds `.logo` (title + `.mode-select` site-mode dropdown, §15) + `.header-actions` (the compact PayPal CTA and `.uconn-mark`). Render via the `PageHeader` primitive |
 | Main | `.main-content` → `.content-shell` | Centered to `--site-max-width`; `clamp()` padding; `.content-shell` stacks sections with `--section-gap` |
 | Footer | `.footer` → `.footer-content` | `--gradient-surface` (navy), top accent border, centered. Render via the `Footer` primitive |
 
@@ -221,7 +221,8 @@ stack). Reuse these — don't add new arbitrary breakpoints.
 
 Base class `.btn` provides layout, `--radius-md`, `--transition-fast`, a tactile
 `:active` press (`translateY(1px)`), a `:focus-visible` ring, and `:disabled`
-(opacity 0.6). **Always combine `.btn` with exactly one variant.**
+(opacity 0.6). `Button` renders a semantic anchor with the same classes when
+`href` is provided. **Always combine `.btn` with exactly one variant.**
 
 | Class | Looks like | Use for |
 |---|---|---|
@@ -585,7 +586,7 @@ construction rather than by review.
 
 | Primitive | Wraps (this doc) | Key props |
 |---|---|---|
-| `Button` | §4 `.btn` + variant | `variant` (`primary\|secondary\|ghost\|danger`), `size` (`sm`), `icon`, `fixedWidth`, `feedbackState` (`success\|error`), `className` (premade sub-variants), `...rest` |
+| `Button` | §4 `.btn` + variant | `variant` (`primary\|secondary\|ghost\|danger`), `size` (`sm`), `href` (renders an anchor), `icon`, `fixedWidth`, `feedbackState` (`success\|error`), `className` (premade sub-variants), `...rest` |
 | `IconButton` | §4 `.btn-icon-only` | `icon`, `aria-label` |
 | `TextInput` / `TextArea` / `Select` | §5 controls | native props; `Select` takes `options`/`placeholder` |
 | `Dropdown` | §5 `.dropdown*` (custom listbox) | `value`, `onChange(value)`, `options` (`{value,label,disabled?}`), `placeholder`, `size` (`sm`), `variant` (`onDark`), `disabled`, `aria-label`, `id` |
@@ -717,6 +718,12 @@ empty-conversation hint text by mode. The former Dev mode is now the protected
 Admin Dashboard’s **Developer Mode** tab, where it retains the full two-column
 `.workspace` with its Developer Tools panel. The consumer choice persists in
 `localStorage` (`uiMode`).
+
+The consumer header's `.header-actions` group places a compact primary
+`Button` link for PayPal before the UConn mark. It stays beside the mark on
+desktop and uses the existing `768px` header breakpoint to fill the available
+phone width. The recipient comes from `src/config/site.js`, not from the
+component.
 
 ### Blocked runs
 

@@ -168,7 +168,7 @@ function PublicApp() {
             {serviceStatus.message || "This site is currently inactive for maintenance."}
           </SiteBanner>
         }
-        header={<SiteHeader mode={mode} onModeChange={setMode} />}
+        header={<SiteHeader mode={mode} onModeChange={setMode} showDonation />}
         footer={<SiteFooter version={footerVersion} />}
       >
         <div className="workspace is-single">
