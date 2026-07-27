@@ -1,5 +1,10 @@
 # 08 — Rate Limiting & Token Budget
 
+> **Status — planning model, not an authoritative price quote or implemented
+> budget ledger; status warning added July 27, 2026.** Recheck current model pricing
+> before decisions. The implemented limiter is an in-process request throttle,
+> not the per-user/semester accounting proposed below.
+
 > **Purpose:** answer the professor's core question — *"if 500 people each do ~5
 > generations a day, how much is that in tokens, and can we cap the semester at
 > $2,000?"* — and specify the throttling system that keeps spend predictable.
@@ -13,11 +18,12 @@
   only `result.final_output` and discards the SDK `RunResult`, which is where
   `context_wrapper.usage` (input/output/total tokens) lives. **Step one of this
   whole feature is capturing usage.** Everything else depends on it.
-- **500 users × 5 generations/day does NOT fit in $2,000 for a semester.** It is
-  off by roughly **50–100×**. Realistic spend at that volume is **$90k–$280k**.
-- To live inside **$2,000**, the *whole cohort* gets on the order of **2,000–6,000
-  total generations for the entire semester** — i.e. **~4–12 generations per
-  student for the semester**, or a **global cap of ~25–60 generations/day**. Not 5
+- **500 users × 5 generations/day does NOT fit in $2,000 for a semester** under
+  this document's historical $0.30–$0.75/run assumptions: the sensitivity
+  table gives **$75,000–$187,500** over 100 days.
+- At those same assumptions, **$2,000** buys about **2,667–6,667 total
+  generations for the whole semester** — i.e. **~5–13 generations per student
+  for the semester**, or a **global cap of ~26–66 generations/day**. Not 5
   per student per day.
 - The right primitive is **token-based accounting with a hard global kill-switch**,
   not a raw request counter — because cost is a function of tokens, and one heavy
@@ -30,10 +36,13 @@ eyes open.
 
 ## 1. What one "generation" actually costs
 
-A generation runs the pipeline: **6 LLM agents** (normalizer, extracter, verifier,
-generator, latexifier, evaluation) **+ 2 guardrail classifiers + 1 moderation
-call**. Several agents use reasoning effort (`medium`/`high`), and reasoning tokens
-bill as **output** tokens — the expensive kind.
+A normal generation with evaluation disabled uses five core model stages,
+two model-backed guardrail classifiers, two model-backed container shell tasks
+(bootstrap and compile), moderation, and any tool/retry turns. Evaluation is
+separate and opt-in: it runs eight rubric graders for every evaluated item
+rather than one ordinary pipeline call. The registry's ten-node taxonomy is
+therefore not a billing count. Several calls use reasoning effort, and
+reasoning tokens may be billed as output tokens.
 
 We do not yet have measured numbers (that's the point of the usage-capture work),
 so this uses **stated assumptions**. Treat them as a model to replace with real

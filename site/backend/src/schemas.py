@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class OptionItem(BaseModel):
@@ -136,7 +136,7 @@ class NewQuestionItem(BaseModel):
 class NormalizerOutput(BaseModel):
     """Output from the Normalizer agent."""
 
-    new_questions_per_question: int = 1
+    new_questions_per_question: int = Field(default=1, ge=1, le=5)
     difficulty: str = ""
     theme: str = ""
     title: str = ""

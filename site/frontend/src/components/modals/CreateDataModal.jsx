@@ -1,8 +1,9 @@
+import { useState } from "react";
 import Modal from "./Modal.jsx";
-import CompareProfessorPanel from "./CompareProfessorPanel.jsx";
 import { IconFile, IconFolder, IconZap } from "../Icons.jsx";
 import { useAgentRegistry } from "../../hooks/useAgentRegistry";
-import { Badge, Button, Pill } from "../ui/index.js";
+import { Badge, Button, Pill, ToggleSwitch } from "../ui/index.js";
+import { downloadApiFile } from "../../utils/api.js";
 
 /**
  * Normalizes the batch output folder label for display.
@@ -33,10 +34,14 @@ function getStatusLabel(status) {
       return "Error";
     case "cancelled":
       return "Stopped";
+    case "blocked":
+      return "Blocked";
     case "stopping":
       return "Stopping";
     case "starting":
       return "Starting";
+    case "start_uncertain":
+      return "Recovery needed";
     default:
       return "Idle";
   }
@@ -53,7 +58,12 @@ export default function CreateDataModal({
   createData,
   onRun,
   onStop,
+  serviceInactive = false,
+  maxWorkflows = 5,
 }) {
+  const [costConfirmed, setCostConfirmed] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
   const registryData = useAgentRegistry();
   // Fallback chip shown before the backend reports a step: first pipeline
   // stage out of the full agents.json sequence.
@@ -64,11 +74,36 @@ export default function CreateDataModal({
     ? registryData.agentLabels[registryData.pipelineKeys[0]]
     : "";
   const isActive = createData.isStarting || createData.isRunning;
+  const isRecoveringResult = Boolean(createData.isLoadingResult);
+  const isTerminal = ["completed", "errored", "cancelled", "blocked"].includes(
+    createData.status,
+  );
   const progressText =
     createData.totalFiles > 0
       ? `${createData.doneFiles}/${createData.totalFiles} files done`
       : "Preparing evaluation files";
   const outputFolder = formatOutputFolder(createData.outputFolder);
+  const handleRun = () => {
+    if (!costConfirmed) return;
+    onRun?.({ confirmWorkflowCosts: true });
+    setCostConfirmed(false);
+  };
+  const handleDownload = async () => {
+    if (!createData.batchId) return;
+    setDownloading(true);
+    setDownloadError("");
+    try {
+      const basename = createData.outputFolder?.split("/").pop() || "create-data";
+      await downloadApiFile(
+        `/api/download-zip/${encodeURIComponent(createData.batchId)}`,
+        `${basename}.zip`,
+      );
+    } catch (error) {
+      setDownloadError(error.message || "Batch download failed.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <Modal
@@ -80,11 +115,30 @@ export default function CreateDataModal({
         <div className="create-data-footer-actions">
           <Button
             variant={isActive ? "danger" : "primary"}
-            onClick={isActive ? onStop : onRun}
-            disabled={createData.status === "stopping"}
+            onClick={isActive ? onStop : handleRun}
+            disabled={
+              createData.status === "stopping" ||
+              isRecoveringResult ||
+              (!isActive && (serviceInactive || !costConfirmed))
+            }
           >
-            {isActive ? "Stop" : "Start"}
+            {isActive
+              ? "Stop"
+              : isRecoveringResult
+                ? "Loading Final Result…"
+              : createData.status === "start_uncertain"
+                ? "Recover Exact Start"
+                : "Start"}
           </Button>
+          {isTerminal && createData.batchId && createData.outputFolder ? (
+            <Button
+              variant="secondary"
+              onClick={handleDownload}
+              disabled={downloading}
+            >
+              {downloading ? "Preparing download…" : "Download Batch ZIP"}
+            </Button>
+          ) : null}
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
@@ -96,7 +150,7 @@ export default function CreateDataModal({
           <div className="create-data-summary-title">
             <IconZap />
             <div>
-              <div className="create-data-heading">Batch evaluation run</div>
+                <div className="create-data-heading">Batch generation run</div>
               <div className="create-data-subheading">
                 Runs the full workflow on every file in{" "}
                 <code>data/evaluation</code>.
@@ -116,18 +170,34 @@ export default function CreateDataModal({
               {createData.cancelledFiles > 0
                 ? `, ${createData.cancelledFiles} stopped`
                 : ""}
+              {createData.blockedFiles > 0
+                ? `, ${createData.blockedFiles} blocked`
+                : ""}
             </span>
           </div>
         </div>
 
         {createData.error && (
-          <div className="create-data-alert">{createData.error}</div>
+          <div className="create-data-alert" role="alert">{createData.error}</div>
+        )}
+        {downloadError && (
+          <div className="create-data-alert" role="alert">{downloadError}</div>
         )}
 
-        {["completed", "errored", "cancelled"].includes(createData.status) &&
-          createData.outputFolder && (
-            <CompareProfessorPanel outputFolder={createData.outputFolder} />
-          )}
+        {!isActive && (
+          <>
+            <div className="batch-eval-hint">
+              This can start up to {maxWorkflows} complete generation workflows.
+              Rubric evaluation is not included; use Batch Evaluation separately.
+            </div>
+            <ToggleSwitch
+              checked={costConfirmed}
+              onChange={setCostConfirmed}
+              disabled={isRecoveringResult}
+              label={`I approve up to ${maxWorkflows} full generation workflows`}
+            />
+          </>
+        )}
 
         <div className="output-folder-note">
           <IconFolder />

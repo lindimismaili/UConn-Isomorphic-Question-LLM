@@ -26,16 +26,23 @@ import logging
 import os
 import re
 import time
+from collections import defaultdict, deque
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from openai import OpenAI
 
 from .artifacts import to_jsonable
+from .cost_controls import grader_max_completion_tokens, max_evaluation_items
+from .helpers import openai_file_expires_after
 from .paths import EVALUATION_FIXTURES_DIR, EVALUATOR_PROMPT_PATH, REPO_ROOT, RUBRIC_PATH
+from .provider_timeouts import (
+    evaluation_timeout_seconds,
+    validate_evaluation_wait_seconds,
+)
 from .registry import evaluation_model as _evaluation_model
-from .safety import utc_now_iso
+from .safety import safe_exception_category, safe_exception_message, utc_now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +63,10 @@ GRADER_SEED = 7
 # is used as the grader model instead of rubric_model() (agents.json evaluation.model),
 # so a different judge family can mitigate generator/judge self-preference.
 GRADER_MODEL_OVERRIDE_ENV = "GRADER_MODEL_OVERRIDE"
+
+
+class _EvaluationCancelled(RuntimeError):
+    """Internal control flow for cancellation before a remote eval starts."""
 
 # Fixed failure-reason taxonomy. When a grader returns 0 (fail) it is instructed to
 # begin the reasoning's final conclusion with exactly one bracketed tag from this
@@ -275,19 +286,52 @@ def _build_spreadsheet_rows(
     output_items: list[dict[str, Any]],
     threshold: float,
 ) -> list[dict[str, Any]]:
-    """Build flat rows for spreadsheet export."""
+    """Build flat rows for spreadsheet export without dropping submitted items."""
     rows: list[dict[str, Any]] = []
     criteria = [criterion["name"] for criterion in question_level_criteria()]
 
-    if output_items:
-        records: list[dict[str, Any]] = output_items
-    else:
-        records = [{"datasource_item": item, "results": []} for item in dataset_items]
+    def _item_from_record(record: dict[str, Any]) -> dict[str, Any]:
+        item = record.get("datasource_item") or record.get("item") or {}
+        if isinstance(item, dict) and isinstance(item.get("item"), dict):
+            item = item["item"]
+        return item if isinstance(item, dict) else {}
+
+    def _identity(item: dict[str, Any]) -> tuple[str, str, str]:
+        return (
+            str(item.get("source_id", "")),
+            str(item.get("source_question_text", "")),
+            str(item.get("generated_question_text", "")),
+        )
+
+    # OpenAI can return fewer output rows than were submitted. Match returned
+    # rows back to their dataset row and synthesize an unscored record for every
+    # missing response. A deque preserves duplicate submissions.
+    output_by_identity: dict[tuple[str, str, str], deque[dict[str, Any]]] = defaultdict(deque)
+    unkeyed_output: list[dict[str, Any]] = []
+    for record in output_items:
+        item = _item_from_record(record)
+        identity = _identity(item)
+        if any(identity):
+            output_by_identity[identity].append(record)
+        else:
+            unkeyed_output.append(record)
+
+    records: list[dict[str, Any]] = []
+    for item in dataset_items:
+        matches = output_by_identity.get(_identity(item))
+        records.append(
+            matches.popleft()
+            if matches
+            else {"datasource_item": item, "results": []}
+        )
+
+    # Do not discard provider rows that could not be matched to a submission.
+    records.extend(unkeyed_output)
+    for matches in output_by_identity.values():
+        records.extend(matches)
 
     for index, record in enumerate(records, start=1):
-        item = record.get("datasource_item") or record.get("item") or {}
-        if not isinstance(item, dict):
-            item = {}
+        item = _item_from_record(record)
         grades, passes = _extract_eval_result_maps(record)
         na_names = {
             name
@@ -367,16 +411,36 @@ def _write_evaluation_spreadsheet(
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(
+            {
+                key: _spreadsheet_safe_cell(value)
+                for key, value in row.items()
+            }
+            for row in rows
+        )
     return True
+
+
+def _spreadsheet_safe_cell(value: Any) -> Any:
+    """Prevent untrusted text from becoming a formula when the CSV is opened."""
+    if not isinstance(value, str) or not value:
+        return value
+    candidate = value.lstrip(" \t\r\n")
+    if candidate.startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n")):
+        return f"'{value}"
+    return value
 
 
 def _write_rubric_snapshot(path: Path) -> Optional[str]:
     """Copy the rubric file used for the run into the evaluation output folder."""
     try:
         path.write_text(RUBRIC_PATH.read_text(encoding="utf-8"), encoding="utf-8")
-    except OSError:
-        logger.exception("Failed to write rubric snapshot to %s", path)
+    except OSError as exc:
+        logger.error(
+            "Failed to write rubric snapshot to %s (%s)",
+            path,
+            safe_exception_category(exc),
+        )
         return None
     return _evaluation_relative_path(path)
 
@@ -589,10 +653,10 @@ def _render_question_text(question: dict[str, Any]) -> str:
 
 
 def _collect_distractor_logic_labels(question: dict[str, Any]) -> list[str]:
-    """Collect non-empty ``distractor_logic`` labels from a question's options/parts."""
+    """Collect labels while retaining their option and part association."""
     labels: list[str] = []
 
-    def _from_options(options: Any) -> None:
+    def _from_options(options: Any, *, part_label: str = "") -> None:
         if not isinstance(options, list):
             return
         for option in options:
@@ -600,14 +664,26 @@ def _collect_distractor_logic_labels(question: dict[str, Any]) -> list[str]:
                 continue
             label = str(option.get("distractor_logic", "")).strip()
             if label:
-                labels.append(label)
+                option_key = str(option.get("key", "")).strip()
+                location = " / ".join(
+                    value
+                    for value in (
+                        f"Part {part_label}" if part_label else "",
+                        f"option {option_key}" if option_key else "",
+                    )
+                    if value
+                )
+                labels.append(f"{location}: {label}" if location else label)
 
     _from_options(question.get("options"))
     parts = question.get("parts")
     if isinstance(parts, list):
         for part in parts:
             if isinstance(part, dict):
-                _from_options(part.get("options"))
+                _from_options(
+                    part.get("options"),
+                    part_label=str(part.get("part_label", "")).strip(),
+                )
     return labels
 
 
@@ -624,11 +700,19 @@ def _summarize_source_distractor_logic(question: dict[str, Any]) -> str:
 
 
 def _render_source_question_text(question: dict[str, Any]) -> str:
-    """Render the source question text for eval comparisons."""
+    """Render original text plus the verifier's structured answer metadata."""
     source_raw = str(question.get("source_raw", "")).strip()
-    if source_raw:
-        return _normalize_whitespace(source_raw)
-    return _render_question_text(question)
+    structured = _render_question_text(question)
+    if not source_raw:
+        return structured
+
+    original = _normalize_whitespace(source_raw)
+    if not structured or structured == original:
+        return original
+    return _normalize_whitespace(
+        f"Original source text:\n{original}\n\n"
+        f"Verified structured record:\n{structured}"
+    )
 
 
 def _render_generated_question_text(question: dict[str, Any]) -> str:
@@ -680,6 +764,7 @@ def _build_testing_criteria(model: str | None = None) -> list[dict[str, Any]]:
                 "type": "score_model",
                 "model": model,
                 "sampling_params": {
+                    "max_completions_tokens": grader_max_completion_tokens(),
                     "reasoning_effort": criterion_reasoning_effort(criterion),
                     "seed": GRADER_SEED,
                 },
@@ -886,12 +971,46 @@ def _aggregate_question_scores(output_items: list[Any]) -> tuple[dict[str, Any],
             "pass_rate": average_score,
             "items_passed": items_passed,
             "items_scored": len(values),
+            "items_observed": total_observed,
             "na_count": na_count,
             "na_rate": round(na_count / total_observed, 4) if total_observed else None,
             "failure_tag_counts": dict(criterion_failure_tags.get(name, {})),
         }
 
     return summary, sorted(set(unmatched_results + missing_scores))
+
+
+def _count_fully_scored_items(output_items: list[Any]) -> int:
+    """Count output rows containing a numeric result for every rubric criterion."""
+    expected = {criterion["name"] for criterion in question_level_criteria()}
+    if not expected:
+        return 0
+
+    count = 0
+    for output_item in output_items:
+        observed: set[str] = set()
+        results = (
+            output_item.get("results", [])
+            if isinstance(output_item, dict)
+            else getattr(output_item, "results", [])
+        )
+        for result in results or []:
+            raw_name = (
+                str(result.get("name") or result.get("criterion") or "")
+                if isinstance(result, dict)
+                else str(getattr(result, "name", "") or "")
+            )
+            name = _normalize_criterion_name(raw_name)
+            score = (
+                result.get("score")
+                if isinstance(result, dict)
+                else getattr(result, "score", None)
+            )
+            if name and isinstance(score, (int, float)):
+                observed.add(name)
+        if expected.issubset(observed):
+            count += 1
+    return count
 
 
 def _compute_overall_score(question_level_scores: dict[str, Any]) -> Optional[float]:
@@ -913,6 +1032,9 @@ def _build_base_report(
     grader_model: str,
     dataset_path: Optional[Path],
     items_evaluated: int,
+    items_submitted: int = 0,
+    items_received: int = 0,
+    items_scored: int = 0,
 ) -> dict[str, Any]:
     """Build the common evaluation report skeleton."""
     report: dict[str, Any] = {
@@ -921,8 +1043,12 @@ def _build_base_report(
         "rubric": rubric_criteria(),
         "grader_model": grader_model,
         "grader_seed": GRADER_SEED,
+        "grader_max_completion_tokens": grader_max_completion_tokens(),
         "reasoning_effort_by_criterion": reasoning_effort_by_criterion(),
         "items_evaluated": items_evaluated,
+        "items_submitted": items_submitted,
+        "items_received": items_received,
+        "items_scored": items_scored,
         "dataset_file": _evaluation_relative_path(dataset_path) if dataset_path else "",
         "criterion_scores": {},
         "overall_score": _compute_overall_score({}),
@@ -941,9 +1067,15 @@ def run_openai_output_evaluation(
     grader_model: Optional[str] = None,
     contract_report: Optional[dict[str, Any]] = None,
     poll_interval_seconds: float = 3.0,
-    max_wait_seconds: int = 900,
+    max_wait_seconds: float | None = None,
+    should_cancel: Optional[Callable[[], bool]] = None,
 ) -> dict[str, Any]:
     """Evaluate generated questions using OpenAI Evals and save evaluation_report.json."""
+    max_wait_seconds = (
+        evaluation_timeout_seconds()
+        if max_wait_seconds is None
+        else validate_evaluation_wait_seconds(max_wait_seconds)
+    )
     evaluation_outputs_dir = outputs_dir / EVALUATION_OUTPUTS_DIRNAME
     evaluation_outputs_dir.mkdir(parents=True, exist_ok=True)
     report_path = evaluation_outputs_dir / EVALUATION_REPORT_FILENAME
@@ -984,13 +1116,42 @@ def run_openai_output_evaluation(
         )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
+    evaluation_limit = max_evaluation_items()
+    if len(generated_questions) > evaluation_limit:
+        report = _build_base_report(
+            status="failed",
+            reason=(
+                f"Generated question count {len(generated_questions)} exceeds "
+                f"MAX_EVALUATION_ITEMS={evaluation_limit}"
+            ),
+            grader_model=grader_model,
+            dataset_path=None,
+            items_evaluated=0,
+            items_submitted=len(generated_questions),
+        )
+        report["deterministic_checks"] = deterministic_checks
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=None,
+            output_items_path=None,
+            spreadsheet_path=None,
+            rubric_file=rubric_file,
+            source_files=source_files,
+        )
+        report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        return report
 
     source_candidates = (
         final_result.get("verified_questions")
         or final_result.get("source_questions")
         or []
     )
-    source_by_id = {q.get("source_id"): q for q in source_candidates if q.get("source_id")}
+    source_by_id = {
+        str(q.get("source_id")): q
+        for q in source_candidates
+        if isinstance(q, dict) and q.get("source_id")
+    }
     generated_by_source: dict[str, list[dict[str, Any]]] = {}
     for generated in generated_questions:
         source_id = str(generated.get("source_id") or "")
@@ -1060,25 +1221,41 @@ def run_openai_output_evaluation(
         return report
 
     items: list[dict[str, Any]] = []
-    for generated in generated_questions:
-        source = source_by_id.get(generated.get("source_id"))
+    unknown_source_ids: list[str] = []
+    for index, generated in enumerate(generated_questions, start=1):
+        source_id = str(generated.get("source_id") or "")
+        source = source_by_id.get(source_id)
         if source is None:
+            unknown_source_ids.append(source_id or f"<missing source_id at generated item {index}>")
             continue
         if source.get("has_figure") and generated.get("skipped"):
             continue
         items.append(
             {
-                "source_id": str(generated.get("source_id", "")),
+                "source_id": source_id,
                 "source_question_text": _render_source_question_text(source),
                 "generated_question_text": _render_generated_question_text(generated),
                 "source_distractor_logic": _summarize_source_distractor_logic(source),
             }
         )
 
+    deterministic_checks["evaluation_input_coverage"] = {
+        "status": "failed" if unknown_source_ids else "passed",
+        "generated_items": len(generated_questions),
+        "submitted_pairs": len(items),
+        "unknown_source_ids": unknown_source_ids,
+    }
+
     if not items:
+        status = "incomplete" if unknown_source_ids else "skipped"
+        reason = (
+            "Generated questions reference unknown or missing source IDs"
+            if unknown_source_ids
+            else "No source/generated pairs available for evaluation"
+        )
         report = _build_base_report(
-            status="skipped",
-            reason="No source/generated pairs available for evaluation",
+            status=status,
+            reason=reason,
             grader_model=grader_model,
             dataset_path=None,
             items_evaluated=0,
@@ -1098,10 +1275,76 @@ def run_openai_output_evaluation(
 
     dataset_path.write_text(_to_jsonl(items), encoding="utf-8")
 
-    try:
-        with open(dataset_path, "rb") as file_handle:
-            eval_data_file = client.files.create(file=file_handle, purpose="evals")
+    eval_data_file: Any = None
+    eval_obj: Any = None
+    eval_run: Any = None
+    remote_cancel_attempted = False
+    output_items: list[Any] = []
 
+    def cancel_remote_run_best_effort() -> None:
+        """Cancel a created provider run once without replacing the primary outcome."""
+        nonlocal remote_cancel_attempted
+        if remote_cancel_attempted or eval_obj is None or eval_run is None:
+            return
+        remote_cancel_attempted = True
+        try:
+            eval_id = getattr(eval_obj, "id", "")
+            run_id = getattr(eval_run, "id", "")
+            runs_api = getattr(getattr(client, "evals", None), "runs", None)
+            cancel_run = getattr(runs_api, "cancel", None)
+            if eval_id and run_id and callable(cancel_run):
+                cancel_run(eval_id=eval_id, run_id=run_id)
+        except Exception as exc:
+            logger.warning(
+                "Could not cancel OpenAI eval run after a local evaluation failure (%s)",
+                safe_exception_category(exc),
+            )
+
+    def delete_remote_eval_artifacts_best_effort() -> None:
+        """Delete the ephemeral provider run and eval definition without masking results."""
+        try:
+            eval_id = getattr(eval_obj, "id", "") if eval_obj is not None else ""
+            run_id = getattr(eval_run, "id", "") if eval_run is not None else ""
+        except Exception as exc:
+            logger.warning(
+                "Could not resolve OpenAI eval artifact identifiers for cleanup (%s)",
+                safe_exception_category(exc),
+            )
+            return
+        try:
+            runs_api = getattr(getattr(client, "evals", None), "runs", None)
+            delete_run = getattr(runs_api, "delete", None)
+            if eval_id and run_id and callable(delete_run):
+                delete_run(run_id, eval_id=eval_id)
+        except Exception as exc:
+            logger.warning(
+                "Could not delete OpenAI eval run after local artifacts were written (%s)",
+                safe_exception_category(exc),
+            )
+
+        try:
+            evals_api = getattr(client, "evals", None)
+            delete_eval = getattr(evals_api, "delete", None)
+            if eval_id and callable(delete_eval):
+                delete_eval(eval_id)
+        except Exception as exc:
+            logger.warning(
+                "Could not delete OpenAI eval definition after local artifacts were written (%s)",
+                safe_exception_category(exc),
+            )
+
+    try:
+        if should_cancel is not None and should_cancel():
+            raise _EvaluationCancelled
+        with open(dataset_path, "rb") as file_handle:
+            eval_data_file = client.files.create(
+                file=file_handle,
+                purpose="evals",
+                expires_after=openai_file_expires_after(),
+            )
+
+        if should_cancel is not None and should_cancel():
+            raise _EvaluationCancelled
         eval_obj = client.evals.create(
             name="Isomorphic Question Rubric Eval",
             metadata={"source": "isomorphic-question-generator"},
@@ -1113,38 +1356,54 @@ def run_openai_output_evaluation(
             testing_criteria=_build_testing_criteria(model=grader_model),
         )
 
-        run = client.evals.runs.create(
+        if should_cancel is not None and should_cancel():
+            raise _EvaluationCancelled
+        eval_run = client.evals.runs.create(
             eval_id=eval_obj.id,
             name="Rubric Run",
             data_source=_build_run_data_source(eval_data_file.id),
         )
+        if should_cancel is not None and should_cancel():
+            raise _EvaluationCancelled
 
         started = time.time()
-        current = run
+        current = eval_run
+        cancelled_locally = False
+        timed_out = False
         while True:
+            if should_cancel is not None and should_cancel():
+                cancel_remote_run_best_effort()
+                cancelled_locally = True
+                break
             current = client.evals.runs.retrieve(eval_id=eval_obj.id, run_id=current.id)
             status = getattr(current, "status", "")
-            if status in {"completed", "failed", "cancelled"}:
+            if status in {"completed", "failed", "cancelled", "canceled"}:
                 break
             if time.time() - started > max_wait_seconds:
+                timed_out = True
+                cancel_remote_run_best_effort()
                 break
             time.sleep(poll_interval_seconds)
 
-        run_status = getattr(current, "status", "unknown")
+        run_status = (
+            "cancelled"
+            if cancelled_locally
+            else getattr(current, "status", "unknown")
+        )
         report_status = "completed"
         if run_status == "failed":
             report_status = "failed"
-        elif run_status == "cancelled":
+        elif run_status in {"cancelled", "canceled"}:
             report_status = "cancelled"
         elif run_status not in {"completed"}:
             report_status = "incomplete"
 
         criterion_scores: dict[str, Any] = {}
         aggregation_notes: list[str] = []
-        output_items: list[Any] = []
         output_item_records: list[dict[str, Any]] = []
 
         coverage_mismatch: Optional[dict[str, Any]] = None
+        criterion_coverage_mismatch: dict[str, dict[str, int]] = {}
         if run_status == "completed":
             output_items = _collect_output_items(client, eval_obj.id, current.id)
             if output_items:
@@ -1160,9 +1419,9 @@ def run_openai_output_evaluation(
             actual = len(output_items)
             if expected != actual:
                 coverage_mismatch = {
-                    "expected_items": expected,
+                    "submitted_items": expected,
                     "received_items": actual,
-                    "missing": expected - actual,
+                    "difference": actual - expected,
                 }
                 aggregation_notes.append(
                     f"coverage_mismatch: expected {expected} eval items, received {actual}"
@@ -1170,6 +1429,22 @@ def run_openai_output_evaluation(
                 logger.warning(
                     "Eval coverage mismatch: expected %d items, received %d",
                     expected, actual,
+                )
+            for criterion_name, criterion_summary in criterion_scores.items():
+                observed = int(criterion_summary.get("items_observed") or 0)
+                if observed != expected:
+                    criterion_coverage_mismatch[criterion_name] = {
+                        "submitted_items": expected,
+                        "observed_results": observed,
+                        "difference": observed - expected,
+                    }
+            if criterion_coverage_mismatch:
+                aggregation_notes.append(
+                    "criterion_coverage_mismatch: "
+                    + ", ".join(
+                        f"{name}={details['observed_results']}/{details['submitted_items']}"
+                        for name, details in criterion_coverage_mismatch.items()
+                    )
                 )
 
         _write_evaluation_spreadsheet(
@@ -1180,19 +1455,33 @@ def run_openai_output_evaluation(
         )
 
         overall_score = _compute_overall_score(criterion_scores)
+        received_count = len(output_items)
+        scored_count = _count_fully_scored_items(output_items)
         if report_status == "completed":
             report_status = "complete" if isinstance(overall_score, (int, float)) else "incomplete"
         if deterministic_checks.get("figure_skips", {}).get("status") == "failed":
             report_status = "failed"
         if coverage_mismatch:
             deterministic_checks["coverage_mismatch"] = coverage_mismatch
+            if report_status == "complete":
+                report_status = "incomplete"
+        if criterion_coverage_mismatch:
+            deterministic_checks["criterion_coverage_mismatch"] = criterion_coverage_mismatch
+            if report_status == "complete":
+                report_status = "incomplete"
+        if unknown_source_ids:
+            report_status = "incomplete" if report_status == "complete" else report_status
         report = {
             "status": report_status,
             "created_at": utc_now_iso(),
             "rubric": rubric_criteria(),
-            "items_evaluated": len(items),
+            "items_evaluated": received_count,
+            "items_submitted": len(items),
+            "items_received": received_count,
+            "items_scored": scored_count,
             "grader_model": grader_model,
             "grader_seed": GRADER_SEED,
+            "grader_max_completion_tokens": grader_max_completion_tokens(),
             "reasoning_effort_by_criterion": reasoning_effort_by_criterion(),
             "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": criterion_scores,
@@ -1202,7 +1491,7 @@ def run_openai_output_evaluation(
             "eval_id": eval_obj.id,
             "run_id": current.id,
             "run_status": run_status,
-            "output_items_count": len(output_items),
+            "output_items_count": received_count,
             "deterministic_checks": deterministic_checks,
         }
         if output_items_path.exists():
@@ -1212,9 +1501,14 @@ def run_openai_output_evaluation(
             report["report_url"] = current.report_url
 
         if report_status == "incomplete":
-            report["reason"] = (
-                f"Eval run did not reach a terminal state within {max_wait_seconds} seconds"
-            )
+            if timed_out:
+                report["reason"] = (
+                    f"Eval run did not reach a terminal state within {max_wait_seconds} seconds"
+                )
+            elif unknown_source_ids:
+                report["reason"] = "One or more generated questions referenced unknown source IDs"
+            else:
+                report["reason"] = "Evaluation output or criterion coverage was incomplete"
         elif report_status in {"failed", "cancelled"}:
             report["reason"] = f"Eval run ended with status: {run_status}"
 
@@ -1232,21 +1526,67 @@ def run_openai_output_evaluation(
         )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
+    except _EvaluationCancelled:
+        cancel_remote_run_best_effort()
+        report = _build_base_report(
+            status="cancelled",
+            reason="Evaluation was cancelled before completion.",
+            grader_model=grader_model,
+            dataset_path=dataset_path,
+            items_evaluated=0,
+            items_submitted=len(items),
+        )
+        report["run_status"] = "cancelled"
+        report["deterministic_checks"] = deterministic_checks
+        eval_id = getattr(eval_obj, "id", "") if eval_obj is not None else ""
+        run_id = getattr(eval_run, "id", "") if eval_run is not None else ""
+        if eval_id:
+            report["eval_id"] = eval_id
+        if run_id:
+            report["run_id"] = run_id
+        report = _attach_report_file_metadata(
+            report,
+            report_path=report_path,
+            dataset_path=dataset_path,
+            output_items_path=None,
+            spreadsheet_path=None,
+            rubric_file=rubric_file,
+            source_files=source_files,
+        )
+        report_path.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return report
     except Exception as exc:
-        logger.exception("Evaluation run failed for outputs at %s", outputs_dir)
+        cancel_remote_run_best_effort()
+        error_type = safe_exception_category(exc)
+        error_message = safe_exception_message(exc, operation="Evaluation run")
+        logger.error(
+            "Evaluation run failed for outputs at %s (%s)",
+            outputs_dir,
+            error_type,
+        )
+        received_count = len(output_items)
+        scored_count = _count_fully_scored_items(output_items)
         report = {
             "status": "failed",
             "created_at": utc_now_iso(),
             "rubric": rubric_criteria(),
-            "items_evaluated": len(items),
+            "items_evaluated": received_count,
+            "items_submitted": len(items),
+            "items_received": received_count,
+            "items_scored": scored_count,
             "grader_model": grader_model,
             "grader_seed": GRADER_SEED,
+            "grader_max_completion_tokens": grader_max_completion_tokens(),
             "reasoning_effort_by_criterion": reasoning_effort_by_criterion(),
             "dataset_file": _evaluation_relative_path(dataset_path),
             "criterion_scores": {},
             "overall_score": _compute_overall_score({}),
             "passing_score_threshold": PASSING_SCORE_THRESHOLD,
-            "error": str(exc),
+            "error": error_message,
+            "error_type": error_type,
             "deterministic_checks": deterministic_checks,
         }
         if dataset_path.exists():
@@ -1267,3 +1607,16 @@ def run_openai_output_evaluation(
         )
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
+    finally:
+        delete_remote_eval_artifacts_best_effort()
+        file_id = getattr(eval_data_file, "id", "")
+        delete_file = getattr(getattr(client, "files", None), "delete", None)
+        if file_id and callable(delete_file):
+            try:
+                delete_file(file_id)
+            except Exception as exc:
+                logger.warning(
+                    "Could not delete temporary OpenAI eval file %s (%s)",
+                    file_id,
+                    safe_exception_category(exc),
+                )

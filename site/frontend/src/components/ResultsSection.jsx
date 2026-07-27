@@ -13,6 +13,7 @@ import useFileViewer from './modals/useFileViewer.jsx';
 import { Button, Card, CardBody, CardHeader } from './ui/index.js';
 import { baseName, collectResultFiles, isPdfFile, isTexFile } from '../utils/files.js';
 import { useAgentRegistry } from '../hooks/useAgentRegistry';
+import { downloadApiFile } from '../utils/api.js';
 
 const AGENT_METADATA_FILE = 'agent_outputs/agent_metadata_output.json';
 
@@ -123,9 +124,10 @@ function splitDownloadFiles(files) {
  *
  * @param {{result: object}} props
  */
-export default function ResultsSection({ result }) {
+export default function ResultsSection({ result, mode = 'user' }) {
   const sectionRef = useRef(null);
   const registryData = useAgentRegistry();
+  const allowRawDetails = mode === 'dev';
   const [evalModalOpen, setEvalModalOpen] = useState(false);
   const [finalResultOpen, setFinalResultOpen] = useState(false);
   const [agentsOpen, setAgentsOpen] = useState(false);
@@ -144,7 +146,9 @@ export default function ResultsSection({ result }) {
 
   if (!result) return null;
 
-  const files = collectResultFiles(result);
+  const files = collectResultFiles(result).filter(
+    (file) => allowRawDetails || !file.name.startsWith('agent_outputs/'),
+  );
   const { mainFiles, evaluationFiles, agentFiles } = splitDownloadFiles(files);
   const { metadataFiles, agentGroups } = buildAgentOutputSections(agentFiles, registryData);
   const fileCount = files.length;
@@ -172,14 +176,17 @@ export default function ResultsSection({ result }) {
     setEvalModalOpen(true);
   };
 
-  // The backend zips the whole output folder on first request and reuses the
-  // archive afterwards, so this is a plain navigation download.
-  const handleZipDownload = () => {
+  const handleZipDownload = async () => {
     if (!result.workflowId) return;
-    const link = document.createElement('a');
-    link.href = `/api/download-zip/${result.workflowId}`;
-    link.download = '';
-    link.click();
+    try {
+      const zipBaseName = baseName(result.outputFolder) || `workflow-${result.workflowId}`;
+      await downloadApiFile(
+        `/api/download-zip/${encodeURIComponent(result.workflowId)}`,
+        `${zipBaseName}.zip`,
+      );
+    } catch (error) {
+      alert(`ZIP download failed: ${error.message}`);
+    }
   };
 
   const evalItemsUrl = evalItemsFileName ? getFileUrl(evalItemsFileName, true) : '';
@@ -276,24 +283,28 @@ export default function ResultsSection({ result }) {
                 >
                   View Evaluations
                 </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={!agentMetadataFileName}
-                  onClick={() => setAgentsOpen(true)}
-                  icon={<IconBrain className="btn-icon" />}
-                >
-                  View Agents
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={!result.workflowId}
-                  onClick={handleZipDownload}
-                  icon={<IconDownload className="btn-icon" />}
-                >
-                  Download .ZIP
-                </Button>
+                {allowRawDetails ? (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={!agentMetadataFileName}
+                      onClick={() => setAgentsOpen(true)}
+                      icon={<IconBrain className="btn-icon" />}
+                    >
+                      View Agents
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={!result.workflowId}
+                      onClick={handleZipDownload}
+                      icon={<IconDownload className="btn-icon" />}
+                    >
+                      Download .ZIP
+                    </Button>
+                  </>
+                ) : null}
               </div>
             </div>
             <div className="completed-elapsed-time">
@@ -322,34 +333,36 @@ export default function ResultsSection({ result }) {
                   </div>
                 </div>
               ))}
-              <div className="download-column agent-outputs-column">
-                <h5 className="download-column-title">Agent Outputs</h5>
-                <div className="download-column-list agent-output-list">
-                  {metadataFiles.length === 0 && agentGroups.length === 0 && (
-                    <div className="download-empty-state">No agent output files.</div>
-                  )}
-                  {metadataFiles.map(renderFileRow)}
-                  {agentGroups.length > 0 && (
-                    <div className="agent-output-groups">
-                      {agentGroups.map((agent) => (
-                        <section className="agent-output-agent-section" key={agent.key}>
-                          <h6 className="agent-output-agent-heading">{agent.label}</h6>
-                          <div className="agent-output-actions">
-                            <div className="agent-output-action-group">
-                              <span className="agent-output-kind">Input</span>
-                              {renderAgentArtifactButton(agent.inputFile, 'Download', 'Input')}
+              {allowRawDetails ? (
+                <div className="download-column agent-outputs-column">
+                  <h5 className="download-column-title">Agent Outputs</h5>
+                  <div className="download-column-list agent-output-list">
+                    {metadataFiles.length === 0 && agentGroups.length === 0 && (
+                      <div className="download-empty-state">No agent output files.</div>
+                    )}
+                    {metadataFiles.map(renderFileRow)}
+                    {agentGroups.length > 0 && (
+                      <div className="agent-output-groups">
+                        {agentGroups.map((agent) => (
+                          <section className="agent-output-agent-section" key={agent.key}>
+                            <h6 className="agent-output-agent-heading">{agent.label}</h6>
+                            <div className="agent-output-actions">
+                              <div className="agent-output-action-group">
+                                <span className="agent-output-kind">Input</span>
+                                {renderAgentArtifactButton(agent.inputFile, 'Download', 'Input')}
+                              </div>
+                              <div className="agent-output-action-group">
+                                <span className="agent-output-kind">Output</span>
+                                {renderAgentArtifactButton(agent.outputFile, 'Download', 'Output')}
+                              </div>
                             </div>
-                            <div className="agent-output-action-group">
-                              <span className="agent-output-kind">Output</span>
-                              {renderAgentArtifactButton(agent.outputFile, 'Download', 'Output')}
-                            </div>
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  )}
+                          </section>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
           </div>
         </CardBody>
@@ -373,18 +386,20 @@ export default function ResultsSection({ result }) {
         onDownload={downloadFile}
         onViewInDepth={hasEvaluation ? handleViewInDepth : undefined}
       />
-      <WorkflowAgentsModal
-        isOpen={agentsOpen}
-        onClose={() => setAgentsOpen(false)}
-        fileName={agentMetadataFileName}
-        url={agentMetadataUrl}
-        finalResultUrl={finalResultUrl}
-        onDownload={downloadFile}
-        onViewFile={openFile}
-        totalTimeSeconds={result.elapsedTimeSeconds}
-        onViewResults={finalResultFileName ? () => setFinalResultOpen(true) : undefined}
-        onViewEvaluations={hasEvaluation ? handleEvalModalOpen : undefined}
-      />
+      {allowRawDetails ? (
+        <WorkflowAgentsModal
+          isOpen={agentsOpen}
+          onClose={() => setAgentsOpen(false)}
+          fileName={agentMetadataFileName}
+          url={agentMetadataUrl}
+          finalResultUrl={finalResultUrl}
+          onDownload={downloadFile}
+          onViewFile={openFile}
+          totalTimeSeconds={result.elapsedTimeSeconds}
+          onViewResults={finalResultFileName ? () => setFinalResultOpen(true) : undefined}
+          onViewEvaluations={hasEvaluation ? handleEvalModalOpen : undefined}
+        />
+      ) : null}
     </>
   );
 }

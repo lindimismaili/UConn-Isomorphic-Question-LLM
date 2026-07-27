@@ -106,9 +106,13 @@ describe("file actions", () => {
     expect(reducer(s, { type: "CLEAR_FILES" }).files).toEqual([]);
   });
 
-  it("UPLOAD_WARNING is a no-op", () => {
+  it("UPLOAD_WARNING stores visible feedback", () => {
     const s = stateWith();
-    expect(reducer(s, { type: "UPLOAD_WARNING" })).toBe(s);
+    const next = reducer(s, {
+      type: "UPLOAD_WARNING",
+      message: "Unsupported file.",
+    });
+    expect(next.uploadWarning).toBe("Unsupported file.");
   });
 });
 
@@ -164,19 +168,21 @@ describe("AGENTS_LOADED", () => {
 });
 
 describe("WORKFLOW_START", () => {
-  it("resets, marks setup thinking, queues the rest, captures runInputs, clears files", () => {
+  it("resets, marks setup thinking, queues the rest, captures runInputs, and retains files until accepted", () => {
     const s = stateWith({ files: [{ id: "1" }], result: { ok: true }, error: "boom" });
     const next = reducer(s, {
       type: "WORKFLOW_START",
       prompt: "make it harder",
       fileNames: ["a.pdf"],
+      fileIds: ["1"],
       startAgent: "normalizer",
     });
     expect(next.isRunning).toBe(true);
     expect(next.workflowId).toBeNull();
     expect(next.result).toBeNull();
     expect(next.error).toBeNull();
-    expect(next.files).toEqual([]);
+    expect(next.files).toEqual([{ id: "1" }]);
+    expect(next.pendingFileIds).toEqual(["1"]);
     expect(next.agents.setup.status).toBe("thinking");
     expect(next.agents.setup.startTime).toBeInstanceOf(Date);
     expect(next.agents.normalizer.status).toBe("queued");
@@ -191,6 +197,109 @@ describe("WORKFLOW_REGISTERED", () => {
   it("stores the workflow id", () => {
     const next = reducer(stateWith(), { type: "WORKFLOW_REGISTERED", workflowId: "wf-1" });
     expect(next.workflowId).toBe("wf-1");
+  });
+
+  it("removes only accepted run attachments and preserves a next-draft file", () => {
+    const next = reducer(
+      stateWith({
+        files: [{ id: "submitted" }, { id: "next-draft" }],
+        pendingFileIds: ["submitted"],
+      }),
+      { type: "WORKFLOW_REGISTERED", workflowId: "wf-1" },
+    );
+    expect(next.files).toEqual([{ id: "next-draft" }]);
+    expect(next.pendingFileIds).toEqual([]);
+  });
+});
+
+describe("WORKFLOW_RECONNECT", () => {
+  it("restores active monitoring without clearing draft files", () => {
+    const next = reducer(
+      stateWith({ files: [{ id: "draft" }] }),
+      { type: "WORKFLOW_RECONNECT", workflowId: "wf-saved" },
+    );
+    expect(next.isRunning).toBe(true);
+    expect(next.workflowId).toBe("wf-saved");
+    expect(next.files).toEqual([{ id: "draft" }]);
+    expect(next.logs.at(-1).message).toContain("Reconnecting");
+  });
+
+  it("preserves existing agent progress when the same workflow reconnects", () => {
+    const agents = {
+      ...baseAgents(),
+      normalizer: {
+        ...(_emptyAgentState()),
+        status: "thinking",
+        inputText: "preserve me",
+      },
+    };
+    const next = reducer(
+      stateWith({
+        agents,
+        isRunning: true,
+        workflowId: "wf-saved",
+        monitoringWarning: "Connection interrupted",
+      }),
+      { type: "WORKFLOW_RECONNECT", workflowId: "wf-saved" },
+    );
+    expect(next.agents).toBe(agents);
+    expect(next.agents.normalizer.status).toBe("thinking");
+    expect(next.agents.normalizer.inputText).toBe("preserve me");
+    expect(next.monitoringWarning).toBe("");
+  });
+});
+
+describe("workflow monitoring interruptions", () => {
+  it("keeps the run and agent state active while monitoring is interrupted", () => {
+    const agents = {
+      ...baseAgents(),
+      normalizer: { ...(_emptyAgentState()), status: "thinking" },
+    };
+    const s = stateWith({
+      agents,
+      isRunning: true,
+      workflowId: "wf-active",
+    });
+    const next = reducer(s, {
+      type: "WORKFLOW_MONITORING_INTERRUPTED",
+      message: "Network unavailable; retrying.",
+    });
+
+    expect(next.isRunning).toBe(true);
+    expect(next.workflowId).toBe("wf-active");
+    expect(next.agents).toBe(agents);
+    expect(next.agents.normalizer.status).toBe("thinking");
+    expect(next.monitoringWarning).toBe("Network unavailable; retrying.");
+    expect(next.error).toBeNull();
+    expect(next.logs.at(-1)).toMatchObject({
+      message: "Network unavailable; retrying.",
+      level: "warning",
+    });
+  });
+
+  it("deduplicates one interruption and clears it after monitoring resumes", () => {
+    const interrupted = reducer(
+      stateWith({ isRunning: true, workflowId: "wf-active" }),
+      {
+        type: "WORKFLOW_MONITORING_INTERRUPTED",
+        message: "Retrying safely.",
+      },
+    );
+    expect(reducer(interrupted, {
+      type: "WORKFLOW_MONITORING_INTERRUPTED",
+      message: "Retrying safely.",
+    })).toBe(interrupted);
+
+    const resumed = reducer(interrupted, {
+      type: "WORKFLOW_MONITORING_RESUMED",
+    });
+    expect(resumed.isRunning).toBe(true);
+    expect(resumed.workflowId).toBe("wf-active");
+    expect(resumed.monitoringWarning).toBe("");
+    expect(resumed.logs.at(-1)).toMatchObject({
+      message: "Workflow monitoring resumed.",
+      level: "success",
+    });
   });
 });
 
@@ -351,8 +460,24 @@ describe("WORKFLOW_BLOCKED", () => {
 
 describe("WORKFLOW_ABORTED", () => {
   it("just clears the running flag", () => {
-    const s = stateWith({ isRunning: true });
-    expect(reducer(s, { type: "WORKFLOW_ABORTED" }).isRunning).toBe(false);
+    const s = stateWith({
+      isRunning: true,
+      workflowId: "wf-preserved",
+      monitoringWarning: "retrying",
+    });
+    const next = reducer(s, { type: "WORKFLOW_ABORTED" });
+    expect(next.isRunning).toBe(false);
+    expect(next.workflowId).toBe("wf-preserved");
+    expect(next.monitoringWarning).toBe("");
+  });
+
+  it("clears the workflow id when the server says it is unavailable", () => {
+    const next = reducer(
+      stateWith({ isRunning: true, workflowId: "wf-gone" }),
+      { type: "WORKFLOW_ABORTED", clearWorkflowId: true },
+    );
+    expect(next.isRunning).toBe(false);
+    expect(next.workflowId).toBeNull();
   });
 });
 

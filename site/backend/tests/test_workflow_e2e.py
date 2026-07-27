@@ -114,6 +114,9 @@ class _FakeRuntime:
             pdf_path=pdf, tex_path=tex, response_id="resp_e2e",
         )
 
+    async def compile_latex_async(self, latex_source, output_basename):
+        return self.compile_latex(latex_source, output_basename)
+
 
 def _fake_agents(**_kwargs) -> dict[str, object]:
     return {
@@ -146,6 +149,7 @@ def _run(
     stop_after_agent: str | None = None,
     **kwargs,
 ) -> WorkflowResult:
+    kwargs.setdefault("run_evaluation", True)
     outputs = _stage_outputs()
     called_agents: list[str] = []
 
@@ -160,7 +164,11 @@ def _run(
         patch.object(engine, "create_agents", _fake_agents),
         patch.object(engine, "SharedWorkflowRuntime", _FakeRuntime),
         patch.object(engine, "upload_file_to_openai", return_value="fid_e2e"),
-        patch.object(engine, "run_openai_output_evaluation", return_value={"score": 0.9}),
+        patch.object(
+            engine,
+            "run_openai_output_evaluation",
+            return_value={"status": "complete", "score": 0.9},
+        ),
         patch.object(
             engine, "check_input_guardrails",
             AsyncMock(return_value=engine.GuardrailDecision(allowed=True, stage="input")),

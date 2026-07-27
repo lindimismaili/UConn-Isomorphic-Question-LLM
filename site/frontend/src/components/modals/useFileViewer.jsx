@@ -4,6 +4,7 @@ import TexViewerModal from './TexViewerModal.jsx';
 import CsvViewerModal from './CsvViewerModal.jsx';
 import JsonTextViewerModal from './JsonTextViewerModal.jsx';
 import { baseName, buildWorkflowFileUrl, getViewerType } from '../../utils/files.js';
+import { downloadApiFile } from '../../utils/api.js';
 
 /**
  * Shared view/download wiring for workflow output files.
@@ -48,16 +49,17 @@ export default function useFileViewer(workflowId) {
     setViewerType(type);
   };
 
-  const downloadFile = (fileName) => {
+  const downloadFile = async (fileName) => {
     const url = getFileUrl(fileName);
     if (!url) {
       alert('Download failed: workflow download link is unavailable.');
       return;
     }
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = baseName(fileName);
-    link.click();
+    try {
+      await downloadApiFile(url, baseName(fileName));
+    } catch (error) {
+      alert(`Download failed: ${error.message}`);
+    }
   };
 
   const handlePreviewClose = () => {

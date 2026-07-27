@@ -1,5 +1,10 @@
 # 03 — Admin Dashboard: Architecture & Feature Spec
 
+> **Status — proposed, not implemented; status warning added July 27, 2026.** This is
+> a design specification, not a description of a shipped admin dashboard.
+> Reverify dependencies before implementation; current limitations live in
+> [`docs/PROFESSOR_HANDOFF.md`](../docs/PROFESSOR_HANDOFF.md).
+
 The professor-facing control center. This doc is the umbrella spec; each subsystem has
 a dedicated doc (auth, site controls, history, ratings, budget) linked inline.
 
@@ -28,7 +33,7 @@ Browser (SPA)
         │  fetch /api/admin/*  (session cookie)
         ▼
 FastAPI  api/admin.py   [Depends(require_admin)]   ← the real boundary
-        ├─ status/deploy-info   → systemctl is-active, .deploy.env  (read-only)
+        ├─ status/deploy-info   → sanitized deploy status/config   (read-only)
         ├─ host controls        → enum→argv via narrow sudoers      (audited)
         ├─ history/users        → new usage_ledger table            (queryable)
         ├─ ratings              → workflow record + ledger
@@ -47,7 +52,8 @@ SQLite (site/backend/runtime/)  — new tables alongside the existing records bl
 - **Read-only first, mutation gated + audited.** Status/history/visibility ship first
   and are low-risk; host mutation and config changes are opt-in, audited, and
   privilege-scoped.
-- **Graceful on dev/Windows.** systemd/`.deploy.env`/cloudflared exist only on the Pi;
+- **Graceful on dev/Windows.** systemd, the root-owned deploy config, and
+  cloudflared exist only on the Pi;
   the dashboard degrades cleanly locally (see [05](05-site-controls.md) §3).
 
 ---
@@ -85,7 +91,7 @@ Seeded from env defaults on first boot; env is the floor, the table overrides at
 
 ## 4. Frontend composition
 
-- Add `admin` to `SITE_MODES` ([SiteChrome.jsx:15-19](../site/frontend/src/components/SiteChrome.jsx#L15-L19));
+- Add `admin` to `SITE_MODES` ([SiteChrome.jsx](../site/frontend/src/sections/SiteChrome.jsx));
   branch in [App.jsx:209-222](../site/frontend/src/App.jsx#L209-L222) to render
   `<AdminDashboard/>` instead of `ChatConversation`, mirroring the dev-aside swap.
 - **But** the `admin` option should only appear after a successful `/api/admin/login`

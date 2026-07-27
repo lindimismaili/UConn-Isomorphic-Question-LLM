@@ -4,8 +4,8 @@ import { Button, KeyValueTable } from '../ui/index.js';
 
 /**
  * Details for the runtime starter phase shown in the pipeline: the runtime
- * parameters used to bootstrap the shared container plus the inputs (files
- * and prompt) the run started with.
+ * parameters used to provision isolated provider containers plus the inputs
+ * (files and prompt) the run started with.
  *
  * @param {object} props
  * @param {boolean} props.isOpen
@@ -28,7 +28,10 @@ export default function SetupModal({ isOpen, onClose, workflowId, runInputs }) {
   const parameters = [
     { key: 'OpenAI Runtime', value: setupEntry?.model || 'Unavailable' },
     { key: 'Workflow ID', value: workflowId || 'Not started yet' },
-    { key: 'Code Interpreter Container', value: 'Shared across all agents in the run' },
+    {
+      key: 'Container Isolation',
+      value: 'Disposable extraction container, then a clean downstream container',
+    },
     ...(runInputs?.startAgent
       ? [{ key: 'Started From Agent', value: runInputs.startAgent }]
       : []),
@@ -48,7 +51,10 @@ export default function SetupModal({ isOpen, onClose, workflowId, runInputs }) {
         <p>
           <strong>Starting Runtime</strong> is not an agent. It covers the time
           after you click <strong>Send</strong> while the system uploads your
-          files, bootstraps the shared OpenAI container, and queues the agents.
+          files, provisions the isolated extraction runtime, and queues the
+          agents. If the content guardrail accepts the extracted structure,
+          downstream reasoning and LaTeX work continue in a fresh container
+          that never receives the source-file attachments.
         </p>
 
         <h4>Runtime Parameters</h4>

@@ -38,7 +38,10 @@ def cohen_kappa(pairs: Iterable[tuple[int, int]]) -> float | None:
         b_counts[y] += 1
     pe = sum((a_counts[k] / n) * (b_counts[k] / n) for k in (0, 1))
     if pe >= 1.0:
-        return 1.0 if po == 1.0 else 0.0
+        # When both raters use only one label, expected agreement is 1 and
+        # Cohen's kappa has a zero denominator. Raw agreement remains useful,
+        # but reporting kappa=1 would overstate calibration evidence.
+        return None
     return round((po - pe) / (1 - pe), 4)
 
 
@@ -107,8 +110,9 @@ def load_xlsx_grids(
     First row: [pdf_label, source_id_1, source_id_2, ...].
     Subsequent rows: [criterion_question_or_name, cell_1, cell_2, ...].
 
-    Cells are normalized to 0/1/'na'. Criteria are matched by (a) exact
-    rubric `name`, then (b) normalized `question` text, then (c) row index.
+    Cells are normalized to 0/1/'na'. Criteria are matched by exact rubric
+    ``name`` or normalized ``question`` text. Unknown rows are ignored rather
+    than being positionally assigned to a potentially different criterion.
     """
     skip_sheets = {s.lower() for s in (skip_sheets or set())} | SUMMARY_SHEET_NAMES
     wb = load_workbook(xlsx_path, data_only=True)
@@ -117,8 +121,7 @@ def load_xlsx_grids(
         for c in criteria
         if c.get("question")
     }
-    rubric_names = [c["name"] for c in criteria]
-    rubric_name_set = set(rubric_names)
+    rubric_name_set = {c["name"] for c in criteria}
 
     grids: dict[str, Grid] = {}
     for sheet_name in wb.sheetnames:
@@ -142,7 +145,7 @@ def load_xlsx_grids(
             continue
 
         grid: Grid = {sid: {} for sid in source_ids}
-        for row_idx, row in enumerate(rows[1:]):
+        for row in rows[1:]:
             if not row:
                 continue
             label = "" if row[0] is None else str(row[0]).strip()
@@ -151,9 +154,6 @@ def load_xlsx_grids(
                 criterion_name = label
             else:
                 criterion_name = name_by_question.get(_normalize_criterion_key(label))
-            if criterion_name is None and row_idx < len(rubric_names):
-                # Fall back to positional match (rubric order).
-                criterion_name = rubric_names[row_idx]
             if criterion_name is None:
                 continue
             for sid, col in zip(source_ids, col_positions, strict=False):
@@ -244,9 +244,11 @@ def write_report_json(
     judge_source: str,
     pdfs_compared: list[str],
 ) -> dict[str, Any]:
+    professor_label = professor_path.name or "professor-workbook"
+    judge_label = Path(judge_source).name or "judge-output"
     payload = {
-        "professor_workbook": str(professor_path),
-        "judge_source": judge_source,
+        "professor_workbook": professor_label,
+        "judge_source": judge_label,
         "pdfs_compared": pdfs_compared,
         "criteria": {name: agg.to_dict() for name, agg in per_criterion.items()},
         "summary": _summary(per_criterion),

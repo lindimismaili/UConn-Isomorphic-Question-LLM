@@ -89,4 +89,26 @@ describe('Modal', () => {
     expect(document.querySelector('.modal.is-closing')).not.toBeNull();
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
+
+  it('keeps a required non-dismissible gate open', () => {
+    const onClose = vi.fn();
+    render(
+      <Modal
+        isOpen
+        onClose={onClose}
+        dismissible={false}
+        title="Application access required"
+      >
+        Gate
+      </Modal>,
+    );
+
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog.querySelector('[aria-label="Close"]')).toBeNull();
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      dialog.querySelector('.modal-backdrop').click();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

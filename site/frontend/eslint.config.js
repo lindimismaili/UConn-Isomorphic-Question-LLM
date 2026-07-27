@@ -50,14 +50,9 @@ export default defineConfig([
   {
     // Templates-first enforcement (DESIGN.md §14): feature components must compose
     // from the ui/ primitives, not raw control/card/button class strings. The
-    // primitives themselves (components/ui/**) legitimately emit these classes,
-    // and AgentCard/AgentPipeline are the documented .agent-card exception (§9).
+    // primitives themselves (components/ui/**) legitimately emit these classes.
     files: ['src/components/**/*.{js,jsx}'],
-    ignores: [
-      'src/components/ui/**',
-      'src/components/AgentCard.jsx',
-      'src/components/AgentPipeline.jsx',
-    ],
+    ignores: ['src/components/ui/**'],
     rules: {
       'no-restricted-syntax': [
         'error',

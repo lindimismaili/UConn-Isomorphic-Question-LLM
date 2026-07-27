@@ -1,5 +1,10 @@
 # 09 — Implementation Roadmap
 
+> **Status — proposed roadmap, not a completion checklist; status warning added July
+> 27, 2026.** Some safety work may have changed since the original audit.
+> Reverify each task and track shipped behavior in
+> [`docs/PROFESSOR_HANDOFF.md`](../docs/PROFESSOR_HANDOFF.md).
+
 Phased plan. Each phase is independently shippable and testable. Phases 0–3 are
 **foundational** — the admin dashboard (Phase 4+) is largely presentation on top of them.
 Effort is rough (S/M/L) for one developer.
@@ -13,7 +18,7 @@ new feature.
 
 | # | Task | Ref | Size |
 |---|---|---|---|
-| 0.1 | **Rotate `OPENAI_API_KEY`**, move it out of git-tracked `site/.env` into systemd `EnvironmentFile` (600, outside git) | [04](04-auth-and-security.md) S4/S1, infra §5 | S |
+| 0.1 | Rotate any exposed `OPENAI_API_KEY`; keep active values in ignored local/server-only environment storage outside Git | [04](04-auth-and-security.md) S4/S1, infra §5 | S |
 | 0.2 | Bound upload reads (stream like `files.py`) on `start-from-agent-input` + eval-batch | [01](01-codebase-review.md) C-1 | M |
 | 0.3 | Fix timezone parsing (aware UTC) in all TTL/stale/age math; unify timestamp helpers | [01](01-codebase-review.md) H-2 | M |
 | 0.4 | Fix cross-thread dict races in the prune loop (lock or loop-thread snapshot) | [01](01-codebase-review.md) H-1 | M |
@@ -30,7 +35,7 @@ new feature.
 
 | # | Task | Ref | Size |
 |---|---|---|---|
-| 1.1 | `passlib`/scrypt hashing; `deploy.sh` prompts for admin user/password, writes hash + `SESSION_SECRET` to systemd env / `.deploy.env` | [04](04-auth-and-security.md) §1 | M |
+| 1.1 | `passlib`/scrypt hashing; `deploy.sh` prompts for admin user/password, writes hash + `SESSION_SECRET` to the root-owned server environment file | [04](04-auth-and-security.md) §1 | M |
 | 1.2 | `api/admin.py` router + `require_admin` dependency (session cookie, `SessionMiddleware`) | [04](04-auth-and-security.md) §2/§3 | M |
 | 1.3 | `login`/`logout`/`me`; rate-limit + audit failed logins | [04](04-auth-and-security.md) §2 | S |
 | 1.4 | `admin_audit` table + helper | [04](04-auth-and-security.md) S5 | S |
@@ -72,7 +77,7 @@ new feature.
 | 4.1 | `runtime_flags` table + lazy accessor; `require_feature` dep; public `GET /api/config/flags` subset | [03](03-admin-dashboard.md) §3 | M |
 | 4.2 | Maintenance mode (soft offline) banner + generation block | [05](05-site-controls.md) 1d | S |
 | 4.3 | `GET /api/admin/status` (systemctl is-active ×4, health/openai/version proxy) | [05](05-site-controls.md) 1a | M |
-| 4.4 | Live/local badge + `GET /api/admin/deploy-info` (redacted `.deploy.env`/cloudflared) | [05](05-site-controls.md) 1b/1c | M |
+| 4.4 | Live/local badge + `GET /api/admin/deploy-info` from sanitized deployment status and allowlisted deploy config (never credentials) | [05](05-site-controls.md) 1b/1c | M |
 | 4.5 | Host mutation: narrow sudoers (deploy.sh), enum→argv wrapper, offline/online (cloudflared), restart (systemd-run), auto-update pause | [05](05-site-controls.md) §2 | L |
 | 4.6 | Dev/Windows graceful degradation for all host controls | [05](05-site-controls.md) §3 | S |
 

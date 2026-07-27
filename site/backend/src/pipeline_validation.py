@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Iterable
 
@@ -52,10 +53,26 @@ def validate_verifier_output(
 ) -> ValidationReport:
     """Validate that verifier output preserves and completes source questions."""
     report = ValidationReport()
+    extracted_ids = [q.source_id for q in extracted_questions]
+    verified_ids = [q.source_id for q in verified_output.questions]
+    for source_id in sorted(
+        item for item, count in Counter(extracted_ids).items() if count > 1
+    ):
+        report.add(f"Extracter returned duplicate source_id {source_id}", source_id)
+    for source_id in sorted(
+        item for item, count in Counter(verified_ids).items() if count > 1
+    ):
+        report.add(f"Verifier returned duplicate source_id {source_id}", source_id)
+
+    extracted_id_set = set(extracted_ids)
     verified_by_id = {q.source_id: q for q in verified_output.questions}
-    extra_ids = sorted(set(verified_by_id) - {q.source_id for q in extracted_questions})
+    extra_ids = sorted(set(verified_by_id) - extracted_id_set)
     for source_id in extra_ids:
         report.add(f"Verifier returned unknown source_id {source_id}", source_id)
+    verified_known_order = [item for item in verified_ids if item in extracted_id_set]
+    expected_known_order = [item for item in extracted_ids if item in set(verified_known_order)]
+    if verified_known_order != expected_known_order:
+        report.add("Verifier changed source question order")
 
     for source in extracted_questions:
         verified = verified_by_id.get(source.source_id)
@@ -228,12 +245,34 @@ def validate_generator_output(
     """Validate that generated questions satisfy the workflow contract."""
     report = ValidationReport()
     generated_by_source: dict[str, list] = {}
+    source_ids = [q.source_id for q in source_questions]
+    for source_id in sorted(
+        item for item, count in Counter(source_ids).items() if count > 1
+    ):
+        report.add(f"Verifier returned duplicate source_id {source_id}", source_id)
     source_by_id = {q.source_id: q for q in source_questions}
+    generated_ids = [generated.id for generated in generated_output.isomorphic_questions]
+    for generated_id in sorted(
+        item for item, count in Counter(generated_ids).items() if count > 1
+    ):
+        report.add(f"Generator returned duplicate question id {generated_id}")
     for generated in generated_output.isomorphic_questions:
         if generated.source_id not in source_by_id:
             report.add(f"Generator returned unknown source_id {generated.source_id}", generated.source_id)
             continue
         generated_by_source.setdefault(generated.source_id, []).append(generated)
+
+    expected_source_order: list[str] = []
+    for source in source_questions:
+        expected_count = 1 if source.has_figure else max(1, int(per_source or 1))
+        expected_source_order.extend([source.source_id] * expected_count)
+    actual_known_order = [
+        generated.source_id
+        for generated in generated_output.isomorphic_questions
+        if generated.source_id in source_by_id
+    ]
+    if actual_known_order != expected_source_order:
+        report.add("Generator changed source question order or grouping")
 
     for source in source_questions:
         generated_items = generated_by_source.get(source.source_id, [])
@@ -322,4 +361,3 @@ def validate_generator_output(
             if sid not in report.repair_source_ids:
                 report.repair_source_ids.append(sid)
     return report
-

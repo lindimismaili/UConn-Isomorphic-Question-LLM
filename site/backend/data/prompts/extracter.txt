@@ -43,7 +43,7 @@ Multi-file handling:
   prompt instead.
 
 Procedure:
-1. Read all files with Python tools (`pdfplumber`, `PyPDF2`, `python-docx`, OCR if needed).
+1. Read all files with Python tools (`pdfplumber`, `pypdf`, `python-docx`, OCR if needed).
 2. Extract document metadata from headers/footers/title blocks.
    - Use the literal source title as it appears in the document
      (e.g. "Quiz #2", "Midterm Exam", "Problem Set 3"). Use a concise cleaned filename

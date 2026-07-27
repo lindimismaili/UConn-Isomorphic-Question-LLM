@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -70,6 +72,31 @@ class SafetyStoreTests(unittest.TestCase):
             second.save("workflow", "wf-1", {"status": "completed", "updated_at": "2026-05-05T00:01:00Z"})
             self.assertEqual(first.load("workflow", "wf-1")["status"], "completed")
             self.assertEqual([record_id for record_id, _ in second.list_records("workflow")], ["wf-1"])
+
+    def test_workflow_store_keeps_database_and_sidecars_private(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "workflows.sqlite3"
+            store = WorkflowStore(db_path)
+            store.save("workflow", "wf-1", {"status": "running"})
+
+            self.assertEqual(stat.S_IMODE(db_path.stat().st_mode), 0o600)
+            for suffix in ("-wal", "-shm"):
+                sidecar = Path(f"{db_path}{suffix}")
+                if sidecar.exists():
+                    self.assertEqual(stat.S_IMODE(sidecar.stat().st_mode), 0o600)
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_workflow_store_rejects_symlink_database(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            target = root / "outside.sqlite3"
+            target.write_bytes(b"do not overwrite")
+            link = root / "workflows.sqlite3"
+            link.symlink_to(target)
+
+            with self.assertRaises(OSError):
+                WorkflowStore(link)
+            self.assertEqual(target.read_bytes(), b"do not overwrite")
 
 
 if __name__ == "__main__":

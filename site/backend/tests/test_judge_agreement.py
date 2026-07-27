@@ -138,12 +138,29 @@ def test_write_report_json(tmp_path: Path):
     rep = write_report_json(out, per, professor_path=prof, judge_source=str(judge), pdfs_compared=["PDF1"])
     assert "summary" in rep
     assert "criteria" in rep
+    assert rep["professor_workbook"] == "p.xlsx"
+    assert rep["judge_source"] == "j.xlsx"
+    assert str(tmp_path) not in out.read_text(encoding="utf-8")
     assert out.exists()
 
 
 @pytest.mark.parametrize("p,j,expected", [
-    (1, 1, 1.0),  # perfect, single label → 1
-    (0, 0, 1.0),
+    (1, 1, None),
+    (0, 0, None),
 ])
 def test_cohen_kappa_single_label_perfect(p, j, expected):
     assert cohen_kappa([(p, j)]) == expected
+
+
+def test_load_grid_does_not_positionally_map_unknown_rows(tmp_path: Path):
+    path = tmp_path / "unknown-row.xlsx"
+    _write_grid(path, {"PDF1": [
+        ["PDF1", 1],
+        ["not a rubric criterion", 1],
+        ["scenario_variation", 0],
+    ]})
+
+    grid = load_xlsx_grids(path, CRITERIA)["PDF1"][1]
+
+    assert "preserve_physical_content" not in grid
+    assert grid["scenario_variation"] == 0

@@ -6,9 +6,9 @@
  * a scrolling modal body, and it opens upward when there's no room below.
  *
  * Controlled: pass `value` + `onChange(value)` — `onChange` receives the selected
- * VALUE directly (not a DOM event). Focus stays on the trigger button the whole
- * time; the active option is tracked via `aria-activedescendant`, which keeps it
- * safe inside a modal focus trap.
+ * VALUE directly (not a DOM event). The trigger uses the select-only combobox
+ * pattern: DOM focus stays on it while the active listbox option is exposed via
+ * `aria-activedescendant`, which also keeps it safe inside a modal focus trap.
  */
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
@@ -122,9 +122,7 @@ export function Dropdown({
   // Position on open, and keep the menu glued to the trigger on scroll/resize.
   useLayoutEffect(() => {
     if (!open) return undefined;
-    // Measure the trigger + menu and position before paint (the canonical
-    // useLayoutEffect measure-then-set pattern; setState here is intentional).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Measure the trigger + menu and position before paint.
     computePosition();
     let raf = 0;
     const onScrollOrResize = () => {
@@ -278,6 +276,7 @@ export function Dropdown({
     <div className={rootClass}>
       <button
         type="button"
+        role="combobox"
         id={baseId}
         ref={triggerRef}
         className="dropdown-trigger"

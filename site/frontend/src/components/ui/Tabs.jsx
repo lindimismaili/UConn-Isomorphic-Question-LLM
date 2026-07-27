@@ -10,16 +10,34 @@
  */
 export function Tabs({ value, onChange, tabs = [], className = '' }) {
   const classes = ['viewer-tab-bar', className].filter(Boolean).join(' ');
+  const moveFocus = (event, currentIndex) => {
+    let nextIndex;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    onChange?.(tabs[nextIndex]?.id);
+    event.currentTarget.parentElement
+      ?.querySelectorAll('[role="tab"]')
+      ?.[nextIndex]
+      ?.focus();
+  };
+
   return (
     <div className={classes} role="tablist">
-      {tabs.map((tab) => (
+      {tabs.map((tab, index) => (
         <button
           key={tab.id}
           type="button"
           role="tab"
           aria-selected={value === tab.id}
+          tabIndex={value === tab.id ? 0 : -1}
           className={`viewer-tab${value === tab.id ? ' is-active' : ''}`}
           onClick={() => onChange?.(tab.id)}
+          onKeyDown={(event) => moveFocus(event, index)}
         >
           {tab.label}
         </button>

@@ -1,5 +1,10 @@
 # 01 — Backend Codebase Review (bugs, issues, inconsistencies)
 
+> **Status — dated audit; status warning added July 27, 2026.** Findings describe
+> evidence at review time, not guaranteed current behavior. Reverify each item
+> against the code and tests before acting; current handoff status lives in
+> [`docs/PROFESSOR_HANDOFF.md`](../docs/PROFESSOR_HANDOFF.md).
+
 Findings from a deep read of `site/backend/src/` and `site/backend/data/`, grouped by
 severity. Each item has a `file:line` anchor, the problem, and a fix. Items marked
 **[blocks admin]** are prerequisites for the admin-dashboard work.
@@ -96,18 +101,19 @@ load.
   ([workflows.py:302-340](../site/backend/src/api/workflows.py#L302-L340)). A walked-away
   client spins a 100 ms coroutine forever. Add `await request.is_disconnected()` + an
   absolute timeout.
-- **M-3 — `POST /api/outputs/{label}/compare-professor` mutates a shared data file,
-  unauthenticated** ([professor_comparison.py:13-48](../site/backend/src/api/professor_comparison.py#L13-L48)) —
-  writes the Agreement sheet into `data/professor_comparison/Evaluation.xlsx`. Gate
-  behind auth; write to a per-run copy.
+- **M-3 — `POST /api/outputs/{label}/compare-professor` is a cost/state-changing
+  operation.** It reads the shared professor workbook but writes the Agreement
+  sheet and reports into the selected batch's `XLSX/compiled.xlsx`
+  ([professor_comparison.py](../site/backend/src/tools/professor_comparison.py)).
+  Keep it behind the access boundary and audit its per-batch writes.
 - **M-4 — Blocking filesystem writes inside async batch coroutines**
   (`state.py:1474-1491`, and `run_eval_batch_async` `write_json` at `:566,599,602,616,624,634`).
   Route through `to_thread` like the engine does.
 - **M-5 — Shallow upload content-type validation.** Magic bytes checked only for `.pdf`
   ([state.py:110-112](../site/backend/src/api/state.py#L110-L112)); `.svg/.docx/.tex`
-  accepted on extension alone and fed to the code-interpreter container. The eval-batch
-  path does no allow-listing at all (`safe_filename` coerces bad suffixes to `.pdf`).
-  Tighten both.
+  accepted on extension alone and fed to the code-interpreter container. The
+  eval-batch path does no suffix allow-listing; `safe_filename` preserves the
+  supplied suffix because `allowed_suffixes` is not passed. Tighten both.
 - **M-6 — `download_file` authorization is by-obscurity only**
   ([files.py:193-230](../site/backend/src/api/files.py#L193-L230)) — traversal is
   correctly blocked, but knowing the UUID = access. Acceptable only behind auth (C-2).

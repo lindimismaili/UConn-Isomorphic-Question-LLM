@@ -13,9 +13,12 @@ cleaned up by the app's own pruning on later runs.
 
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from backend.src.api import files as files_module
@@ -23,6 +26,19 @@ from backend.src.api import state
 from backend.src.server import app
 
 _MINIMAL_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
+_BINARY_UPLOADS = {
+    "legacy.doc": b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1payload",
+    "modern.docx": b"PK\x03\x04payload",
+    "image.bmp": b"BMpayload",
+    "image.gif": b"GIF89apayload",
+    "image.jpg": b"\xff\xd8\xffpayload",
+    "image.jpeg": b"\xff\xd8\xffpayload",
+    "image.png": b"\x89PNG\r\n\x1a\npayload",
+    "image.tif": b"II*\x00payload",
+    "image.tiff": b"MM\x00*payload",
+    "big-image.tif": b"II+\x00payload",
+    "image.webp": b"RIFF\x04\x00\x00\x00WEBPpayload",
+}
 
 
 class UploadHardeningBase(unittest.TestCase):
@@ -49,14 +65,69 @@ class MagicSignatureTests(UploadHardeningBase):
         self.assertEqual(resp.status_code, 200, resp.text)
 
     def test_pdf_with_leading_whitespace_before_magic_rejected(self) -> None:
-        # The guard requires the signature within the first KiB via substring
-        # membership; a payload that never contains %PDF is rejected.
+        # Binary declarations require a true prefix, not a marker embedded
+        # somewhere in the first KiB.
         resp = self.client.post(
             "/api/upload",
-            files={"files": ("bad.pdf", b"\x00\x01\x02 plain bytes", "application/pdf")},
+            files={"files": ("bad.pdf", b" \n%PDF-1.4", "application/pdf")},
         )
         self.assertEqual(resp.status_code, 400)
         self.assertIn("does not appear to be a valid", resp.json()["detail"])
+
+    def test_common_binary_upload_prefixes_are_accepted(self) -> None:
+        for filename, content in _BINARY_UPLOADS.items():
+            with self.subTest(filename=filename):
+                response = self.client.post(
+                    "/api/upload",
+                    files={"files": (filename, content, "application/octet-stream")},
+                )
+                self.assertEqual(response.status_code, 200, response.text)
+
+    def test_embedded_binary_marker_is_rejected(self) -> None:
+        for filename, content in _BINARY_UPLOADS.items():
+            with self.subTest(filename=filename):
+                response = self.client.post(
+                    "/api/upload",
+                    files={
+                        "files": (
+                            filename,
+                            b"not-a-prefix" + content,
+                            "application/octet-stream",
+                        )
+                    },
+                )
+                self.assertEqual(response.status_code, 400, response.text)
+
+    def test_webp_requires_both_riff_and_webp_markers(self) -> None:
+        response = self.client.post(
+            "/api/upload",
+            files={
+                "files": (
+                    "fake.webp",
+                    b"RIFF\x04\x00\x00\x00NOPEpayload",
+                    "image/webp",
+                )
+            },
+        )
+        self.assertEqual(response.status_code, 400, response.text)
+
+    def test_input_to_agent_source_uses_same_prefix_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.object(state, "UPLOADS_DIR", root):
+                accepted = state._save_input_to_agent_source_file(
+                    workflow_id="accepted",
+                    filename="questions.docx",
+                    content=b"PK\x03\x04payload",
+                )
+                with self.assertRaises(HTTPException) as raised:
+                    state._save_input_to_agent_source_file(
+                        workflow_id="rejected",
+                        filename="questions.docx",
+                        content=b"junkPK\x03\x04payload",
+                    )
+        self.assertTrue(accepted.name.endswith(".docx"))
+        self.assertEqual(raised.exception.status_code, 400)
 
     def test_txt_has_no_signature_requirement(self) -> None:
         # Types without an entry in UPLOAD_MAGIC_SIGNATURES skip the byte check.

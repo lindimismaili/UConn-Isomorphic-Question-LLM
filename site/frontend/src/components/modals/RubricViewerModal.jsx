@@ -1,26 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import { Badge, Button, EmptyState } from '../ui/index.js';
+import { fetchWithAbort } from '../../utils/api.js';
 
-/**
- * Loads the rubric JSON from the API first, then the data directory.
- *
- * Touches `/api/rubric` and `/data/rubric.json`.
- */
+/** Load rubric JSON through the authenticated backend API. */
 async function fetchRubric() {
-  try {
-    const res = await fetch('/api/rubric', { cache: 'no-store' });
-    if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-    return await res.json();
-  } catch (apiError) {
-    try {
-      const res = await fetch('/data/rubric.json', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`Local fallback unavailable (${res.status})`);
-      return await res.json();
-    } catch (localError) {
-      throw new Error(`API: ${apiError.message}; Local: ${localError.message}`);
-    }
-  }
+  const res = await fetchWithAbort('/api/rubric', { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+  return res.json();
 }
 
 function formatTitle(value) {

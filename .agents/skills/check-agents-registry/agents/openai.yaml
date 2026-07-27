@@ -1,0 +1,9 @@
+interface:
+  display_name: "Check Agents Registry"
+  short_description: "Validate agent registry structure and consumers"
+  default_prompt: "Use $check-agents-registry to validate the current registry, filtered sets, metadata, and dependent tests."
+  icon_small: "./assets/small-logo.svg"
+  icon_large: "./assets/large-logo.svg"
+  brand_color: "#FFFFFF"
+policy:
+  allow_implicit_invocation: true

@@ -1,10 +1,14 @@
 Use the hosted shell container and run the following work exactly.
 
 1. Run `set -euxo pipefail`.
-2. Create `/mnt/data/out`.
-3. Copy `{tex_path}` to `/mnt/data/out/{basename}.tex`.
-4. Change to `/mnt/data/out`.
-5. Run `pdflatex -interaction=nonstopmode -halt-on-error {basename}.tex`.
-6. Run `pdflatex -interaction=nonstopmode -halt-on-error {basename}.tex` a second time.
-7. Confirm that `/mnt/data/out/{basename}.pdf` exists.
-8. Finish with a short summary and mention the PDF path.
+2. Run this conditional setup exactly so the TeX packages are installed only
+   when `pdflatex` is absent:
+   `if ! command -v pdflatex >/dev/null 2>&1; then apt-get update && apt-get install -y texlive-latex-base texlive-latex-recommended texlive-fonts-recommended texlive-latex-extra; fi`
+3. Verify with `pdflatex --version`.
+4. Create `/mnt/data/out`.
+5. Copy `{tex_path}` to `/mnt/data/out/{basename}.tex`.
+6. Change to `/mnt/data/out`.
+7. Run `pdflatex -no-shell-escape -interaction=nonstopmode -halt-on-error {basename}.tex`.
+8. Run `pdflatex -no-shell-escape -interaction=nonstopmode -halt-on-error {basename}.tex` a second time.
+9. Confirm that `/mnt/data/out/{basename}.pdf` exists.
+10. Finish with a short summary and mention the PDF path.

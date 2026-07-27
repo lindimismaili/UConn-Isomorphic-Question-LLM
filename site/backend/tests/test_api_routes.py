@@ -15,15 +15,20 @@ Covered:
 
 from __future__ import annotations
 
+import asyncio
+import time
 import unittest
+import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 
 from fastapi.testclient import TestClient
 
 from backend.src import registry
-from backend.src.api import state
+from backend.src.api import files as files_module
+from backend.src.api import health, state
 from backend.src.server import app
 
 # A tiny valid single-page PDF (starts with the %PDF magic bytes).
@@ -42,25 +47,77 @@ class RouteTestBase(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
         self._saved_workflows = dict(state.workflows)
+        self._saved_workflow_tasks = dict(state.workflow_tasks)
         self._saved_batches = dict(state.batch_jobs)
+        self._saved_batch_tasks = dict(state.batch_tasks)
+        self._saved_eval_batches = dict(state.eval_batch_jobs)
+        self._saved_eval_batch_tasks = dict(state.eval_batch_tasks)
+        self._saved_workflow_reservations = dict(
+            state.workflow_admission_reservations
+        )
+        self._saved_workflow_owners = dict(state.workflow_admission_owners)
         state.workflows.clear()
+        state.workflow_tasks.clear()
         state.batch_jobs.clear()
+        state.batch_tasks.clear()
+        state.eval_batch_jobs.clear()
+        state.eval_batch_tasks.clear()
+        state.workflow_admission_reservations.clear()
+        state.workflow_admission_owners.clear()
 
     def tearDown(self) -> None:
         state.workflows.clear()
         state.workflows.update(self._saved_workflows)
+        state.workflow_tasks.clear()
+        state.workflow_tasks.update(self._saved_workflow_tasks)
         state.batch_jobs.clear()
         state.batch_jobs.update(self._saved_batches)
+        state.batch_tasks.clear()
+        state.batch_tasks.update(self._saved_batch_tasks)
+        state.eval_batch_jobs.clear()
+        state.eval_batch_jobs.update(self._saved_eval_batches)
+        state.eval_batch_tasks.clear()
+        state.eval_batch_tasks.update(self._saved_eval_batch_tasks)
+        state.workflow_admission_reservations.clear()
+        state.workflow_admission_reservations.update(
+            self._saved_workflow_reservations
+        )
+        state.workflow_admission_owners.clear()
+        state.workflow_admission_owners.update(self._saved_workflow_owners)
 
 
 class HealthAndVersionRouteTests(RouteTestBase):
+    def setUp(self) -> None:
+        super().setUp()
+        health._reset_openai_status_cache()
+
     def test_health_ok(self) -> None:
         resp = self.client.get("/api/health")
         self.assertEqual(resp.status_code, 200)
-        body = resp.json()
-        self.assertEqual(body["status"], "healthy")
-        self.assertIn("openai_api_key_configured", body)
-        self.assertIn("uploads_dir", body)
+        self.assertEqual(resp.json(), {"status": "healthy"})
+
+    def test_openai_status_caches_success_and_failure_results(self) -> None:
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = (
+            b'{"status":{"indicator":"none","description":"All Systems Operational"}}'
+        )
+        with patch("backend.src.api.health.urlopen", return_value=response) as urlopen:
+            first = self.client.get("/api/openai/status")
+            second = self.client.get("/api/openai/status")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.json(), first.json())
+        urlopen.assert_called_once()
+
+        health._reset_openai_status_cache()
+        with patch(
+            "backend.src.api.health.urlopen",
+            side_effect=URLError("offline"),
+        ) as urlopen:
+            first = self.client.get("/api/openai/status")
+            second = self.client.get("/api/openai/status")
+        self.assertEqual(first.json()["status"], "unknown")
+        self.assertEqual(second.json(), first.json())
+        urlopen.assert_called_once()
 
     def test_version_json_returns_object(self) -> None:
         resp = self.client.get("/version.json")
@@ -92,6 +149,101 @@ class HealthAndVersionRouteTests(RouteTestBase):
                 self.assertEqual(self.client.get("/api/deployment/status").json()["status"], "unavailable")
                 path.write_text("not json", encoding="utf-8")
                 self.assertEqual(self.client.get("/api/deployment/status").json()["status"], "unavailable")
+
+    def test_deployment_status_counts_every_active_job_registry(self) -> None:
+        state.workflows["workflow-running"] = {"status": "running"}
+        state.workflows["workflow-done"] = {"status": "completed"}
+        state.batch_jobs["batch-running"] = {"status": "running"}
+        state.eval_batch_jobs["eval-running"] = {"status": "pending"}
+        response = self.client.get("/api/deployment/status")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["active_workflows"], 3)
+
+    def test_deployment_status_counts_cancelled_jobs_until_tasks_finish(self) -> None:
+        unfinished_tasks = [MagicMock(), MagicMock(), MagicMock()]
+        for task in unfinished_tasks:
+            task.done.return_value = False
+
+        state.workflows["workflow-cancelled"] = {"status": "cancelled"}
+        state.workflow_tasks["workflow-cancelled"] = unfinished_tasks[0]
+        state.batch_jobs["batch-cancelled"] = {"status": "cancelled"}
+        state.batch_tasks["batch-cancelled"] = unfinished_tasks[1]
+        state.eval_batch_jobs["eval-cancelled"] = {"status": "cancelled"}
+        state.eval_batch_tasks["eval-cancelled"] = unfinished_tasks[2]
+
+        response = self.client.get("/api/deployment/status")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["active_workflows"], 3)
+
+    def test_deployment_status_deduplicates_records_and_ignores_done_tasks(self) -> None:
+        unfinished_task = MagicMock()
+        unfinished_task.done.return_value = False
+        finished_task = MagicMock()
+        finished_task.done.return_value = True
+
+        state.workflows["workflow-running"] = {"status": "running"}
+        state.workflow_tasks["workflow-running"] = unfinished_task
+        state.batch_tasks["batch-finished"] = finished_task
+
+        response = self.client.get("/api/deployment/status")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["active_workflows"], 1)
+
+
+class ArchiveBuildTests(RouteTestBase):
+    def test_concurrent_zip_requests_share_one_background_build(self) -> None:
+        calls = 0
+
+        def fake_build(_output_dir: Path, zip_path: Path) -> None:
+            nonlocal calls
+            calls += 1
+            time.sleep(0.02)
+            zip_path.write_bytes(b"zip")
+
+        async def drive(output_dir: Path, zip_path: Path) -> None:
+            await asyncio.gather(
+                files_module._build_zip_single_flight("workflow", output_dir, zip_path),
+                files_module._build_zip_single_flight("workflow", output_dir, zip_path),
+            )
+
+        with TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory)
+            zip_path = output_dir / "workflow.zip"
+            with patch.object(files_module, "_build_workflow_zip", new=fake_build):
+                asyncio.run(drive(output_dir, zip_path))
+
+        self.assertEqual(calls, 1)
+
+    def test_zip_builder_skips_symlinks_and_enforces_source_size(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_dir = root / "run"
+            output_dir.mkdir()
+            (output_dir / "result.txt").write_text("safe", encoding="utf-8")
+            outside = root / "outside.txt"
+            outside.write_text("private", encoding="utf-8")
+            (output_dir / "linked.txt").symlink_to(outside)
+            zip_path = output_dir / "run.zip"
+
+            state._build_workflow_zip(output_dir, zip_path)
+            with zipfile.ZipFile(zip_path) as archive:
+                self.assertEqual(archive.namelist(), ["result.txt"])
+            self.assertTrue(
+                state._workflow_zip_is_current(output_dir, zip_path)
+            )
+            (output_dir / "later.txt").write_text("new", encoding="utf-8")
+            self.assertFalse(
+                state._workflow_zip_is_current(output_dir, zip_path)
+            )
+
+            zip_path.unlink()
+            with (
+                patch.object(state, "download_zip_max_source_bytes", return_value=1),
+                self.assertRaisesRegex(ValueError, "too large"),
+            ):
+                state._build_workflow_zip(output_dir, zip_path)
 
 
 class ConfigRouteTests(RouteTestBase):
@@ -213,6 +365,92 @@ class DownloadRouteTests(RouteTestBase):
         resp = self.client.get("/api/download-zip/does-not-exist")
         self.assertEqual(resp.status_code, 404)
 
+    def test_download_zip_waits_for_terminal_status_and_task_cleanup(self) -> None:
+        state.workflows["running-output"] = {
+            "id": "running-output",
+            "status": "running",
+            "outputFolder": "unused",
+        }
+        response = self.client.get("/api/download-zip/running-output")
+        self.assertEqual(response.status_code, 409)
+
+        live_task = MagicMock()
+        live_task.done.return_value = False
+        state.workflows["cleanup-output"] = {
+            "id": "cleanup-output",
+            "status": "cancelled",
+            "outputFolder": "unused",
+        }
+        state.workflow_tasks["cleanup-output"] = live_task
+        response = self.client.get("/api/download-zip/cleanup-output")
+        self.assertEqual(response.status_code, 409)
+
+    def test_eval_batch_output_can_be_downloaded_as_zip(self) -> None:
+        with TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            run_dir = outputs_dir / "eval-batch-output"
+            run_dir.mkdir()
+            (run_dir / "evaluation_report.json").write_text("{}", encoding="utf-8")
+            batch_id = "eval-batch-download"
+            state.eval_batch_jobs[batch_id] = {
+                "id": batch_id,
+                "status": "completed",
+                "outputFolder": "eval-batch-output",
+            }
+            with patch.object(files_module, "OUTPUTS_DIR", outputs_dir):
+                response = self.client.get(f"/api/download-zip/{batch_id}")
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.headers["content-type"], "application/zip")
+
+    def test_download_zip_rebuilds_after_artifacts_change(self) -> None:
+        with TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            run_dir = outputs_dir / "mutable-output"
+            run_dir.mkdir()
+            (run_dir / "first.json").write_text("{}", encoding="utf-8")
+            batch_id = "mutable-eval-batch"
+            state.eval_batch_jobs[batch_id] = {
+                "id": batch_id,
+                "status": "completed",
+                "outputFolder": "mutable-output",
+            }
+            with patch.object(files_module, "OUTPUTS_DIR", outputs_dir):
+                first = self.client.get(f"/api/download-zip/{batch_id}")
+                self.assertEqual(first.status_code, 200, first.text)
+                (run_dir / "comparison.xlsx").write_bytes(b"new artifact")
+                second = self.client.get(f"/api/download-zip/{batch_id}")
+
+            self.assertEqual(second.status_code, 200, second.text)
+            with zipfile.ZipFile(run_dir / "mutable-output.zip") as archive:
+                self.assertEqual(
+                    archive.namelist(),
+                    ["comparison.xlsx", "first.json"],
+                )
+
+    def test_output_artifact_download_is_contained_and_hides_server_path(self) -> None:
+        with TemporaryDirectory() as tmp:
+            outputs_dir = Path(tmp)
+            run_dir = outputs_dir / "batch"
+            artifact = run_dir / "XLSX" / "compiled.xlsx"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"workbook")
+            with (
+                patch.object(files_module, "OUTPUTS_DIR", outputs_dir),
+                patch.object(state, "OUTPUTS_DIR", outputs_dir),
+            ):
+                response = self.client.get(
+                    "/api/output-artifact",
+                    params={"folder": "batch", "file": "XLSX/compiled.xlsx"},
+                )
+                traversal = self.client.get(
+                    "/api/output-artifact",
+                    params={"folder": "batch", "file": "../outside.txt"},
+                )
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.content, b"workbook")
+            self.assertNotIn(str(outputs_dir), response.headers.get("content-disposition", ""))
+            self.assertEqual(traversal.status_code, 400)
+
     def test_download_rejects_traversal_via_allowlist(self) -> None:
         # A traversal path is not in the workflow's downloadable allowlist, so it
         # is rejected before any filesystem access (404 File not found).
@@ -270,6 +508,15 @@ class WorkflowStatusResultRouteTests(RouteTestBase):
         wf_id = "wf-status"
         record = state._new_workflow_record()
         record["status"] = "running"
+        record["agents"]["normalizer"] = {
+            "status": "thinking",
+            "data": {
+                "input": {"private": "course content"},
+                "output": {"private": "generated content"},
+                "startTime": "2026-07-27T12:00:00Z",
+                "model": "gpt-test",
+            },
+        }
         state.workflows[wf_id] = record
         resp = self.client.get(f"/api/workflow/{wf_id}/status")
         self.assertEqual(resp.status_code, 200)
@@ -278,6 +525,10 @@ class WorkflowStatusResultRouteTests(RouteTestBase):
         self.assertEqual(body["status"], "running")
         self.assertIn("agents", body)
         self.assertIn("outputFolder", body)
+        agent_data = body["agents"]["normalizer"]["data"]
+        self.assertEqual(agent_data["model"], "gpt-test")
+        self.assertNotIn("input", agent_data)
+        self.assertNotIn("output", agent_data)
 
     def test_status_surfaces_blocked(self) -> None:
         wf_id = "wf-blocked"
@@ -320,6 +571,7 @@ class WorkflowStatusResultRouteTests(RouteTestBase):
         self.assertEqual(body["result"], {"generated_questions": []})
         self.assertEqual(body["outputFolder"], "06-30-2026/12-00-00")
         self.assertEqual(body["files"], [{"name": "final_result.json", "downloadable": True}])
+        self.assertIn("agents", body)
 
 
 if __name__ == "__main__":

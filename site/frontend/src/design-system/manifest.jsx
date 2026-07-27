@@ -10,6 +10,7 @@ import {
   CardHeader,
   ChatMessage,
   ChatTranscript,
+  Checkbox,
   Chip,
   Composer,
   DataTable,
@@ -52,7 +53,7 @@ import { IconClose } from '../components/Icons.jsx';
  */
 
 /** The full 10-node pipeline fixture (including both guardrail nodes) for the Stepper specimen. */
-const STEPPER_NODES = [
+export const STEPPER_NODES = [
   { key: 'setup', label: 'Setup', status: 'completed', kind: 'runtime' },
   { key: 'input_guardrail', label: 'Input Guardrail', status: 'completed', kind: 'guardrail' },
   { key: 'normalizer', label: 'Normalizer', status: 'completed', kind: 'agent' },
@@ -112,6 +113,7 @@ export const MANIFEST = [
       { name: 'type', type: 'string' },
       { name: 'placeholder', type: 'string' },
       { name: 'disabled', type: 'boolean' },
+      { name: 'controlSize', type: "'lg'", description: 'Uses the existing large control treatment.' },
       { name: 'className', type: 'string' },
     ],
     usage: '<TextInput placeholder="Enter a value…" value={value} onChange={onChange} />',
@@ -203,6 +205,27 @@ export const MANIFEST = [
             { value: 'chemistry', label: 'Chemistry' },
           ]}
         />
+      );
+    },
+  },
+  {
+    name: 'Checkbox',
+    group: 'Toggles',
+    summary: 'Native checkbox primitive for independent list selections.',
+    props: [
+      { name: 'checked', type: 'boolean', required: true },
+      { name: 'onChange', type: '(checked: boolean) => void', required: true },
+      { name: 'disabled', type: 'boolean' },
+      { name: 'aria-label', type: 'string' },
+    ],
+    usage: '<Checkbox checked={checked} onChange={setChecked} aria-label="Select run" />',
+    Specimen: () => {
+      const [checked, setChecked] = useState(true);
+      return (
+        <label>
+          <Checkbox checked={checked} onChange={setChecked} />
+          {' Select this run'}
+        </label>
       );
     },
   },
@@ -382,7 +405,7 @@ export const MANIFEST = [
         <Chip tone="success">passed</Chip>
         <Chip tone="error">failed</Chip>
         <Chip mono tone="neutral">
-          gpt-5.5
+          gpt-example
         </Chip>
       </div>
     ),

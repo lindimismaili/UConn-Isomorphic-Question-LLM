@@ -1,33 +1,19 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
 import { Button } from '../ui/index.js';
+import { fetchWithAbort } from '../../utils/api.js';
 
-/**
- * Loads prompt text from the API first, then the bundled data directory.
- *
- * Touches `/api/prompts/:promptName` and `/data/prompts/:promptName.txt`.
- */
+/** Load prompt text through the authenticated backend API. */
 async function fetchPromptContent(promptName) {
-  try {
-    const res = await fetch(`/api/prompts/${promptName}`);
-    if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-    return await res.text();
-  } catch (apiError) {
-    try {
-      const res = await fetch(`/data/prompts/${promptName}.txt`);
-      if (!res.ok) throw new Error(`Local fallback unavailable (${res.status})`);
-      return await res.text();
-    } catch (localError) {
-      throw new Error(`API: ${apiError.message}; Local: ${localError.message}`);
-    }
-  }
+  const res = await fetchWithAbort(`/api/prompts/${promptName}`);
+  if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+  return res.text();
 }
 
 /**
  * Generic content viewer for prompt documents.
  *
- * Pass `promptName` so the modal can fetch the corresponding backend or
- * bundled file.
+ * Pass `promptName` so the modal can fetch the corresponding backend file.
  */
 export default function PromptViewerModal({ isOpen, onClose, title, promptName }) {
   const [content, setContent] = useState('Loading...');

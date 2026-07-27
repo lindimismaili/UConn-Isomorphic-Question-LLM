@@ -2,7 +2,7 @@
  * Button — the single button primitive. Wraps the documented `.btn` system
  * (DESIGN.md §4): always `.btn` + exactly one variant, or `.btn-icon-only`
  * when `iconOnly`. No new styling — height tiers still come from the container
- * (e.g. `.prompt-actions-row`, `.developer-tools-row`).
+ * (e.g. `.composer-controls`, `.developer-tools-row`).
  *
  * @param {object} props
  * @param {'primary'|'secondary'|'ghost'|'danger'|null} [props.variant] - Visual

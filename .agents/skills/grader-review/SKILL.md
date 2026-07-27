@@ -1,7 +1,11 @@
 ---
 name: grader-review
-description: Review LLM-grader evaluation output(s) and surface ranked, PROPOSE-ONLY improvements to the generator/verifier prompts and rubric. Use after an evaluation run (or a batch of runs) when you want to know WHY questions failed and what hand-curated file to consider editing, or when validating the grader against labeled data with a Cohen's kappa gate. Never auto-applies edits.
+description: Review evaluation artifacts and produce ranked, propose-only grader, prompt, schema, or rubric improvements. Use after single or batch evaluations, including labeled Cohen's kappa calibration.
 ---
+
+```toml
+id = "be464eeef4afa7f4c183696e9d3fdbaa"
+```
 
 # Grader review (meta-evaluator)
 
@@ -20,7 +24,7 @@ of running this skill.
 
 - After an evaluation run: `site/backend/outputs/<ts>/evaluation_outputs/`.
 - Over an eval batch: each `site/backend/outputs/<batch>/<entry>/evaluation_outputs/`.
-- When you have a labeled calibration dataset (graded by the latest grader, or
+- When you have an independently reviewed calibration dataset (preferably
   professor labels) and want a per-criterion Cohen's kappa PASS/FAIL gate.
 
 ## 1. Run it (unlabeled mode)
@@ -29,7 +33,7 @@ From `site/`:
 
 ```bash
 .venv/bin/python -m backend.src.tools.meta_evaluator \
-  --eval-dir outputs/<ts>/evaluation_outputs
+  --eval-dir backend/outputs/<ts>/evaluation_outputs
 ```
 
 Batch (repeat `--eval-dir`, results aggregate across dirs):
@@ -68,9 +72,10 @@ per-criterion Cohen's kappa gate and calibration proposals targeting the rubric:
 
 ```bash
 .venv/bin/python -m backend.src.tools.meta_evaluator \
-  --eval-dir outputs/<ts>/evaluation_outputs \
-  --labels data/calibration/<name>.jsonl \
-  --kappa-floor 0.4
+  --eval-dir backend/outputs/<ts>/evaluation_outputs \
+  --labels backend/data/calibration/<name>.jsonl \
+  --kappa-floor 0.4 \
+  --min-kappa-samples 5
 ```
 
 Any criterion with `kappa < kappa-floor` reports **FAIL** in the Kappa gate
@@ -79,15 +84,19 @@ criterion means the *grader/rubric* disagrees with reference labels — a grader
 problem, not a generator problem). The process exits non-zero when the overall
 gate FAILs, so it can be wired into CI.
 
+The default minimum is five non-N/A comparisons per criterion. Insufficient or
+all-N/A evidence fails the gate without proposing a rubric edit; do not lower
+the minimum merely to manufacture a passing kappa.
+
 ## 4. Applying an accepted proposal (human, manual)
 
 If the human decides to apply a proposal:
 
 1. Check current prompt status: from `site/`,
-   `python scripts/prompt_versions.py status`.
+   `.venv/bin/python scripts/prompt_versions.py status`.
 2. Hand-edit the target file with the (adapted) `suggested_text`.
 3. Snapshot prompt edits immediately:
-   `python scripts/prompt_versions.py snapshot -m "<summary>"`.
+   `.venv/bin/python scripts/prompt_versions.py snapshot -m "<summary>"`.
    (rubric.json is versioned via normal git commits.)
 4. Re-run the evaluation, then re-run this skill and confirm the targeted
    `expected_metric_moved` improved without regressing other criteria (compare
@@ -101,5 +110,19 @@ If the human decides to apply a proposal:
 - Failure tags come from the fixed taxonomy in `backend/src/evaluation.py`
   (`FAILURE_TAGS`); the failure-tag -> file mapping lives in
   `backend/src/tools/meta_evaluator.py` (`TAG_TARGET_MAP`).
+- Treat grader self-tags as diagnostic self-report. Give more weight to
+  `independently_corroborated: true` deterministic/reference evidence; the JSON
+  and Markdown reports distinguish both categories.
+- `prompt_version` and `rubric_version` are SHA-256 content hashes, including
+  dirty working-tree content, rather than Git labels.
 - Runs that predate the `[TAG]` taxonomy attribute every failure to `OTHER`
   (a `review_manually` proposal) — that is expected, not a bug.
+- Evaluation is paid and opt-in for ordinary CLI generation (`run --eval`).
+  Each evaluated item is scored by eight rubric graders, so `N` items produce
+  approximately `8 × N` grader calls in addition to generation costs.
+- OpenAI's current Evals API becomes read-only on October 31, 2026 and shuts
+  down November 30, 2026. This skill can still inspect existing local reports,
+  but producing new reports requires the repository's planned replacement
+  evaluation path after shutdown. Verify the schedule against the
+  [official OpenAI deprecations page](https://developers.openai.com/api/docs/deprecations)
+  during release audits.

@@ -118,22 +118,29 @@ def parse_cell(score_text: str, passed_text: str) -> int | str:
     if p in {"FALSE", "FAIL", "FAILED", "0"}:
         return 0
     if not s:
-        return 0
+        return "na"
     try:
         return 1 if float(s) >= 1 else 0
     except ValueError:
-        return 0
+        return "na"
 
 
 def load_pdf_grid(csv_path: Path, criteria_names: list[str]) -> dict[int, dict[str, int | str]]:
     """Return {source_id: {criterion: 0|1|'na'}} for one entry's CSV."""
     grid: dict[int, dict[str, int | str]] = {}
     with csv_path.open(newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
+        for row_number, row in enumerate(csv.DictReader(handle), start=2):
             sid_text = (row.get("source_id") or "").strip()
             if not sid_text.isdigit():
-                continue
+                raise ProfessorComparisonError(
+                    f"{csv_path}: row {row_number} has a non-numeric source_id {sid_text!r}"
+                )
             sid = int(sid_text)
+            if sid in grid:
+                raise ProfessorComparisonError(
+                    f"{csv_path}: duplicate source_id {sid}; professor comparison "
+                    "requires one evaluated variant per source question"
+                )
             cells: dict[str, int | str] = {}
             for name in criteria_names:
                 cells[name] = parse_cell(
@@ -367,6 +374,42 @@ def write_agreement_sheet(xlsx_path: Path, report: dict) -> None:
     wb.save(xlsx_path)
 
 
+def _comparison_coverage(
+    professor_grids: dict[str, dict[int, dict[str, int | str]]],
+    judge_grids: dict[str, dict[int, dict[str, int | str]]],
+) -> dict[str, Any]:
+    """Describe workbook/sheet/source coverage before agreement is aggregated."""
+    professor_pdfs = set(professor_grids)
+    judge_pdfs = set(judge_grids)
+    common_pdfs = sorted(professor_pdfs & judge_pdfs)
+    by_pdf: dict[str, dict[str, Any]] = {}
+    for pdf in common_pdfs:
+        professor_ids = set(professor_grids[pdf])
+        judge_ids = set(judge_grids[pdf])
+        by_pdf[pdf] = {
+            "professor_source_count": len(professor_ids),
+            "judge_source_count": len(judge_ids),
+            "compared_source_count": len(professor_ids & judge_ids),
+            "missing_from_judge": sorted(professor_ids - judge_ids),
+            "missing_from_professor": sorted(judge_ids - professor_ids),
+        }
+    return {
+        "professor_pdf_count": len(professor_pdfs),
+        "judge_pdf_count": len(judge_pdfs),
+        "compared_pdf_count": len(common_pdfs),
+        "missing_pdfs_from_judge": sorted(professor_pdfs - judge_pdfs),
+        "missing_pdfs_from_professor": sorted(judge_pdfs - professor_pdfs),
+        "by_pdf": by_pdf,
+        "complete": (
+            professor_pdfs == judge_pdfs
+            and all(
+                not row["missing_from_judge"] and not row["missing_from_professor"]
+                for row in by_pdf.values()
+            )
+        ),
+    }
+
+
 def run_professor_comparison(
     batch_dir: Path,
     professor_xlsx: Path | None = None,
@@ -394,9 +437,10 @@ def run_professor_comparison(
     if not professor_path.exists():
         raise FileNotFoundError(f"Professor workbook not found: {professor_path}")
 
-    compiled = batch_dir / "XLSX" / "compiled.xlsx"
-    if not compiled.exists():
-        compiled = create_xlsx(batch_dir, source_stem=source_stem)
+    # Rebuild on every comparison. Per-entry CSVs, rubric rows, or source
+    # classifications may have changed since a previous workbook was produced;
+    # silently reusing compiled.xlsx would compare stale grades.
+    compiled = create_xlsx(batch_dir, source_stem=source_stem)
 
     criteria = _load_criteria()
     professor_grids = load_xlsx_grids(professor_path, criteria)
@@ -422,6 +466,8 @@ def run_professor_comparison(
         judge_source=str(compiled),
         pdfs_compared=common,
     )
+    report["coverage"] = _comparison_coverage(professor_grids, judge_grids)
+    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     write_agreement_sheet(compiled, report)
 
     return {

@@ -1,0 +1,9 @@
+interface:
+  display_name: "Run Tests"
+  short_description: "Run complete repository verification gates"
+  default_prompt: "Use $run-tests to run every backend, frontend, build, and deploy-script verification gate."
+  icon_small: "./assets/small-logo.svg"
+  icon_large: "./assets/large-logo.svg"
+  brand_color: "#FFFFFF"
+policy:
+  allow_implicit_invocation: true

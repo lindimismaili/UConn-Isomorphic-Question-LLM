@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    env:
+      OPENAI_API_KEY: ""
+      APP_ACCESS_TOKEN: ""
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Remove local credentials from the runner
+        run: rm -f .env
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: site/backend/requirements-dev.txt
+
+      - name: Create isolated environment
+        run: python -m venv .venv
+
+      - name: Install locked backend and lint dependencies
+        run: .venv/bin/python -m pip install --require-hashes --requirement backend/requirements-dev.txt
+
+      - name: Check dependency consistency
+        run: .venv/bin/python -m pip check
+
+      - name: Audit production dependencies
+        if: matrix.python-version == '3.12'
+        run: .venv/bin/pip-audit --disable-pip --requirement backend/requirements.txt
+
+      - name: Run backend tests
+        run: .venv/bin/python -m pytest
+
+      - name: Lint backend
+        run: .venv/bin/python -m ruff check .
+
+      - name: Validate deployment scripts
+        working-directory: ${{ github.workspace }}
+        run: |
+          bash -n deploy/deploy.sh deploy/preview.sh
+          shellcheck -x deploy/deploy.sh deploy/preview.sh
+          site/.venv/bin/python -m py_compile \
+            deploy/backup_restore.py \
+            deploy/preview_origins.py \
+            deploy/runtime_env.py
+
+  frontend:
+    name: Frontend tests, lint, build, and audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: site/frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Remove local credentials from the runner
+        run: rm -f ../.env
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: site/frontend/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Validate preview launchers
+        working-directory: ${{ github.workspace }}
+        run: |
+          bash -n deploy/preview.sh
+          node --check deploy/preview.mjs
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Lint frontend
+        run: npm run lint -- --max-warnings=0
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=low
+
+      - name: Audit complete dependency tree
+        run: npm audit --audit-level=low
