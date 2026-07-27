@@ -95,6 +95,7 @@ from ..registry import stoppable_agents as _registry_stoppable_agents
 from ..safety import (
     LATEX_SUFFIXES,
     PDF_SUFFIXES,
+    SafeConfigurationError,
     SanitizedProviderError,
     ensure_child_path,
     safe_exception_category,
@@ -531,23 +532,39 @@ class _WorkflowContainerManager:
         )
 
         suffix = role.replace("_", "-")
-        container = await _run_owned_provider_create(
-            to_thread=self.to_thread,
-            create=self.client.containers.create,
-            owned_ids=self.owned_container_ids,
-            kwargs={
-                "name": (
-                    f"isomorphic-workflow-{self.workflow_id}-"
-                    f"{self.output_folder_label.replace('/', '-')}-{suffix}"
-                ),
-                "expires_after": {
-                    "anchor": "last_active_at",
-                    "minutes": container_expires_minutes(),
+        try:
+            container = await _run_owned_provider_create(
+                to_thread=self.to_thread,
+                create=self.client.containers.create,
+                owned_ids=self.owned_container_ids,
+                kwargs={
+                    "name": (
+                        f"isomorphic-workflow-{self.workflow_id}-"
+                        f"{self.output_folder_label.replace('/', '-')}-{suffix}"
+                    ),
+                    "expires_after": {
+                        "anchor": "last_active_at",
+                        "minutes": container_expires_minutes(),
+                    },
+                    "file_ids": list(file_ids),
+                    "network_policy": container_network_policy(self.allowed_domains),
                 },
-                "file_ids": list(file_ids),
-                "network_policy": container_network_policy(self.allowed_domains),
-            },
-        )
+            )
+        except Exception as exc:
+            if (
+                getattr(exc, "code", None) == "invalid_value"
+                and getattr(exc, "param", None) == "network_policy.type"
+                and "organization policy disables container network access" in str(exc)
+            ):
+                raise SafeConfigurationError(
+                    category="ContainerNetworkAccessDisabled",
+                    message=(
+                        "Document extraction cannot start because this OpenAI organization "
+                        "disables Code Interpreter container networking. An organization admin "
+                        "must allow the app's configured container domains before retrying."
+                    ),
+                ) from None
+            raise
         container_id = str(container.id)
         runtime = SharedWorkflowRuntime(
             client=self.client,
