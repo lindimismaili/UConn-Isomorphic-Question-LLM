@@ -19,5 +19,5 @@ Network note:
    {packages}
 6. Verify with:
    `pdflatex --version`
-   `python3 -c "import fitz, pdf2image, pdfplumber, PyPDF2, docx; print('document-python-deps-ok')"`
+   `python3 -c "import pdf2image, pdfplumber, pypdf, docx; print('document-python-deps-ok')"`
 7. Finish with a short summary.
