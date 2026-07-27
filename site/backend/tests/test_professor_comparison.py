@@ -17,6 +17,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from openpyxl import Workbook, load_workbook  # noqa: E402
 
+from backend.src.api import state  # noqa: E402
 from backend.src.evaluation import rubric_criteria  # noqa: E402
 from backend.src.paths import OUTPUTS_DIR  # noqa: E402
 from backend.src.tools.professor_comparison import (  # noqa: E402
@@ -225,6 +226,7 @@ class TestCompareProfessorRoute:
         label = f"test-compare-{uuid.uuid4().hex}"
         batch = OUTPUTS_DIR / label
         _make_batch(batch, ["entry-1"])
+        state.batch_jobs[label] = {"status": "completed", "outputFolder": label}
         stub = {
             "report": {
                 "summary": {"mean_kappa": 0.5, "mean_raw_agreement": 0.9, "criteria_with_poor_kappa": []},
@@ -248,12 +250,14 @@ class TestCompareProfessorRoute:
             assert payload["pdfsCompared"] == ["entry-1"]
             assert payload["xlsxPath"].endswith("compiled.xlsx")
         finally:
+            state.batch_jobs.pop(label, None)
             shutil.rmtree(batch, ignore_errors=True)
 
     def test_comparison_failure_maps_to_422(self, client):
         label = f"test-compare-{uuid.uuid4().hex}"
         batch = OUTPUTS_DIR / label
         _make_batch(batch, ["entry-1"])
+        state.batch_jobs[label] = {"status": "completed", "outputFolder": label}
         try:
             with patch(
                 "backend.src.tools.professor_comparison.run_professor_comparison",
@@ -262,4 +266,5 @@ class TestCompareProfessorRoute:
                 response = client.post(f"/api/outputs/{label}/compare-professor")
             assert response.status_code == 422
         finally:
+            state.batch_jobs.pop(label, None)
             shutil.rmtree(batch, ignore_errors=True)

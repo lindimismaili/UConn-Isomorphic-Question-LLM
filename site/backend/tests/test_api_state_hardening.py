@@ -827,6 +827,11 @@ class UploadSelectionTests(ApiHardeningBase):
         self.assertEqual(response.status_code, 200, response.text)
         workflow = state.workflows[response.json()["workflowId"]]
         self.assertEqual(workflow["uploadFolder"], "upload-session")
+        asyncio.run(
+            state._release_workflow_reservation(
+                f"workflow:{response.json()['workflowId']}"
+            )
+        )
 
     def test_chunked_reader_enforces_limit_before_unbounded_read(self) -> None:
         class ChunkedUpload:
@@ -1103,7 +1108,6 @@ class EvalBatchHardeningTests(ApiHardeningBase):
                     "cancelledFiles": 0,
                     "blockedFiles": 0,
                     "doneFiles": 0,
-                    "evaluationItemBudget": 10,
                     "reservedEvaluationItems": 0,
                     "entries": [
                         {

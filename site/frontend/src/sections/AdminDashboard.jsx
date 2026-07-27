@@ -123,7 +123,10 @@ function FileBrowser({ onError }) {
     }
   }, [onError, path, root]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const initialLoad = window.setTimeout(load, 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [load]);
 
   const selectRoot = (nextRoot) => {
     setRoot(nextRoot);
@@ -247,10 +250,13 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
   useEffect(() => {
+    const initialLoad = window.setTimeout(load, 0);
     const interval = window.setInterval(load, REFRESH_MS);
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(interval);
+    };
   }, [load]);
 
   const updateSettings = async (payload) => {

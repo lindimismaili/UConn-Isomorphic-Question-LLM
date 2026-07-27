@@ -15,6 +15,7 @@ They assert the engine reaches ``completed`` and produces a well-formed
 from __future__ import annotations
 
 import asyncio
+import json
 import tempfile
 import unittest
 from contextlib import nullcontext
@@ -469,10 +470,7 @@ class EngineWorkflowTests(unittest.TestCase):
             for item in self.runner_calls
             if item.args[0].stage == "latexifier"
         ]
-        self.assertEqual(
-            latexifier_container_ids,
-            ["cntr_downstream", "cntr_downstream_recreate"],
-        )
+        self.assertEqual(latexifier_container_ids, ["cntr_downstream"])
         self.assertEqual(_FakeRuntime.compile_calls, 2)
         self.assertEqual(_FakeRuntime.bootstrap_calls, 1)
 
