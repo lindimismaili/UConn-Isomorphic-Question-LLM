@@ -4,13 +4,33 @@ Onboarding guide for coding agents (Claude, Codex, etc.) working in this repo.
 **This file is the single source of truth for the repo** — `CLAUDE.md` just points
 here. Older `.claude/CLAUDE.md` / `.codex/AGENTS.md` references are stale.
 
+> **Status:** This repository is no longer updated or maintained. It has been
+> handed off to Xian Wu at the University of Connecticut, who is continuing the
+> project and research. See [deploy/HANDOFF.md](deploy/HANDOFF.md).
+
 ## Repository Docs
 
 Primary maintained documents:
 
-- [README.md](README.md) — human-facing setup, environment, run/CLI/output reference
+- [README.md](README.md) — short human-facing overview: description, version, install,
+  API key setup, local preview, documentation index, and authors. Keep it short;
+  put detailed human-facing reference material in `docs/`.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — purpose, pipeline, runtime surfaces,
+  repository layout, and workflow stages
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — complete environment-variable reference,
+  provider output ceilings, frontend build variables, and PayPal recipient
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — full dev install, running pieces separately,
+  tests/lint, prompt versioning, development notes, and repository skills
+- [docs/CLI.md](docs/CLI.md) — CLI subcommands and `run` flags
+- [docs/OUTPUTS_AND_EVALUATION.md](docs/OUTPUTS_AND_EVALUATION.md) — run/batch output files,
+  evaluation, cost model, and the OpenAI Evals shutdown
+- [docs/OPERATIONS.md](docs/OPERATIONS.md) — Raspberry Pi automatic deployment and the
+  `/admin` operations dashboard (summary; runbooks stay in `deploy/`)
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — common setup/runtime fixes
+- [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — current security and product limitations
 - [CLAUDE.md](CLAUDE.md) — Claude Code entry point; a pointer straight to this file
-- [deploy/PROFESSOR_HANDOFF.md](deploy/PROFESSOR_HANDOFF.md) — professor setup, access/cost controls,
+- [deploy/HANDOFF.md](deploy/HANDOFF.md) — handoff to Xian Wu (University of Connecticut), who
+  continues the project and research: handoff status, open items, setup, access/cost controls,
   Raspberry Pi operations, backup boundaries, limitations, and release checklist
 - [site/SECURITY.md](site/SECURITY.md) — deployment boundary, secrets, abuse limits, privacy, and reporting
 - [site/backend/BACKEND.md](site/backend/BACKEND.md) — backend reference: what every file does,
@@ -168,7 +188,7 @@ Tooling / analysis:
 ## Commands That Work
 
 `backend` and `frontend` live under `site/`, and the backend resolves its repo
-root as `site/` (so `.env`, `dist/`, and the venv all belong there). **Run these
+root as `site/` (so `.env.example`, `.env.local`, `dist/`, and the venv all belong there). **Run these
 from the `site/` directory.**
 
 One-time setup:
@@ -178,6 +198,7 @@ cd site
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --require-hashes -r backend/requirements-dev.txt
 npm -C frontend ci
+cp .env.example .env.local && chmod 600 .env.local   # then set OPENAI_API_KEY in .env.local
 ```
 
 `requirements-dev.txt` includes the production lock plus pytest, Ruff, and
@@ -240,18 +261,23 @@ cd site
 
 ## Environment Variables
 
-The backend loads ignored `site/.env.local` before `site/.env`; an existing
-process or systemd environment value has highest precedence. Arbitrary
-`.env.*.local` mode files are not loaded. `.env.example` documents the common
-runtime variables.
+The backend loads ignored `site/.env.local` before an optional ignored
+`site/.env`; an existing process or systemd environment value has highest
+precedence. Arbitrary `.env.*.local` mode files are not loaded.
 
-`site/.env` is **tracked in this repo** — the owner keeps it synced deliberately,
-so do not re-add it to `.gitignore` or flag the committed key. This is an
-explicit owner decision that overrides the general rule below; it does mean the
-committed key is exposed in git history and should be rotated if the repository
-is ever shared. Everywhere else, never put real secrets in tracked files,
-frontend code, `VITE_*` variables, logs, screenshots, or chat. On Unix-like
-systems, keep local environment files mode `0600`.
+- `site/.env.example` — the committed, non-secret **template**. It documents
+  every supported runtime variable with blank or commented values and is never
+  loaded by the app. `site/backend/tests/test_env_example_contract.py` pins its
+  exact key set, so add a new variable to both together.
+- `site/.env.local` — each machine's private, git-ignored settings, normally
+  created by copying `.env.example`. Real keys and tokens go here.
+- `site/.env` — optional, git-ignored, lowest priority. Earlier commits tracked
+  it with OpenAI keys while the repo was private; those keys are disabled and
+  the file is no longer tracked. Never commit it again.
+
+Never put real secrets in tracked files (including `.env.example`), frontend
+code, `VITE_*` variables, logs, screenshots, or chat. On Unix-like systems,
+keep local environment files mode `0600`.
 
 On Raspberry Pi, device secrets live in root-owned mode-`0600`
 `/etc/uconn-isomorphic/environment`, outside releases. systemd loads release
@@ -359,9 +385,12 @@ Important optional app/runtime vars:
   Cloudflare Access identity verification for `/admin` and `/api/admin/*`.
 - `OPENAI_ADMIN_KEY` — optional Organization Owner key used only server-side for
   cost monitoring; `SMTP_*` + `ALERT_RECIPIENTS` configure incident email.
-- `ADMIN_LOCAL_DEV_MODE`, `ADMIN_LOCAL_DEV_EMAIL` — tracked local dashboard
-  test defaults. The bypass accepts only direct loopback requests; the Pi
-  systemd unit explicitly overrides `ADMIN_LOCAL_DEV_MODE=false`.
+- `ADMIN_LOCAL_DEV_MODE`, `ADMIN_LOCAL_DEV_EMAIL` — local dashboard test
+  identity, commented out in `.env.example`; uncomment both in `site/.env.local`
+  to open `/admin` locally. The bypass accepts only direct loopback requests
+  (so keep it off with `preview.mjs --lan`, whose Vite proxy reaches the
+  backend from loopback); the Pi systemd unit explicitly overrides
+  `ADMIN_LOCAL_DEV_MODE=false`.
 
 ## Architecture
 
@@ -864,7 +893,7 @@ not source of truth for local development.
   use the updater's systemd journal for detailed diagnostics.
 - The installer writes a persistent `config/admin-runtime.env` override and runs
   `${SERVICE_NAME}-operations.timer`; the web service has no shell/systemd access.
-  The systemd unit reads the release `.env`, then this persistent override, then
+  The systemd unit reads the optional release `site/.env` (normally absent), then this persistent override, then
   the root-owned device environment, and forcibly sets
   `ADMIN_LOCAL_DEV_MODE=false` after all of them; configure Cloudflare Access and
   Google separately from the tunnel installer.

@@ -12,8 +12,9 @@ contracts live in [../../AGENTS.md](../../AGENTS.md); the frontend is documented
 in [../frontend/DESIGN.md](../frontend/DESIGN.md).
 
 > **Runs from `site/`.** The backend resolves its repo root as `site/`
-> (`paths.REPO_ROOT` = the parent of `backend/`), so `.env`, `dist/`, and the
-> venv live under `site/`. Launch with `uvicorn backend.src.server:app` (or
+> (`paths.REPO_ROOT` = the parent of `backend/`), so `.env.example` (committed
+> template), `.env.local` (private, git-ignored), `dist/`, and the venv live
+> under `site/`. Launch with `uvicorn backend.src.server:app` (or
 > `--app-dir site` from the repo root). See AGENTS.md → *Commands That Work*.
 
 ---

@@ -10,6 +10,8 @@ ROOT_GITIGNORE = Path(__file__).resolve().parents[3] / ".gitignore"
 
 EXPECTED_RUNTIME_KEYS = {
     "ACTIVE_WORKFLOW_STALE_SECONDS",
+    "ADMIN_LOCAL_DEV_EMAIL",
+    "ADMIN_LOCAL_DEV_MODE",
     "ALLOWED_ORIGINS",
     "APP_ACCESS_TOKEN",
     "APP_RATE_LIMIT_REQUESTS",
@@ -100,12 +102,11 @@ def test_env_example_explains_safe_override_precedence():
 
 
 def test_local_environment_files_are_ignored():
-    """Local override files stay ignored and `.env.example` stays committable.
+    """Every file that can hold a private value stays ignored.
 
-    `site/.env` itself is deliberately tracked by owner decision, so `.env` is
-    intentionally NOT in the ignore set. That decision keeps the committed key
-    in git history; it is a project choice, not an oversight. Everything else
-    that can hold a private value must remain ignored.
+    Only the blank `.env.example` template is committable. `site/.env` was
+    tracked in earlier commits; it is ignored now so a key cannot be committed
+    again.
     """
     patterns = {
         line.strip()
@@ -113,6 +114,7 @@ def test_local_environment_files_are_ignored():
         if line.strip() and not line.lstrip().startswith("#")
     }
 
+    assert ".env" in patterns
     assert ".env.local" in patterns
     assert ".env.*.local" in patterns
     assert ".deploy.env" in patterns

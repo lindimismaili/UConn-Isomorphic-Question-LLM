@@ -1,8 +1,36 @@
-# Professor Handoff Guide
+# Handoff Guide
 
-This guide is the operational starting point for running the UConn Isomorphic
-Question Generator without a development-agent environment. Complete the
-release checklist before giving students or public users access.
+## Handoff status
+
+This repository is **no longer updated or maintained** by its original author.
+It has been handed off to **Xian Wu at the University of Connecticut**, who is
+continuing the project and its research. Treat this repository as the state of
+the project at handoff (version 1.0.0).
+
+This guide is for whoever takes over the project. It explains what the
+application does, which safety decisions carry over, how to set it up and run
+it, how to deploy and back it up on a Raspberry Pi, what paid evaluation costs,
+which limitations remain, and the release checklist to complete before giving
+students or anyone else access.
+
+## Open items at handoff
+
+These were unresolved when the project was handed off. Each is explained later
+in this guide.
+
+- **Rubric evaluation needs a replacement.** The OpenAI Evals API it depends on
+  became read-only on October 31, 2026 and shuts down on November 30, 2026.
+  Generation still works with evaluation disabled.
+- **No software license has been chosen.** Decide on one before redistributing
+  the code outside the project.
+- **The data-distribution review is not signed off.** Confirm permission to
+  distribute the tracked evaluation PDFs, rubric/calibration artifacts, and
+  professor-comparison workbook, and that none contains student-identifiable
+  data.
+- **Backup restore has not been rehearsed on hardware.** A physical spare-SD
+  restore drill is still required before relying on backups.
+- **Uploads must stay limited to trusted material.** Public anonymous uploads
+  need a local parsing/OCR quarantine stage that is not implemented.
 
 ## What the application does
 
@@ -17,10 +45,11 @@ optional step; it is not a guarantee that every generated question is correct.
 
 ## Handoff safety decisions
 
-- Revoke or rotate every credential that was ever stored in the formerly
-  tracked `site/.env` before sharing this repository history. The current tree
-  ignores that file, but earlier commits remain part of Git history unless the
-  owner performs a separate reviewed history-cleanup operation.
+- Every OpenAI API key that was ever stored in the formerly tracked
+  `site/.env` has been disabled. The current tree ignores that file, but
+  earlier commits remain part of Git history unless the owner performs a
+  separate reviewed history-cleanup operation. Never reuse those keys;
+  provision your own as described below.
 - Keep `OPENAI_API_KEY` on the server. Never put it in frontend source, a
   `VITE_*` variable, screenshots, logs, or chat.
 - Set `APP_ACCESS_TOKEN` before allowing access beyond localhost. It is a
@@ -69,21 +98,25 @@ passes; never substitute an unreviewed branch tip or short SHA.
 
 ## Configure credentials and optional settings
 
-For local development, put private overrides in `site/.env.local`. The backend
-loads `.env.local` before an optional ignored `.env`; existing process or
-service environment variables have highest precedence. No arbitrary
-`.env.<mode>.local` files are loaded.
+For local development, put private overrides in `site/.env.local`, a
+git-ignored copy of the committed template `site/.env.example`. The template
+documents every setting with blank or commented values and is never loaded, so
+keep real values out of it. The backend loads `.env.local` before an optional
+ignored `.env`; existing process or service environment variables have highest
+precedence. No arbitrary `.env.<mode>.local` files are loaded.
 
 Create the file directly on the machine with owner-only permissions and do not
 paste real values into chat. Run this from the repository root:
 
 ```bash
-touch site/.env.local
+cp site/.env.example site/.env.local
 chmod 600 site/.env.local
 ```
 
+Then set at least these values in `site/.env.local`:
+
 ```dotenv
-OPENAI_API_KEY=<professor-owned-key>
+OPENAI_API_KEY=<your-own-key>
 APP_ACCESS_TOKEN=<long-random-shared-access-token>
 
 # Optional hosted donation link; no PayPal API secret is needed.
@@ -98,7 +131,7 @@ The optional donation URL is exposed only when it is HTTPS and belongs to
 `paypal.com` or `paypal.me`. Donations do not purchase or increase application
 quota.
 
-### Provision the professor's OpenAI project and key
+### Provision your own OpenAI project and key
 
 Create a dedicated API Platform project for this application instead of using
 an organization-wide/default key. OpenAI documents
@@ -125,7 +158,7 @@ usage before opening access to a class.
 OpenAI hosted containers have no outbound network access by default. The
 [official shell-network guide](https://developers.openai.com/api/docs/guides/tools-shell#network-access)
 requires both an organization administrator's allowlist and the request-level
-`network_policy`. Ask the professor's organization administrator to allow
+`network_policy`. Ask your OpenAI organization administrator to allow
 exactly the six domains currently declared by `setup.allowedDomains` in
 `site/backend/data/agents.json`:
 
@@ -343,7 +376,7 @@ host-specific secrets outside those releases in:
 /etc/uconn-isomorphic/environment
 ```
 
-The directory is root-owned mode `0755` so the normal professor account can
+The directory is root-owned mode `0755` so the normal operator account can
 read the non-secret `0644` deploy config; the environment file is root-owned
 mode `0600`. systemd loads optional release-local non-secret defaults first and
 the canonical persistent device environment second, so device values override
@@ -433,7 +466,7 @@ intentionally outside this repository's automation. Use a blank, correctly
 identified removable device; inventory and back up anything on it first; and
 follow the current Raspberry Pi OS or institutional IT procedure. Do not copy
 generic `cryptsetup` commands onto a device that contains data, and do not
-weaken the helper merely to accept a plaintext destination. If the professor
+weaken the helper merely to accept a plaintext destination. If you
 cannot safely provision and rehearse encrypted removable storage, record the
 backup gate as failed and keep public exposure disabled.
 
@@ -463,7 +496,7 @@ The application has User, Teacher, and Dev views. Those are presentation modes,
 not user accounts or authorization roles. The current security boundary is one
 shared deployment token.
 
-The professor can use the existing Developer Tools for batch/evaluation
+You can use the existing Developer Tools for batch/evaluation
 workflows, but the Dev panel is a workflow/developer surface, not a full
 host-admin dashboard. The proposed admin dashboard is not implemented. In
 particular, do not expect the UI to:
@@ -499,12 +532,12 @@ verification.
 
 ## Evals retirement deadline
 
-The OpenAI Evals API used by `site/backend/src/evaluation.py` becomes read-only
-on **October 31, 2026** and shuts down on **November 30, 2026**. The professor
-should not plan a semester that depends on the current evaluation path beyond
-those dates. Assign and validate a replacement evaluation implementation before
-the read-only deadline. Generation can remain useful with evaluation disabled,
-but evaluation-specific batch tools and reports depend on that migration. Track
+The OpenAI Evals API used by `site/backend/src/evaluation.py` became read-only
+on **October 31, 2026** and shuts down on **November 30, 2026**. Do not plan
+course or research work that depends on the current evaluation path; a
+replacement evaluation implementation must be built and validated first.
+Generation remains useful with evaluation disabled, but evaluation-specific
+batch tools and reports depend on that migration. Track
 the dates and migration guidance on OpenAI's
 [official deprecations page](https://developers.openai.com/api/docs/deprecations).
 
@@ -514,7 +547,7 @@ From the repository root, invoke the `handoff-readiness` skill or perform its
 equivalent checks:
 
 - clean dependency install with `site/.venv` and `npm ci`;
-- dedicated professor-owned OpenAI project, least-privilege key, model/rate
+- dedicated OpenAI project owned by the new maintainer, least-privilege key, model/rate
   limits, spend enforcement/alerts, and key rotation recorded;
 - organization hosted-container allowlist restricted to the six
   registry-requested domains, followed by a tiny authorized bootstrap/compile
@@ -528,9 +561,9 @@ equivalent checks:
   real donation;
 - small, explicitly authorized paid workflow only if live API verification is
   required;
-- scratch Pi/VM installation before the professor's device;
+- scratch Pi/VM installation before the production device;
 - verified executable backup, spare-SD restore/recovery, and code rollback;
-- [ ] Data-distribution review signed off by the owner/professor: they have
+- [ ] Data-distribution review signed off by the new maintainer: they have
   permission to distribute every tracked evaluation PDF, rubric/calibration
   artifact, and professor-comparison workbook, and have confirmed that none
   contains student-identifiable data. This technical review intentionally did

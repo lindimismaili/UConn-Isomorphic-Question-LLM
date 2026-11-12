@@ -22,9 +22,12 @@ offered.
   `X-App-Access-Token`; it is not the OpenAI key. The current UI keeps it only
   in the browser tab's `sessionStorage` and attaches it only to same-origin
   `/api` requests.
-- Local private overrides belong in `site/.env.local`. The backend loads that
-  file before an optional ignored `site/.env`, while existing process/service
-  environment variables win. Other `.env.*.local` mode files are not loaded.
+- Local private overrides belong in `site/.env.local`, a git-ignored copy of
+  the committed `site/.env.example` template. The template holds only blank or
+  commented values and is never loaded, so never put a real value in it. The
+  backend loads `site/.env.local` before an optional ignored `site/.env`, while
+  existing process/service environment variables win. Other `.env.*.local`
+  mode files are not loaded.
 - Raspberry Pi secrets live in root-owned
   `/etc/uconn-isomorphic/environment` with mode `0600`, inside a root-owned
   mode-`0755` configuration directory and outside Git/immutable releases. The

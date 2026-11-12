@@ -17,7 +17,7 @@ authorized.
 ## Establish scope
 
 Inspect `git status`, the release commit/tag, applicable instructions, and
-`docs/PROFESSOR_HANDOFF.md`. Preserve unrelated work. Report whether validation
+`deploy/HANDOFF.md`. Preserve unrelated work. Report whether validation
 is against a clean clone, the current checkout, or a Raspberry Pi/VM.
 
 ## Verify a clean setup
@@ -62,7 +62,8 @@ completing a real transaction.
 
 Fail the handoff if Git tracks `site/.env`, `.env.local`, `.env.*.local`, or
 another credential-bearing local configuration file. Confirm those paths are
-ignored without opening them. Run a redaction-safe tracked-file secret scan
+ignored without opening them, and that the committed `site/.env.example`
+template exists and contains only blank or commented values. Run a redaction-safe tracked-file secret scan
 that reports only category and file/line, never matched text. If any credential
 ever entered Git history, require revocation/rotation before sharing and record
 history cleanup as a separate owner-approved operation.

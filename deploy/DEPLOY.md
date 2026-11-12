@@ -262,15 +262,16 @@ supplement rather than replace authenticated application quotas.
 
 The installer creates a persistent `/var/lib/uconn-isomorphic/config/admin-runtime.env`
 override; this is where a dashboard key rotation survives immutable release
-switches. The systemd unit loads the release-local `.env` first, this override
+switches. The systemd unit loads the optional release-local `site/.env` first (normally absent), this override
 second, and the root-owned `/etc/uconn-isomorphic/environment` last, so device
 secrets still outrank both. Keep `OPENAI_ADMIN_KEY`, SMTP settings, the
 Cloudflare Access audience/team domain, and the admin email allowlist only in
 Pi-side files, never in a client bundle.
 
 The backend systemd unit explicitly sets `ADMIN_LOCAL_DEV_MODE=false` after
-loading every environment file. This prevents the tracked localhost dashboard
-test default from becoming a production origin bypass.
+loading every environment file. This prevents the localhost dashboard test
+setting (commented out in the `site/.env.example` template and meant only for a
+developer's `site/.env.local`) from becoming a production origin bypass.
 
 It also enables `uconn-isomorphic-operations.timer`, which runs every minute as
 a separate systemd job and writes a sanitized report consumed by `/admin`.

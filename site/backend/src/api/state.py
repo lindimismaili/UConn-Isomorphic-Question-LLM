@@ -509,7 +509,8 @@ def get_openai_client() -> OpenAI:
     if not api_key:
         raise RuntimeError(
             "OPENAI_API_KEY is not configured. "
-            "Set it in the environment or in a .env file at the project root."
+            "Set it in the environment or in site/.env.local "
+            "(copy site/.env.example to create that file)."
         )
 
     client = OpenAI(
